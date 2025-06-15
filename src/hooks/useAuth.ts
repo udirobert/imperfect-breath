@@ -8,21 +8,19 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    // First, try to get the current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (_event === 'INITIAL_SESSION') {
-        setLoading(false);
-      }
     });
 
-    getSession();
+    // Then, listen for any changes in auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false);
+    });
 
+    // Clean up the subscription when the component unmounts
     return () => {
       subscription?.unsubscribe();
     };
