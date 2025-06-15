@@ -1,11 +1,14 @@
 
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
 import { useDemoMode } from '@/context/DemoModeContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Waves, Target, BarChart3, Bot } from 'lucide-react';
+import { Waves, Target, BarChart3, Bot, LogOut } from 'lucide-react';
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Feature = ({ icon: Icon, title, children }: { icon: React.ElementType, title: string, children: React.ReactNode }) => (
   <div className="flex items-start gap-4">
@@ -20,9 +23,29 @@ const Feature = ({ icon: Icon, title, children }: { icon: React.ElementType, tit
 const Index = () => {
   const { history } = useSessionHistory();
   const { isDemoMode, toggleDemoMode } = useDemoMode();
+  const { session, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Failed to log out.");
+    } else {
+      toast.success("Logged out successfully.");
+      navigate('/');
+    }
+  };
 
   return (
     <div className="text-center flex flex-col items-center animate-fade-in max-w-4xl mx-auto">
+       {session && user && (
+        <div className="absolute top-4 right-4 flex items-center gap-4 animate-fade-in">
+          <span className="text-sm text-muted-foreground hidden sm:inline">Welcome, {user.email}</span>
+          <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
       <h1 
         style={{ animationDelay: '200ms', opacity: 0 }} 
         className="text-5xl md:text-6xl font-bold text-foreground mb-4 animate-fade-in"
@@ -45,7 +68,7 @@ const Index = () => {
             Begin Session
           </Button>
         </Link>
-        {history && history.length > 0 && (
+        {session && history && history.length > 0 && (
           <Link to="/progress">
             <Button
               style={{ animationDelay: '700ms', opacity: 0 }}
@@ -54,6 +77,18 @@ const Index = () => {
               className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto"
             >
               My Progress
+            </Button>
+          </Link>
+        )}
+        {!session && (
+           <Link to="/auth">
+            <Button
+              style={{ animationDelay: '700ms', opacity: 0 }}
+              size="lg"
+              variant="outline"
+              className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto"
+            >
+              Login to Save Progress
             </Button>
           </Link>
         )}

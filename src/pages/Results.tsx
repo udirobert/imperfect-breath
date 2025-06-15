@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,7 @@ import { Clock, Activity, Star, Share } from 'lucide-react';
 import { BREATHING_PATTERNS } from '@/lib/breathingPatterns';
 import { useSessionHistory } from '@/hooks/useSessionHistory';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -19,22 +21,29 @@ const formatTime = (seconds: number) => {
 
 const Results = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const { streak, totalMinutes, saveSession } = useSessionHistory();
   const hasSavedRef = useRef(false);
 
   const sessionData = location.state || {};
 
   useEffect(() => {
-    if (sessionData.patternName && !hasSavedRef.current) {
-        saveSession({
-          breathHoldTime: sessionData.breathHoldTime || 0,
-          restlessnessScore: sessionData.restlessnessScore || 0,
-          sessionDuration: sessionData.sessionDuration || 0,
-          patternName: sessionData.patternName,
-        });
-        hasSavedRef.current = true;
+    if (sessionData.patternName && !hasSavedRef.current && user) {
+        try {
+            saveSession({
+              breathHoldTime: sessionData.breathHoldTime || 0,
+              restlessnessScore: sessionData.restlessnessScore || 0,
+              sessionDuration: sessionData.sessionDuration || 0,
+              patternName: sessionData.patternName,
+            });
+            toast.success("Session saved successfully!");
+            hasSavedRef.current = true;
+        } catch (error) {
+            console.error("Failed to save session", error);
+            toast.error("Could not save your session. Please try again.");
+        }
     }
-  }, [sessionData, saveSession]);
+  }, [sessionData, saveSession, user]);
 
   const restlessnessValue = Math.round(sessionData.restlessnessScore || 0);
   const restlessnessColor = restlessnessValue < 20 ? 'bg-green-500' : restlessnessValue < 50 ? 'bg-yellow-500' : 'bg-red-500';

@@ -16,6 +16,7 @@ const Index = React.lazy(() => import('./pages/Index'));
 const BreathingSession = React.lazy(() => import('./pages/BreathingSession'));
 const Results = React.lazy(() => import('./pages/Results'));
 const Progress = React.lazy(() => import('./pages/Progress'));
+const Auth = React.lazy(() => import('./pages/Auth'));
 
 const PageLoader = () => (
   <div className="flex-grow flex items-center justify-center">
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/session" element={<BreathingSession />} />
                 <Route path="/results" element={<Results />} />
                 <Route path="/progress" element={<Progress />} />
+                <Route path="/auth" element={<Auth />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
