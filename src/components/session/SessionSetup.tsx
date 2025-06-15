@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { BREATHING_PATTERNS } from '@/lib/breathingPatterns';
+import { BREATHING_PATTERNS, BreathingPattern } from '@/lib/breathingPatterns';
 import { useBreathingSession } from '@/hooks/useBreathingSession';
 
 type SessionSetupProps = {
@@ -18,6 +17,20 @@ const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
   const secs = (seconds % 60).toString().padStart(2, '0');
   return `${mins}:${secs}`;
+};
+
+const formatSessionDuration = (pattern: BreathingPattern) => {
+  if (pattern.cycles === Infinity) {
+    return 'Continuous Practice';
+  }
+  const oneCycleDuration = pattern.phases.reduce((sum, phase) => sum + phase.duration, 0);
+  const totalSeconds = (pattern.cycles * oneCycleDuration) / 1000;
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  let durationString = '';
+  if (mins > 0) durationString += `${mins} min `;
+  if (secs > 0) durationString += `${secs} sec`;
+  return durationString.trim() || 'Brief';
 };
 
 export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
@@ -47,9 +60,10 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
                       <RadioGroupItem value={p.key} id={p.key} className="peer sr-only" />
                       <Label
                         htmlFor={p.key}
-                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
+                        className="flex flex-col text-center items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
                       >
-                        {p.name}
+                        <span className="font-semibold">{p.name}</span>
+                        <span className="text-xs text-muted-foreground mt-2">{formatSessionDuration(p)}</span>
                       </Label>
                     </div>
                   ))}

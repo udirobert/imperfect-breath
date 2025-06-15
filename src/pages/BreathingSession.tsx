@@ -18,7 +18,7 @@ const BreathingSession = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const isTracking = state.sessionPhase === 'breath-hold' && !isDemoMode;
-  const { restlessnessScore } = useCameraTracking({ videoRef, isTracking });
+  const { restlessnessScore, landmarks } = useCameraTracking({ videoRef, isTracking });
   const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished && !isDemoMode;
 
   useDemoFeedback({
@@ -32,6 +32,13 @@ const BreathingSession = () => {
   });
 
   const handleEndSession = () => {
+    // Stop camera feed before navigating away
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+
     const pattern = BREATHING_PATTERNS[state.pattern.key];
     const oneCycleDuration = pattern.phases.reduce((sum, phase) => sum + phase.duration, 0);
     const sessionDuration = (state.cycleCount * oneCycleDuration) / 1000;
@@ -66,6 +73,7 @@ const BreathingSession = () => {
       showVideoFeed={showVideoFeed}
       isTracking={isTracking}
       restlessnessScore={restlessnessScore}
+      landmarks={landmarks}
     />
   );
 };

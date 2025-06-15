@@ -18,6 +18,7 @@ const euclidianDistance = (p1: Keypoint, p2: Keypoint) => {
 export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingProps) => {
   const [detector, setDetector] = useState<FaceLandmarksDetector | null>(null);
   const [smoothedScore, setSmoothedScore] = useState(0);
+  const [landmarks, setLandmarks] = useState<Keypoint[]>([]);
 
   const requestRef = useRef<number>();
   const lastPosition = useRef<Keypoint | null>(null);
@@ -71,6 +72,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
           flipHorizontal: false,
         });
 
+        setLandmarks(faces[0]?.keypoints || []);
         const score = calculateRestlessness(faces);
 
         scoreHistory.current.push(score);
@@ -95,6 +97,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
       lastPosition.current = null;
       scoreHistory.current = [];
       setSmoothedScore(0);
+      setLandmarks([]);
       detectionLoop(); // Start the loop
     } else {
       if (requestRef.current) {
@@ -109,5 +112,5 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
     };
   }, [isTracking, detector, detectionLoop]);
 
-  return { restlessnessScore: smoothedScore };
+  return { restlessnessScore: smoothedScore, landmarks };
 };

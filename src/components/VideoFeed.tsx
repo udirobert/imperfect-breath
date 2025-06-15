@@ -1,12 +1,14 @@
 
 import React, { useEffect } from 'react';
+import type { Keypoint } from '@tensorflow-models/face-landmarks-detection';
 
 interface VideoFeedProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   isActive: boolean;
+  landmarks?: Keypoint[];
 }
 
-const VideoFeed = ({ videoRef, isActive }: VideoFeedProps) => {
+const VideoFeed = ({ videoRef, isActive, landmarks }: VideoFeedProps) => {
   useEffect(() => {
     const stopCameraFeed = () => {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -45,9 +47,21 @@ const VideoFeed = ({ videoRef, isActive }: VideoFeedProps) => {
         className="w-full h-full object-cover transform -scale-x-100"
       />
       <div className="absolute inset-0 bg-black/20" />
+      {isActive && landmarks && landmarks.length > 0 && (
+        <svg className="absolute inset-0 w-full h-full transform -scale-x-100">
+          {landmarks.map((point, i) => (
+            <circle
+              key={`landmark-${i}`}
+              cx={point.x}
+              cy={point.y}
+              r="1"
+              fill="cyan"
+            />
+          ))}
+        </svg>
+      )}
     </div>
   );
 };
 
 export default VideoFeed;
-
