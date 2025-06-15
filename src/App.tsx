@@ -16,6 +16,7 @@ const Results = React.lazy(() => import("./pages/Results"));
 const Progress = React.lazy(() => import("./pages/Progress"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const DiagnosticPage = React.lazy(() => import("./pages/DiagnosticPage"));
+const AISettings = React.lazy(() => import("./pages/AISettings"));
 
 const PageLoader = () => (
   <div className="flex-grow flex items-center justify-center">
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/progress" element={<Progress />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/diagnostic" element={<DiagnosticPage />} />
+              <Route path="/ai-settings" element={<AISettings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

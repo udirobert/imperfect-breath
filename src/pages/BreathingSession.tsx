@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useBreathingSession } from "@/hooks/useBreathingSession";
@@ -8,20 +8,28 @@ import { useAIFeedback } from "@/hooks/useAIFeedback";
 
 import { SessionSetup } from "@/components/session/SessionSetup";
 import { SessionInProgress } from "@/components/session/SessionInProgress";
-import { CameraSetup } from "@/components/session/CameraSetup";
 
 const BreathingSession = () => {
   const { state, controls } = useBreathingSession();
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const isTracking = state.isRunning || state.sessionPhase === "camera-setup";
-  const { restlessnessScore, landmarks, trackingStatus, initializeCamera } =
-    useCameraTracking({
-      videoRef,
-      isTracking,
-    });
-  const showVideoFeed = state.sessionPhase !== "idle" && !state.isFinished;
+  // Keep camera tracking active during session phases
+  const isTracking = state.sessionPhase !== "idle" && !state.isFinished;
+
+  const {
+    restlessnessScore,
+    landmarks,
+    trackingStatus,
+    initializeCamera,
+    cleanup,
+  } = useCameraTracking({
+    videoRef,
+    isTracking,
+  });
+
+  // Show video feed during active phases
+  const showVideoFeed = isTracking;
 
   useAIFeedback({
     isRunning: state.isRunning,
@@ -33,13 +41,6 @@ const BreathingSession = () => {
   });
 
   const handleEndSession = () => {
-    // Stop camera feed before navigating away
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
-
     const pattern = BREATHING_PATTERNS[state.pattern.key];
     const oneCycleDuration = pattern.phases.reduce(
       (sum, phase) => sum + phase.duration,
@@ -50,7 +51,10 @@ const BreathingSession = () => {
     const finalBreathHoldTime = state.breathHoldTime;
     const finalRestlessnessScore = restlessnessScore;
 
+    // Clean up camera before ending session
+    cleanup();
     controls.endSession();
+
     navigate("/results", {
       state: {
         breathHoldTime: finalBreathHoldTime,
@@ -65,18 +69,6 @@ const BreathingSession = () => {
     return <SessionSetup state={state} controls={controls} />;
   }
 
-  if (state.sessionPhase === "camera-setup") {
-    return (
-      <CameraSetup
-        controls={controls}
-        videoRef={videoRef}
-        landmarks={landmarks}
-        trackingStatus={trackingStatus}
-        initializeCamera={initializeCamera}
-      />
-    );
-  }
-
   return (
     <SessionInProgress
       state={state}
@@ -88,6 +80,7 @@ const BreathingSession = () => {
       restlessnessScore={restlessnessScore}
       landmarks={landmarks}
       trackingStatus={trackingStatus}
+      initializeCamera={initializeCamera}
     />
   );
 };

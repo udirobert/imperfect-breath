@@ -51,7 +51,9 @@ const calculateCenterOfMass = (points: Point2D[]): Point2D => {
   };
 };
 
-const getStableReferencePoints = (landmarks: any): Point2D[] => {
+const getStableReferencePoints = (
+  landmarks: faceapi.FaceLandmarks68,
+): Point2D[] => {
   // Use multiple stable facial landmarks for better tracking
   const positions = landmarks.positions;
 
@@ -96,7 +98,7 @@ export const useCameraTracking = ({
 
   const loadModels = useCallback(async () => {
     try {
-      setTrackingStatus("INITIALIZING");
+      console.log("📚 Loading face detection models...");
 
       // Try multiple model loading strategies with different CDN sources
       const MODEL_STRATEGIES = [
@@ -162,6 +164,7 @@ export const useCameraTracking = ({
       }
 
       setModelsLoaded(true);
+      console.log("✅ Face detection models loaded successfully");
     } catch (error) {
       console.error("❌ Critical error loading face detection models:", error);
       setTrackingStatus("ERROR");
@@ -169,7 +172,15 @@ export const useCameraTracking = ({
   }, []);
 
   const calculateRestlessness = useCallback(
-    (detection: any) => {
+    (
+      detection:
+        | faceapi.WithFaceLandmarks<
+            { detection: faceapi.FaceDetection },
+            faceapi.FaceLandmarks68
+          >
+        | faceapi.FaceDetection
+        | null,
+    ) => {
       const now = Date.now();
 
       if (!detection) {
@@ -201,11 +212,13 @@ export const useCameraTracking = ({
       let newLandmarks: Keypoint[] = [];
       let currentCenter: Point2D;
 
-      if (detection.landmarks) {
-        newLandmarks = detection.landmarks.positions.map((p: any) => ({
+      // Type guard to check if detection has landmarks
+      if ("landmarks" in detection && detection.landmarks) {
+        newLandmarks = detection.landmarks.positions.map((p) => ({
           x: p.x,
           y: p.y,
         }));
+
         setLandmarks(newLandmarks);
 
         // Get stable reference points for movement calculation
@@ -214,13 +227,13 @@ export const useCameraTracking = ({
       } else {
         // Fallback to bounding box center if no landmarks
         let box;
-        if (detection.detection) {
+        if ("detection" in detection && detection.detection) {
           box = detection.detection.box;
-        } else if (detection.box) {
+        } else if ("box" in detection) {
           box = detection.box;
         } else {
-          // Last fallback - use detection as box directly
-          box = detection;
+          // Last fallback - extract box property directly
+          box = (detection as unknown as { box: faceapi.Box }).box;
         }
 
         currentCenter = {
@@ -306,11 +319,15 @@ export const useCameraTracking = ({
   );
 
   const detectionLoop = useCallback(async () => {
+    // Check if we should continue detection
+    if (!isTracking) {
+      console.log("🛑 Detection loop stopped - tracking disabled");
+      return;
+    }
+
     if (!videoRef.current) {
       console.log("❌ Video ref not available");
-      if (isTracking) {
-        requestRef.current = window.setTimeout(detectionLoop, 500);
-      }
+      requestRef.current = window.setTimeout(detectionLoop, 500);
       return;
     }
 
@@ -318,34 +335,57 @@ export const useCameraTracking = ({
       console.log(
         `⏳ Video not ready, readyState: ${videoRef.current.readyState}, srcObject: ${!!videoRef.current.srcObject}`,
       );
-      if (isTracking) {
-        requestRef.current = window.setTimeout(detectionLoop, 500);
-      }
+      requestRef.current = window.setTimeout(detectionLoop, 500);
       return;
     }
 
-    console.log("🔍 Running detection on frame...");
+    if (!videoRef.current.srcObject) {
+      console.log("❌ No camera stream available");
+      requestRef.current = window.setTimeout(detectionLoop, 1000);
+      return;
+    }
 
     try {
-      // Simple detection first
-      const detection = await faceapi.detectSingleFace(
-        videoRef.current,
-        new faceapi.TinyFaceDetectorOptions({
-          inputSize: 320,
-          scoreThreshold: 0.5,
-        }),
-      );
-
-      console.log(
-        "Detection result:",
-        detection ? "✅ Face found" : "❌ No face",
-      );
+      // Try detection with landmarks first, fallback to simple detection
+      let detection;
+      try {
+        detection = await faceapi
+          .detectSingleFace(
+            videoRef.current,
+            new faceapi.TinyFaceDetectorOptions({
+              inputSize: 320,
+              scoreThreshold: 0.5,
+            }),
+          )
+          .withFaceLandmarks();
+      } catch (landmarkError) {
+        // Fallback to detection only
+        detection = await faceapi.detectSingleFace(
+          videoRef.current,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 320,
+            scoreThreshold: 0.5,
+          }),
+        );
+      }
 
       if (detection) {
-        console.log("Face box:", detection.box);
         setTrackingStatus("TRACKING");
-        setLandmarks([]);
         detectionFailureCount.current = 0;
+
+        // Handle landmarks if available
+        if ("landmarks" in detection && detection.landmarks) {
+          const newLandmarks = detection.landmarks.positions.map((p) => ({
+            x: p.x,
+            y: p.y,
+          }));
+
+          setLandmarks(newLandmarks);
+          calculateRestlessness(detection);
+        } else {
+          setLandmarks([]);
+          calculateRestlessness(detection);
+        }
       } else {
         detectionFailureCount.current++;
         if (detectionFailureCount.current > 5) {
@@ -353,7 +393,7 @@ export const useCameraTracking = ({
         }
       }
     } catch (error) {
-      console.error("Detection error:", error);
+      console.warn("Detection error:", error);
       detectionFailureCount.current++;
       if (detectionFailureCount.current > 10) {
         setTrackingStatus("ERROR");
@@ -361,14 +401,16 @@ export const useCameraTracking = ({
       }
     }
 
+    // Continue detection loop if tracking is still active
     if (isTracking) {
       requestRef.current = window.setTimeout(detectionLoop, 500);
     }
-  }, [videoRef, isTracking]);
+  }, [videoRef, isTracking, calculateRestlessness]);
 
   // Camera initialization function (to be called by user interaction)
   const initializeCamera = useCallback(async () => {
     if (!videoRef.current || videoRef.current.srcObject) {
+      console.log("📷 Camera already initialized or video ref not available");
       return;
     }
 
@@ -387,16 +429,23 @@ export const useCameraTracking = ({
       const video = videoRef.current;
       if (video) {
         video.srcObject = stream;
-        console.log("✅ Camera stream set");
+        console.log("✅ Camera stream set to video element");
         setTrackingStatus("INITIALIZING");
 
         // Wait for video to be ready
         const onMetadataLoaded = () => {
           console.log("📹 Video metadata loaded, ready for detection");
-          video.play();
-          // Start detection once video is ready
+          video.play().catch(console.error);
+
+          // Start detection once video is ready and tracking is active
           setTimeout(() => {
-            if (isTracking && modelsLoaded && videoRef.current?.srcObject) {
+            if (
+              isTracking &&
+              modelsLoaded &&
+              video.srcObject &&
+              video.readyState >= 2
+            ) {
+              console.log("🚀 Starting initial detection loop");
               detectionLoop();
             }
           }, 1000);
@@ -408,7 +457,7 @@ export const useCameraTracking = ({
         setTimeout(() => {
           if (video && video.readyState === 0) {
             console.log("🔄 Attempting to play video...");
-            video.play();
+            video.play().catch(console.error);
           }
         }, 500);
       }
@@ -435,20 +484,52 @@ export const useCameraTracking = ({
       if (requestRef.current) {
         clearTimeout(requestRef.current);
       }
-      setTrackingStatus("IDLE");
-      setLandmarks([]);
+      // Don't immediately clear video stream - only stop detection loop
+      // This preserves the camera stream during session transitions
+      console.log("⏸️ Pausing detection (keeping camera stream)");
+    } else if (isTracking && modelsLoaded) {
+      // Start/resume detection when tracking is enabled
+      if (videoRef.current?.srcObject) {
+        console.log("▶️ Resuming detection loop");
+        detectionLoop();
+      } else {
+        console.log("⚠️ Tracking enabled but no camera stream available");
+      }
     }
-  }, [isTracking]);
+  }, [isTracking, modelsLoaded, detectionLoop, videoRef]);
 
   // Cleanup camera stream when component unmounts
   useEffect(() => {
-    const video = videoRef.current;
     return () => {
+      const video = videoRef.current;
       if (video?.srcObject) {
         const stream = video.srcObject as MediaStream;
         stream.getTracks().forEach((track) => track.stop());
       }
     };
+  }, [videoRef]);
+
+  // Camera cleanup function
+  const cleanup = useCallback(() => {
+    console.log("🧹 Cleaning up camera stream...");
+    if (requestRef.current) {
+      clearTimeout(requestRef.current);
+    }
+
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      console.log("🧹 Cleaning up camera stream");
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+      videoRef.current.srcObject = null;
+    }
+
+    setTrackingStatus("IDLE");
+    setLandmarks([]);
+    setRestlessnessScore(0);
+    movementHistory.current = [];
+    detectionFailureCount.current = 0;
   }, [videoRef]);
 
   return {
@@ -457,5 +538,6 @@ export const useCameraTracking = ({
     trackingStatus,
     isModelsLoaded: modelsLoaded,
     initializeCamera,
+    cleanup,
   };
 };

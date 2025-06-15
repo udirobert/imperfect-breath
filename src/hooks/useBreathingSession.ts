@@ -1,20 +1,31 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { BREATHING_PATTERNS, BreathingPattern, BreathingPhaseName } from '@/lib/breathingPatterns';
-import { useVoiceGuidance } from './useVoiceGuidance';
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  BREATHING_PATTERNS,
+  BreathingPattern,
+  BreathingPhaseName,
+} from "@/lib/breathingPatterns";
+import { useVoiceGuidance } from "./useVoiceGuidance";
 
-type SessionPhase = BreathingPhaseName | 'breath-hold' | 'finished' | 'idle' | 'camera-setup';
+type SessionPhase =
+  | BreathingPhaseName
+  | "breath-hold"
+  | "finished"
+  | "idle"
+  | "camera-setup";
 type PatternKey = keyof typeof BREATHING_PATTERNS;
 
 export const useBreathingSession = () => {
-  const [pattern, setPattern] = useState<BreathingPattern>(BREATHING_PATTERNS.box);
-  const [sessionPhase, setSessionPhase] = useState<SessionPhase>('idle');
-  const [phaseText, setPhaseText] = useState('Begin your session when ready.');
+  const [pattern, setPattern] = useState<BreathingPattern>(
+    BREATHING_PATTERNS.box,
+  );
+  const [sessionPhase, setSessionPhase] = useState<SessionPhase>("idle");
+  const [phaseText, setPhaseText] = useState("Begin your session when ready.");
   const [isRunning, setIsRunning] = useState(false);
-  
+
   const [cycleCount, setCycleCount] = useState(0);
   const [phaseCountdown, setPhaseCountdown] = useState(0);
   const [breathHoldTime, setBreathHoldTime] = useState(0);
-  
+
   const [audioEnabled, setAudioEnabled] = useState(true);
   const { speak } = useVoiceGuidance(audioEnabled);
 
@@ -27,37 +38,39 @@ export const useBreathingSession = () => {
 
   const cleanupTimers = () => {
     if (phaseIntervalRef.current) clearTimeout(phaseIntervalRef.current);
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    if (breathHoldIntervalRef.current) clearInterval(breathHoldIntervalRef.current);
+    if (countdownIntervalRef.current)
+      clearInterval(countdownIntervalRef.current);
+    if (breathHoldIntervalRef.current)
+      clearInterval(breathHoldIntervalRef.current);
     phaseIntervalRef.current = null;
     countdownIntervalRef.current = null;
     breathHoldIntervalRef.current = null;
   };
 
-  const startBreathHold = () => {
+  const startBreathHold = useCallback(() => {
     cleanupTimers();
-    setSessionPhase('breath-hold');
-    setPhaseText('Hold your breath');
-    speak('Hold your breath. Relax.');
+    setSessionPhase("breath-hold");
+    setPhaseText("Hold your breath");
+    speak("Hold your breath. Relax.");
     setBreathHoldTime(0);
     breathHoldIntervalRef.current = setInterval(() => {
-      setBreathHoldTime(prev => prev + 1);
+      setBreathHoldTime((prev) => prev + 1);
     }, 1000);
-  };
-  
+  }, [speak]);
+
   const advancePhase = useCallback(() => {
     if (cycleCount >= pattern.cycles) {
       if (pattern.hasBreathHold) {
         startBreathHold();
       } else {
-        setSessionPhase('finished');
-        setPhaseText('Session Complete');
+        setSessionPhase("finished");
+        setPhaseText("Session Complete");
         setIsRunning(false);
         cleanupTimers();
       }
       return;
     }
-    
+
     const currentPhase = pattern.phases[currentPhaseIndexRef.current];
     setSessionPhase(currentPhase.name);
     setPhaseText(currentPhase.text);
@@ -66,39 +79,45 @@ export const useBreathingSession = () => {
 
     // Countdown timer for the phase
     let remaining = currentPhase.duration;
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    if (countdownIntervalRef.current)
+      clearInterval(countdownIntervalRef.current);
     countdownIntervalRef.current = setInterval(() => {
       remaining -= 1000;
       setPhaseCountdown(remaining / 1000);
       if (remaining <= 0) {
-        if(countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        if (countdownIntervalRef.current)
+          clearInterval(countdownIntervalRef.current);
       }
     }, 1000);
 
     if (phaseIntervalRef.current) clearTimeout(phaseIntervalRef.current);
     phaseIntervalRef.current = setTimeout(() => {
-      currentPhaseIndexRef.current = (currentPhaseIndexRef.current + 1) % pattern.phases.length;
+      currentPhaseIndexRef.current =
+        (currentPhaseIndexRef.current + 1) % pattern.phases.length;
       if (currentPhaseIndexRef.current === 0) {
-        setCycleCount(prev => prev + 1);
+        setCycleCount((prev) => prev + 1);
       }
       advancePhase();
     }, currentPhase.duration);
+  }, [cycleCount, pattern, speak, startBreathHold]);
 
-  }, [cycleCount, pattern, speak]);
-  
-  
   useEffect(() => {
-    if (isRunning && sessionPhase !== 'breath-hold' && sessionPhase !== 'idle' && sessionPhase !== 'finished') {
+    if (
+      isRunning &&
+      sessionPhase !== "breath-hold" &&
+      sessionPhase !== "idle" &&
+      sessionPhase !== "finished"
+    ) {
       advancePhase();
     } else {
       cleanupTimers();
-      if (sessionPhase === 'breath-hold') {
+      if (sessionPhase === "breath-hold") {
         startBreathHold();
       }
     }
     return cleanupTimers;
-  }, [isRunning, sessionPhase]);
-  
+  }, [isRunning, sessionPhase, advancePhase, startBreathHold]);
+
   const startSession = () => {
     cleanupTimers();
     currentPhaseIndexRef.current = 0;
@@ -110,13 +129,13 @@ export const useBreathingSession = () => {
   };
 
   const prepareSession = () => {
-    setSessionPhase('camera-setup');
-    setPhaseText('Prepare your posture.');
-    speak('Prepare for tracking.');
+    setSessionPhase("camera-setup");
+    setPhaseText("Prepare your posture.");
+    speak("Prepare for tracking.");
   };
 
   const togglePause = () => {
-    if (sessionPhase === 'breath-hold') {
+    if (sessionPhase === "breath-hold") {
       endSession();
       return;
     }
@@ -125,11 +144,11 @@ export const useBreathingSession = () => {
     }
     setIsRunning(!isRunning);
   };
-  
+
   const endSession = () => {
     setIsRunning(false);
-    setSessionPhase('finished');
-    setPhaseText('Session Complete');
+    setSessionPhase("finished");
+    setPhaseText("Session Complete");
     cleanupTimers();
     window.speechSynthesis.cancel();
   };
@@ -137,14 +156,14 @@ export const useBreathingSession = () => {
   const selectPattern = (key: PatternKey) => {
     if (BREATHING_PATTERNS[key]) {
       setPattern(BREATHING_PATTERNS[key]);
-      setSessionPhase('idle');
-      setPhaseText('Begin your session when ready.');
+      setSessionPhase("idle");
+      setPhaseText("Begin your session when ready.");
       window.speechSynthesis.cancel();
     }
   };
 
-  const toggleAudio = () => setAudioEnabled(prev => !prev);
-  
+  const toggleAudio = () => setAudioEnabled((prev) => !prev);
+
   return {
     state: {
       pattern,
@@ -155,7 +174,7 @@ export const useBreathingSession = () => {
       phaseCountdown,
       breathHoldTime,
       audioEnabled,
-      isFinished: sessionPhase === 'finished',
+      isFinished: sessionPhase === "finished",
     },
     controls: {
       prepareSession,
