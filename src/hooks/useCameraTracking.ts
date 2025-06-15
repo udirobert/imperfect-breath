@@ -1,5 +1,4 @@
 
-```typescript
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
@@ -132,4 +131,3 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
 
   return { restlessnessScore, landmarks };
 };
-```
