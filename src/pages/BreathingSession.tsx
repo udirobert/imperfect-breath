@@ -16,7 +16,7 @@ const BreathingSession = () => {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  const isTracking = state.sessionPhase === 'camera-setup' || state.sessionPhase === 'breath-hold';
+  const isTracking = state.isRunning || state.sessionPhase === 'camera-setup';
   const { restlessnessScore, landmarks, trackingStatus } = useCameraTracking({ videoRef, isTracking });
   const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished;
 

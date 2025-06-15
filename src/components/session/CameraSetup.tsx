@@ -23,7 +23,7 @@ export const CameraSetup = ({ controls, videoRef, landmarks, trackingStatus }: C
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-2">Camera Setup</h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Position your face in the center of the video feed. This allows us to measure your stillness during the breath hold phase.
+          Position your face in the center of the video feed. This allows us to measure your stillness and focus during the session.
         </p>
       </div>
 

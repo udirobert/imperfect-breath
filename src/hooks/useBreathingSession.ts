@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BREATHING_PATTERNS, BreathingPattern, BreathingPhaseName } from '@/lib/breathingPatterns';
 import { useVoiceGuidance } from './useVoiceGuidance';
@@ -111,13 +110,9 @@ export const useBreathingSession = () => {
   };
 
   const prepareSession = () => {
-    if (pattern.hasBreathHold) {
-      setSessionPhase('camera-setup');
-      setPhaseText('Prepare your posture.');
-      speak('Prepare for tracking.');
-    } else {
-      startSession();
-    }
+    setSessionPhase('camera-setup');
+    setPhaseText('Prepare your posture.');
+    speak('Prepare for tracking.');
   };
 
   const togglePause = () => {
