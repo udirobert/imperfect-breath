@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,11 +10,12 @@ import Layout from "./components/Layout";
 const queryClient = new QueryClient();
 
 // Lazy load pages for better performance
-const Index = React.lazy(() => import('./pages/Index'));
-const BreathingSession = React.lazy(() => import('./pages/BreathingSession'));
-const Results = React.lazy(() => import('./pages/Results'));
-const Progress = React.lazy(() => import('./pages/Progress'));
-const Auth = React.lazy(() => import('./pages/Auth'));
+const Index = React.lazy(() => import("./pages/Index"));
+const BreathingSession = React.lazy(() => import("./pages/BreathingSession"));
+const Results = React.lazy(() => import("./pages/Results"));
+const Progress = React.lazy(() => import("./pages/Progress"));
+const Auth = React.lazy(() => import("./pages/Auth"));
+const DiagnosticPage = React.lazy(() => import("./pages/DiagnosticPage"));
 
 const PageLoader = () => (
   <div className="flex-grow flex items-center justify-center">
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/results" element={<Results />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/diagnostic" element={<DiagnosticPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
