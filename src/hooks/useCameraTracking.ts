@@ -31,7 +31,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
         const detectorConfig: faceLandmarksDetection.MediaPipeFaceMeshTfjsModelConfig = {
           runtime: 'tfjs',
           maxFaces: 1,
-          refineLandmarks: true,
+          refineLandmarks: false, // Performance: disabled landmark refinement
         };
         const loadedDetector = await faceLandmarksDetection.createDetector(model, detectorConfig);
         setDetector(loadedDetector);
@@ -74,7 +74,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
         const score = calculateRestlessness(faces);
 
         scoreHistory.current.push(score);
-        if (scoreHistory.current.length > 15) { // Smoothing over ~0.25s
+        if (scoreHistory.current.length > 5) { // Smoothing over ~0.5s at 10fps
           scoreHistory.current.shift();
         }
         const avgScore = scoreHistory.current.reduce((a, b) => a + b, 0) / scoreHistory.current.length;
@@ -85,7 +85,8 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
       }
     }
     if (isTracking) {
-      requestRef.current = requestAnimationFrame(detectionLoop);
+      // Performance: Throttle the loop to run at ~10 FPS
+      requestRef.current = window.setTimeout(detectionLoop, 100);
     }
   }, [detector, videoRef, isTracking, calculateRestlessness]);
 
@@ -94,20 +95,19 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
       lastPosition.current = null;
       scoreHistory.current = [];
       setSmoothedScore(0);
-      requestRef.current = requestAnimationFrame(detectionLoop);
+      detectionLoop(); // Start the loop
     } else {
       if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
+        clearTimeout(requestRef.current);
       }
     }
 
     return () => {
       if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
+        clearTimeout(requestRef.current);
       }
     };
   }, [isTracking, detector, detectionLoop]);
 
   return { restlessnessScore: smoothedScore };
 };
-

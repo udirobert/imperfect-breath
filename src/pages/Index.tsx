@@ -7,7 +7,7 @@ const Index = () => {
     <div className="text-center flex flex-col items-center animate-fade-in">
       <h1 
         style={{ animationDelay: '200ms', opacity: 0 }} 
-        className="text-5xl md:text-7xl font-bold text-foreground mb-4 animate-fade-in"
+        className="text-5xl md:text-6xl font-bold text-foreground mb-4 animate-fade-in"
       >
         Find your center.
       </h1>

@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+
+import React, { useRef, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Pause, Play, StopCircle, Volume2, VolumeX } from 'lucide-react';
 
@@ -8,10 +9,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import BreathingAnimation from '@/components/BreathingAnimation';
-import VideoFeed from '@/components/VideoFeed';
+// import VideoFeed from '@/components/VideoFeed';
 import { useBreathingSession } from '@/hooks/useBreathingSession';
 import { BREATHING_PATTERNS, BreathingPhaseName } from '@/lib/breathingPatterns';
 import { useCameraTracking } from '@/hooks/useCameraTracking';
+
+const VideoFeed = lazy(() => import('@/components/VideoFeed'));
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -32,9 +35,24 @@ const BreathingSession = () => {
     controls.endSession();
     navigate('/results', { state: { 
       breathHoldTime: state.breathHoldTime,
-      restlessnessScore 
+      restlessnessScore,
+      patternName: state.pattern.key,
     } });
   };
+  
+  const originalHandleEndSession = handleEndSession;
+  handleEndSession = () => {
+    const pattern = BREATHING_PATTERNS[state.pattern.key];
+    const sessionDuration = pattern.cycles * pattern.phases.reduce((sum, phase) => sum + phase.duration, 0) / 1000;
+  
+    controls.endSession();
+    navigate('/results', { state: { 
+      breathHoldTime: state.breathHoldTime,
+      restlessnessScore,
+      patternName: state.pattern.key,
+      sessionDuration
+    } });
+  }
 
   if (state.sessionPhase === 'idle' || state.isFinished) {
     return (
@@ -117,7 +135,7 @@ const BreathingSession = () => {
         )}
       </div>
 
-      <div className="z-20 mt-auto mb-8 flex items-center space-x-4">
+      <div className="z-20 mt-auto mb-8 flex items-center justify-center space-x-4">
         <Button variant="ghost" size="icon" onClick={controls.toggleAudio} className="rounded-full w-16 h-16">
           {state.audioEnabled ? <Volume2 size={32} /> : <VolumeX size={32} />}
         </Button>
@@ -129,7 +147,11 @@ const BreathingSession = () => {
         </Button>
       </div>
 
-      {showVideoFeed && <VideoFeed videoRef={videoRef} isActive={showVideoFeed} />}
+      {showVideoFeed && (
+        <Suspense fallback={<div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg bg-secondary animate-pulse" />}>
+          <VideoFeed videoRef={videoRef} isActive={showVideoFeed} />
+        </Suspense>
+      )}
       
       {isTracking && (
         <div className="absolute bottom-4 left-4 bg-gray-900/80 text-white p-2 rounded-lg text-xs z-30 font-mono animate-fade-in">

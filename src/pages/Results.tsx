@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,18 +26,13 @@ const Results = () => {
 
   useEffect(() => {
     if (sessionData.patternName && !hasSavedRef.current) {
-      const pattern = BREATHING_PATTERNS[sessionData.patternName];
-      if (pattern) {
-        const sessionDuration = pattern.cycles * pattern.phases.reduce((sum, phase) => sum + phase.duration, 0) / 1000;
-        
         saveSession({
           breathHoldTime: sessionData.breathHoldTime || 0,
           restlessnessScore: sessionData.restlessnessScore || 0,
-          sessionDuration: sessionDuration,
+          sessionDuration: sessionData.sessionDuration || 0,
           patternName: sessionData.patternName,
         });
         hasSavedRef.current = true;
-      }
     }
   }, [sessionData, saveSession]);
 

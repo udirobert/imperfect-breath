@@ -1,16 +1,25 @@
 
+import React, { Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import BreathingSession from "./pages/BreathingSession";
-import Results from "./pages/Results";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 
 const queryClient = new QueryClient();
+
+// Lazy load pages for better performance
+const Index = React.lazy(() => import('./pages/Index'));
+const BreathingSession = React.lazy(() => import('./pages/BreathingSession'));
+const Results = React.lazy(() => import('./pages/Results'));
+
+const PageLoader = () => (
+  <div className="flex-grow flex items-center justify-center">
+    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -19,12 +28,14 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Layout>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/session" element={<BreathingSession />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/session" element={<BreathingSession />} />
+              <Route path="/results" element={<Results />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </Layout>
       </BrowserRouter>
     </TooltipProvider>
