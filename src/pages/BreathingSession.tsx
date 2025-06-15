@@ -26,6 +26,9 @@ const BreathingSession = () => {
     isRunning: state.isRunning,
     isFinished: state.isFinished,
     speak: controls.speak,
+    cycleCount: state.cycleCount,
+    sessionPhase: state.sessionPhase,
+    patternKey: state.pattern.key,
   });
 
   const handleEndSession = () => {
