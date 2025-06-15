@@ -1,7 +1,8 @@
 
-import React, { useRef, lazy, Suspense } from 'react';
+import React, { useRef, lazy, Suspense, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Pause, Play, StopCircle, Volume2, VolumeX } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +33,50 @@ const BreathingSession = () => {
   const isTracking = state.sessionPhase === 'breath-hold' && !isDemoMode;
   const { restlessnessScore } = useCameraTracking({ videoRef, isTracking });
   const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished && !isDemoMode;
+
+  useEffect(() => {
+    if (!isDemoMode || !state.isRunning || state.isFinished) {
+      return;
+    }
+
+    const feedbackMessages = [
+      "Your posture is very stable. Excellent focus.",
+      "Slight movement detected. Try to find complete stillness.",
+      "Breathing rhythm looks exceptionally steady.",
+      "A minor adjustment in posture was noted. Resettling.",
+      "The stillness in your upper body is indicative of a calm state.",
+      "Your breath appears deep and regular.",
+      "Micro-movements have decreased, showing deeper relaxation.",
+    ];
+
+    let timeoutId: NodeJS.Timeout;
+
+    const showRandomFeedback = () => {
+      // Guard against showing feedback after session has ended
+      if (!state.isRunning || state.isFinished) {
+         clearTimeout(timeoutId);
+         return;
+      }
+      
+      const message = feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
+      toast.info("Biometric Feedback (Demo)", {
+        description: message,
+        duration: 5000,
+      });
+
+      const nextInterval = (Math.random() * 30 + 30) * 1000; // 30-60 seconds
+      timeoutId = setTimeout(showRandomFeedback, nextInterval);
+    };
+    
+    // Start with an initial delay
+    const initialDelay = (Math.random() * 15 + 15) * 1000; // 15-30 seconds for first feedback
+    timeoutId = setTimeout(showRandomFeedback, initialDelay);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [isDemoMode, state.isRunning, state.isFinished]);
+
 
   const handleEndSession = () => {
     const pattern = BREATHING_PATTERNS[state.pattern.key];
