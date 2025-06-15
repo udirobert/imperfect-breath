@@ -6,6 +6,7 @@ import { useBreathingSession } from '@/hooks/useBreathingSession';
 import { SessionHeader } from './SessionHeader';
 import { SessionControls } from './SessionControls';
 import type { Keypoint } from '@tensorflow-models/face-landmarks-detection';
+import type { TrackingStatus } from '@/hooks/useCameraTracking';
 
 const VideoFeed = lazy(() => import('@/components/VideoFeed'));
 
@@ -18,6 +19,7 @@ type SessionInProgressProps = {
   isTracking: boolean;
   restlessnessScore: number;
   landmarks: Keypoint[];
+  trackingStatus: TrackingStatus;
 };
 
 export const SessionInProgress = ({
@@ -29,6 +31,7 @@ export const SessionInProgress = ({
   isTracking,
   restlessnessScore,
   landmarks,
+  trackingStatus,
 }: SessionInProgressProps) => {
   return (
     <div className="flex-grow flex flex-col items-center justify-center w-full relative animate-fade-in">
@@ -45,7 +48,12 @@ export const SessionInProgress = ({
 
       {showVideoFeed && (
         <Suspense fallback={<div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg bg-secondary animate-pulse" />}>
-          <VideoFeed videoRef={videoRef} isActive={showVideoFeed} landmarks={landmarks} />
+          <VideoFeed
+            videoRef={videoRef}
+            isActive={showVideoFeed}
+            landmarks={landmarks}
+            trackingStatus={trackingStatus}
+          />
         </Suspense>
       )}
       

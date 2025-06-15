@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,7 +17,7 @@ const BreathingSession = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const isTracking = state.sessionPhase === 'breath-hold' && !isDemoMode;
-  const { restlessnessScore, landmarks } = useCameraTracking({ videoRef, isTracking });
+  const { restlessnessScore, landmarks, trackingStatus } = useCameraTracking({ videoRef, isTracking });
   const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished && !isDemoMode;
 
   useDemoFeedback({
@@ -74,6 +73,7 @@ const BreathingSession = () => {
       isTracking={isTracking}
       restlessnessScore={restlessnessScore}
       landmarks={landmarks}
+      trackingStatus={trackingStatus}
     />
   );
 };

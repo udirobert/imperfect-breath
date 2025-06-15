@@ -1,9 +1,10 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import { Face, Keypoint, FaceLandmarksDetector } from '@tensorflow-models/face-landmarks-detection';
+
+export type TrackingStatus = 'INITIALIZING' | 'TRACKING' | 'NO_FACE' | 'IDLE';
 
 type UseCameraTrackingProps = {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -25,6 +26,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
   const [detector, setDetector] = useState<FaceLandmarksDetector | null>(null);
   const [restlessnessScore, setRestlessnessScore] = useState(0);
   const [landmarks, setLandmarks] = useState<Keypoint[]>([]);
+  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus>('IDLE');
 
   const requestRef = useRef<number>();
   const lastPosition = useRef<Point2D | null>(null);
@@ -53,9 +55,13 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
 
   const calculateRestlessness = useCallback((faces: Face[]) => {
     if (faces.length === 0) {
+      setTrackingStatus('NO_FACE');
       lastPosition.current = null;
+      setLandmarks([]);
       return;
     }
+    setTrackingStatus('TRACKING');
+
     const newLandmarks = faces[0].keypoints;
     setLandmarks(newLandmarks || []);
 
@@ -109,6 +115,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
 
   useEffect(() => {
     if (isTracking && detector) {
+      setTrackingStatus('INITIALIZING');
       // Reset stats for the new tracking session
       lastPosition.current = null;
       accumulatedJitter.current = 0;
@@ -120,6 +127,8 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
       if (requestRef.current) {
         clearTimeout(requestRef.current);
       }
+      setTrackingStatus('IDLE');
+      setLandmarks([]);
     }
 
     return () => {
@@ -129,5 +138,5 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
     };
   }, [isTracking, detector, detectionLoop]);
 
-  return { restlessnessScore, landmarks };
+  return { restlessnessScore, landmarks, trackingStatus };
 };
