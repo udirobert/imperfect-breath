@@ -1,0 +1,81 @@
+
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { BREATHING_PATTERNS } from '@/lib/breathingPatterns';
+import { useBreathingSession } from '@/hooks/useBreathingSession';
+
+type SessionSetupProps = {
+  state: ReturnType<typeof useBreathingSession>['state'];
+  controls: ReturnType<typeof useBreathingSession>['controls'];
+};
+
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const secs = (seconds % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}`;
+};
+
+export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
+  return (
+    <div className="flex flex-col items-center justify-center text-center animate-fade-in w-full max-w-md mx-auto">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-2xl">{state.isFinished ? "Session Complete!" : "Prepare Your Session"}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {state.isFinished ? (
+            <div className="text-center space-y-4">
+               <p>You held your breath for <span className="font-bold">{formatTime(state.breathHoldTime)}</span>.</p>
+               <p>Well done. Take a moment to notice how you feel.</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label className="text-lg mb-2 block">Choose Your Rhythm</Label>
+                <RadioGroup
+                  defaultValue={state.pattern.key}
+                  onValueChange={(value) => controls.selectPattern(value as any)}
+                  className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+                >
+                  {Object.values(BREATHING_PATTERNS).map(p => (
+                    <div key={p.key}>
+                      <RadioGroupItem value={p.key} id={p.key} className="peer sr-only" />
+                      <Label
+                        htmlFor={p.key}
+                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
+                      >
+                        {p.name}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="audio-switch" className="text-lg">Audio Guidance</Label>
+                <Switch
+                  id="audio-switch"
+                  checked={state.audioEnabled}
+                  onCheckedChange={controls.toggleAudio}
+                />
+              </div>
+            </>
+          )}
+          <div className="flex gap-4">
+            {state.isFinished ? (
+              <Button asChild size="lg" className="w-full"><Link to="/">Back to Home</Link></Button>
+            ) : (
+              <Button onClick={controls.startSession} size="lg" className="w-full">
+                Begin Session
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
