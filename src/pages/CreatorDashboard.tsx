@@ -24,9 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/hooks/useAuth";
-import { ipRegistrationService } from "@/lib/ip/registration";
-import { licenseManager } from "@/lib/licensing/licenseManager";
+import { demoStoryIntegration } from "@/lib/story/storyClient";
 import type { CustomPattern } from "@/lib/ai/providers";
 import type {
   IPRegistration,
@@ -119,56 +117,43 @@ const CreatorDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [royaltyPercentage, setRoyaltyPercentage] = useState(10);
 
-  const { user, wallet, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const loadCreatorData = useCallback(async () => {
-    if (!user) return;
-
     setLoading(true);
     try {
-      // Load creator's patterns and stats
-      // In production, these would be API calls
-      console.log("Loading creator data for user:", user.id);
+      // Load creator's patterns and stats (demo mode)
+      console.log("Loading demo creator data");
+      // Simulate loading delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
     } catch (error) {
       console.error("Failed to load creator data:", error);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/auth");
-      return;
-    }
+    // Demo mode - no auth required
     loadCreatorData();
-  }, [isAuthenticated, navigate, loadCreatorData]);
+  }, [loadCreatorData]);
 
   const handleRegisterIP = async (pattern: PatternWithStats) => {
-    if (!wallet) {
-      console.error("Wallet not connected");
-      return;
-    }
-
     setLoading(true);
     try {
-      const registration = await ipRegistrationService.registerPattern(
-        pattern,
-        wallet,
-        royaltyPercentage,
-      );
+      // Demo mode - use Story Protocol demo integration
+      const ipAssetId = await demoStoryIntegration.registerPatternDemo(pattern);
 
       // Update pattern with IP registration info
       setPatterns((prev) =>
         prev.map((p) =>
           p.id === pattern.id
-            ? { ...p, ipRegistered: true, ipHash: registration.ipHash }
-            : p,
-        ),
+            ? { ...p, ipRegistered: true, ipHash: ipAssetId }
+            : p
+        )
       );
 
-      console.log("IP registered successfully:", registration);
+      console.log("✅ Demo IP registered successfully:", ipAssetId);
     } catch (error) {
       console.error("IP registration failed:", error);
     } finally {
@@ -191,7 +176,7 @@ const CreatorDashboard = () => {
   };
 
   const handleEditPattern = (pattern: PatternWithStats) => {
-    navigate("/creator", { state: { editPattern: pattern } });
+    navigate("/create-pattern", { state: { editPattern: pattern } });
   };
 
   const handleSharePattern = async (pattern: PatternWithStats) => {
@@ -325,9 +310,7 @@ const CreatorDashboard = () => {
     </Card>
   );
 
-  if (!isAuthenticated) {
-    return null; // Will redirect in useEffect
-  }
+  // Demo mode - no auth required
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -343,7 +326,7 @@ const CreatorDashboard = () => {
             <Settings className="h-4 w-4 mr-2" />
             Settings
           </Button>
-          <Button onClick={() => navigate("/creator")}>
+          <Button onClick={() => navigate("/create-pattern")}>
             <Plus className="h-4 w-4 mr-2" />
             Create Pattern
           </Button>
@@ -485,7 +468,7 @@ const CreatorDashboard = () => {
                 <div className="space-y-3">
                   {["stress", "focus", "sleep", "energy"].map((category) => {
                     const categoryPatterns = patterns.filter(
-                      (p) => p.category === category,
+                      (p) => p.category === category
                     );
                     const percentage =
                       (categoryPatterns.length / patterns.length) * 100;

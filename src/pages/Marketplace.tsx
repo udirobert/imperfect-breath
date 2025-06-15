@@ -144,11 +144,10 @@ const Marketplace = () => {
     useState<MarketplacePattern | null>(null);
   const [showLicenseDialog, setShowLicenseDialog] = useState(false);
   const [availableLicenses, setAvailableLicenses] = useState<LicenseTerms[]>(
-    [],
+    []
   );
   const [loading, setLoading] = useState(false);
 
-  const { user, wallet, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const applyFilters = useCallback(() => {
@@ -163,22 +162,22 @@ const Marketplace = () => {
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
           pattern.tags.some((tag) =>
-            tag.toLowerCase().includes(searchQuery.toLowerCase()),
-          ),
+            tag.toLowerCase().includes(searchQuery.toLowerCase())
+          )
       );
     }
 
     // Category filter
     if (filters.category) {
       filtered = filtered.filter(
-        (pattern) => pattern.category === filters.category,
+        (pattern) => pattern.category === filters.category
       );
     }
 
     // Difficulty filter
     if (filters.difficulty) {
       filtered = filtered.filter(
-        (pattern) => pattern.difficulty === filters.difficulty,
+        (pattern) => pattern.difficulty === filters.difficulty
       );
     }
 
@@ -187,14 +186,14 @@ const Marketplace = () => {
       filtered = filtered.filter(
         (pattern) =>
           pattern.price >= filters.priceRange!.min &&
-          pattern.price <= filters.priceRange!.max,
+          pattern.price <= filters.priceRange!.max
       );
     }
 
     // Rating filter
     if (filters.rating) {
       filtered = filtered.filter(
-        (pattern) => pattern.rating >= filters.rating!,
+        (pattern) => pattern.rating >= filters.rating!
       );
     }
 
@@ -229,7 +228,7 @@ const Marketplace = () => {
 
     try {
       const licenses = await licenseManager.getAvailableLicenseTerms(
-        pattern.id,
+        pattern.id
       );
       setAvailableLicenses(licenses);
     } catch (error) {
@@ -240,28 +239,38 @@ const Marketplace = () => {
   };
 
   const handleLicensePurchase = async (terms: LicenseTerms) => {
-    if (!user || !wallet || !selectedPattern) {
-      navigate("/auth");
+    if (!selectedPattern) {
       return;
     }
 
     setLoading(true);
 
     try {
-      const license = await licenseManager.purchaseLicense(
-        selectedPattern.id,
-        terms,
-        wallet,
+      // Demo mode - simulate license purchase
+      console.log(
+        "🎯 DEMO: Purchasing license for pattern:",
+        selectedPattern.name
       );
+      console.log("License terms:", terms);
 
-      console.log("License purchased successfully:", license);
+      // Simulate purchase delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const mockLicenseId = `license_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+      console.log("✅ Demo license purchased successfully:", mockLicenseId);
+
       setShowLicenseDialog(false);
 
-      // Navigate to user's library or show success message
-      navigate("/progress"); // Assuming this shows user's patterns
+      // Show success and navigate to progress
+      alert(
+        `Demo: License purchased successfully! License ID: ${mockLicenseId}`
+      );
+      navigate("/progress");
     } catch (error) {
       console.error("License purchase failed:", error);
-      // Show error message to user
+      alert("Demo: License purchase failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -274,7 +283,9 @@ const Marketplace = () => {
 
   const PatternCard = ({ pattern }: { pattern: MarketplacePattern }) => (
     <Card
-      className={`h-full transition-all hover:shadow-lg ${pattern.featured ? "ring-2 ring-blue-500" : ""}`}
+      className={`h-full transition-all hover:shadow-lg ${
+        pattern.featured ? "ring-2 ring-blue-500" : ""
+      }`}
     >
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
@@ -549,15 +560,15 @@ const Marketplace = () => {
                           <div className="font-bold">
                             {formatLicensePrice(
                               license.price,
-                              license.currency,
+                              license.currency
                             )}
                           </div>
                           <Button
                             size="sm"
                             onClick={() => handleLicensePurchase(license)}
-                            disabled={loading || !isAuthenticated}
+                            disabled={loading}
                           >
-                            {!isAuthenticated ? "Login Required" : "Purchase"}
+                            Purchase (Demo)
                           </Button>
                         </div>
                       </div>
@@ -566,16 +577,12 @@ const Marketplace = () => {
                 </div>
               )}
 
-              {!isAuthenticated && (
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-sm">
-                    <Button variant="link" onClick={() => navigate("/auth")}>
-                      Sign in
-                    </Button>{" "}
-                    to purchase licenses
-                  </p>
-                </div>
-              )}
+              <div className="text-center p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Demo mode: All purchases are simulated for hackathon
+                  demonstration
+                </p>
+              </div>
             </div>
           )}
         </DialogContent>
