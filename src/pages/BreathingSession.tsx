@@ -1,4 +1,3 @@
-
 import React, { useRef, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Pause, Play, StopCircle, Volume2, VolumeX } from 'lucide-react';
@@ -32,19 +31,11 @@ const BreathingSession = () => {
   const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished;
 
   const handleEndSession = () => {
-    controls.endSession();
-    navigate('/results', { state: { 
-      breathHoldTime: state.breathHoldTime,
-      restlessnessScore,
-      patternName: state.pattern.key,
-    } });
-  };
-  
-  const originalHandleEndSession = handleEndSession;
-  handleEndSession = () => {
     const pattern = BREATHING_PATTERNS[state.pattern.key];
-    const sessionDuration = pattern.cycles * pattern.phases.reduce((sum, phase) => sum + phase.duration, 0) / 1000;
-  
+    const oneCycleDuration = pattern.phases.reduce((sum, phase) => sum + phase.duration, 0);
+    // We calculate duration based on completed cycles. This doesn't account for a partial cycle, but is a good approximation.
+    const sessionDuration = (state.cycleCount * oneCycleDuration) / 1000;
+
     controls.endSession();
     navigate('/results', { state: { 
       breathHoldTime: state.breathHoldTime,
@@ -52,7 +43,7 @@ const BreathingSession = () => {
       patternName: state.pattern.key,
       sessionDuration
     } });
-  }
+  };
 
   if (state.sessionPhase === 'idle' || state.isFinished) {
     return (
