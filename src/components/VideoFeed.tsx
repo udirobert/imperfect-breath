@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import type { Keypoint } from '@tensorflow-models/face-landmarks-detection';
 import { cn } from '@/lib/utils';
@@ -9,9 +10,10 @@ interface VideoFeedProps {
   isActive: boolean;
   landmarks?: Keypoint[];
   trackingStatus: TrackingStatus;
+  className?: string;
 }
 
-const VideoFeed = ({ videoRef, isActive, landmarks, trackingStatus }: VideoFeedProps) => {
+const VideoFeed = ({ videoRef, isActive, landmarks, trackingStatus, className }: VideoFeedProps) => {
   useEffect(() => {
     const stopCameraFeed = () => {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -52,7 +54,8 @@ const VideoFeed = ({ videoRef, isActive, landmarks, trackingStatus }: VideoFeedP
   return (
     <div className={cn(
       "absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden shadow-2xl border-4 transition-colors duration-500",
-      border
+      border,
+      className
     )}>
       <video
         ref={videoRef}

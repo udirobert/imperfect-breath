@@ -1,10 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
-import { useDemoMode } from '@/context/DemoModeContext';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Waves, Target, BarChart3, Bot, LogOut } from 'lucide-react';
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +18,6 @@ const Feature = ({ icon: Icon, title, children }: { icon: React.ElementType, tit
 
 const Index = () => {
   const { history } = useSessionHistory();
-  const { isDemoMode, toggleDemoMode } = useDemoMode();
   const { session, user } = useAuth();
   const navigate = useNavigate();
 
@@ -109,17 +104,9 @@ const Index = () => {
             Track your sessions over time and watch your mental and physical resilience grow.
           </Feature>
           <Feature icon={Bot} title="AI-Powered Feedback">
-            Get real-time (demo) insights on your posture and focus during breath holds.
+            Get real-time insights on your posture and focus during breath holds.
           </Feature>
         </div>
-      </div>
-
-      <div 
-        style={{ animationDelay: '1000ms', opacity: 0 }} 
-        className="flex items-center space-x-2 mt-12 animate-fade-in"
-      >
-        <Switch id="demo-mode" checked={isDemoMode} onCheckedChange={toggleDemoMode} />
-        <Label htmlFor="demo-mode">Demo Mode</Label>
       </div>
     </div>
   );

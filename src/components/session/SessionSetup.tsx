@@ -83,7 +83,7 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
             {state.isFinished ? (
               <Button asChild size="lg" className="w-full"><Link to="/">Back to Home</Link></Button>
             ) : (
-              <Button onClick={controls.startSession} size="lg" className="w-full">
+              <Button onClick={controls.prepareSession} size="lg" className="w-full">
                 Begin Session
               </Button>
             )}

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { BREATHING_PATTERNS, BreathingPattern, BreathingPhaseName } from '@/lib/breathingPatterns';
 import { useVoiceGuidance } from './useVoiceGuidance';
 
-type SessionPhase = BreathingPhaseName | 'breath-hold' | 'finished' | 'idle';
+type SessionPhase = BreathingPhaseName | 'breath-hold' | 'finished' | 'idle' | 'camera-setup';
 type PatternKey = keyof typeof BREATHING_PATTERNS;
 
 export const useBreathingSession = () => {
@@ -110,6 +110,16 @@ export const useBreathingSession = () => {
     setIsRunning(true);
   };
 
+  const prepareSession = () => {
+    if (pattern.hasBreathHold) {
+      setSessionPhase('camera-setup');
+      setPhaseText('Prepare your posture.');
+      speak('Prepare for tracking.');
+    } else {
+      startSession();
+    }
+  };
+
   const togglePause = () => {
     if (sessionPhase === 'breath-hold') {
       endSession();
@@ -153,6 +163,7 @@ export const useBreathingSession = () => {
       isFinished: sessionPhase === 'finished',
     },
     controls: {
+      prepareSession,
       startSession,
       togglePause,
       endSession,

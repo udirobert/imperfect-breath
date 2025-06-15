@@ -1,27 +1,26 @@
+
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useBreathingSession } from '@/hooks/useBreathingSession';
 import { BREATHING_PATTERNS } from '@/lib/breathingPatterns';
 import { useCameraTracking } from '@/hooks/useCameraTracking';
-import { useDemoMode } from '@/context/DemoModeContext';
-import { useDemoFeedback } from '@/hooks/useDemoFeedback';
+import { useAIFeedback } from '@/hooks/useAIFeedback';
 
 import { SessionSetup } from '@/components/session/SessionSetup';
 import { SessionInProgress } from '@/components/session/SessionInProgress';
+import { CameraSetup } from '@/components/session/CameraSetup';
 
 const BreathingSession = () => {
   const { state, controls } = useBreathingSession();
-  const { isDemoMode } = useDemoMode();
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  const isTracking = state.sessionPhase === 'breath-hold' && !isDemoMode;
+  const isTracking = state.sessionPhase === 'camera-setup' || state.sessionPhase === 'breath-hold';
   const { restlessnessScore, landmarks, trackingStatus } = useCameraTracking({ videoRef, isTracking });
-  const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished && !isDemoMode;
+  const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished;
 
-  useDemoFeedback({
-    isDemoMode,
+  useAIFeedback({
     isRunning: state.isRunning,
     isFinished: state.isFinished,
     speak: controls.speak,
@@ -44,11 +43,6 @@ const BreathingSession = () => {
 
     let finalBreathHoldTime = state.breathHoldTime;
     let finalRestlessnessScore = restlessnessScore;
-
-    if (isDemoMode) {
-      finalBreathHoldTime = 90;
-      finalRestlessnessScore = Math.floor(Math.random() * 15) + 5;
-    }
     
     controls.endSession();
     navigate('/results', { state: { 
@@ -61,6 +55,17 @@ const BreathingSession = () => {
 
   if (state.sessionPhase === 'idle' || state.isFinished) {
     return <SessionSetup state={state} controls={controls} />;
+  }
+
+  if (state.sessionPhase === 'camera-setup') {
+    return (
+      <CameraSetup 
+        controls={controls}
+        videoRef={videoRef}
+        landmarks={landmarks}
+        trackingStatus={trackingStatus}
+      />
+    );
   }
 
   return (
