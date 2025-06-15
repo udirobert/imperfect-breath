@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
+import { DemoModeProvider } from './context/DemoModeContext';
 
 const queryClient = new QueryClient();
 
@@ -27,19 +28,21 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Layout>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/session" element={<BreathingSession />} />
-              <Route path="/results" element={<Results />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </Layout>
-      </BrowserRouter>
+      <DemoModeProvider>
+        <BrowserRouter>
+          <Layout>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/session" element={<BreathingSession />} />
+                <Route path="/results" element={<Results />} />
+                <Route path="/progress" element={<Progress />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </Layout>
+        </BrowserRouter>
+      </DemoModeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

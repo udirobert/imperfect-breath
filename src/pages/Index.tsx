@@ -2,9 +2,13 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { useDemoMode } from '@/context/DemoModeContext';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const Index = () => {
   const { history } = useSessionHistory();
+  const { isDemoMode, toggleDemoMode } = useDemoMode();
 
   return (
     <div className="text-center flex flex-col items-center animate-fade-in">
@@ -42,6 +46,13 @@ const Index = () => {
             </Button>
           </Link>
         )}
+      </div>
+      <div 
+        style={{ animationDelay: '800ms', opacity: 0 }} 
+        className="flex items-center space-x-2 mt-8 animate-fade-in"
+      >
+        <Switch id="demo-mode" checked={isDemoMode} onCheckedChange={toggleDemoMode} />
+        <Label htmlFor="demo-mode">Demo Mode</Label>
       </div>
     </div>
   );

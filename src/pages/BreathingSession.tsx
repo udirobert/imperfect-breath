@@ -1,3 +1,4 @@
+
 import React, { useRef, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Pause, Play, StopCircle, Volume2, VolumeX } from 'lucide-react';
@@ -12,6 +13,7 @@ import BreathingAnimation from '@/components/BreathingAnimation';
 import { useBreathingSession } from '@/hooks/useBreathingSession';
 import { BREATHING_PATTERNS, BreathingPhaseName } from '@/lib/breathingPatterns';
 import { useCameraTracking } from '@/hooks/useCameraTracking';
+import { useDemoMode } from '@/context/DemoModeContext';
 
 const VideoFeed = lazy(() => import('@/components/VideoFeed'));
 
@@ -23,12 +25,13 @@ const formatTime = (seconds: number) => {
 
 const BreathingSession = () => {
   const { state, controls } = useBreathingSession();
+  const { isDemoMode } = useDemoMode();
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  const isTracking = state.sessionPhase === 'breath-hold';
+  const isTracking = state.sessionPhase === 'breath-hold' && !isDemoMode;
   const { restlessnessScore } = useCameraTracking({ videoRef, isTracking });
-  const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished;
+  const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished && !isDemoMode;
 
   const handleEndSession = () => {
     const pattern = BREATHING_PATTERNS[state.pattern.key];
@@ -36,10 +39,18 @@ const BreathingSession = () => {
     // We calculate duration based on completed cycles. This doesn't account for a partial cycle, but is a good approximation.
     const sessionDuration = (state.cycleCount * oneCycleDuration) / 1000;
 
+    let finalBreathHoldTime = state.breathHoldTime;
+    let finalRestlessnessScore = restlessnessScore;
+
+    if (isDemoMode) {
+      finalBreathHoldTime = 90; // Emulate 90-second breath hold
+      finalRestlessnessScore = Math.floor(Math.random() * 15) + 5; // Emulate low restlessness (5-19)
+    }
+    
     controls.endSession();
     navigate('/results', { state: { 
-      breathHoldTime: state.breathHoldTime,
-      restlessnessScore,
+      breathHoldTime: finalBreathHoldTime,
+      restlessnessScore: finalRestlessnessScore,
       patternName: state.pattern.key,
       sessionDuration
     } });
