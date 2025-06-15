@@ -58,7 +58,17 @@ const BreathingSession = () => {
          return;
       }
       
+      // Defer if voice guidance is currently speaking to avoid interruptions.
+      if (typeof window !== 'undefined' && window.speechSynthesis.speaking) {
+        timeoutId = setTimeout(showRandomFeedback, 3000); // Check again in 3s
+        return;
+      }
+
       const message = feedbackMessages[Math.floor(Math.random() * feedbackMessages.length)];
+      
+      // Speak the biometric feedback with a softer, lower, and slower tone.
+      controls.speak(message, { pitch: 0.8, rate: 0.85, volume: 0.8 });
+      
       toast.info("Biometric Feedback (Demo)", {
         description: message,
         duration: 5000,
@@ -75,7 +85,7 @@ const BreathingSession = () => {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [isDemoMode, state.isRunning, state.isFinished]);
+  }, [isDemoMode, state.isRunning, state.isFinished, controls]);
 
 
   const handleEndSession = () => {

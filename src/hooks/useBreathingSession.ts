@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BREATHING_PATTERNS, BreathingPattern, BreathingPhaseName } from '@/lib/breathingPatterns';
+import { useVoiceGuidance } from './useVoiceGuidance';
 
 type SessionPhase = BreathingPhaseName | 'breath-hold' | 'finished' | 'idle';
 type PatternKey = keyof typeof BREATHING_PATTERNS;
@@ -16,19 +17,14 @@ export const useBreathingSession = () => {
   const [breathHoldTime, setBreathHoldTime] = useState(0);
   
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const { speak } = useVoiceGuidance(audioEnabled);
 
   const phaseIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const breathHoldIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentPhaseIndexRef = useRef(0);
 
-  const speak = useCallback((text: string) => {
-    if (!audioEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    // You could customize voice here, e.g., utterance.voice = ...
-    window.speechSynthesis.speak(utterance);
-  }, [audioEnabled]);
+  // The old `speak` function is now replaced by the `useVoiceGuidance` hook.
 
   const cleanupTimers = () => {
     if (phaseIntervalRef.current) clearTimeout(phaseIntervalRef.current);
@@ -119,6 +115,9 @@ export const useBreathingSession = () => {
       endSession();
       return;
     }
+    if (isRunning) {
+      window.speechSynthesis.cancel();
+    }
     setIsRunning(!isRunning);
   };
   
@@ -127,6 +126,7 @@ export const useBreathingSession = () => {
     setSessionPhase('finished');
     setPhaseText('Session Complete');
     cleanupTimers();
+    window.speechSynthesis.cancel();
   };
 
   const selectPattern = (key: PatternKey) => {
@@ -134,6 +134,7 @@ export const useBreathingSession = () => {
       setPattern(BREATHING_PATTERNS[key]);
       setSessionPhase('idle');
       setPhaseText('Begin your session when ready.');
+      window.speechSynthesis.cancel();
     }
   };
 
@@ -157,6 +158,7 @@ export const useBreathingSession = () => {
       endSession,
       selectPattern,
       toggleAudio,
+      speak,
     },
   };
 };
