@@ -1,4 +1,5 @@
 
+```typescript
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
@@ -10,19 +11,26 @@ type UseCameraTrackingProps = {
   isTracking: boolean;
 };
 
-const euclidianDistance = (p1: Keypoint, p2: Keypoint) => {
+// Define a simple 2D point for our calculations, making the logic cleaner.
+interface Point2D {
+  x: number;
+  y: number;
+}
+
+const euclidianDistance = (p1: Point2D, p2: Point2D) => {
   if (!p1 || !p2) return 0;
   return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
 };
 
 export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingProps) => {
   const [detector, setDetector] = useState<FaceLandmarksDetector | null>(null);
-  const [smoothedScore, setSmoothedScore] = useState(0);
+  const [restlessnessScore, setRestlessnessScore] = useState(0);
   const [landmarks, setLandmarks] = useState<Keypoint[]>([]);
 
   const requestRef = useRef<number>();
-  const lastPosition = useRef<Keypoint | null>(null);
-  const scoreHistory = useRef<number[]>([]);
+  const lastPosition = useRef<Point2D | null>(null);
+  const accumulatedJitter = useRef(0);
+  const detectionCount = useRef(0);
 
   useEffect(() => {
     const loadModel = async () => {
@@ -47,22 +55,40 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
   const calculateRestlessness = useCallback((faces: Face[]) => {
     if (faces.length === 0) {
       lastPosition.current = null;
-      return 0;
+      return;
     }
-    const landmarks = faces[0].keypoints;
-    const noseTip = landmarks.find(p => p.name === 'noseTip');
+    const newLandmarks = faces[0].keypoints;
+    setLandmarks(newLandmarks || []);
 
-    if (!noseTip) return 0;
-
-    let jitter = 0;
-    if (lastPosition.current) {
-      jitter = euclidianDistance(noseTip, lastPosition.current);
-    }
-    lastPosition.current = noseTip;
+    // Use a composite central point for more robust tracking
+    const noseTip = newLandmarks.find(p => p.name === 'noseTip');
+    const leftEye = newLandmarks.find(p => p.name === 'leftEye');
+    const rightEye = newLandmarks.find(p => p.name === 'rightEye');
     
-    // Normalize jitter to a 0-100 scale. A movement of 5px is considered high.
-    const rawScore = Math.min(100, (jitter / 5) * 100);
-    return rawScore;
+    if (!noseTip || !leftEye || !rightEye) return;
+
+    const currentCenter: Point2D = {
+      x: (noseTip.x + leftEye.x + rightEye.x) / 3,
+      y: (noseTip.y + leftEye.y + rightEye.y) / 3,
+    };
+
+    // The first frame with a face sets the baseline position. Subsequent frames measure jitter.
+    if (lastPosition.current) {
+      const jitter = euclidianDistance(currentCenter, lastPosition.current);
+      accumulatedJitter.current += jitter;
+      detectionCount.current += 1;
+    }
+    lastPosition.current = currentCenter;
+    
+    if (detectionCount.current > 0) {
+      // The score is based on the average pixel movement per frame during the session.
+      const averageJitter = accumulatedJitter.current / detectionCount.current;
+      
+      // Normalize the score. An average movement of 1px per frame is considered high restlessness (100).
+      // This makes the score sensitive to small, persistent movements.
+      const score = Math.min(100, averageJitter * 100);
+      setRestlessnessScore(score);
+    }
   }, []);
 
   const detectionLoop = useCallback(async () => {
@@ -71,17 +97,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
         const faces = await detector.estimateFaces(videoRef.current, {
           flipHorizontal: false,
         });
-
-        setLandmarks(faces[0]?.keypoints || []);
-        const score = calculateRestlessness(faces);
-
-        scoreHistory.current.push(score);
-        if (scoreHistory.current.length > 5) { // Smoothing over ~0.5s at 10fps
-          scoreHistory.current.shift();
-        }
-        const avgScore = scoreHistory.current.reduce((a, b) => a + b, 0) / scoreHistory.current.length;
-        setSmoothedScore(avgScore);
-
+        calculateRestlessness(faces);
       } catch (error) {
         // This can happen if the video stream is not ready, we'll just skip the frame.
       }
@@ -94,9 +110,11 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
 
   useEffect(() => {
     if (isTracking && detector) {
+      // Reset stats for the new tracking session
       lastPosition.current = null;
-      scoreHistory.current = [];
-      setSmoothedScore(0);
+      accumulatedJitter.current = 0;
+      detectionCount.current = 0;
+      setRestlessnessScore(0);
       setLandmarks([]);
       detectionLoop(); // Start the loop
     } else {
@@ -112,5 +130,6 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
     };
   }, [isTracking, detector, detectionLoop]);
 
-  return { restlessnessScore: smoothedScore, landmarks };
+  return { restlessnessScore, landmarks };
 };
+```
