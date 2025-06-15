@@ -1,8 +1,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useSessionHistory } from "@/hooks/useSessionHistory";
 
 const Index = () => {
+  const { history } = useSessionHistory();
+
   return (
     <div className="text-center flex flex-col items-center animate-fade-in">
       <h1 
@@ -17,15 +20,29 @@ const Index = () => {
       >
         Welcome to Imperfect Breath. A space to reconnect with your breath and find calm in the chaos.
       </p>
-      <Link to="/session">
-        <Button 
-          style={{ animationDelay: '600ms', opacity: 0 }} 
-          size="lg" 
-          className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        >
-          Begin Session
-        </Button>
-      </Link>
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <Link to="/session">
+          <Button 
+            style={{ animationDelay: '600ms', opacity: 0 }} 
+            size="lg" 
+            className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto"
+          >
+            Begin Session
+          </Button>
+        </Link>
+        {history && history.length > 0 && (
+          <Link to="/progress">
+            <Button
+              style={{ animationDelay: '700ms', opacity: 0 }}
+              size="lg"
+              variant="outline"
+              className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto"
+            >
+              My Progress
+            </Button>
+          </Link>
+        )}
+      </div>
     </div>
   );
 };

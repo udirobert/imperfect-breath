@@ -1,6 +1,6 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { differenceInCalendarDays, parseISO, isToday } from 'date-fns';
+import { BREATHING_PATTERNS } from '@/lib/breathingPatterns';
 
 export interface ISessionRecord {
   date: string; // ISO string
@@ -57,16 +57,49 @@ const calculateTotalMinutes = (history: ISessionRecord[]): number => {
   return Math.floor(totalSeconds / 60);
 };
 
+const calculateLongestBreathHold = (history: ISessionRecord[]): number => {
+  if (history.length === 0) return 0;
+  return Math.max(0, ...history.map(s => s.breathHoldTime));
+};
+
+const calculateAverageRestlessness = (history: ISessionRecord[]): number => {
+    if (history.length === 0) return 0;
+    const sessionsWithScore = history.filter(s => typeof s.restlessnessScore === 'number');
+    if (sessionsWithScore.length === 0) return 0;
+    const totalRestlessness = sessionsWithScore.reduce((acc, session) => acc + session.restlessnessScore, 0);
+    return Math.round(totalRestlessness / sessionsWithScore.length);
+};
+
+const calculatePreferredPattern = (history: ISessionRecord[]): string => {
+    if (history.length === 0) return 'None';
+    const patternCounts = history.reduce((acc, session) => {
+        acc[session.patternName] = (acc[session.patternName] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    if (Object.keys(patternCounts).length === 0) return 'None';
+
+    const preferredPatternKey = Object.keys(patternCounts).reduce((a, b) => patternCounts[a] > patternCounts[b] ? a : b);
+    const patternDetails = BREATHING_PATTERNS[preferredPatternKey as keyof typeof BREATHING_PATTERNS];
+    return patternDetails?.name || 'Unknown';
+};
+
 export const useSessionHistory = () => {
   const [history, setHistory] = useState<ISessionRecord[]>([]);
   const [streak, setStreak] = useState(0);
   const [totalMinutes, setTotalMinutes] = useState(0);
+  const [longestBreathHold, setLongestBreathHold] = useState(0);
+  const [averageRestlessness, setAverageRestlessness] = useState(0);
+  const [preferredPattern, setPreferredPattern] = useState('None');
 
   useEffect(() => {
     const storedHistory = getStoredHistory();
     setHistory(storedHistory);
     setStreak(calculateStreak(storedHistory));
     setTotalMinutes(calculateTotalMinutes(storedHistory));
+    setLongestBreathHold(calculateLongestBreathHold(storedHistory));
+    setAverageRestlessness(calculateAverageRestlessness(storedHistory));
+    setPreferredPattern(calculatePreferredPattern(storedHistory));
   }, []);
 
   const saveSession = useCallback((newSession: Omit<ISessionRecord, 'date'>) => {
@@ -77,6 +110,9 @@ export const useSessionHistory = () => {
         window.localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
         setStreak(calculateStreak(updatedHistory));
         setTotalMinutes(calculateTotalMinutes(updatedHistory));
+        setLongestBreathHold(calculateLongestBreathHold(updatedHistory));
+        setAverageRestlessness(calculateAverageRestlessness(updatedHistory));
+        setPreferredPattern(calculatePreferredPattern(updatedHistory));
       } catch (error) {
         console.error('Error saving session to localStorage:', error);
       }
@@ -84,5 +120,5 @@ export const useSessionHistory = () => {
     });
   }, []);
 
-  return { history, streak, totalMinutes, saveSession };
+  return { history, streak, totalMinutes, saveSession, longestBreathHold, averageRestlessness, preferredPattern };
 };
