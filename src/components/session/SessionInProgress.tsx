@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from "react";
+import React from "react";
 import BreathingAnimation from "@/components/BreathingAnimation";
 import { BreathingPhaseName } from "@/lib/breathingPatterns";
 import { useBreathingSession } from "@/hooks/useBreathingSession";
@@ -7,8 +7,7 @@ import { SessionControls } from "./SessionControls";
 import { Button } from "@/components/ui/button";
 import type { TrackingStatus, Keypoint } from "@/hooks/useCameraTracking";
 import { Loader2, Camera } from "lucide-react";
-
-const VideoFeed = lazy(() => import("@/components/VideoFeed"));
+import VideoFeed from "@/components/VideoFeed";
 
 type SessionInProgressProps = {
   state: ReturnType<typeof useBreathingSession>["state"];
@@ -20,7 +19,9 @@ type SessionInProgressProps = {
   restlessnessScore: number;
   landmarks: Keypoint[];
   trackingStatus: TrackingStatus;
-  initializeCamera: () => Promise<void>;
+  cameraInitialized: boolean;
+  cameraRequested: boolean;
+  onRequestCamera: () => Promise<void>;
 };
 
 export const SessionInProgress = ({
@@ -33,157 +34,126 @@ export const SessionInProgress = ({
   restlessnessScore,
   landmarks,
   trackingStatus,
-  initializeCamera,
+  cameraInitialized,
+  cameraRequested,
+  onRequestCamera,
 }: SessionInProgressProps) => {
-  const [cameraRequested, setCameraRequested] = useState(false);
-  const [sessionStarted, setSessionStarted] = useState(false);
-
-  const isReady = trackingStatus === "TRACKING";
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
-  const showBreathingInterface = sessionStarted && state.isRunning;
+  const cameraReady = trackingStatus === "TRACKING" || cameraInitialized;
+  const showBreathingInterface = state.isRunning;
 
-  const handleRequestCamera = async () => {
-    setCameraRequested(true);
-    await initializeCamera();
-  };
+  // VideoFeed positioning: setup phase vs breathing phase
+  const videoFeedContainerClass = showBreathingInterface
+    ? "absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden shadow-2xl border-4 border-green-400"
+    : "w-64 h-48 md:w-96 md:h-72 relative rounded-lg overflow-hidden shadow-lg mb-8";
 
-  const handleStartSession = () => {
-    setSessionStarted(true);
-    controls.startSession();
-  };
+  const videoFeedClassName = showBreathingInterface
+    ? ""
+    : "!relative !inset-0 !w-full !h-full";
 
-  // Show camera setup screen if camera not set up yet
-  if (!sessionStarted && needsCameraSetup) {
-    return (
-      <div className="flex-grow flex flex-col items-center justify-center w-full relative animate-fade-in p-4 text-center">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">Camera Setup</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Position your face in the center of the video feed. This allows us
-            to measure your stillness and focus during the session.
-          </p>
-        </div>
-
-        <div className="w-64 h-48 md:w-96 md:h-72 relative rounded-lg overflow-hidden shadow-lg">
-          <Suspense
-            fallback={
-              <div className="w-full h-full rounded-lg bg-secondary animate-pulse" />
-            }
-          >
-            <VideoFeed
-              videoRef={videoRef}
-              isActive={true}
-              landmarks={landmarks}
-              trackingStatus={trackingStatus}
-              className="!relative !inset-0 !w-full !h-full"
-            />
-          </Suspense>
-        </div>
-
-        <div className="mt-8 text-center">
-          <Button onClick={handleRequestCamera} size="lg" className="w-48">
-            <Camera className="mr-2 h-4 w-4" />
-            Enable Camera
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show ready screen if camera is set up but session not started
-  if (!sessionStarted && cameraRequested) {
-    return (
-      <div className="flex-grow flex flex-col items-center justify-center w-full relative animate-fade-in p-4 text-center">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">Ready to Begin</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Camera is active and face detection is working. Start your breathing
-            session when ready.
-          </p>
-        </div>
-
-        <div className="w-64 h-48 md:w-96 md:h-72 relative rounded-lg overflow-hidden shadow-lg">
-          <Suspense
-            fallback={
-              <div className="w-full h-full rounded-lg bg-secondary animate-pulse" />
-            }
-          >
-            <VideoFeed
-              videoRef={videoRef}
-              isActive={true}
-              landmarks={landmarks}
-              trackingStatus={trackingStatus}
-              className="!relative !inset-0 !w-full !h-full"
-            />
-          </Suspense>
-        </div>
-
-        <div className="mt-8 text-center">
-          <Button
-            onClick={handleStartSession}
-            size="lg"
-            disabled={!isReady}
-            className="w-48"
-          >
-            {!isReady && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isReady ? "Start Session" : "Initializing..."}
-          </Button>
-          {!isReady && (
-            <p className="text-sm text-muted-foreground mt-4">
-              Having trouble? You can{" "}
-              <Button
-                variant="link"
-                className="p-0 h-auto"
-                onClick={handleStartSession}
-              >
-                skip the camera setup
-              </Button>
-              .
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Show breathing session interface
+  // Unified interface - no more phase-based screens
   return (
     <div className="flex-grow flex flex-col items-center justify-center w-full relative animate-fade-in">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <BreathingAnimation
-          phase={
-            state.sessionPhase === "breath-hold"
-              ? "hold"
-              : (state.sessionPhase as BreathingPhaseName)
-          }
-          text={state.phaseText}
-        />
-      </div>
+      {/* Breathing Animation - only show when session is running */}
+      {showBreathingInterface && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <BreathingAnimation
+            phase={
+              state.sessionPhase === "breath-hold"
+                ? "hold"
+                : (state.sessionPhase as BreathingPhaseName)
+            }
+            text={state.phaseText}
+          />
+        </div>
+      )}
 
-      <SessionHeader state={state} />
+      {/* Setup Interface - show when not running */}
+      {!showBreathingInterface && (
+        <div className="flex flex-col items-center justify-center p-4 text-center">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-2">
+              {needsCameraSetup
+                ? "Optional Camera Setup"
+                : cameraRequested && !cameraReady
+                ? "Setting Up Camera"
+                : "Ready to Begin"}
+            </h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              {needsCameraSetup
+                ? "Enable camera to track your stillness during breathing, or start without it."
+                : cameraRequested && !cameraReady
+                ? "Initializing face detection. Please wait..."
+                : "Camera is ready. Start your breathing session when ready."}
+            </p>
+          </div>
 
-      <SessionControls
-        state={state}
-        controls={controls}
-        onEndSession={handleEndSession}
-      />
+          {/* Camera Feed placeholder during setup - actual feed renders at bottom */}
 
+          {/* Control Buttons */}
+          <div className="space-y-4">
+            {needsCameraSetup ? (
+              <>
+                <Button onClick={onRequestCamera} size="lg" className="w-48">
+                  <Camera className="mr-2 h-4 w-4" />
+                  Enable Camera
+                </Button>
+                <div>
+                  <Button
+                    variant="outline"
+                    onClick={() => controls.startSession()}
+                    className="w-48"
+                  >
+                    Start Without Camera
+                  </Button>
+                </div>
+              </>
+            ) : cameraRequested && !cameraReady ? (
+              <Button size="lg" disabled className="w-48">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Initializing...
+              </Button>
+            ) : (
+              <Button
+                onClick={() => controls.startSession()}
+                size="lg"
+                className="w-48"
+              >
+                Start Breathing Session
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Session Header and Controls - only show when running */}
+      {showBreathingInterface && (
+        <>
+          <SessionHeader state={state} />
+          <SessionControls
+            state={state}
+            controls={controls}
+            onEndSession={handleEndSession}
+          />
+        </>
+      )}
+
+      {/* Single VideoFeed that changes position/size based on phase */}
       {showVideoFeed && (
-        <Suspense
-          fallback={
-            <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg bg-secondary animate-pulse" />
-          }
-        >
+        <div className={videoFeedContainerClass}>
           <VideoFeed
+            key="persistent-video-feed"
             videoRef={videoRef}
             isActive={showVideoFeed}
             landmarks={landmarks}
             trackingStatus={trackingStatus}
+            className={videoFeedClassName}
           />
-        </Suspense>
+        </div>
       )}
 
-      {isTracking && (
+      {/* Restlessness Score - only show when tracking during breathing */}
+      {showBreathingInterface && isTracking && (
         <div className="absolute bottom-4 left-4 bg-gray-900/80 text-white p-2 rounded-lg text-xs z-30 font-mono animate-fade-in">
           <p>RESTLESSNESS: {Math.round(restlessnessScore)}</p>
         </div>

@@ -17,6 +17,9 @@ const Progress = React.lazy(() => import("./pages/Progress"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const DiagnosticPage = React.lazy(() => import("./pages/DiagnosticPage"));
 const AISettings = React.lazy(() => import("./pages/AISettings"));
+const Marketplace = React.lazy(() => import("./pages/Marketplace"));
+const CreatorDashboard = React.lazy(() => import("./pages/CreatorDashboard"));
+const CreatePattern = React.lazy(() => import("./pages/CreatePattern"));
 
 const PageLoader = () => (
   <div className="flex-grow flex items-center justify-center">
@@ -40,6 +43,9 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/diagnostic" element={<DiagnosticPage />} />
               <Route path="/ai-settings" element={<AISettings />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/creator" element={<CreatorDashboard />} />
+              <Route path="/create-pattern" element={<CreatePattern />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

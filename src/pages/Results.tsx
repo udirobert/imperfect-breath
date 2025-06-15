@@ -15,6 +15,8 @@ import {
   Settings,
   Loader2,
   TrendingUp,
+  Shield,
+  CheckCircle,
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "@/lib/breathingPatterns";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
@@ -22,6 +24,7 @@ import { useAIAnalysis } from "@/hooks/useAIAnalysis";
 import { AI_PROVIDERS, AIConfigManager, SessionData } from "@/lib/ai/config";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { demoStoryIntegration } from "@/lib/story/storyClient";
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -39,6 +42,8 @@ const Results = () => {
   const { analyzeSession, analyses, isAnalyzing, error } = useAIAnalysis();
   const hasSavedRef = useRef(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
+  const [ipRegistered, setIpRegistered] = useState(false);
+  const [isRegisteringIP, setIsRegisteringIP] = useState(false);
 
   const sessionData = useMemo(() => location.state || {}, [location.state]);
 
@@ -58,7 +63,7 @@ const Results = () => {
         toast.error("Could not save your session. Please try again.");
       }
     }
-  }, [sessionData, saveSession, user]);
+  }, [sessionData.patternName, saveSession, user]);
 
   const handleAIAnalysis = async () => {
     if (!sessionData.patternName) {
@@ -94,6 +99,36 @@ const Results = () => {
     await analyzeSession(currentSession, previousSessions);
   };
 
+  const handleRegisterIP = async () => {
+    if (!sessionData.patternName) {
+      toast.error("No session data available for IP registration");
+      return;
+    }
+
+    setIsRegisteringIP(true);
+    try {
+      const sessionIPData = {
+        sessionId: `session_${Date.now()}`,
+        patternName: sessionData.patternName,
+        duration: sessionData.sessionDuration || 0,
+        breathHoldTime: sessionData.breathHoldTime || 0,
+        restlessnessScore: sessionData.restlessnessScore || 0,
+        timestamp: new Date().toISOString(),
+      };
+
+      const ipAssetId = await demoStoryIntegration.registerSessionDemo(
+        sessionIPData
+      );
+      setIpRegistered(true);
+      toast.success(`Session data registered as IP Asset: ${ipAssetId}`);
+    } catch (error) {
+      console.error("Failed to register IP:", error);
+      toast.error("Failed to register session as IP asset");
+    } finally {
+      setIsRegisteringIP(false);
+    }
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
@@ -111,8 +146,8 @@ const Results = () => {
     restlessnessValue < 20
       ? "bg-green-500"
       : restlessnessValue < 50
-        ? "bg-yellow-500"
-        : "bg-red-500";
+      ? "bg-yellow-500"
+      : "bg-red-500";
 
   const handleShare = async () => {
     const summary = `I just completed a mindful breathing session!
@@ -204,6 +239,61 @@ Check out Mindful Breath!`;
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Story Protocol IP Registration Section */}
+      <div className="mb-8 w-full max-w-4xl">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              IP Protection with Story Protocol
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Register your breathing session data as intellectual property on
+              Story Protocol. Protect your wellness journey and contribute to
+              the breathing exercise ecosystem.
+            </p>
+            <div className="flex gap-2">
+              {!ipRegistered ? (
+                <Button
+                  onClick={handleRegisterIP}
+                  disabled={!sessionData.patternName || isRegisteringIP}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                >
+                  {isRegisteringIP ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registering IP...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="mr-2 h-4 w-4" />
+                      Register as IP Asset
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button disabled className="bg-green-600">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  IP Asset Registered
+                </Button>
+              )}
+            </div>
+            {ipRegistered && (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Your session data has been successfully registered as an IP
+                  asset on Story Protocol! This creates a permanent, verifiable
+                  record of your breathing session performance.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* AI Analysis Section */}
@@ -342,7 +432,7 @@ Check out Mindful Breath!`;
                           <div className="text-center space-y-2">
                             <Badge
                               variant={getScoreBadgeVariant(
-                                analysis.score.overall,
+                                analysis.score.overall
                               )}
                             >
                               {analysis.score.overall}/100
@@ -352,7 +442,7 @@ Check out Mindful Breath!`;
                           <div className="text-center space-y-2">
                             <Badge
                               variant={getScoreBadgeVariant(
-                                analysis.score.focus,
+                                analysis.score.focus
                               )}
                             >
                               {analysis.score.focus}/100
@@ -362,7 +452,7 @@ Check out Mindful Breath!`;
                           <div className="text-center space-y-2">
                             <Badge
                               variant={getScoreBadgeVariant(
-                                analysis.score.consistency,
+                                analysis.score.consistency
                               )}
                             >
                               {analysis.score.consistency}/100
@@ -372,7 +462,7 @@ Check out Mindful Breath!`;
                           <div className="text-center space-y-2">
                             <Badge
                               variant={getScoreBadgeVariant(
-                                analysis.score.progress,
+                                analysis.score.progress
                               )}
                             >
                               {analysis.score.progress}/100

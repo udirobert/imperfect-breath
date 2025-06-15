@@ -20,6 +20,8 @@ const VideoFeed = ({
 }: VideoFeedProps) => {
   // Camera initialization is now handled by the useCameraTracking hook
 
+  // VideoFeed component for camera display
+
   const statusStyles: {
     [key in TrackingStatus]: {
       border: string;
@@ -64,7 +66,7 @@ const VideoFeed = ({
       className={cn(
         "absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden shadow-2xl border-4 transition-colors duration-500",
         border,
-        className,
+        className
       )}
     >
       <video

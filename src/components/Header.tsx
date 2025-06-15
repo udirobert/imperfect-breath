@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Brain, Settings } from "lucide-react";
+import { Brain, Settings, Store, Palette } from "lucide-react";
 
 const Header = () => {
   return (
@@ -14,6 +14,26 @@ const Header = () => {
         </Link>
 
         <div className="flex items-center gap-2">
+          <Link to="/marketplace">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Store className="w-4 h-4" />
+              Marketplace
+            </Button>
+          </Link>
+          <Link to="/creator">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Palette className="w-4 h-4" />
+              Creator
+            </Button>
+          </Link>
           <Link to="/ai-settings">
             <Button
               variant="ghost"

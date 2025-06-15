@@ -11,7 +11,8 @@ type SessionPhase =
   | "breath-hold"
   | "finished"
   | "idle"
-  | "camera-setup";
+  | "camera-setup"
+  | "ready";
 type PatternKey = keyof typeof BREATHING_PATTERNS;
 
 export const useBreathingSession = () => {
@@ -128,10 +129,16 @@ export const useBreathingSession = () => {
     setIsRunning(true);
   };
 
+  const setReady = () => {
+    setSessionPhase("ready");
+    setPhaseText("Ready to begin breathing session");
+    speak("Camera is ready. You can start when ready.");
+  };
+
   const prepareSession = () => {
     setSessionPhase("camera-setup");
-    setPhaseText("Prepare your posture.");
-    speak("Prepare for tracking.");
+    setPhaseText("Ready to begin when you are.");
+    speak("Ready to begin your breathing session.");
   };
 
   const togglePause = () => {
@@ -179,6 +186,7 @@ export const useBreathingSession = () => {
     controls: {
       prepareSession,
       startSession,
+      setReady,
       togglePause,
       endSession,
       selectPattern,

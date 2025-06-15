@@ -39,6 +39,45 @@ export type Database = {
         }
         Relationships: []
       }
+      patterns: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          phases: Json
+          category: string
+          difficulty: string
+          duration: number
+          creator: string
+          ip_hash: string | null
+          created_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          description?: string | null
+          phases: Json
+          category: string
+          difficulty: string
+          duration: number
+          creator: string
+          ip_hash?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          phases?: Json
+          category?: string
+          difficulty?: string
+          duration?: number
+          creator?: string
+          ip_hash?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

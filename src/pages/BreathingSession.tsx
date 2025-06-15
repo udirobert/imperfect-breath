@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useBreathingSession } from "@/hooks/useBreathingSession";
@@ -13,9 +13,14 @@ const BreathingSession = () => {
   const { state, controls } = useBreathingSession();
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraInitialized, setCameraInitialized] = useState(false);
+  const [cameraRequested, setCameraRequested] = useState(false);
 
-  // Keep camera tracking active during session phases
-  const isTracking = state.sessionPhase !== "idle" && !state.isFinished;
+  // Keep camera tracking active once initialized until session ends
+  const isTracking =
+    cameraInitialized && !state.isFinished && state.sessionPhase !== "idle";
+
+  // Camera tracking state management
 
   const {
     restlessnessScore,
@@ -28,8 +33,27 @@ const BreathingSession = () => {
     isTracking,
   });
 
-  // Show video feed during active phases
-  const showVideoFeed = isTracking;
+  // No automatic phase transitions - user controls when to start
+
+  // Show video feed once camera is requested and throughout the session
+  const showVideoFeed = cameraRequested && !state.isFinished;
+
+  // Camera initialization is now manual only - triggered by user clicking "Enable Camera"
+
+  const handleRequestCamera = async () => {
+    setCameraRequested(true);
+
+    try {
+      // Small delay to ensure video element is rendered
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await initializeCamera();
+      setCameraInitialized(true);
+    } catch (error) {
+      console.error("Failed to initialize camera:", error);
+      setCameraInitialized(false);
+      setCameraRequested(false); // Reset on failure so user can try again
+    }
+  };
 
   useAIFeedback({
     isRunning: state.isRunning,
@@ -40,11 +64,20 @@ const BreathingSession = () => {
     patternKey: state.pattern.key,
   });
 
+  // Cleanup camera when component unmounts
+  useEffect(() => {
+    return () => {
+      if (cameraInitialized) {
+        cleanup();
+      }
+    };
+  }, [cleanup, cameraInitialized]);
+
   const handleEndSession = () => {
     const pattern = BREATHING_PATTERNS[state.pattern.key];
     const oneCycleDuration = pattern.phases.reduce(
       (sum, phase) => sum + phase.duration,
-      0,
+      0
     );
     const sessionDuration = (state.cycleCount * oneCycleDuration) / 1000;
 
@@ -53,6 +86,8 @@ const BreathingSession = () => {
 
     // Clean up camera before ending session
     cleanup();
+    setCameraInitialized(false);
+    setCameraRequested(false);
     controls.endSession();
 
     navigate("/results", {
@@ -69,6 +104,7 @@ const BreathingSession = () => {
     return <SessionSetup state={state} controls={controls} />;
   }
 
+  // Single unified session interface - no more phase-based routing
   return (
     <SessionInProgress
       state={state}
@@ -80,7 +116,9 @@ const BreathingSession = () => {
       restlessnessScore={restlessnessScore}
       landmarks={landmarks}
       trackingStatus={trackingStatus}
-      initializeCamera={initializeCamera}
+      cameraInitialized={cameraInitialized}
+      cameraRequested={cameraRequested}
+      onRequestCamera={handleRequestCamera}
     />
   );
 };
