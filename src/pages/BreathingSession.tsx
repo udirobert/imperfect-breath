@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Pause, Play, StopCircle, Volume2, VolumeX } from 'lucide-react';
 
@@ -12,6 +11,7 @@ import BreathingAnimation from '@/components/BreathingAnimation';
 import VideoFeed from '@/components/VideoFeed';
 import { useBreathingSession } from '@/hooks/useBreathingSession';
 import { BREATHING_PATTERNS, BreathingPhaseName } from '@/lib/breathingPatterns';
+import { useCameraTracking } from '@/hooks/useCameraTracking';
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -22,11 +22,18 @@ const formatTime = (seconds: number) => {
 const BreathingSession = () => {
   const { state, controls } = useBreathingSession();
   const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  const isTracking = state.sessionPhase === 'breath-hold';
+  const { restlessnessScore } = useCameraTracking({ videoRef, isTracking });
+  const showVideoFeed = state.sessionPhase !== 'idle' && !state.isFinished;
 
   const handleEndSession = () => {
     controls.endSession();
-    // Here we can pass state to results page
-    navigate('/results', { state: { breathHoldTime: state.breathHoldTime } });
+    navigate('/results', { state: { 
+      breathHoldTime: state.breathHoldTime,
+      restlessnessScore 
+    } });
   };
 
   if (state.sessionPhase === 'idle' || state.isFinished) {
@@ -122,7 +129,13 @@ const BreathingSession = () => {
         </Button>
       </div>
 
-      <VideoFeed />
+      {showVideoFeed && <VideoFeed videoRef={videoRef} isActive={showVideoFeed} />}
+      
+      {isTracking && (
+        <div className="absolute bottom-4 left-4 bg-gray-900/80 text-white p-2 rounded-lg text-xs z-30 font-mono animate-fade-in">
+          <p>RESTLESSNESS: {Math.round(restlessnessScore)}</p>
+        </div>
+      )}
     </div>
   );
 };

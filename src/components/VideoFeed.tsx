@@ -1,53 +1,39 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 
-const VideoFeed = () => {
-  const videoRef = useRef<HTMLVideoElement>(null);
+interface VideoFeedProps {
+  videoRef: React.RefObject<HTMLVideoElement>;
+  isActive: boolean;
+}
 
+const VideoFeed = ({ videoRef, isActive }: VideoFeedProps) => {
   useEffect(() => {
-    // 1. Get user media (camera feed)
-    const getCameraFeed = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error("Error accessing camera:", err);
-        // TODO: Show a user-friendly message that camera access is needed
-      }
-    };
-
-    getCameraFeed();
-
-    // 2. Load a computer vision model (e.g., TensorFlow.js Face Landmarks Detection)
-    // TODO: Add a library like:
-    // import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
-    // import '@tensorflow/tfjs-backend-webgl';
-    
-    // 3. Run detection on the video feed
-    const detectMovement = async () => {
-      // TODO: Implement detection loop
-      // const model = await faceLandmarksDetection.load(...)
-      // setInterval(async () => {
-      //   if (videoRef.current) {
-      //     const faces = await model.estimateFaces({ input: videoRef.current });
-      //     // Analyze faces array for blinking, head movement, etc.
-      //     // Update restlessness score in parent component.
-      //   }
-      // }, 100); // Run detection every 100ms
-    };
-
-    // detectMovement();
-
-    // Cleanup function to stop video stream
-    return () => {
+    const stopCameraFeed = () => {
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
       }
+    };
+
+    if (isActive) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        })
+        .catch(err => {
+          console.error("Error accessing camera:", err);
+        });
+    } else {
+      stopCameraFeed();
     }
-  }, []);
+
+    return () => {
+      stopCameraFeed();
+    };
+  }, [isActive, videoRef]);
 
   return (
     <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden shadow-2xl border-4 border-white">
@@ -64,3 +50,4 @@ const VideoFeed = () => {
 };
 
 export default VideoFeed;
+

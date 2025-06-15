@@ -16,7 +16,7 @@ const formatTime = (seconds: number) => {
 
 const Results = () => {
   const location = useLocation();
-  const sessionData = location.state;
+  const sessionData = location.state || {};
 
   const stats = [
     {
@@ -27,9 +27,13 @@ const Results = () => {
     },
     {
       title: 'Restlessness Score',
-      value: '23/100',
+      value: typeof sessionData.restlessnessScore === 'number' ? `${Math.round(sessionData.restlessnessScore)}/100` : 'N/A',
       icon: <Activity className="w-6 h-6 text-primary" />,
-      description: 'Very calm session. Minimal movement detected.',
+      description: typeof sessionData.restlessnessScore !== 'number' 
+        ? 'Movement tracking was not active for this session.'
+        : (sessionData.restlessnessScore < 20 
+            ? 'Very calm session. Minimal movement detected.' 
+            : 'Some movement was detected. Try finding a more comfortable, stable position next time.'),
     },
     {
       title: 'Session Consistency',
