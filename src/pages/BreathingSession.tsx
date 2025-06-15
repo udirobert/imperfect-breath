@@ -16,10 +16,11 @@ const BreathingSession = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const isTracking = state.isRunning || state.sessionPhase === "camera-setup";
-  const { restlessnessScore, landmarks, trackingStatus } = useCameraTracking({
-    videoRef,
-    isTracking,
-  });
+  const { restlessnessScore, landmarks, trackingStatus, initializeCamera } =
+    useCameraTracking({
+      videoRef,
+      isTracking,
+    });
   const showVideoFeed = state.sessionPhase !== "idle" && !state.isFinished;
 
   useAIFeedback({
@@ -71,6 +72,7 @@ const BreathingSession = () => {
         videoRef={videoRef}
         landmarks={landmarks}
         trackingStatus={trackingStatus}
+        initializeCamera={initializeCamera}
       />
     );
   }

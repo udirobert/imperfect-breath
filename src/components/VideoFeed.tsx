@@ -27,7 +27,11 @@ const VideoFeed = ({
       showIcon: boolean;
     };
   } = {
-    IDLE: { border: "border-white", message: "", showIcon: false },
+    IDLE: {
+      border: "border-gray-400",
+      message: "Click 'Enable Camera' to start",
+      showIcon: false,
+    },
     REQUESTING_CAMERA: {
       border: "border-blue-400",
       message: "Requesting camera access...",

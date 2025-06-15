@@ -29,11 +29,16 @@ const DiagnosticPage = () => {
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [browserInfo, setBrowserInfo] = useState<string>("");
 
-  const { restlessnessScore, landmarks, trackingStatus, isModelsLoaded } =
-    useCameraTracking({
-      videoRef,
-      isTracking: isTestingActive,
-    });
+  const {
+    restlessnessScore,
+    landmarks,
+    trackingStatus,
+    isModelsLoaded,
+    initializeCamera,
+  } = useCameraTracking({
+    videoRef,
+    isTracking: isTestingActive,
+  });
 
   // Log diagnostic information
   const addLog = (message: string) => {
@@ -90,32 +95,26 @@ const DiagnosticPage = () => {
         throw new Error("Camera API not supported in this browser");
       }
 
-      const constraints = {
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: "user",
-        },
-      };
+      setIsTestingActive(true);
+      await initializeCamera();
 
-      addLog(
-        `Requesting camera with constraints: ${JSON.stringify(constraints)}`,
-      );
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Wait a moment for camera to initialize
+      setTimeout(() => {
+        if (videoRef.current?.srcObject) {
+          setCameraPermission("granted");
+          addLog("✅ Camera access granted");
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraPermission("granted");
-        setIsTestingActive(true);
-        addLog("✅ Camera access granted");
-
-        // Log stream info
-        const videoTrack = stream.getVideoTracks()[0];
-        const settings = videoTrack.getSettings();
-        addLog(
-          `Camera settings: ${settings.width}x${settings.height} @ ${settings.frameRate}fps`,
-        );
-      }
+          // Log stream info
+          const stream = videoRef.current.srcObject as MediaStream;
+          const videoTrack = stream.getVideoTracks()[0];
+          const settings = videoTrack.getSettings();
+          addLog(
+            `Camera settings: ${settings.width}x${settings.height} @ ${settings.frameRate}fps`,
+          );
+        } else {
+          addLog("⚠️ Camera initialization incomplete");
+        }
+      }, 1000);
     } catch (error) {
       setCameraPermission("denied");
       const err = error as Error;
@@ -128,6 +127,7 @@ const DiagnosticPage = () => {
       } else {
         addLog(`❌ Camera error: ${err.message}`);
       }
+      setIsTestingActive(false);
     }
   };
 

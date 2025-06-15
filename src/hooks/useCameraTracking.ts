@@ -366,94 +366,79 @@ export const useCameraTracking = ({
     }
   }, [videoRef, isTracking]);
 
-  // Initialize camera stream
-  useEffect(() => {
-    const initializeCamera = async () => {
-      if (!isTracking || !videoRef.current || videoRef.current.srcObject) {
-        return;
-      }
+  // Camera initialization function (to be called by user interaction)
+  const initializeCamera = useCallback(async () => {
+    if (!videoRef.current || videoRef.current.srcObject) {
+      return;
+    }
 
-      console.log("🎥 Requesting camera permission...");
-      setTrackingStatus("REQUESTING_CAMERA");
+    console.log("🎥 Requesting camera permission...");
+    setTrackingStatus("REQUESTING_CAMERA");
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            facingMode: "user",
-          },
-        });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: "user",
+        },
+      });
 
-        const video = videoRef.current;
-        if (video) {
-          video.srcObject = stream;
-          console.log("✅ Camera stream set");
-          setTrackingStatus("INITIALIZING");
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        console.log("✅ Camera stream set");
+        setTrackingStatus("INITIALIZING");
 
-          // Wait for video to be ready
-          const onMetadataLoaded = () => {
-            console.log("📹 Video metadata loaded, ready for detection");
-            video.play();
-          };
-
-          video.onloadedmetadata = onMetadataLoaded;
-
-          // Fallback - try to play after a delay
+        // Wait for video to be ready
+        const onMetadataLoaded = () => {
+          console.log("📹 Video metadata loaded, ready for detection");
+          video.play();
+          // Start detection once video is ready
           setTimeout(() => {
-            if (video && video.readyState === 0) {
-              console.log("🔄 Attempting to play video...");
-              video.play();
+            if (isTracking && modelsLoaded && videoRef.current?.srcObject) {
+              detectionLoop();
             }
-          }, 500);
-        }
-      } catch (error) {
-        console.error("❌ Camera access error:", error);
-        const err = error as Error;
-        if (err.name === "NotAllowedError") {
-          console.log("Camera permission denied by user");
-        } else if (err.name === "NotFoundError") {
-          console.log("No camera found");
-        }
-        setTrackingStatus("ERROR");
-      }
-    };
+          }, 1000);
+        };
 
-    initializeCamera();
-  }, [isTracking, videoRef]);
+        video.onloadedmetadata = onMetadataLoaded;
+
+        // Fallback - try to play after a delay
+        setTimeout(() => {
+          if (video && video.readyState === 0) {
+            console.log("🔄 Attempting to play video...");
+            video.play();
+          }
+        }, 500);
+      }
+    } catch (error) {
+      console.error("❌ Camera access error:", error);
+      const err = error as Error;
+      if (err.name === "NotAllowedError") {
+        console.log("Camera permission denied by user");
+      } else if (err.name === "NotFoundError") {
+        console.log("No camera found");
+      }
+      setTrackingStatus("ERROR");
+    }
+  }, [videoRef, isTracking, modelsLoaded, detectionLoop]);
 
   // Load models on mount
   useEffect(() => {
     loadModels();
   }, [loadModels]);
 
-  // Main tracking effect
+  // Effect to handle tracking state changes
   useEffect(() => {
-    if (isTracking && modelsLoaded) {
-      console.log("🚀 Starting tracking session...");
-
-      // Reset state
-      detectionFailureCount.current = 0;
-      setRestlessnessScore(0);
-      setLandmarks([]);
-
-      // Don't set status here - let camera initialization handle it
-      // Start detection after allowing time for camera to initialize
-      const timer = setTimeout(() => {
-        console.log("⏰ Starting detection loop");
-        detectionLoop();
-      }, 3000); // Increased delay to allow camera setup
-
-      return () => clearTimeout(timer);
-    } else {
+    if (!isTracking) {
       if (requestRef.current) {
         clearTimeout(requestRef.current);
       }
-      if (!isTracking) {
-        setTrackingStatus("IDLE");
-      }
+      setTrackingStatus("IDLE");
+      setLandmarks([]);
     }
-  }, [isTracking, modelsLoaded, detectionLoop]);
+  }, [isTracking]);
 
   // Cleanup camera stream when component unmounts
   useEffect(() => {
@@ -471,5 +456,6 @@ export const useCameraTracking = ({
     landmarks,
     trackingStatus,
     isModelsLoaded: modelsLoaded,
+    initializeCamera,
   };
 };
