@@ -2,8 +2,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Button } from '@/components/ui/button';
 import { useBreathingSession } from '@/hooks/useBreathingSession';
-import { TrackingStatus } from '@/hooks/useCameraTracking';
-import type { Keypoint } from '@tensorflow-models/face-landmarks-detection';
+import { TrackingStatus, Keypoint } from '@/hooks/useCameraTracking';
 import { Loader2 } from 'lucide-react';
 
 const VideoFeed = lazy(() => import('@/components/VideoFeed'));
@@ -39,11 +38,16 @@ export const CameraSetup = ({ controls, videoRef, landmarks, trackingStatus }: C
         </Suspense>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 text-center">
         <Button onClick={controls.startSession} size="lg" disabled={!isReady} className="w-48">
           {!isReady && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isReady ? 'Start Session' : 'Initializing...'}
         </Button>
+        {!isReady && (
+           <p className="text-sm text-muted-foreground mt-4">
+             Having trouble? You can <Button variant="link" className="p-0 h-auto" onClick={controls.startSession}>skip the camera setup</Button>.
+           </p>
+        )}
       </div>
     </div>
   );

@@ -1,8 +1,6 @@
-
 import React, { useEffect } from 'react';
-import type { Keypoint } from '@tensorflow-models/face-landmarks-detection';
 import { cn } from '@/lib/utils';
-import type { TrackingStatus } from '@/hooks/useCameraTracking';
+import type { TrackingStatus, Keypoint } from '@/hooks/useCameraTracking';
 import { Loader2 } from 'lucide-react';
 
 interface VideoFeedProps {

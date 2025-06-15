@@ -1,12 +1,10 @@
-
 import React, { Suspense, lazy } from 'react';
 import BreathingAnimation from '@/components/BreathingAnimation';
 import { BreathingPhaseName } from '@/lib/breathingPatterns';
 import { useBreathingSession } from '@/hooks/useBreathingSession';
 import { SessionHeader } from './SessionHeader';
 import { SessionControls } from './SessionControls';
-import type { Keypoint } from '@tensorflow-models/face-landmarks-detection';
-import type { TrackingStatus } from '@/hooks/useCameraTracking';
+import type { TrackingStatus, Keypoint } from '@/hooks/useCameraTracking';
 
 const VideoFeed = lazy(() => import('@/components/VideoFeed'));
 
