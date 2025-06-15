@@ -1,18 +1,29 @@
 
 import React from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import { BarChart, Clock, Activity } from 'lucide-react';
 
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins > 0) {
+    return `${mins}m ${secs}s`;
+  }
+  return `${secs}s`;
+};
+
 const Results = () => {
-  // TODO: Replace with actual data from the session
+  const location = useLocation();
+  const sessionData = location.state;
+
   const stats = [
     {
       title: 'Max Breath Hold',
-      value: '45s',
+      value: sessionData?.breathHoldTime ? formatTime(sessionData.breathHoldTime) : 'N/A',
       icon: <Clock className="w-6 h-6 text-primary" />,
-      description: 'Great focus! Try to relax your shoulders more.',
+      description: sessionData?.breathHoldTime && sessionData.breathHoldTime > 0 ? 'Great focus! Try to relax your shoulders more.' : 'Breath hold was not part of this session.',
     },
     {
       title: 'Restlessness Score',

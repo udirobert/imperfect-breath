@@ -1,59 +1,125 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Pause, Play, StopCircle, Volume2, VolumeX } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import BreathingAnimation from '@/components/BreathingAnimation';
 import VideoFeed from '@/components/VideoFeed';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { Pause, Play, StopCircle } from 'lucide-react';
+import { useBreathingSession } from '@/hooks/useBreathingSession';
+import { BREATHING_PATTERNS, BreathingPhaseName } from '@/lib/breathingPatterns';
 
-// TODO: This logic should be moved to a custom hook (e.g., useBreathingSession)
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const secs = (seconds % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}`;
+};
+
 const BreathingSession = () => {
-  const [phase, setPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
-  const [text, setText] = useState('Breathe In...');
-  const [isRunning, setIsRunning] = useState(true);
+  const { state, controls } = useBreathingSession();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!isRunning) return;
+  const handleEndSession = () => {
+    controls.endSession();
+    // Here we can pass state to results page
+    navigate('/results', { state: { breathHoldTime: state.breathHoldTime } });
+  };
 
-    // This is a simplified box breathing cycle (4s in, 4s hold, 4s out)
-    // A real implementation would allow for different patterns (Wim Hof, etc.)
-    const cycle = [
-      { phase: 'inhale', text: 'Breathe In...', duration: 4000 },
-      { phase: 'hold', text: 'Hold', duration: 4000 },
-      { phase: 'exhale', text: 'Breathe Out...', duration: 4000 },
-      { phase: 'hold', text: 'Hold', duration: 4000 },
-    ];
-    
-    let currentIndex = 0;
-    
-    const nextPhase = () => {
-      const current = cycle[currentIndex];
-      setPhase(current.phase as any);
-      setText(current.text);
-      currentIndex = (currentIndex + 1) % cycle.length;
-    };
-
-    nextPhase(); // Initial call
-    const intervalId = setInterval(nextPhase, 4000);
-
-    return () => clearInterval(intervalId);
-  }, [isRunning]);
+  if (state.sessionPhase === 'idle' || state.isFinished) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center animate-fade-in w-full max-w-md mx-auto">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl">{state.isFinished ? "Session Complete!" : "Prepare Your Session"}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {state.isFinished ? (
+              <div className="text-center space-y-4">
+                 <p>You held your breath for <span className="font-bold">{formatTime(state.breathHoldTime)}</span>.</p>
+                 <p>Well done. Take a moment to notice how you feel.</p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <Label className="text-lg mb-2 block">Choose Your Rhythm</Label>
+                  <RadioGroup
+                    defaultValue={state.pattern.key}
+                    onValueChange={(value) => controls.selectPattern(value as any)}
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+                  >
+                    {Object.values(BREATHING_PATTERNS).map(p => (
+                      <div key={p.key}>
+                        <RadioGroupItem value={p.key} id={p.key} className="peer sr-only" />
+                        <Label
+                          htmlFor={p.key}
+                          className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
+                        >
+                          {p.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="audio-switch" className="text-lg">Audio Guidance</Label>
+                  <Switch
+                    id="audio-switch"
+                    checked={state.audioEnabled}
+                    onCheckedChange={controls.toggleAudio}
+                  />
+                </div>
+              </>
+            )}
+            <div className="flex gap-4">
+              {state.isFinished ? (
+                <Button asChild size="lg" className="w-full"><Link to="/">Back to Home</Link></Button>
+              ) : (
+                <Button onClick={controls.startSession} size="lg" className="w-full">
+                  Begin Session
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-grow flex flex-col items-center justify-center w-full relative animate-fade-in">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <BreathingAnimation phase={phase} text={text} />
+        <BreathingAnimation 
+          phase={state.sessionPhase === 'breath-hold' ? 'hold' : state.sessionPhase as BreathingPhaseName} 
+          text={state.phaseText} 
+        />
       </div>
-      
+
+      <div className="absolute top-8 text-center z-20">
+        <p className="text-lg text-muted-foreground">{state.pattern.name}</p>
+        {state.sessionPhase !== 'breath-hold' && state.pattern.cycles !== Infinity &&
+          <p className="text-2xl font-bold text-primary">Cycle: {state.cycleCount + 1} / {state.pattern.cycles}</p>
+        }
+        {state.sessionPhase === 'breath-hold' ? (
+          <p className="text-4xl font-mono font-bold text-primary animate-pulse">{formatTime(state.breathHoldTime)}</p>
+        ) : (
+          <p className="text-4xl font-mono font-bold text-primary">{state.phaseCountdown > 0 ? state.phaseCountdown : ''}</p>
+        )}
+      </div>
+
       <div className="z-20 mt-auto mb-8 flex items-center space-x-4">
-        <Button variant="ghost" size="icon" onClick={() => setIsRunning(!isRunning)} className="rounded-full w-16 h-16">
-          {isRunning ? <Pause size={32} /> : <Play size={32} />}
+        <Button variant="ghost" size="icon" onClick={controls.toggleAudio} className="rounded-full w-16 h-16">
+          {state.audioEnabled ? <Volume2 size={32} /> : <VolumeX size={32} />}
         </Button>
-        <Link to="/results">
-          <Button variant="destructive" size="icon" className="rounded-full w-16 h-16 bg-red-400 hover:bg-red-500">
-            <StopCircle size={32} />
-          </Button>
-        </Link>
+        <Button variant="ghost" size="icon" onClick={controls.togglePause} className="rounded-full w-16 h-16">
+          {state.isRunning && state.sessionPhase !== 'breath-hold' ? <Pause size={32} /> : <Play size={32} />}
+        </Button>
+        <Button variant="destructive" size="icon" onClick={handleEndSession} className="rounded-full w-16 h-16 bg-red-400 hover:bg-red-500">
+          <StopCircle size={32} />
+        </Button>
       </div>
 
       <VideoFeed />
