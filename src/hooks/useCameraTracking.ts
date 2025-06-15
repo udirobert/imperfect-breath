@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
@@ -28,7 +27,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
       try {
         await tf.setBackend('webgl');
         const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
-        const detectorConfig: faceLandmarksDetection.MediaPipeFaceMeshMediaPipeModelConfig = {
+        const detectorConfig: faceLandmarksDetection.MediaPipeFaceMeshTfjsModelConfig = {
           runtime: 'tfjs',
           maxFaces: 1,
         };
@@ -109,4 +108,3 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
 
   return { restlessnessScore: smoothedScore };
 };
-
