@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as tf from '@tensorflow/tfjs-core';
 import '@tensorflow/tfjs-backend-webgl';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
-import { Face, Keypoint } from '@tensorflow-models/face-landmarks-detection';
+import { Face, Keypoint, FaceLandmarksDetector } from '@tensorflow-models/face-landmarks-detection';
 
 type UseCameraTrackingProps = {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -16,7 +16,7 @@ const euclidianDistance = (p1: Keypoint, p2: Keypoint) => {
 };
 
 export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingProps) => {
-  const [model, setModel] = useState<faceLandmarksDetection.FaceLandmarksDetector | null>(null);
+  const [detector, setDetector] = useState<FaceLandmarksDetector | null>(null);
   const [smoothedScore, setSmoothedScore] = useState(0);
 
   const requestRef = useRef<number>();
@@ -27,11 +27,13 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
     const loadModel = async () => {
       try {
         await tf.setBackend('webgl');
-        const loadedModel = await faceLandmarksDetection.load(
-          faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
-          { maxFaces: 1 }
-        );
-        setModel(loadedModel);
+        const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
+        const detectorConfig: faceLandmarksDetection.MediaPipeFaceMeshMediaPipeModelConfig = {
+          runtime: 'tfjs',
+          maxFaces: 1,
+        };
+        const loadedDetector = await faceLandmarksDetection.createDetector(model, detectorConfig);
+        setDetector(loadedDetector);
         console.log('Face detection model loaded.');
       } catch (error) {
         console.error('Error loading face detection model:', error);
@@ -62,10 +64,9 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
   }, []);
 
   const detectionLoop = useCallback(async () => {
-    if (model && videoRef.current && videoRef.current.readyState >= 3) {
+    if (detector && videoRef.current && videoRef.current.readyState >= 3) {
       try {
-        const faces = await model.estimateFaces({
-          input: videoRef.current,
+        const faces = await detector.estimateFaces(videoRef.current, {
           flipHorizontal: false,
         });
 
@@ -85,10 +86,10 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
     if (isTracking) {
       requestRef.current = requestAnimationFrame(detectionLoop);
     }
-  }, [model, videoRef, isTracking, calculateRestlessness]);
+  }, [detector, videoRef, isTracking, calculateRestlessness]);
 
   useEffect(() => {
-    if (isTracking && model) {
+    if (isTracking && detector) {
       lastPosition.current = null;
       scoreHistory.current = [];
       setSmoothedScore(0);
@@ -104,7 +105,7 @@ export const useCameraTracking = ({ videoRef, isTracking }: UseCameraTrackingPro
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [isTracking, model, detectionLoop]);
+  }, [isTracking, detector, detectionLoop]);
 
   return { restlessnessScore: smoothedScore };
 };
