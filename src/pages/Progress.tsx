@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useSessionHistory } from '@/hooks/useSessionHistory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,9 +19,9 @@ const Progress = () => {
   const { history, streak, totalMinutes, longestBreathHold, averageRestlessness, preferredPattern } = useSessionHistory();
 
   const chartData = history.map(session => ({
-    date: format(parseISO(session.date), 'MMM d'),
-    'Breath Hold': session.breathHoldTime,
-    'Restlessness': session.restlessnessScore,
+    date: format(parseISO(session.created_at), 'MMM d'),
+    'Breath Hold': session.breath_hold_time,
+    'Restlessness': session.restlessness_score,
   })).slice(-30);
 
   const chartConfig: ChartConfig = {

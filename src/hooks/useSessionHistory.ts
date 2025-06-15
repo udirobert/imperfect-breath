@@ -7,7 +7,13 @@ import { useAuth } from './useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type SessionRecordFromDb = Database['public']['Tables']['sessions']['Row'];
-export type ISessionRecord = Omit<SessionRecordFromDb, 'id' | 'user_id' | 'created_at'> & { date: string };
+
+export type SessionInput = {
+  breathHoldTime: number;
+  restlessnessScore: number;
+  sessionDuration: number;
+  patternName: string;
+};
 
 const calculateStreak = (history: SessionRecordFromDb[]): number => {
   if (history.length === 0) return 0;
@@ -97,15 +103,11 @@ export const useSessionHistory = () => {
   });
 
   const saveSessionMutation = useMutation({
-    mutationFn: async (newSession: Omit<SessionRecordFromDb, 'id' | 'user_id' | 'created_at'>) => {
+    mutationFn: async (newSession: Omit<Database['public']['Tables']['sessions']['Insert'], 'user_id'>) => {
       if (!user) throw new Error("User must be logged in to save a session.");
       
       const sessionToSave = {
         ...newSession,
-        breath_hold_time: newSession.breath_hold_time,
-        restlessness_score: newSession.restlessness_score,
-        session_duration: newSession.session_duration,
-        pattern_name: newSession.pattern_name,
         user_id: user.id
       };
       
@@ -121,7 +123,7 @@ export const useSessionHistory = () => {
     },
   });
 
-  const saveSession = useCallback((newSession: Omit<ISessionRecord, 'date'>) => {
+  const saveSession = useCallback((newSession: SessionInput) => {
     const sessionForDb = {
       breath_hold_time: newSession.breathHoldTime,
       restlessness_score: newSession.restlessnessScore,
