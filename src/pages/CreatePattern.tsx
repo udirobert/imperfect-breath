@@ -4,8 +4,8 @@ import { ArrowLeft, Save, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import PatternBuilder from "@/components/creator/PatternBuilder";
-import type { CustomPattern } from "@/lib/ai/providers";
+import EnhancedPatternBuilder from "@/components/creator/EnhancedPatternBuilder";
+import type { EnhancedCustomPattern } from "@/types/patterns";
 import { demoStoryIntegration } from "@/lib/story/storyClient";
 
 const CreatePattern = () => {
@@ -15,10 +15,12 @@ const CreatePattern = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Check if we're editing an existing pattern
-  const editPattern = location.state?.editPattern as CustomPattern | undefined;
+  const editPattern = location.state?.editPattern as
+    | EnhancedCustomPattern
+    | undefined;
   const isEditing = !!editPattern;
 
-  const handleSave = async (pattern: CustomPattern) => {
+  const handleSave = async (pattern: EnhancedCustomPattern) => {
     setIsSaving(true);
 
     try {
@@ -76,7 +78,7 @@ const CreatePattern = () => {
     }
   };
 
-  const handlePreview = (pattern: CustomPattern) => {
+  const handlePreview = (pattern: EnhancedCustomPattern) => {
     // Navigate to breathing session with preview pattern
     navigate("/session", {
       state: {
@@ -126,6 +128,29 @@ const CreatePattern = () => {
                     difficulty: "beginner" as const,
                     duration: 0,
                     creator: "preview",
+                    tags: [],
+                    targetAudience: [],
+                    expectedDuration: 5,
+                    sessionCount: 1,
+                    primaryBenefits: [],
+                    secondaryBenefits: [],
+                    instructorName: "Preview",
+                    instructorBio: "",
+                    instructorCredentials: [],
+                    licenseSettings: {
+                      isCommercial: false,
+                      price: 0,
+                      currency: "ETH" as const,
+                      allowDerivatives: false,
+                      attribution: true,
+                      commercialUse: false,
+                      royaltyPercentage: 0,
+                    },
+                    hasProgressTracking: false,
+                    hasAIFeedback: false,
+                    customInstructions: "",
+                    preparationNotes: "",
+                    postSessionNotes: "",
                   };
                   handlePreview(currentPattern);
                 }}
@@ -140,22 +165,10 @@ const CreatePattern = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Save className="h-5 w-5" />
-                Pattern Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <PatternBuilder
-                onSave={handleSave}
-                existingPattern={editPattern}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        <EnhancedPatternBuilder
+          onSave={handleSave}
+          existingPattern={editPattern}
+        />
       </div>
 
       {/* Tips Section */}

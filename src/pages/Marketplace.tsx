@@ -402,16 +402,19 @@ const Marketplace = () => {
 
         <div className="flex gap-4 flex-wrap">
           <Select
-            value={filters.category || ""}
+            value={filters.category || "all"}
             onValueChange={(value) =>
-              setFilters((prev) => ({ ...prev, category: value || undefined }))
+              setFilters((prev) => ({
+                ...prev,
+                category: value === "all" ? undefined : value,
+              }))
             }
           >
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="stress">Stress Relief</SelectItem>
               <SelectItem value="sleep">Sleep</SelectItem>
               <SelectItem value="focus">Focus</SelectItem>
@@ -420,11 +423,11 @@ const Marketplace = () => {
           </Select>
 
           <Select
-            value={filters.difficulty || ""}
+            value={filters.difficulty || "all"}
             onValueChange={(value) =>
               setFilters((prev) => ({
                 ...prev,
-                difficulty: value || undefined,
+                difficulty: value === "all" ? undefined : value,
               }))
             }
           >
@@ -432,7 +435,7 @@ const Marketplace = () => {
               <SelectValue placeholder="Difficulty" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Levels</SelectItem>
+              <SelectItem value="all">All Levels</SelectItem>
               <SelectItem value="beginner">Beginner</SelectItem>
               <SelectItem value="intermediate">Intermediate</SelectItem>
               <SelectItem value="advanced">Advanced</SelectItem>

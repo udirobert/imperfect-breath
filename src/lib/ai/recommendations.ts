@@ -28,7 +28,7 @@ export interface OptimizationSuggestions {
   suggestedChanges: {
     duration?: number;
     phases?: Partial<BreathingPhase>[];
-    category?: 'stress' | 'sleep' | 'energy' | 'focus';
+    category?: 'stress' | 'sleep' | 'energy' | 'focus' | 'performance';
     difficulty?: 'beginner' | 'intermediate' | 'advanced';
   };
   reasoning: string;

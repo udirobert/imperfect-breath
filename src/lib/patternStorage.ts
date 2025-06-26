@@ -1,4 +1,4 @@
-import { BreathingPhase } from "./breathingPatterns";
+import { BreathingPhase, CustomBreathingPhase } from "./breathingPatterns";
 import { supabase } from "../integrations/supabase/client";
 import { Json } from "../integrations/supabase/types";
 
@@ -6,8 +6,8 @@ export interface CustomPattern {
   id: string;
   name: string;
   description: string;
-  phases: BreathingPhase[];
-  category: 'stress' | 'sleep' | 'energy' | 'focus';
+  phases: CustomBreathingPhase[]; // Use the more flexible phase type
+  category: 'stress' | 'sleep' | 'energy' | 'focus' | 'performance';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   duration: number;
   creator: string;
@@ -37,8 +37,8 @@ export class PatternStorageService {
       id: supabasePattern.id,
       name: supabasePattern.name,
       description: supabasePattern.description || '',
-      phases: supabasePattern.phases as unknown as BreathingPhase[],
-      category: supabasePattern.category as 'stress' | 'sleep' | 'energy' | 'focus',
+      phases: supabasePattern.phases as unknown as CustomBreathingPhase[],
+      category: supabasePattern.category as 'stress' | 'sleep' | 'energy' | 'focus' | 'performance',
       difficulty: supabasePattern.difficulty as 'beginner' | 'intermediate' | 'advanced',
       duration: supabasePattern.duration,
       creator: supabasePattern.creator,

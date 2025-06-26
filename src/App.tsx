@@ -10,16 +10,21 @@ import Layout from "./components/Layout";
 const queryClient = new QueryClient();
 
 // Lazy load pages for better performance
-const Index = React.lazy(() => import("./pages/Index"));
+const Index = React.lazy(() => import("./pages/EnhancedIndex"));
 const BreathingSession = React.lazy(() => import("./pages/BreathingSession"));
 const Results = React.lazy(() => import("./pages/Results"));
 const Progress = React.lazy(() => import("./pages/Progress"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const DiagnosticPage = React.lazy(() => import("./pages/DiagnosticPage"));
 const AISettings = React.lazy(() => import("./pages/AISettings"));
-const Marketplace = React.lazy(() => import("./pages/Marketplace"));
-const CreatorDashboard = React.lazy(() => import("./pages/CreatorDashboard"));
+const Marketplace = React.lazy(() => import("./pages/EnhancedMarketplace"));
+const CreatorDashboard = React.lazy(
+  () => import("./pages/EnhancedCreatorDashboard")
+);
 const CreatePattern = React.lazy(() => import("./pages/CreatePattern"));
+const InstructorOnboarding = React.lazy(
+  () => import("./pages/InstructorOnboarding")
+);
 
 const PageLoader = () => (
   <div className="flex-grow flex items-center justify-center">
@@ -46,6 +51,10 @@ const App = () => (
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/creator" element={<CreatorDashboard />} />
               <Route path="/create-pattern" element={<CreatePattern />} />
+              <Route
+                path="/instructor-onboarding"
+                element={<InstructorOnboarding />}
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
