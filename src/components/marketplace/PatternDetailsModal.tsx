@@ -37,6 +37,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { EnhancedCustomPattern } from "@/types/patterns";
+import { PatternReviewForm } from "./PatternReviewForm";
+import { ReviewService, PatternReview } from "@/lib/reviewService";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
+
+const reviewService = new ReviewService();
 
 interface PatternDetailsModalProps {
   pattern: EnhancedCustomPattern | null;
@@ -67,7 +73,40 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
   isLiked = false,
   hasAccess = true,
 }) => {
+  const { user } = useAuth();
+  const [reviews, setReviews] = React.useState<PatternReview[]>([]);
+  const [loadingReviews, setLoadingReviews] = React.useState(false);
+
+  useEffect(() => {
+    if (pattern) {
+      setLoadingReviews(true);
+      reviewService
+        .getReviewsForPattern(pattern.id)
+        .then(setReviews)
+        .finally(() => setLoadingReviews(false));
+    }
+  }, [pattern]);
+
   if (!pattern) return null;
+
+  const handleReviewSubmit = async (rating: number, reviewText: string) => {
+    if (!user) {
+      alert("You must be logged in to submit a review.");
+      return;
+    }
+    await reviewService.submitReview({
+      pattern_id: pattern.id,
+      user_id: user.id,
+      rating,
+      review_text: reviewText,
+    });
+    // Refresh reviews
+    setLoadingReviews(true);
+    reviewService
+      .getReviewsForPattern(pattern.id)
+      .then(setReviews)
+      .finally(() => setLoadingReviews(false));
+  };
 
   const CategoryIcon =
     categoryIcons[pattern.category as keyof typeof categoryIcons] || Heart;
@@ -199,10 +238,11 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
 
           {/* Main Content */}
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="phases">Phases</TabsTrigger>
               <TabsTrigger value="benefits">Benefits</TabsTrigger>
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="instructor">Instructor</TabsTrigger>
             </TabsList>
 
@@ -242,7 +282,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
               <div className="space-y-3">
                 <h3 className="font-semibold">Included Content</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {pattern.instructionalVideo && (
+                  {(pattern.mediaContent as any)?.instructionalVideo && (
                     <Card>
                       <CardContent className="p-3 flex items-center gap-2">
                         <Video className="h-4 w-4" />
@@ -250,7 +290,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                       </CardContent>
                     </Card>
                   )}
-                  {pattern.guidedAudio && (
+                  {(pattern.mediaContent as any)?.guidedAudio && (
                     <Card>
                       <CardContent className="p-3 flex items-center gap-2">
                         <Volume2 className="h-4 w-4" />
@@ -258,7 +298,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                       </CardContent>
                     </Card>
                   )}
-                  {pattern.backgroundMusic && (
+                  {(pattern.mediaContent as any)?.backgroundMusic && (
                     <Card>
                       <CardContent className="p-3 flex items-center gap-2">
                         <Volume2 className="h-4 w-4" />
@@ -266,7 +306,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                       </CardContent>
                     </Card>
                   )}
-                  {pattern.visualGuide && (
+                  {(pattern.mediaContent as any)?.visualGuide && (
                     <Card>
                       <CardContent className="p-3 flex items-center gap-2">
                         <BookOpen className="h-4 w-4" />
@@ -345,6 +385,52 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                   <p>No specific benefits listed for this pattern</p>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="reviews" className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-4">Community Reviews</h3>
+                {loadingReviews ? (
+                  <p>Loading reviews...</p>
+                ) : reviews.length > 0 ? (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <Card key={review.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < review.rating
+                                    ? "text-yellow-400 fill-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-muted-foreground mt-2">
+                            {review.review_text}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            By user {review.user_id.substring(0, 6)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No reviews yet. Be the first to share your experience!</p>
+                )}
+              </div>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-4">Leave a Review</h3>
+                <PatternReviewForm
+                  patternId={pattern.id}
+                  onSubmit={handleReviewSubmit}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="instructor" className="space-y-4">

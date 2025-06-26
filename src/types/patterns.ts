@@ -32,12 +32,11 @@ export interface BenefitClaim {
   sources?: string[];
 }
 
+import { Json } from "@/integrations/supabase/types";
+
 export interface EnhancedCustomPattern extends CustomPattern {
-  // Media content
-  instructionalVideo?: MediaContent;
-  guidedAudio?: MediaContent;
-  backgroundMusic?: MediaContent;
-  visualGuide?: MediaContent;
+  // Media content as a structured JSON object
+  mediaContent?: Json;
 
   // Enhanced metadata
   tags: string[];
@@ -88,12 +87,18 @@ export const defaultLicense: LicenseSettings = {
 export const enhancePattern = (pattern: CustomPattern): EnhancedCustomPattern => {
   return {
     ...pattern,
+    // Initialize with empty or default values
+    mediaContent: pattern.mediaContent || {},
     tags: [],
     targetAudience: [],
     primaryBenefits: [],
     secondaryBenefits: [],
-    instructorName: pattern.creator,
+    instructorName: pattern.creator, // This should be fetched from a user profile in a real app
     instructorCredentials: [],
-    licenseSettings: defaultLicense,
+    licenseSettings: (pattern.licensingInfo as unknown as LicenseSettings) || defaultLicense,
+    
+    // Default advanced features to false
+    hasProgressTracking: false,
+    hasAIFeedback: false,
   };
 };

@@ -12,12 +12,14 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const location = useLocation();
+  const { user, profile } = useAuth();
 
   const isInstructorPath =
-    location.pathname.includes("/creator") ||
+    location.pathname.includes("/creator-dashboard") ||
     location.pathname.includes("/instructor") ||
     location.pathname.includes("/create-pattern");
 
@@ -61,37 +63,41 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Divider */}
-          <div className="h-6 w-px bg-border" />
+          {profile?.role === "creator" && (
+            <>
+              {/* Divider */}
+              <div className="h-6 w-px bg-border" />
 
-          {/* Instructor Section */}
-          <div className="flex items-center gap-2">
-            <Link to="/creator">
-              <Button
-                variant={isInstructorPath ? "default" : "ghost"}
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Users className="w-4 h-4" />
-                Creator Hub
-                {isInstructorPath && (
-                  <Badge variant="secondary" className="ml-1 px-1 text-xs">
-                    Active
-                  </Badge>
-                )}
-              </Button>
-            </Link>
-            <Link to="/create-pattern">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground"
-              >
-                <Plus className="w-4 h-4" />
-                Create Pattern
-              </Button>
-            </Link>
-          </div>
+              {/* Instructor Section */}
+              <div className="flex items-center gap-2">
+                <Link to="/creator-dashboard">
+                  <Button
+                    variant={isInstructorPath ? "default" : "ghost"}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
+                    Creator Hub
+                    {isInstructorPath && (
+                      <Badge variant="secondary" className="ml-1 px-1 text-xs">
+                        Active
+                      </Badge>
+                    )}
+                  </Button>
+                </Link>
+                <Link to="/create-pattern">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Pattern
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
 
           {/* Divider */}
           <div className="h-6 w-px bg-border" />

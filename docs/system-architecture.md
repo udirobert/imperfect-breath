@@ -136,27 +136,73 @@ Features:
 
 ### Data Architecture
 
-#### 1. Database Schema (Supabase)
+#### 1. Database Schema (Supabase) - Updated
 
 ```sql
 -- Core Entities
-users (id, email, role, profile_data, created_at)
-patterns (id, name, description, phases, category, creator_id, enhanced_metadata)
-sessions (id, user_id, pattern_id, duration, completion_rate, metrics)
+-- (users table is managed by Supabase Auth, extended with a public.users table for profiles)
+CREATE TABLE public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role VARCHAR(20) DEFAULT 'user',
+  creator_verified BOOLEAN DEFAULT FALSE,
+  instructor_credentials JSONB,
+  -- other profile data...
+);
+
+CREATE TABLE public.patterns (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  phases JSONB NOT NULL,
+  category TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  duration INTEGER NOT NULL,
+  creator UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  ip_hash TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  -- Enhanced fields
+  enhanced_metadata JSONB,
+  media_content JSONB,
+  licensing_info JSONB,
+  ip_asset_id VARCHAR(255)
+);
+
+CREATE TABLE public.sessions (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  pattern_id UUID REFERENCES public.patterns(id) ON DELETE CASCADE,
+  -- other session data...
+);
 
 -- Creator Ecosystem
-creator_profiles (user_id, credentials, verification_status, bio)
-pattern_analytics (pattern_id, views, purchases, ratings, revenue)
-ip_assets (pattern_id, asset_id, registration_date, license_terms)
+CREATE TABLE public.creator_analytics (
+  id UUID PRIMARY KEY,
+  creator_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  pattern_id UUID REFERENCES public.patterns(id) ON DELETE CASCADE,
+  views INTEGER DEFAULT 0,
+  purchases INTEGER DEFAULT 0,
+  revenue DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
 -- Social Features
-social_actions (user_id, target_type, target_id, action_type)
-user_follows (follower_id, following_id, created_at)
-pattern_reviews (pattern_id, user_id, rating, review_text)
+CREATE TABLE public.pattern_reviews (
+  id UUID PRIMARY KEY,
+  pattern_id UUID REFERENCES public.patterns(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+  review_text TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Marketplace
-licenses (id, pattern_id, user_id, terms, purchase_date)
-payments (id, user_id, pattern_id, amount, currency, transaction_hash)
+CREATE TABLE public.social_actions (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  target_type VARCHAR(20) NOT NULL,
+  target_id UUID NOT NULL,
+  action_type VARCHAR(20) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 ```
 
 #### 2. State Management
@@ -212,7 +258,7 @@ interface AppState {
 
 ```
 ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
-│Pattern Build│───▶│   Validation │───▶│Local Storage│
+│Pattern Build│───▶│   Validation │───▶│ Supabase DB │
 └─────────────┘    └──────────────┘    └─────────────┘
        │                   │                   │
        ▼                   ▼                   ▼

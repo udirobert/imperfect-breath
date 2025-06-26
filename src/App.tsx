@@ -18,13 +18,12 @@ const Auth = React.lazy(() => import("./pages/Auth"));
 const DiagnosticPage = React.lazy(() => import("./pages/DiagnosticPage"));
 const AISettings = React.lazy(() => import("./pages/AISettings"));
 const Marketplace = React.lazy(() => import("./pages/EnhancedMarketplace"));
-const CreatorDashboard = React.lazy(
-  () => import("./pages/EnhancedCreatorDashboard")
-);
+const CreatorDashboard = React.lazy(() => import("./pages/CreatorDashboard"));
 const CreatePattern = React.lazy(() => import("./pages/CreatePattern"));
 const InstructorOnboarding = React.lazy(
   () => import("./pages/InstructorOnboarding")
 );
+const ProtectedRoute = React.lazy(() => import("./components/ProtectedRoute"));
 
 const PageLoader = () => (
   <div className="flex-grow flex items-center justify-center">
@@ -49,8 +48,13 @@ const App = () => (
               <Route path="/diagnostic" element={<DiagnosticPage />} />
               <Route path="/ai-settings" element={<AISettings />} />
               <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/creator" element={<CreatorDashboard />} />
-              <Route path="/create-pattern" element={<CreatePattern />} />
+              <Route element={<ProtectedRoute requiredRole="creator" />}>
+                <Route
+                  path="/creator-dashboard"
+                  element={<CreatorDashboard />}
+                />
+                <Route path="/create-pattern" element={<CreatePattern />} />
+              </Route>
               <Route
                 path="/instructor-onboarding"
                 element={<InstructorOnboarding />}

@@ -13,11 +13,10 @@ type SessionPhase =
   | "idle"
   | "camera-setup"
   | "ready";
-type PatternKey = keyof typeof BREATHING_PATTERNS;
 
-export const useBreathingSession = () => {
+export const useBreathingSession = (initialPattern?: BreathingPattern) => {
   const [pattern, setPattern] = useState<BreathingPattern>(
-    BREATHING_PATTERNS.box,
+    initialPattern || BREATHING_PATTERNS.box,
   );
   const [sessionPhase, setSessionPhase] = useState<SessionPhase>("idle");
   const [phaseText, setPhaseText] = useState("Begin your session when ready.");
@@ -60,7 +59,8 @@ export const useBreathingSession = () => {
   }, [speak]);
 
   const advancePhase = useCallback(() => {
-    if (cycleCount >= pattern.cycles) {
+    const cycles = pattern.cycles ?? Infinity;
+    if (cycleCount >= cycles) {
       if (pattern.hasBreathHold) {
         startBreathHold();
       } else {
@@ -73,7 +73,7 @@ export const useBreathingSession = () => {
     }
 
     const currentPhase = pattern.phases[currentPhaseIndexRef.current];
-    setSessionPhase(currentPhase.name);
+    setSessionPhase(currentPhase.name as BreathingPhaseName);
     setPhaseText(currentPhase.text);
     speak(currentPhase.text);
     setPhaseCountdown(currentPhase.duration / 1000);
@@ -125,7 +125,7 @@ export const useBreathingSession = () => {
     setCycleCount(0);
     setBreathHoldTime(0);
     const firstPhase = pattern.phases[0];
-    setSessionPhase(firstPhase.name);
+    setSessionPhase(firstPhase.name as BreathingPhaseName);
     setIsRunning(true);
   };
 
@@ -160,13 +160,11 @@ export const useBreathingSession = () => {
     window.speechSynthesis.cancel();
   };
 
-  const selectPattern = (key: PatternKey) => {
-    if (BREATHING_PATTERNS[key]) {
-      setPattern(BREATHING_PATTERNS[key]);
-      setSessionPhase("idle");
-      setPhaseText("Begin your session when ready.");
-      window.speechSynthesis.cancel();
-    }
+  const selectPattern = (newPattern: BreathingPattern) => {
+    setPattern(newPattern);
+    setSessionPhase("idle");
+    setPhaseText("Begin your session when ready.");
+    window.speechSynthesis.cancel();
   };
 
   const toggleAudio = () => setAudioEnabled((prev) => !prev);

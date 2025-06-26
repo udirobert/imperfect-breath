@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      patterns: {
+        Row: {
+          category: string
+          created_at: string | null
+          creator: string
+          description: string | null
+          difficulty: string
+          duration: number
+          id: string
+          ip_hash: string | null
+          name: string
+          phases: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          creator: string
+          description?: string | null
+          difficulty: string
+          duration: number
+          id: string
+          ip_hash?: string | null
+          name: string
+          phases: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          creator?: string
+          description?: string | null
+          difficulty?: string
+          duration?: number
+          id?: string
+          ip_hash?: string | null
+          name?: string
+          phases?: Json
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           breath_hold_time: number
@@ -36,45 +75,6 @@ export type Database = {
           restlessness_score?: number
           session_duration?: number
           user_id?: string
-        }
-        Relationships: []
-      }
-      patterns: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          phases: Json
-          category: string
-          difficulty: string
-          duration: number
-          creator: string
-          ip_hash: string | null
-          created_at: string
-        }
-        Insert: {
-          id: string
-          name: string
-          description?: string | null
-          phases: Json
-          category: string
-          difficulty: string
-          duration: number
-          creator: string
-          ip_hash?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          phases?: Json
-          category?: string
-          difficulty?: string
-          duration?: number
-          creator?: string
-          ip_hash?: string | null
-          created_at?: string
         }
         Relationships: []
       }

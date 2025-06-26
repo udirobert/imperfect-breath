@@ -46,6 +46,11 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { PatternStorageService, CustomPattern } from "@/lib/patternStorage";
+import { ReviewService, PatternReview } from "@/lib/reviewService";
+
+const patternStorageService = new PatternStorageService();
+const reviewService = new ReviewService();
 
 interface InstructorProfile {
   id: string;
@@ -101,217 +106,6 @@ interface MarketplacePattern {
   new: boolean;
 }
 
-// Mock instructor data
-const mockInstructors: InstructorProfile[] = [
-  {
-    id: "instructor_1",
-    name: "Dr. Sarah Chen",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108755-2616b612b422?w=150&h=150&fit=crop&crop=face",
-    bio: "Breathwork therapist with 15+ years experience. Specializes in stress-relief and performance breathing.",
-    verified: true,
-    specializations: ["stress-relief", "performance", "mindfulness"],
-    totalPatterns: 23,
-    totalEarnings: 12.5,
-    rating: 4.9,
-    students: 15420,
-    yearsExperience: 15,
-  },
-  {
-    id: "instructor_2",
-    name: "Marcus Torres",
-    avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    bio: "Former Navy SEAL turned breathing coach. Expert in high-performance breathing for athletes.",
-    verified: true,
-    specializations: ["performance", "energy", "focus"],
-    totalPatterns: 18,
-    totalEarnings: 8.7,
-    rating: 4.8,
-    students: 9240,
-    yearsExperience: 8,
-  },
-  {
-    id: "instructor_3",
-    name: "Luna Rodriguez",
-    avatar:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-    bio: "Yoga instructor and meditation teacher. Creates beautiful, gentle breathing patterns for sleep and relaxation.",
-    verified: true,
-    specializations: ["sleep", "stress-relief", "mindfulness"],
-    totalPatterns: 31,
-    totalEarnings: 15.2,
-    rating: 4.9,
-    students: 22100,
-    yearsExperience: 12,
-  },
-];
-
-// Mock pattern data with rich instructor context
-const mockPatterns: MarketplacePattern[] = [
-  {
-    id: "pattern_1",
-    name: "Navy SEAL Box Breathing",
-    description:
-      "The exact breathing technique used by Navy SEALs for stress management and performance under pressure. Master mental resilience.",
-    instructor: mockInstructors[1],
-    category: "performance",
-    difficulty: "intermediate",
-    duration: 16000, // 16 seconds per cycle
-    expectedSessionDuration: 10,
-    hasVideo: true,
-    hasAudio: true,
-    hasGuided: true,
-    videoPreview: "https://www.youtube.com/watch?v=tybOi4hjZFQ", // Example link
-    rating: 4.9,
-    reviews: 2847,
-    sessions: 145230,
-    favorites: 8942,
-    price: 0.08,
-    currency: "ETH",
-    isFree: false,
-    primaryBenefits: [
-      "Reduce anxiety by 70%",
-      "Improve focus within 2 minutes",
-      "Build mental resilience",
-    ],
-    successRate: 89,
-    avgImprovementTime: 3,
-    tags: ["military-grade", "performance", "stress-management", "focus"],
-    featured: true,
-    trending: true,
-    new: false,
-  },
-  {
-    id: "pattern_2",
-    name: "Sleep Sanctuary Waves",
-    description:
-      "Gentle, flowing breathing pattern that mimics ocean waves. Fall asleep 3x faster with this science-backed technique.",
-    instructor: mockInstructors[2],
-    category: "sleep",
-    difficulty: "beginner",
-    duration: 24000, // 24 seconds per cycle
-    expectedSessionDuration: 15,
-    hasVideo: false,
-    hasAudio: true,
-    hasGuided: true,
-    rating: 4.8,
-    reviews: 1923,
-    sessions: 89456,
-    favorites: 5634,
-    price: 0.05,
-    currency: "ETH",
-    isFree: false,
-    primaryBenefits: [
-      "Fall asleep 3x faster",
-      "Improve sleep quality by 85%",
-      "Reduce nighttime anxiety",
-    ],
-    successRate: 92,
-    avgImprovementTime: 7,
-    tags: ["sleep", "relaxation", "anxiety-relief", "bedtime"],
-    featured: true,
-    trending: false,
-    new: false,
-  },
-  {
-    id: "pattern_3",
-    name: "Therapeutic Trauma Release",
-    description:
-      "Evidence-based breathing technique developed from 15 years of clinical practice. Gentle trauma-informed approach.",
-    instructor: mockInstructors[0],
-    category: "stress",
-    difficulty: "beginner",
-    duration: 20000,
-    expectedSessionDuration: 20,
-    hasVideo: true,
-    hasAudio: true,
-    hasGuided: true,
-    rating: 4.9,
-    reviews: 3456,
-    sessions: 198745,
-    favorites: 12453,
-    price: 0.12,
-    currency: "ETH",
-    isFree: false,
-    primaryBenefits: [
-      "Process trauma safely",
-      "Reduce PTSD symptoms by 60%",
-      "Build emotional regulation",
-    ],
-    successRate: 87,
-    avgImprovementTime: 14,
-    tags: ["trauma-informed", "therapy", "emotional-healing", "clinical"],
-    featured: true,
-    trending: false,
-    new: false,
-  },
-  {
-    id: "pattern_4",
-    name: "Morning Energy Ignition",
-    description:
-      "Start your day with explosive energy! This energizing technique replaces your morning coffee naturally.",
-    instructor: mockInstructors[1],
-    category: "energy",
-    difficulty: "intermediate",
-    duration: 12000,
-    expectedSessionDuration: 8,
-    hasVideo: true,
-    hasAudio: false,
-    hasGuided: false,
-    rating: 4.7,
-    reviews: 1234,
-    sessions: 67890,
-    favorites: 3421,
-    price: 0.03,
-    currency: "ETH",
-    isFree: false,
-    primaryBenefits: [
-      "3x morning energy",
-      "Replace caffeine naturally",
-      "Boost metabolism by 25%",
-    ],
-    successRate: 84,
-    avgImprovementTime: 1,
-    tags: ["morning", "energy", "natural", "metabolism"],
-    featured: false,
-    trending: true,
-    new: true,
-  },
-  {
-    id: "pattern_5",
-    name: "Free Stress Relief Basics",
-    description:
-      "Perfect introduction to breathwork. Learn the fundamentals of stress-relief breathing completely free.",
-    instructor: mockInstructors[0],
-    category: "stress",
-    difficulty: "beginner",
-    duration: 12000,
-    expectedSessionDuration: 5,
-    hasVideo: true,
-    hasAudio: false,
-    hasGuided: false,
-    rating: 4.6,
-    reviews: 5643,
-    sessions: 234567,
-    favorites: 18745,
-    price: 0,
-    currency: "ETH",
-    isFree: true,
-    primaryBenefits: [
-      "Learn breathwork basics",
-      "Immediate stress relief",
-      "Gateway to advanced techniques",
-    ],
-    successRate: 78,
-    avgImprovementTime: 1,
-    tags: ["free", "beginner", "basics", "introduction"],
-    featured: false,
-    trending: false,
-    new: false,
-  },
-];
-
 const categoryIcons = {
   stress: Heart,
   sleep: Moon,
@@ -326,9 +120,102 @@ const EnhancedMarketplace = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("featured");
-  const [patterns, setPatterns] = useState<MarketplacePattern[]>(mockPatterns);
+  const [patterns, setPatterns] = useState<MarketplacePattern[]>([]);
+  const [instructors, setInstructors] = useState<InstructorProfile[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedPattern, setSelectedPattern] =
     useState<MarketplacePattern | null>(null);
+
+  // Advanced filter states
+  const [showFree, setShowFree] = useState(false);
+  const [hasVideo, setHasVideo] = useState(false);
+  const [hasAudio, setHasAudio] = useState(false);
+
+  useEffect(() => {
+    const fetchPatternsAndReviews = async () => {
+      setLoading(true);
+      try {
+        const [fetchedPatterns, allReviews] = await Promise.all([
+          patternStorageService.searchPatterns({}),
+          reviewService.getAllReviews(),
+        ]);
+
+        const reviewsByPattern = allReviews.reduce((acc, review) => {
+          (acc[review.pattern_id] = acc[review.pattern_id] || []).push(review);
+          return acc;
+        }, {} as Record<string, PatternReview[]>);
+
+        const instructorMap = new Map<string, InstructorProfile>();
+        fetchedPatterns.forEach((p) => {
+          if (!instructorMap.has(p.creator)) {
+            instructorMap.set(p.creator, {
+              id: p.creator,
+              name: `Creator ${p.creator.substring(0, 6)}`,
+              avatar: `https://i.pravatar.cc/150?u=${p.creator}`,
+              bio: "A passionate breathwork creator.",
+              verified: false,
+              specializations: ["mindfulness"],
+              totalPatterns: 0,
+              totalEarnings: 0,
+              rating: 4.5,
+              students: 0,
+              yearsExperience: 1,
+            });
+          }
+          const instructor = instructorMap.get(p.creator)!;
+          instructor.totalPatterns += 1;
+        });
+
+        const marketplacePatterns: MarketplacePattern[] = fetchedPatterns.map(
+          (p) => {
+            const patternReviews = reviewsByPattern[p.id] || [];
+            const rating =
+              patternReviews.length > 0
+                ? patternReviews.reduce((sum, r) => sum + r.rating, 0) /
+                  patternReviews.length
+                : 0;
+
+            return {
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              instructor: instructorMap.get(p.creator)!,
+              category: p.category,
+              difficulty: p.difficulty,
+              duration: p.duration,
+              expectedSessionDuration: Math.round(p.duration / 60),
+              hasVideo: !!(p.mediaContent as any)?.video,
+              hasAudio: !!(p.mediaContent as any)?.audio,
+              hasGuided: !!(p.mediaContent as any)?.guided,
+              rating,
+              reviews: patternReviews.length,
+              sessions: 0, // Mock data
+              favorites: 0, // Mock data
+              price: (p.licensingInfo as any)?.price || 0,
+              currency: (p.licensingInfo as any)?.currency || "ETH",
+              isFree:
+                !(p.licensingInfo as any)?.price ||
+                (p.licensingInfo as any)?.price === 0,
+              primaryBenefits: [], // Mock data
+              tags: [], // Mock data
+              featured: false, // Mock data
+              trending: false, // Mock data
+              new: false, // Mock data
+            };
+          }
+        );
+
+        setPatterns(marketplacePatterns);
+        setInstructors(Array.from(instructorMap.values()));
+      } catch (error) {
+        console.error("Failed to fetch patterns and reviews:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatternsAndReviews();
+  }, []);
 
   const filteredPatterns = patterns.filter((pattern) => {
     const matchesSearch =
@@ -339,8 +226,18 @@ const EnhancedMarketplace = () => {
       selectedCategory === "all" || pattern.category === selectedCategory;
     const matchesDifficulty =
       selectedDifficulty === "all" || pattern.difficulty === selectedDifficulty;
+    const matchesFree = !showFree || pattern.isFree;
+    const matchesVideo = !hasVideo || pattern.hasVideo;
+    const matchesAudio = !hasAudio || pattern.hasAudio;
 
-    return matchesSearch && matchesCategory && matchesDifficulty;
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesDifficulty &&
+      matchesFree &&
+      matchesVideo &&
+      matchesAudio
+    );
   });
 
   const sortedPatterns = [...filteredPatterns].sort((a, b) => {
@@ -571,7 +468,7 @@ const EnhancedMarketplace = () => {
     <div className="mb-8">
       <h2 className="text-2xl font-bold mb-4">Featured Instructors</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {mockInstructors.map((instructor) => (
+        {instructors.map((instructor) => (
           <Card
             key={instructor.id}
             className="text-center hover:shadow-lg transition-shadow"
@@ -713,8 +610,45 @@ const EnhancedMarketplace = () => {
               </div>
             </div>
 
+            {/* Advanced Filters */}
+            <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="checkbox"
+                  id="showFree"
+                  checked={showFree}
+                  onChange={(e) => setShowFree(e.target.checked)}
+                />
+                <label htmlFor="showFree" className="text-sm font-medium">
+                  Show Free
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="checkbox"
+                  id="hasVideo"
+                  checked={hasVideo}
+                  onChange={(e) => setHasVideo(e.target.checked)}
+                />
+                <label htmlFor="hasVideo" className="text-sm font-medium">
+                  Has Video
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="checkbox"
+                  id="hasAudio"
+                  checked={hasAudio}
+                  onChange={(e) => setHasAudio(e.target.checked)}
+                />
+                <label htmlFor="hasAudio" className="text-sm font-medium">
+                  Has Audio
+                </label>
+              </div>
+            </div>
+
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mt-6">
               <div>
                 <div className="text-2xl font-bold text-primary">
                   {patterns.length}
@@ -725,7 +659,7 @@ const EnhancedMarketplace = () => {
               </div>
               <div>
                 <div className="text-2xl font-bold text-primary">
-                  {mockInstructors.length}
+                  {instructors.length}
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Expert Instructors

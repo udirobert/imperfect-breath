@@ -51,6 +51,7 @@ import {
   defaultBenefit,
   defaultLicense,
 } from "../../types/patterns";
+import { v4 as uuidv4 } from "uuid";
 
 interface EnhancedPatternBuilderProps {
   onSave: (pattern: EnhancedCustomPattern) => void;
@@ -70,16 +71,17 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
   existingPattern,
 }) => {
   const [pattern, setPattern] = useState<EnhancedCustomPattern>({
-    id: existingPattern?.id || Date.now().toString(),
+    id: existingPattern?.id || uuidv4(),
     name: existingPattern?.name || "",
     description: existingPattern?.description || "",
     phases: existingPattern?.phases || [],
     category: existingPattern?.category || "stress",
     difficulty: existingPattern?.difficulty || "beginner",
     duration: existingPattern?.duration || 0,
-    creator: existingPattern?.creator || "instructor-placeholder",
+    creator: existingPattern?.creator || "", // This will be set on save
 
     // Enhanced fields
+    mediaContent: existingPattern?.mediaContent || {},
     tags: existingPattern?.tags || [],
     targetAudience: existingPattern?.targetAudience || [],
     expectedDuration: existingPattern?.expectedDuration || 5,
@@ -199,16 +201,21 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
   };
 
   const updateMediaContent = (
-    type: keyof Pick<
-      EnhancedCustomPattern,
-      "instructionalVideo" | "guidedAudio" | "backgroundMusic" | "visualGuide"
-    >,
-    content: Partial<MediaContent>
+    type:
+      | "instructionalVideo"
+      | "guidedAudio"
+      | "backgroundMusic"
+      | "visualGuide",
+    url: string
   ) => {
-    setPattern((prev) => ({
-      ...prev,
-      [type]: { ...prev[type], ...content },
-    }));
+    setPattern((prev) => {
+      const newMediaContent = { ...(prev.mediaContent as object) };
+      (newMediaContent as any)[type] = {
+        ...((newMediaContent as any)[type] || {}),
+        url,
+      };
+      return { ...prev, mediaContent: newMediaContent };
+    });
   };
 
   const handleSave = () => {
@@ -669,12 +676,11 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   <Label className="font-medium">Instructional Video</Label>
                 </div>
                 <Input
-                  value={pattern.instructionalVideo?.url || ""}
+                  value={
+                    (pattern.mediaContent as any)?.instructionalVideo?.url || ""
+                  }
                   onChange={(e) =>
-                    updateMediaContent("instructionalVideo", {
-                      type: "video",
-                      url: e.target.value,
-                    })
+                    updateMediaContent("instructionalVideo", e.target.value)
                   }
                   placeholder="YouTube, Vimeo, or direct video URL..."
                 />
@@ -693,12 +699,9 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   <Label className="font-medium">Guided Audio Session</Label>
                 </div>
                 <Input
-                  value={pattern.guidedAudio?.url || ""}
+                  value={(pattern.mediaContent as any)?.guidedAudio?.url || ""}
                   onChange={(e) =>
-                    updateMediaContent("guidedAudio", {
-                      type: "audio",
-                      url: e.target.value,
-                    })
+                    updateMediaContent("guidedAudio", e.target.value)
                   }
                   placeholder="Audio file URL or SoundCloud link..."
                 />
@@ -718,12 +721,11 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   </Label>
                 </div>
                 <Input
-                  value={pattern.backgroundMusic?.url || ""}
+                  value={
+                    (pattern.mediaContent as any)?.backgroundMusic?.url || ""
+                  }
                   onChange={(e) =>
-                    updateMediaContent("backgroundMusic", {
-                      type: "audio",
-                      url: e.target.value,
-                    })
+                    updateMediaContent("backgroundMusic", e.target.value)
                   }
                   placeholder="Relaxing background music URL..."
                 />
@@ -741,12 +743,9 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   <Label className="font-medium">Visual Guide (Optional)</Label>
                 </div>
                 <Input
-                  value={pattern.visualGuide?.url || ""}
+                  value={(pattern.mediaContent as any)?.visualGuide?.url || ""}
                   onChange={(e) =>
-                    updateMediaContent("visualGuide", {
-                      type: "image",
-                      url: e.target.value,
-                    })
+                    updateMediaContent("visualGuide", e.target.value)
                   }
                   placeholder="Diagram or image URL..."
                 />

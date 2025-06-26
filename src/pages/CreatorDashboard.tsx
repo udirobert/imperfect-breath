@@ -20,17 +20,16 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { demoStoryIntegration } from "@/lib/story/storyClient";
-import type { CustomPattern } from "@/lib/ai/providers";
-import type {
-  IPRegistration,
-  EarningsReport,
-  RevenueAnalytics,
-} from "@/types/blockchain";
+import { PatternStorageService, CustomPattern } from "@/lib/patternStorage";
+import { useAuth } from "@/hooks/useAuth";
+import { enhancePattern, EnhancedCustomPattern } from "@/types/patterns";
+import { useToast } from "@/hooks/use-toast";
+
+const patternStorageService = new PatternStorageService();
 
 interface CreatorStats {
   totalPatterns: number;
@@ -51,92 +50,72 @@ interface PatternWithStats extends CustomPattern {
   lastUpdated: string;
 }
 
-// Mock data - replace with actual API calls
-const mockCreatorStats: CreatorStats = {
-  totalPatterns: 12,
-  totalEarnings: 2.45,
-  totalDownloads: 15420,
-  monthlyEarnings: 0.78,
-  activePatterns: 9,
-};
-
-const mockPatterns: PatternWithStats[] = [
-  {
-    id: "pattern_1",
-    name: "Ocean Waves Breathing",
-    description:
-      "A calming breathing pattern inspired by the rhythm of ocean waves",
-    phases: [
-      { name: "inhale", duration: 4000, text: "Breathe in like a wave rising" },
-      { name: "hold", duration: 2000, text: "Hold at the peak" },
-      { name: "exhale", duration: 6000, text: "Release like a wave receding" },
-    ],
-    category: "stress",
-    difficulty: "beginner",
-    duration: 12,
-    creator: "user123",
-    ipRegistered: true,
-    ipHash: "0xabcdef123456789",
-    earnings: 1.25,
-    downloads: 5690,
-    rating: 4.8,
-    reviews: 1247,
-    status: "published",
-    lastUpdated: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: "pattern_2",
-    name: "Focus Flow",
-    description: "Enhanced breathing for deep concentration and mental clarity",
-    phases: [
-      { name: "inhale", duration: 3000, text: "Inhale focus" },
-      { name: "hold", duration: 5000, text: "Center your mind" },
-      { name: "exhale", duration: 4000, text: "Release distractions" },
-    ],
-    category: "focus",
-    difficulty: "intermediate",
-    duration: 12,
-    creator: "user123",
-    ipRegistered: false,
-    earnings: 0.85,
-    downloads: 3240,
-    rating: 4.6,
-    reviews: 892,
-    status: "published",
-    lastUpdated: "2024-01-10T14:20:00Z",
-  },
-];
-
 const CreatorDashboard = () => {
-  const [patterns, setPatterns] = useState<PatternWithStats[]>(mockPatterns);
-  const [stats, setStats] = useState<CreatorStats>(mockCreatorStats);
+  const [patterns, setPatterns] = useState<PatternWithStats[]>([]);
+  const [stats, setStats] = useState<CreatorStats>({
+    totalPatterns: 0,
+    totalEarnings: 0,
+    totalDownloads: 0,
+    monthlyEarnings: 0,
+    activePatterns: 0,
+  });
   const [selectedPattern, setSelectedPattern] =
     useState<PatternWithStats | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [royaltyPercentage, setRoyaltyPercentage] = useState(10);
 
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const loadCreatorData = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      // Load creator's patterns and stats (demo mode)
-      console.log("Loading demo creator data");
-      // Simulate loading delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const userPatterns = await patternStorageService.getUserPatterns(user.id);
+      const patternsWithStats: PatternWithStats[] = userPatterns.map(
+        (p: CustomPattern) => ({
+          ...p,
+          // Mocking stats for now as per integration plan
+          ipRegistered: !!p.ipAssetId,
+          ipHash: p.ipAssetId,
+          earnings: 0,
+          downloads: 0,
+          rating: 0,
+          reviews: 0,
+          status: "published", // Default status
+          lastUpdated: new Date().toISOString(), // Placeholder
+        })
+      );
+      setPatterns(patternsWithStats);
+      setStats((prev) => ({
+        ...prev,
+        totalPatterns: userPatterns.length,
+        activePatterns: userPatterns.length,
+      }));
     } catch (error) {
       console.error("Failed to load creator data:", error);
+      toast({
+        title: "Error",
+        description: "Could not load your patterns. Please try again later.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user, toast]);
 
   useEffect(() => {
-    // Demo mode - no auth required
-    loadCreatorData();
-  }, [loadCreatorData]);
+    if (user) {
+      loadCreatorData();
+    } else {
+      // Handle case where user is not logged in
+      setLoading(false);
+      // Optionally, redirect to login or show a message
+    }
+  }, [user, loadCreatorData]);
 
   const handleRegisterIP = async (pattern: PatternWithStats) => {
     setLoading(true);
@@ -164,19 +143,29 @@ const CreatorDashboard = () => {
   const handleDeletePattern = async (patternId: string) => {
     setLoading(true);
     try {
-      // In production, this would be an API call
-      setPatterns((prev) => prev.filter((p) => p.id !== patternId));
+      await patternStorageService.deletePattern(patternId);
+      toast({
+        title: "Success",
+        description: "Pattern deleted successfully.",
+      });
       setShowDeleteDialog(false);
       setSelectedPattern(null);
+      await loadCreatorData(); // Refresh data
     } catch (error) {
       console.error("Failed to delete pattern:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the pattern. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleEditPattern = (pattern: PatternWithStats) => {
-    navigate("/create-pattern", { state: { editPattern: pattern } });
+    const enhanced = enhancePattern(pattern);
+    navigate("/create-pattern", { state: { editPattern: enhanced } });
   };
 
   const handleSharePattern = async (pattern: PatternWithStats) => {

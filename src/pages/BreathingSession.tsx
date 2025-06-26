@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { useBreathingSession } from "@/hooks/useBreathingSession";
-import { BREATHING_PATTERNS } from "@/lib/breathingPatterns";
+import { BreathingPattern, BREATHING_PATTERNS } from "@/lib/breathingPatterns";
 import { useCameraTracking } from "@/hooks/useCameraTracking";
 import { useAIFeedback } from "@/hooks/useAIFeedback";
 
@@ -10,8 +10,13 @@ import { SessionSetup } from "@/components/session/SessionSetup";
 import { SessionInProgress } from "@/components/session/SessionInProgress";
 
 const BreathingSession = () => {
-  const { state, controls } = useBreathingSession();
+  const location = useLocation();
   const navigate = useNavigate();
+  const previewPattern = location.state?.previewPattern as
+    | BreathingPattern
+    | undefined;
+
+  const { state, controls } = useBreathingSession(previewPattern);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraInitialized, setCameraInitialized] = useState(false);
   const [cameraRequested, setCameraRequested] = useState(false);
@@ -61,7 +66,7 @@ const BreathingSession = () => {
     speak: controls.speak,
     cycleCount: state.cycleCount,
     sessionPhase: state.sessionPhase,
-    patternKey: state.pattern.key,
+    patternKey: state.pattern.key || "custom",
   });
 
   // Cleanup camera when component unmounts
@@ -74,8 +79,7 @@ const BreathingSession = () => {
   }, [cleanup, cameraInitialized]);
 
   const handleEndSession = () => {
-    const pattern = BREATHING_PATTERNS[state.pattern.key];
-    const oneCycleDuration = pattern.phases.reduce(
+    const oneCycleDuration = state.pattern.phases.reduce(
       (sum, phase) => sum + phase.duration,
       0
     );
@@ -94,7 +98,7 @@ const BreathingSession = () => {
       state: {
         breathHoldTime: finalBreathHoldTime,
         restlessnessScore: finalRestlessnessScore,
-        patternName: state.pattern.key,
+        patternName: state.pattern.name,
         sessionDuration,
       },
     });

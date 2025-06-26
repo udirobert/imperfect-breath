@@ -3,32 +3,42 @@ import { supabase } from "../integrations/supabase/client";
 import { Json } from "../integrations/supabase/types";
 
 export interface CustomPattern {
-  id: string;
+  id: string; // UUID
   name: string;
   description: string;
-  phases: CustomBreathingPhase[]; // Use the more flexible phase type
+  phases: CustomBreathingPhase[];
   category: 'stress' | 'sleep' | 'energy' | 'focus' | 'performance';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   duration: number;
-  creator: string;
+  creator: string; // User UUID
   ipHash?: string;
-  // Story Protocol IP registration
+  
+  // Fields from integration plan
+  enhancedMetadata?: Json;
+  mediaContent?: Json;
+  licensingInfo?: Json;
   ipAssetId?: string;
   storyProtocolRegistered?: boolean;
   licenseTermsId?: string;
 }
 
 interface SupabasePattern {
-  id: string;
+  id: string; // UUID
   name: string;
   description: string | null;
   phases: Json;
   category: string;
   difficulty: string;
   duration: number;
-  creator: string;
+  creator: string; // User UUID
   ip_hash: string | null;
   created_at: string;
+
+  // Fields from integration plan
+  enhanced_metadata: Json | null;
+  media_content: Json | null;
+  licensing_info: Json | null;
+  ip_asset_id: string | null;
 }
 
 export class PatternStorageService {
@@ -42,11 +52,15 @@ export class PatternStorageService {
       difficulty: supabasePattern.difficulty as 'beginner' | 'intermediate' | 'advanced',
       duration: supabasePattern.duration,
       creator: supabasePattern.creator,
-      ipHash: supabasePattern.ip_hash || undefined
+      ipHash: supabasePattern.ip_hash || undefined,
+      enhancedMetadata: supabasePattern.enhanced_metadata || undefined,
+      mediaContent: supabasePattern.media_content || undefined,
+      licensingInfo: supabasePattern.licensing_info || undefined,
+      ipAssetId: supabasePattern.ip_asset_id || undefined,
     };
   }
 
-  private mapToSupabasePattern(customPattern: CustomPattern): SupabasePattern {
+  private mapToSupabasePattern(customPattern: CustomPattern): Omit<SupabasePattern, 'created_at'> {
     return {
       id: customPattern.id,
       name: customPattern.name,
@@ -57,16 +71,20 @@ export class PatternStorageService {
       duration: customPattern.duration,
       creator: customPattern.creator,
       ip_hash: customPattern.ipHash || null,
-      created_at: new Date().toISOString()
+      enhanced_metadata: customPattern.enhancedMetadata || null,
+      media_content: customPattern.mediaContent || null,
+      licensing_info: customPattern.licensingInfo || null,
+      ip_asset_id: customPattern.ipAssetId || null,
     };
   }
 
   async savePattern(pattern: CustomPattern): Promise<string> {
     try {
       const supabasePattern = this.mapToSupabasePattern(pattern);
+      
       const { data, error } = await supabase
         .from('patterns')
-        .upsert([supabasePattern], { onConflict: 'id' })
+        .upsert(supabasePattern, { onConflict: 'id' })
         .select('id')
         .single();
       
@@ -99,6 +117,23 @@ export class PatternStorageService {
     } catch (error) {
       console.error('Error getting pattern:', error);
       return null;
+    }
+  }
+
+  async deletePattern(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('patterns')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error deleting pattern from Supabase:', error);
+        throw new Error('Failed to delete pattern');
+      }
+    } catch (error) {
+      console.error('Error deleting pattern:', error);
+      throw new Error('Failed to delete pattern');
     }
   }
 

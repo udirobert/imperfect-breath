@@ -17,11 +17,13 @@ export type CustomBreathingPhase = {
 };
 
 export type BreathingPattern = {
-  key: 'box' | 'resonant' | 'wimHof';
+  id?: string;
+  key?: 'box' | 'resonant' | 'wimHof';
   name: string;
-  cycles: number; // Use Infinity for continuous patterns
+  description?: string;
+  cycles?: number; // Use Infinity for continuous patterns
   phases: BreathingPhase[];
-  hasBreathHold: boolean;
+  hasBreathHold?: boolean;
 };
 
 // Utility functions for phase creation

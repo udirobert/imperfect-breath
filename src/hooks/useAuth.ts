@@ -5,37 +5,78 @@ import type { Session } from "@supabase/supabase-js";
 // Blockchain features disabled until Tomo SDK is configured
 const BLOCKCHAIN_FEATURES_ENABLED = false;
 
+export type UserRole = "user" | "creator" | "instructor";
+
+export interface UserProfile {
+  id: string;
+  role: UserRole;
+  creator_verified: boolean;
+  // Add other profile fields as needed
+}
+
 export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize authentication state (simplified for Supabase only)
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        // If no profile exists, create one
+        if (error.code === 'PGRST116') {
+          const { data: newUser, error: insertError } = await (supabase as any)
+            .from('users')
+            .insert({ id: userId, role: 'user' })
+            .select()
+            .single();
+          if (insertError) throw insertError;
+          setProfile(newUser as UserProfile);
+        } else {
+          throw error;
+        }
+      } else {
+        setProfile(data as UserProfile);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      setProfile(null);
+    }
+  }, []);
+
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        setSession(session);
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-      } finally {
-        setLoading(false);
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      if (session?.user) {
+        await fetchProfile(session.user.id);
       }
+      setLoading(false);
     };
 
     initAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
 
     return () => {
       subscription?.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   // Traditional email/social login
   const loginWithEmail = useCallback(
@@ -86,6 +127,7 @@ export const useAuth = () => {
     ? {
         id: session.user.id,
         email: session.user.email,
+        ...profile, // Spread profile details into user object
         wallet: null,
         profile: {
           username: session.user.user_metadata?.username,
@@ -101,6 +143,7 @@ export const useAuth = () => {
     // Legacy Supabase auth (working)
     session,
     user,
+    profile,
     loading,
     loginWithEmail,
     signUpWithEmail,

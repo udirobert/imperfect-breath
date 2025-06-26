@@ -176,7 +176,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
 
         {/* Features */}
         <div className="flex items-center gap-2">
-          {pattern.instructionalVideo && (
+          {(pattern.mediaContent as any)?.instructionalVideo && (
             <Badge
               variant="outline"
               className="text-xs flex items-center gap-1"
@@ -185,7 +185,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
               Video
             </Badge>
           )}
-          {pattern.guidedAudio && (
+          {(pattern.mediaContent as any)?.guidedAudio && (
             <Badge
               variant="outline"
               className="text-xs flex items-center gap-1"

@@ -1,71 +1,60 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Save, Eye } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import EnhancedPatternBuilder from "@/components/creator/EnhancedPatternBuilder";
 import type { EnhancedCustomPattern } from "@/types/patterns";
-import { demoStoryIntegration } from "@/lib/story/storyClient";
+import { PatternStorageService } from "@/lib/patternStorage";
+import { useAuth } from "@/hooks/useAuth";
+import { v4 as uuidv4 } from "uuid";
+
+const patternStorageService = new PatternStorageService();
 
 const CreatePattern = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Check if we're editing an existing pattern
   const editPattern = location.state?.editPattern as
     | EnhancedCustomPattern
     | undefined;
   const isEditing = !!editPattern;
 
   const handleSave = async (pattern: EnhancedCustomPattern) => {
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to save a pattern.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // In production, this would be an API call
-      console.log("Saving pattern:", pattern);
+      const patternToSave = {
+        ...pattern,
+        id: isEditing ? pattern.id : uuidv4(),
+        creator: user.id,
+      };
 
-      // Mock save operation
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const savedPatternId = await patternStorageService.savePattern(
+        patternToSave
+      );
 
-      // Store in localStorage for demo purposes
-      const storageKey = `pattern_${pattern.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(pattern));
+      // For now, we'll skip the Story Protocol integration to focus on core functionality
 
-      // Register as IP Asset on Story Protocol (demo)
-      if (!isEditing) {
-        try {
-          const ipAssetId = await demoStoryIntegration.registerPatternDemo(
-            pattern
-          );
-          pattern.ipAssetId = ipAssetId;
-          pattern.storyProtocolRegistered = true;
+      toast({
+        title: isEditing ? "Pattern Updated" : "Pattern Created",
+        description: `"${patternToSave.name}" has been saved successfully.`,
+      });
 
-          // Update stored pattern with IP info
-          localStorage.setItem(storageKey, JSON.stringify(pattern));
-
-          toast({
-            title: "Pattern Created & IP Registered",
-            description: `"${pattern.name}" has been saved and registered as IP Asset: ${ipAssetId}`,
-          });
-        } catch (error) {
-          console.error("IP registration failed:", error);
-          toast({
-            title: "Pattern Created",
-            description: `"${pattern.name}" has been saved successfully. IP registration failed.`,
-          });
-        }
-      } else {
-        toast({
-          title: "Pattern Updated",
-          description: `"${pattern.name}" has been updated successfully.`,
-        });
-      }
-
-      // Navigate back to creator dashboard
-      navigate("/creator");
+      navigate("/creator-dashboard");
     } catch (error) {
       console.error("Failed to save pattern:", error);
       toast({
