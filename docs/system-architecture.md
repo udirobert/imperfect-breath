@@ -63,11 +63,14 @@ src/components/
 ├── marketplace/                # Marketplace components
 │   ├── PatternCard.tsx
 │   ├── SearchFilters.tsx
-│   └── PurchaseFlow.tsx
+│   ├── PurchaseFlow.tsx
+│   ├── PatternDetailsModal.tsx
+│   └── PatternReviewForm.tsx
 └── social/                     # Social features
     ├── SocialActions.tsx
     ├── UserProfile.tsx
-    └── CommunityFeed.tsx
+    ├── CommunityFeed.tsx
+    └── FollowButton.tsx
 ```
 
 ### Core Services Architecture
@@ -356,10 +359,10 @@ Technical Monitoring
 
 ### 2. User Analytics
 
-- **Session Analytics**: Breathing pattern effectiveness
-- **Creator Analytics**: Pattern performance and earnings
-- **Marketplace Analytics**: Discovery and conversion rates
-- **Social Analytics**: Community engagement metrics
+- **Session Analytics**: Breathing pattern effectiveness, user progress over time.
+- **Creator Analytics**: Pattern performance, revenue, user engagement with patterns.
+- **Marketplace Analytics**: Discovery funnels, conversion rates, search query analysis.
+- **Social Analytics**: Community engagement metrics, follow/unfollow rates, content sharing velocity.
 
 ## External Integrations
 
