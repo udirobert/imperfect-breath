@@ -23,8 +23,8 @@
 │                        Data Layer                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────┐  │
-│  │  Supabase   │  │Local Storage│  │   External  │  │Blockchain│  │
-│  │(PostgreSQL) │  │    Cache    │  │    APIs     │  │ Storage │  │
+│  │  Supabase   │  │Local Storage│  │   External  │  │ Web3 Infra│  │
+│  │(PostgreSQL) │  │    Cache    │  │    APIs     │  │(Multi-Chain)│
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -366,21 +366,45 @@ Technical Monitoring
 
 ## External Integrations
 
-### 1. Blockchain & Web3
+### 1. Multi-Chain Web3 Architecture
 
-```
-Story Protocol
-├── IP Asset Registration
-├── License Management
-├── Royalty Distribution
-└── Dispute Resolution
+Our platform leverages a multi-chain strategy to optimize for social engagement, real-time performance tracking, intellectual property management, and monetization. Each chain is selected for its specific strengths, creating a cohesive and powerful wellness network.
 
-Payment Systems
-├── Cryptocurrency Support
-├── Traditional Payment Processing
-├── Escrow Services
-└── Revenue Sharing
-```
+#### 🌿 Lens Chain — Social Layer & Identity
+
+- **Role**: Social coordination, discovery, and community building. Powers the breathwork social graph.
+- **Integrations**:
+  - User profiles mapped to Lens profiles.
+  - Publishing breathwork flows and sessions as Lens posts.
+  - Social actions (likes, comments, mirrors, collects) via Lens Protocol.
+  - Following creators and building communities.
+  - Token-gated content based on creator NFTs or social graph interactions.
+
+#### 🌊 Flow Chain — Real-Time Interaction & Gamification
+
+- **Role**: High-throughput, low-latency layer for real-time session data and gamified user experiences.
+- **Integrations**:
+  - Real-time tracking of breath patterns (inhale/exhale/holds) stored on-chain.
+  - Session analytics, streaks, and personal bests recorded on Flow.
+  - Dynamic NFTs that evolve based on user practice and achievements.
+  - On-chain badges and quests to drive engagement.
+
+#### 💳 Base Chain — Monetization Layer
+
+- **Role**: Secure and low-cost monetization for creators, leveraging Zora for NFT minting.
+- **Integrations**:
+  - Tokenizing breathwork sessions as NFTs on Zora, minted on Base.
+  - Primary and secondary sales of patterns.
+  - Utilizing standards for seamless payments (e.g., pay with any token).
+  - Connecting creator earnings to their on-chain identity.
+
+#### 🧠 Story Protocol — Intellectual Property Layer
+
+- **Role**: Registering breathwork flows as on-chain intellectual property.
+- **Integrations**:
+  - `registerIpAsset` flow for creators to establish ownership.
+  - On-chain licensing for programmatic revenue sharing and remixes.
+  - Ensuring provenance and attribution for all creative work.
 
 ### 2. AI & Machine Learning
 

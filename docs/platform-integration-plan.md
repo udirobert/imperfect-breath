@@ -52,7 +52,16 @@ This document outlines how to tie together all components of BreathFlow Vision i
 - **Social Actions** (`src/components/social/SocialActions.tsx`)
 - **Demo Instructor Ecosystem** (`src/lib/demo/instructorEcosystem.ts`)
 
-## Integration Strategy
+## Multi-Chain Integration Strategy
+
+Our integration strategy is centered around a multi-chain architecture that assigns specific roles to different protocols, ensuring a modular, scalable, and user-centric platform.
+
+- **🌿 Lens Chain (Social Layer):** Powers the social graph, discovery, and community engagement.
+- **🌊 Flow Chain (Performance Layer):** Handles real-time session tracking, analytics, and gamified user achievements.
+- **💳 Base Chain (Monetization Layer):** Facilitates creator monetization through NFT minting (via Zora) and payments.
+- **🧠 Story Protocol (IP Layer):** Secures intellectual property rights for breathwork creators.
+
+This approach allows us to leverage the best of each ecosystem to build a cohesive wellness network.
 
 ### Phase 1: Core System Integration
 
@@ -166,40 +175,52 @@ Creator Application
 - Use AI insights for marketplace pattern ranking
 - Implement feedback loop: recommendations → usage → refinement
 
-#### 3.2 Social & Community Integration
+#### 3.2 Social & Community Integration (Lens Protocol)
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ User Profiles   │───▶│ Social Actions   │───▶│ Community Feed  │
+│ Lens Profiles   │───▶│ Social Actions   │───▶│ On-Chain Feed   │
+│ (User Identity) │    │ (Mirror, Collect)│    │ (Lens Posts)    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
         │                       │                       │
         ▼                       ▼                       ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Following       │    │ Pattern Sharing  │    │ Group Sessions │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-### Phase 4: Business Logic Integration
-
-#### 4.1 Monetization & IP Integration
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Pattern Create  │───▶│ IP Registration  │───▶│ Licensing Setup │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Marketplace     │    │ Usage Tracking   │    │ Revenue Share   │
+│ Following       │    │ Pattern Sharing  │    │ Token-Gated    │
+│ (Social Graph)  │    │ (Publishing)     │    │  Communities   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
 **Integration Points:**
 
-- Connect Story Protocol registration to pattern creation flow
-- Implement usage tracking for royalty calculations
-- Integrate payment processing with licensing system
-- Connect earnings to creator dashboard analytics
+- Map application user profiles to **Lens Protocol profiles**.
+- Implement social actions (`like`, `collect`, `mirror`) by interacting with the Lens API.
+- Publish new patterns and session completions as posts on Lens.
+- Build community feeds by aggregating content from followed profiles on the Lens social graph.
+
+### Phase 4: Business Logic Integration
+
+#### 4.1 Monetization & IP Integration (Base, Story & Flow)
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Pattern Create  │───▶│ IP Registration  │───▶│ Tokenize on Base│
+│ (App UI)        │    │ (Story Protocol) │    │ (via Zora)      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+        │                       │                       │
+        ▼                       ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Marketplace     │    │ Usage Tracking   │    │ Revenue Share   │
+│ (NFTs on Base)  │    │ (Flow Chain)     │    │ (On-Chain)      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
+**Integration Points:**
+
+- Connect **Story Protocol** registration to the pattern creation flow.
+- Integrate **Zora** to mint patterns as NFTs on the **Base Chain**.
+- Implement usage tracking by recording session data on the **Flow Chain**.
+- Develop smart contracts or use existing protocols on **Base** for transparent revenue sharing from NFT sales.
+- Connect on-chain earnings to the creator dashboard analytics.
 
 ## Technical Implementation Plan
 
@@ -301,24 +322,53 @@ The `PatternStorageService` in `src/lib/patternStorage.ts` has been updated to s
     - Connected to payment providers.
     - Updated user profiles to reflect purchased patterns.
 
-#### Social Features (Planned)
+#### Social Features (In Progress) - Lens Protocol Integration
 
-1.  **User Profiles & Following**
+This phase focuses on building our social layer on Lens Protocol, creating a bridge between our platform's Supabase authentication and the user's on-chain identity. We are using the `@lens-chain/sdk` with `viem` for interactions and `ConnectKit` for wallet management.
 
-    - Create a new `UserProfile.tsx` page.
-    - Display user's activity, created patterns, and favorite patterns.
-    - Implement a "follow" button and a service to manage user relationships.
+1.  **Hybrid Authentication: Supabase + Web3 Wallet (Completed)**
 
-2.  **Community Feed**
+    - **Objective:** Link a user's off-chain Supabase account to their on-chain Web3 wallet.
+    - **Implementation Details:**
+      - **`Web3Provider.tsx`**: Configures `Wagmi` and `ConnectKit`.
+      - **`useWalletAuth.ts`**: Hook to manage linking/unlinking wallets by signing a message and updating the Supabase `users` table.
+      - **`WalletManager.tsx`**: UI component in the header to trigger wallet actions.
+      - **Database Migration**: Added `wallet_address` and `wallet_signature` to the `users` table.
 
-    - Create a new `CommunityFeed.tsx` component.
-    - Display a chronological feed of activities from followed users.
-    - Integrate with `SocialActions` to allow for likes and comments.
+2.  **User Profiles & Following (In Progress)**
 
-3.  **Pattern Reviews & Ratings (Completed)**
-    - The `PatternDetailsModal` now includes a form to submit reviews.
-    - The `ReviewService` handles storing and retrieving reviews.
-    - The marketplace displays average ratings and sorts by them.
+    - **Objective:** Create a unified user profile that displays both on-platform activity and on-chain social data from Lens.
+    - **Implementation Details:**
+      - **`useLensProfile.ts`**: Hook to fetch a user's default Lens profile using their linked wallet address.
+      - **`UserProfile.tsx`**: Page that combines data from `useAuth` and `useLensProfile` to display a unified view.
+      - **`useFollow.ts` & `FollowButton.tsx` (Completed)**: Enables on-chain follow actions from the user profile page.
+      - **Follower/Following Counts (Completed)**: The `useLensProfile` hook now fetches and the `UserProfile` page displays these counts.
+      - **Next Step**: Implement on-chain comments.
+
+3.  **Community Feed (In Progress)**
+
+    - **Objective:** Display a decentralized social feed based on the user's on-chain social graph.
+    - **Implementation Details:**
+      - **`useLensFeed.ts`**: Hook now fetches the latest publication from each profile the user follows.
+      - **`CommunityFeed.tsx`**: Page that renders the publications, fetching metadata from IPFS.
+      - **Next Step**: Implement pagination or infinite scroll for the feed.
+
+4.  **Social Actions (In Progress)**
+
+    - **Objective:** Enable on-chain social interactions like mirroring and collecting.
+    - **Implementation Details:**
+      - **Mirror (Completed):**
+        - **`useMirror.ts`**: Hook to manage the on-chain `mirror` transaction.
+        - **`MirrorButton.tsx`**: Reusable button to trigger the mirror action.
+        - Integrated into `PublicationCard` to allow mirroring from the feed.
+      - **Collect (Completed):**
+        - **`useCollect.ts`**: Hook to manage the on-chain `collect` transaction.
+        - **`CollectButton.tsx`**: Reusable button to trigger the collect action.
+        - Integrated into `PublicationCard` to allow collecting from the feed.
+      - **Next Step**: Implement on-chain comments.
+
+5.  **Pattern Reviews & Ratings (Remains Off-Chain)**
+    - This feature will remain as-is, powered by our Supabase backend.
 
 #### Creator Dashboard Integration (Completed)
 

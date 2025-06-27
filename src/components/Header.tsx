@@ -13,6 +13,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { ConnectKitButton } from "connectkit";
+import { WalletManager } from "./WalletManager";
 
 const Header = () => {
   const location = useLocation();
@@ -125,6 +127,24 @@ const Header = () => {
                 Start Teaching
               </Button>
             </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            <ConnectKitButton />
+            <WalletManager />
+            {user && (
+              <>
+                <Link to="/feed">
+                  <Button variant="ghost" size="sm">
+                    Feed
+                  </Button>
+                </Link>
+                <Link to="/profile">
+                  <Button variant="ghost" size="sm">
+                    Profile
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>

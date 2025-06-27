@@ -2,12 +2,10 @@ import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
-
-const queryClient = new QueryClient();
+import { Web3Provider } from "./providers/Web3Provider";
 
 // Lazy load pages for better performance
 const Index = React.lazy(() => import("./pages/EnhancedIndex"));
@@ -24,6 +22,8 @@ const InstructorOnboarding = React.lazy(
   () => import("./pages/InstructorOnboarding")
 );
 const ProtectedRoute = React.lazy(() => import("./components/ProtectedRoute"));
+const UserProfile = React.lazy(() => import("./pages/UserProfile"));
+const CommunityFeed = React.lazy(() => import("./pages/CommunityFeed"));
 
 const PageLoader = () => (
   <div className="flex-grow flex items-center justify-center">
@@ -32,7 +32,7 @@ const PageLoader = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <Web3Provider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -59,13 +59,15 @@ const App = () => (
                 path="/instructor-onboarding"
                 element={<InstructorOnboarding />}
               />
+              <Route path="/profile" element={<UserProfile />} />
+              <Route path="/feed" element={<CommunityFeed />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </Layout>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+  </Web3Provider>
 );
 
 export default App;

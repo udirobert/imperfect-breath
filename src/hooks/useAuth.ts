@@ -11,6 +11,7 @@ export interface UserProfile {
   id: string;
   role: UserRole;
   creator_verified: boolean;
+  wallet_address: string | null;
   // Add other profile fields as needed
 }
 
@@ -21,7 +22,7 @@ export const useAuth = () => {
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("users")
         .select("*")
         .eq("id", userId)
@@ -30,7 +31,7 @@ export const useAuth = () => {
       if (error) {
         // If no profile exists, create one
         if (error.code === 'PGRST116') {
-          const { data: newUser, error: insertError } = await (supabase as any)
+          const { data: newUser, error: insertError } = await supabase
             .from('users')
             .insert({ id: userId, role: 'user' })
             .select()
@@ -48,6 +49,12 @@ export const useAuth = () => {
       setProfile(null);
     }
   }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+    }
+  }, [session, fetchProfile]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -148,6 +155,7 @@ export const useAuth = () => {
     loginWithEmail,
     signUpWithEmail,
     logout,
+    refreshProfile,
 
     // Blockchain features (disabled)
     tomoUser: null,

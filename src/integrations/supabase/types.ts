@@ -78,6 +78,37 @@ export type Database = {
         }
         Relationships: []
       }
+      users: {
+        Row: {
+          id: string
+          role: string
+          creator_verified: boolean
+          wallet_address: string | null
+          wallet_signature: string | null
+        }
+        Insert: {
+          id: string
+          role?: string
+          creator_verified?: boolean
+          wallet_address?: string | null
+          wallet_signature?: string | null
+        }
+        Update: {
+          id?: string
+          role?: string
+          creator_verified?: boolean
+          wallet_address?: string | null
+          wallet_signature?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_id_fkey"
+            columns: ["id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
