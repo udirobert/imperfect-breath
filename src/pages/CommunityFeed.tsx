@@ -10,10 +10,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { MirrorButton } from "@/components/MirrorButton";
 import { CollectButton } from "@/components/CollectButton";
+import { CommentForm } from "@/components/CommentForm";
+import { Button } from "@/components/ui/button";
+import { MessageSquare } from "lucide-react";
+import { CommentList } from "@/components/CommentList";
 
 const PublicationCard = ({ pub }: { pub: Publication }) => {
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showCommentForm, setShowCommentForm] = useState(false);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -53,15 +58,38 @@ const PublicationCard = ({ pub }: { pub: Publication }) => {
           />
         )}
       </CardContent>
-      <CardFooter className="gap-2">
-        <MirrorButton
-          profileIdPointed={pub.profileIdPointed}
-          pubIdPointed={pub.pubIdPointed}
-        />
-        <CollectButton
-          profileIdPointed={pub.profileIdPointed}
-          pubIdPointed={pub.pubIdPointed}
-        />
+      <CardFooter className="flex-col items-start gap-2">
+        <div className="flex gap-2">
+          <MirrorButton
+            profileIdPointed={pub.profileIdPointed}
+            pubIdPointed={pub.pubIdPointed}
+          />
+          <CollectButton
+            profileIdPointed={pub.profileIdPointed}
+            pubIdPointed={pub.pubIdPointed}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowCommentForm(!showCommentForm)}
+          >
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Comment
+          </Button>
+        </div>
+        {showCommentForm && (
+          <CommentForm
+            profileIdPointed={pub.profileIdPointed}
+            pubIdPointed={pub.pubIdPointed}
+            onCommentPosted={() => setShowCommentForm(false)}
+          />
+        )}
+        {showCommentForm && (
+          <CommentList
+            profileId={pub.profileIdPointed}
+            pubId={pub.pubIdPointed}
+          />
+        )}
       </CardFooter>
     </Card>
   );

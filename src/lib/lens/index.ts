@@ -148,5 +148,44 @@ export const LENS_HUB_ABI = [
     "payable": false,
     "stateMutability": "view",
     "type": "function"
+  },
+  // comment
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "type": "tuple",
+        "name": "vars",
+        "components": [
+          { "type": "uint256", "name": "profileId" },
+          { "type": "string", "name": "contentURI" },
+          { "type": "uint256", "name": "profileIdPointed" },
+          { "type": "uint256", "name": "pubIdPointed" },
+          { "type": "bytes", "name": "referenceModuleData" },
+          { "type": "address", "name": "collectModule" },
+          { "type": "bytes", "name": "collectModuleInitData" },
+          { "type": "address", "name": "referenceModule" },
+          { "type": "bytes", "name": "referenceModuleInitData" }
+        ]
+      }
+    ],
+    "name": "comment",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  // getComments
+  {
+    "constant": true,
+    "inputs": [
+      { "name": "profileId", "type": "uint256" },
+      { "name": "pubId", "type": "uint256" }
+    ],
+    "name": "getComments",
+    "outputs": [{ "name": "", "type": "uint256[]" }],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
   }
 ];

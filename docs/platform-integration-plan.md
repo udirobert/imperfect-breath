@@ -322,53 +322,61 @@ The `PatternStorageService` in `src/lib/patternStorage.ts` has been updated to s
     - Connected to payment providers.
     - Updated user profiles to reflect purchased patterns.
 
-#### Social Features (In Progress) - Lens Protocol Integration
+#### Social Features (Completed) - Lens Protocol Integration
 
-This phase focuses on building our social layer on Lens Protocol, creating a bridge between our platform's Supabase authentication and the user's on-chain identity. We are using the `@lens-chain/sdk` with `viem` for interactions and `ConnectKit` for wallet management.
+This phase, focused on building our social layer on Lens Protocol, is now complete. We have successfully created a bridge between our platform's Supabase authentication and the user's on-chain identity.
 
 1.  **Hybrid Authentication: Supabase + Web3 Wallet (Completed)**
 
-    - **Objective:** Link a user's off-chain Supabase account to their on-chain Web3 wallet.
-    - **Implementation Details:**
-      - **`Web3Provider.tsx`**: Configures `Wagmi` and `ConnectKit`.
-      - **`useWalletAuth.ts`**: Hook to manage linking/unlinking wallets by signing a message and updating the Supabase `users` table.
-      - **`WalletManager.tsx`**: UI component in the header to trigger wallet actions.
-      - **Database Migration**: Added `wallet_address` and `wallet_signature` to the `users` table.
+    - Linked off-chain accounts to on-chain wallets using `useWalletAuth.ts`.
 
-2.  **User Profiles & Following (In Progress)**
+2.  **User Profiles & Following (Completed)**
 
-    - **Objective:** Create a unified user profile that displays both on-platform activity and on-chain social data from Lens.
-    - **Implementation Details:**
-      - **`useLensProfile.ts`**: Hook to fetch a user's default Lens profile using their linked wallet address.
-      - **`UserProfile.tsx`**: Page that combines data from `useAuth` and `useLensProfile` to display a unified view.
-      - **`useFollow.ts` & `FollowButton.tsx` (Completed)**: Enables on-chain follow actions from the user profile page.
-      - **Follower/Following Counts (Completed)**: The `useLensProfile` hook now fetches and the `UserProfile` page displays these counts.
-      - **Next Step**: Implement on-chain comments.
+    - Created a unified `UserProfile.tsx` page showing both Supabase and Lens data.
+    - Implemented on-chain following via `useFollow.ts`.
+    - Displaying follower/following counts via an enhanced `useLensProfile.ts`.
 
-3.  **Community Feed (In Progress)**
+3.  **Community Feed (Completed)**
 
-    - **Objective:** Display a decentralized social feed based on the user's on-chain social graph.
-    - **Implementation Details:**
-      - **`useLensFeed.ts`**: Hook now fetches the latest publication from each profile the user follows.
-      - **`CommunityFeed.tsx`**: Page that renders the publications, fetching metadata from IPFS.
-      - **Next Step**: Implement pagination or infinite scroll for the feed.
+    - The `CommunityFeed.tsx` page now displays a timeline of publications from followed profiles, powered by `useLensFeed.ts`.
 
-4.  **Social Actions (In Progress)**
+4.  **Social Actions (Completed)**
 
-    - **Objective:** Enable on-chain social interactions like mirroring and collecting.
-    - **Implementation Details:**
-      - **Mirror (Completed):**
-        - **`useMirror.ts`**: Hook to manage the on-chain `mirror` transaction.
-        - **`MirrorButton.tsx`**: Reusable button to trigger the mirror action.
-        - Integrated into `PublicationCard` to allow mirroring from the feed.
-      - **Collect (Completed):**
-        - **`useCollect.ts`**: Hook to manage the on-chain `collect` transaction.
-        - **`CollectButton.tsx`**: Reusable button to trigger the collect action.
-        - Integrated into `PublicationCard` to allow collecting from the feed.
-      - **Next Step**: Implement on-chain comments.
+    - **Mirroring, Collecting, and Commenting** are fully implemented with their respective hooks (`useMirror`, `useCollect`, `useComment`) and UI components, allowing for rich, on-chain interaction directly from the feed.
+    - **Viewing Comments** is enabled via the `useComments` hook and `CommentList` component.
 
 5.  **Pattern Reviews & Ratings (Remains Off-Chain)**
-    - This feature will remain as-is, powered by our Supabase backend.
+    - This feature remains on Supabase, providing a valuable platform-specific feedback mechanism.
+
+---
+
+### Phase 4: Monetization & IP (Next Steps)
+
+With the social layer established, we will now focus on the creator monetization and intellectual property flow. This phase will integrate **Base Chain** (via Zora) for NFT minting and **Story Protocol** for IP registration.
+
+1.  **Creator IP Registration (Planned)**
+
+    - **Objective:** Allow creators to register their breathwork patterns as Intellectual Property Assets (IPAs) on Story Protocol.
+    - **Implementation Plan:**
+      - Integrate the Story Protocol SDK.
+      - Create a `useRegisterIp` hook to handle the on-chain registration transaction.
+      - Add a "Register IP" button to the `CreatorDashboard.tsx` for each pattern.
+      - Store the returned `ipAssetId` in our `patterns` table in Supabase.
+
+2.  **Tokenize Patterns as NFTs (Planned)**
+
+    - **Objective:** Enable creators to mint their registered patterns as NFTs on Base Chain using the Zora protocol.
+    - **Implementation Plan:**
+      - Integrate the Zora SDK.
+      - Create a `useMintPattern` hook that facilitates the minting process.
+      - Add a "Mint NFT" button in the `CreatorDashboard.tsx`, which becomes active after a pattern's IP is registered.
+      - The NFT metadata will link back to the pattern details and the Story Protocol IP record.
+
+3.  **Marketplace Integration (Planned)**
+    - **Objective:** Display and sell the newly minted pattern NFTs in the marketplace.
+    - **Implementation Plan:**
+      - Refactor the `EnhancedMarketplace.tsx` to fetch and display NFTs from Zora on Base Chain.
+      - Integrate a purchase flow that interacts with the Zora contracts.
 
 #### Creator Dashboard Integration (Completed)
 
