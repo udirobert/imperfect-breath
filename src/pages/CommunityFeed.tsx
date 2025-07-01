@@ -1,4 +1,5 @@
-import { useLensFeed, Publication } from "@/hooks/useLensFeed";
+import { usePostsToExplore } from "@lens-protocol/react";
+import { Post } from "@lens-protocol/client";
 import {
   Card,
   CardContent,
@@ -7,67 +8,56 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEffect, useState } from "react";
-import { MirrorButton } from "@/components/MirrorButton";
-import { CollectButton } from "@/components/CollectButton";
-import { CommentForm } from "@/components/CommentForm";
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
-import { CommentList } from "@/components/CommentList";
+import { useState } from "react";
+import { CommentForm } from "@/components/CommentForm"; // Assuming this will be updated
+import { CommentList } from "@/components/CommentList"; // Assuming this will be updated
 
-const PublicationCard = ({ pub }: { pub: Publication }) => {
-  const [metadata, setMetadata] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [showCommentForm, setShowCommentForm] = useState(false);
+// Helper to render post content based on metadata type
+const renderPostContent = (post: Post) => {
+  if (!post.metadata) return <p>No content available.</p>;
 
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      if (!pub.contentURI) return;
-      setLoading(true);
-      try {
-        const response = await fetch(
-          pub.contentURI.replace("ipfs://", "https://ipfs.io/ipfs/")
-        );
-        const data = await response.json();
-        setMetadata(data);
-      } catch (error) {
-        console.error("Failed to fetch publication metadata:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMetadata();
-  }, [pub.contentURI]);
-
-  if (loading) {
-    return <Skeleton className="h-24 w-full" />;
+  switch (post.metadata.__typename) {
+    case "TextOnlyMetadata":
+      return <p>{post.metadata.content}</p>;
+    case "ImageMetadata":
+      return (
+        <div>
+          <p>{post.metadata.content}</p>
+          {post.metadata.asset && (
+            <img
+              src={post.metadata.asset.uri}
+              alt={post.metadata.altTag || "Post image"}
+              className="mt-4 rounded-lg"
+            />
+          )}
+        </div>
+      );
+    // Add more cases for other metadata types (Video, Audio, etc.)
+    default:
+      return <p>Unsupported content type.</p>;
   }
+};
+
+const LensPublicationCard = ({ post }: { post: Post }) => {
+  const [showCommentForm, setShowCommentForm] = useState(false);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{metadata?.name || "Untitled Publication"}</CardTitle>
+        <CardTitle>
+          {post.author?.username?.value || "Anonymous"}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {new Date(post.timestamp).toLocaleString()}
+        </p>
       </CardHeader>
-      <CardContent>
-        <p>{metadata?.description || "No description available."}</p>
-        {metadata?.image && (
-          <img
-            src={metadata.image.replace("ipfs://", "https://ipfs.io/ipfs/")}
-            alt={metadata.name}
-            className="mt-4 rounded-lg"
-          />
-        )}
-      </CardContent>
+      <CardContent>{renderPostContent(post)}</CardContent>
       <CardFooter className="flex-col items-start gap-2">
         <div className="flex gap-2">
-          <MirrorButton
-            profileIdPointed={pub.profileIdPointed}
-            pubIdPointed={pub.pubIdPointed}
-          />
-          <CollectButton
-            profileIdPointed={pub.profileIdPointed}
-            pubIdPointed={pub.pubIdPointed}
-          />
+          <MirrorButton publicationId={post.id} />
+          <CollectButton publicationId={post.id} />
           <Button
             variant="ghost"
             size="sm"
@@ -79,15 +69,17 @@ const PublicationCard = ({ pub }: { pub: Publication }) => {
         </div>
         {showCommentForm && (
           <CommentForm
-            profileIdPointed={pub.profileIdPointed}
-            pubIdPointed={pub.pubIdPointed}
+            // Pass necessary props for commenting
+            // For Lens SDK, you'd pass the post ID
+            postId={post.id}
             onCommentPosted={() => setShowCommentForm(false)}
           />
         )}
         {showCommentForm && (
           <CommentList
-            profileId={pub.profileIdPointed}
-            pubId={pub.pubIdPointed}
+            // Pass necessary props for displaying comments
+            // For Lens SDK, you'd pass the post ID
+            postId={post.id}
           />
         )}
       </CardFooter>
@@ -96,7 +88,7 @@ const PublicationCard = ({ pub }: { pub: Publication }) => {
 };
 
 const CommunityFeedPage = () => {
-  const { feed, loading } = useLensFeed();
+  const { data, loading, error } = usePostsToExplore();
 
   if (loading) {
     return (
@@ -111,15 +103,26 @@ const CommunityFeedPage = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="container mx-auto p-4">
+        <h1 className="text-3xl font-bold mb-6">Community Feed</h1>
+        <p className="text-red-500">Error loading feed: {error.message}</p>
+      </div>
+    );
+  }
+
+  const posts = data?.items || [];
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Community Feed</h1>
-      {feed.length === 0 ? (
-        <p>No publications found in your feed.</p>
+      {posts.length === 0 ? (
+        <p>No posts found in your feed.</p>
       ) : (
         <div className="space-y-4">
-          {feed.map((pub, index) => (
-            <PublicationCard key={index} pub={pub} />
+          {posts.map((post) => (
+            <LensPublicationCard key={post.id} post={post} />
           ))}
         </div>
       )}

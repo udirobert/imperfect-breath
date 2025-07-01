@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useAccount, useSignMessage } from "wagmi";
+// TODO: Replace with proper multichain implementation
+// import { useAccount, useSignMessage } from "wagmi";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

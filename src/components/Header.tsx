@@ -13,7 +13,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { ConnectKitButton } from "connectkit";
 import { WalletManager } from "./WalletManager";
 
 const Header = () => {
@@ -129,7 +128,6 @@ const Header = () => {
             </Link>
           </div>
           <div className="flex items-center gap-2">
-            <ConnectKitButton />
             <WalletManager />
             {user && (
               <>

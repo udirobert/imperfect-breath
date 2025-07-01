@@ -1,64 +1,69 @@
 import { useEffect } from "react";
-import { useAccount } from "wagmi";
-import { useAuth } from "@/hooks/useAuth";
-import { useWalletAuth } from "@/hooks/useWalletAuth";
+import { useFlow } from "@/hooks/useFlow";
+import { useLens } from "@/hooks/useLens";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 
 export const WalletManager = () => {
-  const { isConnected, isConnecting } = useAccount();
-  const { isAuthenticated } = useAuth();
-  const { linkWallet, unlinkWallet, isLinked, loading } = useWalletAuth();
+  const { user: flowUser, logIn: flowLogIn, logOut: flowLogOut, executeTransaction } = useFlow();
+  const { lensUser, lensLoggedIn, authenticatingLens, unauthenticatingLens, lensReady, loginLens, logoutLens } = useLens();
 
   useEffect(() => {
-    // Automatically prompt to link wallet upon connection if user is logged in
-    if (
-      isConnected &&
-      isAuthenticated &&
-      !isLinked &&
-      !isConnecting &&
-      !loading
-    ) {
-      toast("Wallet connected.", {
-        description: "Would you like to link this wallet to your account?",
-        action: {
-          label: "Link Wallet",
-          onClick: () => linkWallet(),
-        },
-      });
+    // If Flow user is logged in, ensure their account is set up for NFTs
+    if (flowUser.loggedIn) {
+      const setupFlowAccount = async () => {
+        try {
+          const txCode = `
+            import ImperfectBreath from 0xImperfectBreath
+
+            transaction {
+                prepare(signer: AuthAccount) {
+                    if signer.borrow<&BreathFlowVision.Collection>(from: BreathFlowVision.CollectionStoragePath) == nil {
+                        signer.save(<-BreathFlowVision.createEmptyCollection(), to: BreathFlowVision.CollectionStoragePath)
+                        signer.link<&BreathFlowVision.Collection{BreathFlowVision.CollectionPublic}>(
+                            BreathFlowVision.CollectionPublicPath,
+                            target: BreathFlowVision.CollectionStoragePath
+                        )
+                    }
+                }
+            }
+          `;
+          await executeTransaction(txCode);
+          toast.success("Flow account set up successfully!");
+        } catch (error) {
+          console.error("Failed to set up Flow account:", error);
+          toast.error("Failed to set up Flow account.");
+        }
+      };
+      setupFlowAccount();
     }
-  }, [
-    isConnected,
-    isAuthenticated,
-    isLinked,
-    isConnecting,
-    loading,
-    linkWallet,
-  ]);
-
-  if (!isAuthenticated || !isConnected) {
-    return null; // Don't show anything if user is not logged in or wallet is not connected
-  }
-
-  if (loading) {
-    return (
-      <Button variant="outline" size="sm" disabled>
-        Processing...
-      </Button>
-    );
-  }
-
-  if (isLinked) {
-    return (
-      <Button variant="destructive" size="sm" onClick={unlinkWallet}>
-        Unlink Wallet
-      </Button>
-    );
-  }
+  }, [flowUser.loggedIn, executeTransaction]);
 
   return (
-    <Button variant="secondary" size="sm" onClick={linkWallet}>
-      Link Wallet to Account
-    </Button>
+    <div className="flex space-x-2">
+      {/* Flow Wallet Management */}
+      {flowUser.loggedIn ? (
+        <Button variant="destructive" size="sm" onClick={flowLogOut}>
+          Disconnect Flow Wallet
+        </Button>
+      ) : (
+        <Button variant="secondary" size="sm" onClick={flowLogIn}>
+          Connect Flow Wallet
+        </Button>
+      )}
+
+      {/* Lens Profile Management */}
+      {lensReady && (
+        lensLoggedIn ? (
+          <Button variant="destructive" size="sm" onClick={logoutLens} disabled={unauthenticatingLens}>
+            Disconnect Lens Profile
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={loginLens} disabled={authenticatingLens}>
+            Connect Lens Profile
+          </Button>
+        )
+      )}
+    </div>
   );
 };

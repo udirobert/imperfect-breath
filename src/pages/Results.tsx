@@ -25,6 +25,7 @@ import { AI_PROVIDERS, AIConfigManager, SessionData } from "@/lib/ai/config";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { demoStoryIntegration } from "@/lib/story/storyClient";
+import { ShareToLensButton } from "@/components/social/ShareToLensButton";
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -496,6 +497,12 @@ Check out Mindful Breath!`;
           <Share className="mr-2 h-5 w-5" />
           Share Results
         </Button>
+        {analyses.length > 0 && (
+          <ShareToLensButton
+            sessionData={sessionData}
+            aiAnalysis={analyses[0].analysis} // Assuming the first analysis is the primary one
+          />
+        )}
       </div>
     </div>
   );

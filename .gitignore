@@ -16,6 +16,17 @@ dist-ssr
 .env
 .env.*
 !.env.example
+!.env.development
+
+# Flow-specific security files
+*.pkey
+.flow-keys*
+deployment-keys*
+flow.json
+flow.json.backup
+flow.json.temp
+.deployment-keys
+emulator-account.pkey
 
 # Editor directories and files
 .vscode/*
@@ -27,3 +38,37 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build artifacts
+build/
+dist/
+out/
+
+# Deployment artifacts
+deployment-info.txt
+DEPLOYMENT_SUCCESS.md
+validate-env.sh
+
+# Flow emulator and blockchain
+.flowconfig
+flow-emulator/
+.flow/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Security sensitive files
+private-keys/
+keys/
+secrets/
+wallet-files/
+
+# Log files
+*.log
+logs/
+
+# OS generated files
+Thumbs.db
+.DS_Store?

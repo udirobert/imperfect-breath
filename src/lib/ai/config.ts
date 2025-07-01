@@ -36,12 +36,13 @@ export const AI_PROVIDERS: AIProvider[] = [
 ];
 
 export interface SessionData {
-  breathHoldTime: number;
-  restlessnessScore: number;
+  patternID?: number; // The ID of the NFT pattern used
   patternName: string;
-  sessionDuration: number;
-  timestamp: string;
-  landmarks?: number;
+  sessionDuration: number; // in seconds
+  breathHoldTime: number; // in seconds
+  restlessnessScore: number; // 0-100
+  bpm?: number; // Breaths per minute, if calculated
+  // Add other relevant session metrics here
 }
 
 export interface AIAnalysisRequest {

@@ -1,4 +1,6 @@
-import { useAccount, useWriteContract } from 'wagmi';
+// TODO: Replace with proper multichain implementation
+// import { useAccount, useWriteContract } from 'wagmi';
+import { useState } from 'react';
 import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from '@/lib/lens';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
