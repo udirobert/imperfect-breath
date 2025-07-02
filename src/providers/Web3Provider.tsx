@@ -1,13 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useFlow } from "@/hooks/useFlow";
-import { useLens } from "@/hooks/useLens";
+import { useLensService } from "@/hooks/useLensService";
 import { config, debugLog } from "@/config/environment";
 
 // Multichain user identity
 export interface MultiChainUser {
   flowAddress?: string;
-  lensProfile?: any; // Will be typed properly when Lens integration is complete
-  storyIPAssets?: any[]; // Will be typed properly when Story integration is complete
+  lensProfile?: {
+    id: string;
+    username: string;
+    displayName?: string;
+    bio?: string;
+    picture?: string;
+    address: string;
+  };
+  storyIPAssets?: unknown[]; // Will be typed properly when Story integration is complete
   isConnected: boolean;
 }
 
@@ -15,18 +22,18 @@ interface Web3ContextType {
   user: MultiChainUser;
   isLoading: boolean;
   error: string | null;
-  
+
   // Flow blockchain methods
   flowLogin: () => Promise<void>;
   flowLogout: () => Promise<void>;
-  
+
   // Lens protocol methods
   lensLogin: () => Promise<void>;
   lensLogout: () => Promise<void>;
-  
+
   // Story protocol methods (to be implemented)
   storyConnect: () => Promise<void>;
-  
+
   // Utility methods
   connectAll: () => Promise<void>;
   disconnectAll: () => Promise<void>;
@@ -38,21 +45,21 @@ const Web3Context = createContext<Web3ContextType | undefined>(undefined);
 export const useWeb3 = () => {
   const context = useContext(Web3Context);
   if (!context) {
-    throw new Error('useWeb3 must be used within a Web3Provider');
+    throw new Error("useWeb3 must be used within a Web3Provider");
   }
   return context;
 };
 
 export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<MultiChainUser>({
-    isConnected: false
+    isConnected: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize blockchain hooks
   const flow = useFlow();
-  const lens = useLens();
+  const lens = useLensService();
 
   // Update user state when blockchain connections change
   useEffect(() => {
@@ -60,15 +67,15 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
       const newUser: MultiChainUser = {
         flowAddress: flow.user.loggedIn ? flow.user.addr : undefined,
         lensProfile: lens.profile,
-        isConnected: Boolean(flow.user.loggedIn || lens.profile)
+        isConnected: Boolean(flow.user.loggedIn || lens.isAuthenticated),
       };
-      
+
       setUser(newUser);
-      debugLog('User state updated:', newUser);
+      debugLog("User state updated:", newUser);
     };
 
     updateUser();
-  }, [flow.user, lens.profile]);
+  }, [flow.user, lens.profile, lens.isAuthenticated]);
 
   // Aggregate loading states
   useEffect(() => {
@@ -78,26 +85,27 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   // Aggregate error states
   useEffect(() => {
     const errors = [flow.error, lens.error].filter(Boolean);
-    setError(errors.length > 0 ? errors.join('; ') : null);
+    setError(errors.length > 0 ? errors.join("; ") : null);
   }, [flow.error, lens.error]);
 
   const flowLogin = async () => {
     try {
       setError(null);
       await flow.logIn();
-      
+
       // Set up user collection if needed
       if (flow.user.loggedIn && flow.user.addr) {
         const hasCollection = await flow.checkUserCollection(flow.user.addr);
         if (!hasCollection) {
-          debugLog('Setting up user collection...');
+          debugLog("Setting up user collection...");
           await flow.setupUserCollection();
         }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Flow login failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Flow login failed";
       setError(errorMessage);
-      console.error('Flow login error:', err);
+      console.error("Flow login error:", err);
     }
   };
 
@@ -106,49 +114,56 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
       setError(null);
       await flow.logOut();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Flow logout failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Flow logout failed";
       setError(errorMessage);
-      console.error('Flow logout error:', err);
+      console.error("Flow logout error:", err);
     }
   };
 
   const lensLogin = async () => {
     try {
       setError(null);
-      await lens.login();
+      const success = await lens.authenticate();
+      if (!success) {
+        throw new Error("Lens authentication failed");
+      }
+      debugLog("Lens login successful");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Lens login failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Lens login failed";
       setError(errorMessage);
-      console.error('Lens login error:', err);
+      console.error("Lens login error:", err);
     }
   };
 
   const lensLogout = async () => {
     try {
       setError(null);
-      await lens.logout();
+      const success = await lens.logout();
+      if (!success) {
+        throw new Error("Lens logout failed");
+      }
+      debugLog("Lens logout successful");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Lens logout failed';
+      const errorMessage =
+        err instanceof Error ? err.message : "Lens logout failed";
       setError(errorMessage);
-      console.error('Lens logout error:', err);
+      console.error("Lens logout error:", err);
     }
   };
 
   const storyConnect = async () => {
     // TODO: Implement Story Protocol connection
-    console.log('Story Protocol connection not yet implemented');
+    console.log("Story Protocol connection not yet implemented");
   };
 
   const connectAll = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([
-        flowLogin(),
-        lensLogin(),
-        storyConnect()
-      ]);
+      await Promise.all([flowLogin(), lensLogin(), storyConnect()]);
     } catch (err) {
-      console.error('Failed to connect to all chains:', err);
+      console.error("Failed to connect to all chains:", err);
     } finally {
       setIsLoading(false);
     }
@@ -157,12 +172,9 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
   const disconnectAll = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([
-        flowLogout(),
-        lensLogout()
-      ]);
+      await Promise.all([flowLogout(), lensLogout()]);
     } catch (err) {
-      console.error('Failed to disconnect from all chains:', err);
+      console.error("Failed to disconnect from all chains:", err);
     } finally {
       setIsLoading(false);
     }
@@ -170,7 +182,7 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
 
   const refreshUserData = async () => {
     // Refresh user data from all connected chains
-    debugLog('Refreshing user data...');
+    debugLog("Refreshing user data...");
     // Implementation will be added as each chain integration is completed
   };
 
@@ -185,12 +197,10 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
     storyConnect,
     connectAll,
     disconnectAll,
-    refreshUserData
+    refreshUserData,
   };
 
   return (
-    <Web3Context.Provider value={contextValue}>
-      {children}
-    </Web3Context.Provider>
+    <Web3Context.Provider value={contextValue}>{children}</Web3Context.Provider>
   );
 };

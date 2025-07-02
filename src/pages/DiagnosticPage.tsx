@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCameraTracking } from "@/hooks/useCameraTracking";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { LensConnectionTest } from "@/components/social/LensConnectionTest";
 import {
   CheckCircle,
   XCircle,
@@ -423,6 +424,9 @@ const DiagnosticPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Lens Protocol Integration Test */}
+      <LensConnectionTest />
     </div>
   );
 };

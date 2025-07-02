@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
-import { publicClient } from '@/providers/Web3Provider'; // We need to export this from Web3Provider
-import { useAuth } from './useAuth';
-import { toast } from 'sonner';
-import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from '@/lib/lens';
+import { useState, useEffect } from "react";
+import { publicClient } from "@/lib/publicClient";
+import { useAuth } from "./useAuth";
+import { toast } from "sonner";
+import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from "@/lib/lens";
+import {
+  useModernLensAccount,
+  ModernLensAccount,
+} from "./useModernLensProfile";
 
 export interface LensProfile {
   handle: string;
@@ -12,6 +16,20 @@ export interface LensProfile {
   followersCount: number;
   followingCount: number;
 }
+
+// Helper function to convert ModernLensAccount to legacy LensProfile format
+const convertToLegacyProfile = (
+  modernAccount: ModernLensAccount,
+): LensProfile => {
+  return {
+    handle: modernAccount.username,
+    imageURI: modernAccount.picture || "",
+    pubCount: modernAccount.stats.posts,
+    profileId: parseInt(modernAccount.id, 16) || 0, // Convert hex ID to number
+    followersCount: modernAccount.stats.followers,
+    followingCount: modernAccount.stats.following,
+  };
+};
 
 type LensProfileData = {
   pubCount: bigint;
@@ -27,8 +45,24 @@ export const useLensProfile = () => {
   const [lensProfile, setLensProfile] = useState<LensProfile | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Try to use modern Lens V3 SDK first
+  const {
+    account: modernAccount,
+    loading: modernLoading,
+    error: modernError,
+  } = useModernLensAccount();
+
   useEffect(() => {
-    const fetchLensProfile = async () => {
+    // First, try to use the modern Lens V3 SDK
+    if (modernAccount && !modernError) {
+      const legacyProfile = convertToLegacyProfile(modernAccount);
+      setLensProfile(legacyProfile);
+      setLoading(modernLoading);
+      return;
+    }
+
+    // Fallback to legacy implementation if modern SDK fails or no profile found
+    const fetchLensProfileLegacy = async () => {
       if (!profile?.wallet_address) {
         setLensProfile(null);
         return;
@@ -40,7 +74,7 @@ export const useLensProfile = () => {
         const profileId = await publicClient.readContract({
           address: LENS_HUB_CONTRACT_ADDRESS,
           abi: LENS_HUB_ABI,
-          functionName: 'defaultProfile',
+          functionName: "defaultProfile",
           args: [profile.wallet_address],
         });
 
@@ -53,21 +87,21 @@ export const useLensProfile = () => {
         const lensData = (await publicClient.readContract({
           address: LENS_HUB_CONTRACT_ADDRESS,
           abi: LENS_HUB_ABI,
-          functionName: 'getProfile',
+          functionName: "getProfile",
           args: [profileId],
         })) as LensProfileData;
 
         const followersCount = (await publicClient.readContract({
           address: LENS_HUB_CONTRACT_ADDRESS,
           abi: LENS_HUB_ABI,
-          functionName: 'getFollowersCount',
+          functionName: "getFollowersCount",
           args: [profileId],
         })) as bigint;
 
         const followingCount = (await publicClient.readContract({
           address: LENS_HUB_CONTRACT_ADDRESS,
           abi: LENS_HUB_ABI,
-          functionName: 'getFollowingCount',
+          functionName: "getFollowingCount",
           args: [profileId],
         })) as bigint;
 
@@ -79,11 +113,11 @@ export const useLensProfile = () => {
           followersCount: Number(followersCount),
           followingCount: Number(followingCount),
         });
-
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error fetching Lens profile:", error);
         toast.error("Could not fetch Lens profile.", {
-          description: "The connected wallet may not have a Lens profile, or there was a network issue."
+          description:
+            "The connected wallet may not have a Lens profile, or there was a network issue.",
         });
         setLensProfile(null);
       } finally {
@@ -91,8 +125,13 @@ export const useLensProfile = () => {
       }
     };
 
-    fetchLensProfile();
-  }, [profile?.wallet_address]);
+    // Only use legacy if modern SDK didn't work
+    if (!modernAccount && !modernLoading) {
+      fetchLensProfileLegacy();
+    } else {
+      setLoading(modernLoading);
+    }
+  }, [profile?.wallet_address, modernAccount, modernLoading, modernError]);
 
   return { lensProfile, loading };
 };

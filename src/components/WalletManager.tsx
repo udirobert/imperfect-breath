@@ -1,12 +1,18 @@
 import { useEffect } from "react";
 import { useFlow } from "@/hooks/useFlow";
-import { useLens } from "@/hooks/useLens";
+import { useLensService } from "@/hooks/useLensService";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 
 export const WalletManager = () => {
-  const { user: flowUser, logIn: flowLogIn, logOut: flowLogOut, executeTransaction } = useFlow();
-  const { lensUser, lensLoggedIn, authenticatingLens, unauthenticatingLens, lensReady, loginLens, logoutLens } = useLens();
+  const {
+    user: flowUser,
+    logIn: flowLogIn,
+    logOut: flowLogOut,
+    executeTransaction,
+  } = useFlow();
+  const { isAuthenticated, isLoading, error, authenticate, logout } =
+    useLensService();
 
   useEffect(() => {
     // If Flow user is logged in, ensure their account is set up for NFTs
@@ -53,16 +59,28 @@ export const WalletManager = () => {
       )}
 
       {/* Lens Profile Management */}
-      {lensReady && (
-        lensLoggedIn ? (
-          <Button variant="destructive" size="sm" onClick={logoutLens} disabled={unauthenticatingLens}>
-            Disconnect Lens Profile
-          </Button>
-        ) : (
-          <Button variant="secondary" size="sm" onClick={loginLens} disabled={authenticatingLens}>
-            Connect Lens Profile
-          </Button>
-        )
+      {isAuthenticated ? (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={logout}
+          disabled={isLoading}
+        >
+          Disconnect Lens Profile
+        </Button>
+      ) : (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={authenticate}
+          disabled={isLoading}
+        >
+          Connect Lens Profile
+        </Button>
+      )}
+
+      {error && (
+        <div className="text-sm text-red-600 mt-2">Lens Error: {error}</div>
       )}
     </div>
   );

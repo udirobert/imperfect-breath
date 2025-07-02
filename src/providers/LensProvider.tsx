@@ -1,16 +1,9 @@
-import { LensProvider as CoreLensProvider, PublicClient, development } from "@lens-protocol/react";
 import { ReactNode } from "react";
 
-// Define GraphQL fragments (as per Lens documentation)
-// For a real app, these would be in separate files and imported.
-const fragments = [];
-
-const client = PublicClient.create({
-  environment: development, // Use development for testnet
-  fragments,
-  storage: typeof window !== "undefined" ? window.localStorage : undefined, // Persist session
-});
+// TODO: Implement proper Lens SDK integration when stable
+// For now, this is a placeholder provider to avoid conflicts
 
 export function LensProvider({ children }: { children: ReactNode }) {
-  return <CoreLensProvider config={client}>{children}</CoreLensProvider>;
+  // Simple passthrough provider until Lens SDK is properly configured
+  return <>{children}</>;
 }

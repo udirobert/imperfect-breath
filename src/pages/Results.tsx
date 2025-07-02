@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { demoStoryIntegration } from "@/lib/story/storyClient";
 import { ShareToLensButton } from "@/components/social/ShareToLensButton";
+import { SessionCompleteModal } from "@/components/unified/SessionCompleteModal";
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -45,6 +46,7 @@ const Results = () => {
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [ipRegistered, setIpRegistered] = useState(false);
   const [isRegisteringIP, setIsRegisteringIP] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(true);
 
   const sessionData = useMemo(() => location.state || {}, [location.state]);
 
@@ -212,7 +214,25 @@ Check out Mindful Breath!`;
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center text-center animate-fade-in p-4">
+    <>
+      <SessionCompleteModal
+        isOpen={showSessionModal}
+        onClose={() => setShowSessionModal(false)}
+        sessionData={{
+          patternName: sessionData.patternName || 'Custom Pattern',
+          duration: sessionData.sessionDuration || 0,
+          breathHoldTime: sessionData.breathHoldTime || 0,
+          restlessnessScore: sessionData.restlessnessScore || 0,
+          timestamp: new Date().toISOString(),
+        }}
+        onShare={handleShare}
+        onAIAnalysis={handleAIAnalysis}
+        onRegisterIP={handleRegisterIP}
+        isRegisteringIP={isRegisteringIP}
+        ipRegistered={ipRegistered}
+      />
+      
+      <div className="flex flex-col items-center justify-center text-center animate-fade-in p-4">
       <h1 className="text-4xl font-bold mb-2">Session Complete</h1>
       <p className="text-muted-foreground mb-8">
         Take a moment to notice how you feel.
@@ -504,7 +524,8 @@ Check out Mindful Breath!`;
           />
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

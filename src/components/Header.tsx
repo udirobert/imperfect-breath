@@ -131,9 +131,14 @@ const Header = () => {
             <WalletManager />
             {user && (
               <>
-                <Link to="/feed">
-                  <Button variant="ghost" size="sm">
-                    Feed
+                <Link to="/community">
+                  <Button 
+                    variant={location.pathname === "/community" ? "default" : "ghost"} 
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
+                    Community
                   </Button>
                 </Link>
                 <Link to="/profile">

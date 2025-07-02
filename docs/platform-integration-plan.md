@@ -1,547 +1,399 @@
-# BreathFlow Vision - Platform Integration Plan
+# Imperfect Breath - Realistic Platform Integration Plan
 
 ## Overview
 
-This document outlines how to tie together all components of BreathFlow Vision into a cohesive, fully-functional platform. It serves as a roadmap for integrating existing features with the enhanced creator ecosystem, marketplace, and social features.
+This document outlines our realistic approach to building a functional multichain breathing wellness platform. Based on our current state analysis, we're focusing on implementing real integrations rather than placeholder code.
 
-## Current Architecture Analysis
+## Current Reality Check
 
-### Core Components
+**What Actually Works:**
+- Flow testnet contracts deployed at 0xb8404e09b36b6623
+- Basic React/TypeScript frontend structure
+- Supabase database schema defined
+- Basic breathing session functionality
 
-1. **Authentication System** (`src/lib/auth/`)
+**What Needs Real Implementation:**
+- Lens Protocol integration (currently 100% fake)
+- Story Protocol integration (currently 100% fake)
+- AI analysis (mostly fallback responses)
+- Social features (non-functional)
 
-   - User registration and login
-   - Role-based access (user, creator, instructor)
-   - Profile management
+## Phase 1: Lens Protocol Integration (Priority 1)
 
-2. **Breathing Engine** (`src/lib/breathingPatterns.ts`, `src/components/breathing/`)
+### 1.1 Replace Fake Lens Implementation
 
-   - Core breathing pattern definitions
-   - Session management and timer logic
-   - Progress tracking and metrics
-
-3. **Pattern Storage** (`src/lib/patternStorage.ts`)
-
-   - Custom pattern CRUD operations
-   - Supabase integration for persistence
-   - IP hash generation for uniqueness
-
-4. **AI Integration** (`src/lib/ai/`)
-
-   - Pattern recommendations
-   - Performance optimization suggestions
-   - Personalization engine
-
-5. **Story Protocol Integration** (`src/lib/story/`)
-   - IP asset registration
-   - Licensing management
-   - Demo integration for testing
-
-## Enhanced Components Added
-
-### Creator Ecosystem
-
-- **Enhanced Pattern Builder** (`src/components/creator/EnhancedPatternBuilder.tsx`)
-- **Creator Dashboard** (`src/pages/EnhancedCreatorDashboard.tsx`)
-- **Instructor Onboarding** (`src/pages/InstructorOnboarding.tsx`)
-- **Enhanced Types** (`src/types/patterns.ts`)
-
-### Marketplace & Discovery
-
-- **Enhanced Marketplace** (`src/pages/EnhancedMarketplace.tsx`)
-- **Social Actions** (`src/components/social/SocialActions.tsx`)
-- **Demo Instructor Ecosystem** (`src/lib/demo/instructorEcosystem.ts`)
-
-## Multi-Chain Integration Strategy
-
-Our integration strategy is centered around a multi-chain architecture that assigns specific roles to different protocols, ensuring a modular, scalable, and user-centric platform.
-
-- **🌿 Lens Chain (Social Layer):** Powers the social graph, discovery, and community engagement.
-- **🌊 Flow Chain (Performance Layer):** Handles real-time session tracking, analytics, and gamified user achievements.
-- **💳 Base Chain (Monetization Layer):** Facilitates creator monetization through NFT minting (via Zora) and payments.
-- **🧠 Story Protocol (IP Layer):** Secures intellectual property rights for breathwork creators.
-
-This approach allows us to leverage the best of each ecosystem to build a cohesive wellness network.
-
-### Phase 1: Core System Integration
-
-#### 1.1 Authentication & Authorization Flow
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   User Login    │───▶│   Role Check     │───▶│  Route Guard    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │  Permission Matrix  │
-                    │  - User: View/Use   │
-                    │  - Creator: Create  │
-                    │  - Instructor: All  │
-                    └─────────────────────┘
+**Current Problem:**
+```typescript
+// src/hooks/useLens.ts - This is completely fake
+const publishSession = useCallback(async (sessionData) => {
+  // TODO: Implement actual publication logic
+  debugLog('Publishing session to Lens:', { content, sessionData });
+  return 'publication-id-placeholder'; // This is embarrassing
+}, [client, profile]);
 ```
 
-**Integration Points:**
+**Real Implementation:**
+```typescript
+// src/services/LensService.ts
+import { LensClient, development } from '@lens-protocol/client';
+import { signMessageWith } from '@lens-protocol/client/viem';
 
-- Extend existing auth to support creator/instructor roles
-- Add role-based navigation in main layout
-- Implement permission checks in all creator/marketplace routes
-- Connect auth state to creator dashboard and onboarding flows
+export class LensService {
+  private client: LensClient;
+  
+  constructor() {
+    this.client = LensClient.create({
+      environment: development,
+      fragments: [/* our custom fragments */],
+    });
+  }
 
-#### 1.2 Pattern System Unification
+  async authenticate(signer: any): Promise<SessionClient> {
+    const authenticated = await this.client.login({
+      accountOwner: {
+        app: process.env.VITE_LENS_APP_ADDRESS!,
+        account: userAddress,
+      },
+      signMessage: signMessageWith(signer),
+    });
 
-```
-┌────────────────┐    ┌─────────────────────────┐    ┌──────────────────┐
-│ Basic Patterns │───▶│  Enhanced Pattern Types │───▶│ Marketplace      │
-└────────────────┘    └─────────────────────────┘    └──────────────────┘
-                                    │
-                                    ▼
-                            ┌──────────────────┐
-                            │ Session Engine   │
-                            │ (Backwards Compat)│
-                            └──────────────────┘
-```
+    if (authenticated.isErr()) {
+      throw new Error(authenticated.error.message);
+    }
 
-**Integration Points:**
+    return authenticated.value;
+  }
 
-- Ensure `EnhancedCustomPattern` is backward compatible with `CustomPattern`
-- Update session engine to handle enhanced pattern metadata
-- Integrate pattern discovery flow: Marketplace → Session
-- Connect pattern creation flow: Creator Dashboard → Marketplace
+  async publishBreathingSession(sessionData: {
+    patternName: string;
+    duration: number;
+    score: number;
+    flowNFTId?: string;
+  }): Promise<string> {
+    const metadata = textOnly({
+      content: `Just completed a ${sessionData.patternName} breathing session! 🌬️
 
-### Phase 2: Data Flow Integration
+Duration: ${Math.round(sessionData.duration / 60)} minutes
+Score: ${sessionData.score}/100
 
-#### 2.1 User Journey Integration
+#BreathingPractice #Wellness #ImperfectBreath`,
+    });
 
-```
-New User Registration
-        │
-        ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Profile Setup   │───▶│  Preference Quiz │───▶│ AI Onboarding   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Basic Patterns  │    │ Personalization  │    │ Recommendations │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                    ┌──────────────────────┐
-                    │ Marketplace Discovery│
-                    └──────────────────────┘
-```
+    const { uri } = await storageClient.uploadAsJson(metadata);
 
-#### 2.2 Creator Journey Integration
+    const result = await this.sessionClient.post({
+      contentUri: uri,
+    });
 
-```
-Creator Application
-        │
-        ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Verification    │───▶│ Onboarding Flow  │───▶│ First Pattern   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Profile Setup   │    │ License Config   │    │ IP Registration │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                    ┌──────────────────────┐
-                    │ Marketplace Listing  │
-                    └──────────────────────┘
+    return result.unwrap().txHash;
+  }
+}
 ```
 
-### Phase 3: Feature Integration
+### 1.2 Social Components Implementation
 
-#### 3.1 AI & Personalization Integration
+**Create Real Social Features:**
+```typescript
+// src/components/social/BreathingSessionPost.tsx
+export const BreathingSessionPost: React.FC<{
+  sessionData: SessionData;
+  onPublished?: (txHash: string) => void;
+}> = ({ sessionData, onPublished }) => {
+  const { publishSession, isLoading } = useLensService();
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Session Data    │───▶│ AI Analysis      │───▶│ Recommendations │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Progress Track  │    │ Pattern Optimize │    │ Creator Insights│
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+  const handlePublish = async () => {
+    try {
+      const txHash = await publishSession(sessionData);
+      onPublished?.(txHash);
+      toast.success('Session shared to Lens!');
+    } catch (error) {
+      toast.error('Failed to share session');
+    }
+  };
 
-**Integration Points:**
-
-- Connect session analytics to AI recommendation engine
-- Feed user engagement data to creator dashboard analytics
-- Use AI insights for marketplace pattern ranking
-- Implement feedback loop: recommendations → usage → refinement
-
-#### 3.2 Social & Community Integration (Lens Protocol)
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Lens Profiles   │───▶│ Social Actions   │───▶│ On-Chain Feed   │
-│ (User Identity) │    │ (Mirror, Collect)│    │ (Lens Posts)    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Following       │    │ Pattern Sharing  │    │ Token-Gated    │
-│ (Social Graph)  │    │ (Publishing)     │    │  Communities   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-**Integration Points:**
-
-- Map application user profiles to **Lens Protocol profiles**.
-- Implement social actions (`like`, `collect`, `mirror`) by interacting with the Lens API.
-- Publish new patterns and session completions as posts on Lens.
-- Build community feeds by aggregating content from followed profiles on the Lens social graph.
-
-### Phase 4: Business Logic Integration
-
-#### 4.1 Monetization & IP Integration (Base, Story & Flow)
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Pattern Create  │───▶│ IP Registration  │───▶│ Tokenize on Base│
-│ (App UI)        │    │ (Story Protocol) │    │ (via Zora)      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Marketplace     │    │ Usage Tracking   │    │ Revenue Share   │
-│ (NFTs on Base)  │    │ (Flow Chain)     │    │ (On-Chain)      │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+  return (
+    <Card>
+      <CardHeader>
+        <h3>Share Your Breathing Session</h3>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <SessionSummary data={sessionData} />
+          <Button 
+            onClick={handlePublish} 
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading ? 'Publishing...' : 'Share on Lens'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 ```
 
-**Integration Points:**
-
-- Connect **Story Protocol** registration to the pattern creation flow.
-- Integrate **Zora** to mint patterns as NFTs on the **Base Chain**.
-- Implement usage tracking by recording session data on the **Flow Chain**.
-- Develop smart contracts or use existing protocols on **Base** for transparent revenue sharing from NFT sales.
-- Connect on-chain earnings to the creator dashboard analytics.
-
-## Technical Implementation Plan
-
-### Phase 1: Foundation (Completed)
-
-#### Database Schema Updates (Completed)
-
-The database schema has been updated to align with the integration plan. The following changes have been implemented:
-
-- The `patterns` table now uses a `UUID` primary key.
-- Foreign key relationships have been established between `patterns` and `users`.
-- The `users` and `patterns` tables have been extended with new columns.
-- New tables (`creator_analytics`, `pattern_reviews`, `social_actions`) have been created.
-
-See migration file `supabase/migrations/20250626213000_align_schema_with_docs.sql` for details.
-
-#### API Layer Integration (Completed)
-
-The `PatternStorageService` in `src/lib/patternStorage.ts` has been updated to support the new database schema.
-
-- The `CustomPattern` and `SupabasePattern` interfaces now reflect the new table structures.
-- The mapping functions (`mapToCustomPattern`, `mapToSupabasePattern`) have been updated.
-- The `savePattern` and `deletePattern` methods are implemented.
-
-#### Authentication & Route Integration (Completed)
-
-1.  **Update Auth System**
-
-    - Extend user roles to include `"creator"` and `"instructor"`.
-    - Implement role-based route guards to protect creator-specific routes.
-
-2.  **Navigation Integration**
-
-    - Update the main navigation to display creator/instructor options based on user role.
-
-3.  **State Management**
-    - Create a global state for user roles and permissions.
-    - Integrate with the existing authentication context.
-
-### Phase 2: Core Integration (Completed)
-
-#### Pattern System Integration (Completed)
-
-1. **Backward Compatibility Layer**
-
-   ```typescript
-   // Create adapter functions
-   const adaptEnhancedToBasic = (
-     enhanced: EnhancedCustomPattern
-   ): CustomPattern => {
-     // Strip enhanced features for basic session engine
-   };
-
-   const enrichBasicPattern = (basic: CustomPattern): EnhancedCustomPattern => {
-     // Add default enhanced features
-   };
-   ```
-
-2. **Session Engine Updates**
-
-   ```typescript
-   // Update BreathingSessionEngine to handle enhanced patterns
-   // Maintain compatibility with existing session flows
-   // Add support for media content during sessions
-   ```
-
-3. **API Layer Integration**
-   ```typescript
-   // Create unified API for pattern operations
-   class PatternService {
-     async getPattern(id: string): Promise<EnhancedCustomPattern>;
-     async createPattern(pattern: EnhancedCustomPattern): Promise<void>;
-     async updateAnalytics(
-       patternId: string,
-       metrics: AnalyticsData
-     ): Promise<void>;
-   }
-   ```
-
-### Phase 3: Feature Integration (In Progress)
-
-#### Marketplace Enhancements (Current)
-
-1.  **Advanced Filtering & Sorting (Completed)**
-
-    - Live data integration for patterns.
-    - Filtering by category, difficulty, price, and content type (video/audio).
-    - Sorting by price and user ratings.
-
-2.  **AI-Powered Recommendations (Completed)**
-
-    - Integrated `src/lib/ai/recommendations.ts` with the marketplace.
-    - Provided personalized pattern suggestions based on user session history and preferences.
-    - Implemented a "Recommended for You" section.
-
-3.  **Seamless Purchase & Licensing Flow (Completed)**
-    - Integrated Story Protocol for IP registration and licensing.
-    - Implemented a secure checkout process for pattern licensing.
-    - Connected to payment providers.
-    - Updated user profiles to reflect purchased patterns.
-
-#### Social Features (Completed) - Lens Protocol Integration
-
-This phase, focused on building our social layer on Lens Protocol, is now complete. We have successfully created a bridge between our platform's Supabase authentication and the user's on-chain identity.
-
-1.  **Hybrid Authentication: Supabase + Web3 Wallet (Completed)**
-
-    - Linked off-chain accounts to on-chain wallets using `useWalletAuth.ts`.
-
-2.  **User Profiles & Following (Completed)**
-
-    - Created a unified `UserProfile.tsx` page showing both Supabase and Lens data.
-    - Implemented on-chain following via `useFollow.ts`.
-    - Displaying follower/following counts via an enhanced `useLensProfile.ts`.
-
-3.  **Community Feed (Completed)**
-
-    - The `CommunityFeed.tsx` page now displays a timeline of publications from followed profiles, powered by `useLensFeed.ts`.
-
-4.  **Social Actions (Completed)**
-
-    - **Mirroring, Collecting, and Commenting** are fully implemented with their respective hooks (`useMirror`, `useCollect`, `useComment`) and UI components, allowing for rich, on-chain interaction directly from the feed.
-    - **Viewing Comments** is enabled via the `useComments` hook and `CommentList` component.
-
-5.  **Pattern Reviews & Ratings (Remains Off-Chain)**
-    - This feature remains on Supabase, providing a valuable platform-specific feedback mechanism.
-
----
-
-### Phase 4: Monetization & IP (Next Steps)
-
-With the social layer established, we will now focus on the creator monetization and intellectual property flow. This phase will integrate **Base Chain** (via Zora) for NFT minting and **Story Protocol** for IP registration.
-
-1.  **Creator IP Registration (Planned)**
-
-    - **Objective:** Allow creators to register their breathwork patterns as Intellectual Property Assets (IPAs) on Story Protocol.
-    - **Implementation Plan:**
-      - Integrate the Story Protocol SDK.
-      - Create a `useRegisterIp` hook to handle the on-chain registration transaction.
-      - Add a "Register IP" button to the `CreatorDashboard.tsx` for each pattern.
-      - Store the returned `ipAssetId` in our `patterns` table in Supabase.
-
-2.  **Tokenize Patterns as NFTs (Planned)**
-
-    - **Objective:** Enable creators to mint their registered patterns as NFTs on Base Chain using the Zora protocol.
-    - **Implementation Plan:**
-      - Integrate the Zora SDK.
-      - Create a `useMintPattern` hook that facilitates the minting process.
-      - Add a "Mint NFT" button in the `CreatorDashboard.tsx`, which becomes active after a pattern's IP is registered.
-      - The NFT metadata will link back to the pattern details and the Story Protocol IP record.
-
-3.  **Marketplace Integration (Planned)**
-    - **Objective:** Display and sell the newly minted pattern NFTs in the marketplace.
-    - **Implementation Plan:**
-      - Refactor the `EnhancedMarketplace.tsx` to fetch and display NFTs from Zora on Base Chain.
-      - Integrate a purchase flow that interacts with the Zora contracts.
-
-#### Creator Dashboard Integration (Completed)
-
-1. **Analytics Integration**
-
-   ```typescript
-   // Connect to session analytics
-   // Aggregate usage data from all sources
-   // Real-time dashboard updates
-   ```
-
-2. **Content Management**
-   ```typescript
-   // Integrate pattern builder with storage
-   // Connect to IP registration flow
-   // Manage media content uploads
-   ```
-
-### Phase 4: Advanced Features (Week 7-8)
-
-#### AI Integration
-
-1. **Recommendation Engine**
-
-   ```typescript
-   // Connect user behavior data to recommendations
-   // Integrate with marketplace discovery
-   // Personalized pattern suggestions
-   ```
-
-2. **Creator Insights**
-   ```typescript
-   // AI-powered creator analytics
-   // Pattern optimization suggestions
-   // Market trend analysis
-   ```
-
-#### Social Features
-
-1. **Community Integration**
-   ```typescript
-   // Social actions throughout the app
-   // User profiles and following system
-   // Pattern sharing and reviews
-   ```
-
-## Testing Strategy
-
-### Integration Testing Plan
-
-1. **User Flow Testing**
-
-   - New user onboarding → pattern discovery → session completion
-   - Creator onboarding → pattern creation → marketplace listing
-   - Pattern purchase → session access → review/rating
-
-2. **API Integration Testing**
-
-   - Pattern CRUD operations across all components
-   - Authentication flow through all user roles
-   - Payment and licensing system integration
-
-3. **Cross-Component Testing**
-   - Session engine with enhanced patterns
-   - AI recommendations with marketplace
-   - Creator analytics with usage tracking
-
-### Performance Testing
-
-1. **Load Testing**
-
-   - Marketplace with large pattern catalog
-   - Concurrent sessions with media content
-   - Real-time analytics updates
-
-2. **Mobile Optimization**
-   - Responsive design across all new components
-   - Touch interactions for pattern builder
-   - Offline capability for purchased patterns
-
-## Deployment Strategy
-
-### Phase 1: Core Integration
-
-- Deploy authentication and role system
-- Basic creator dashboard (read-only)
-- Enhanced pattern types (backward compatible)
-
-### Phase 2: Creator Features
-
-- Full creator dashboard with analytics
-- Pattern builder and IP registration
-- Basic marketplace (browse only)
-
-### Phase 3: Marketplace & Social
-
-- Full marketplace with purchase flow
-- Social features and community
-- AI recommendations
-
-### Phase 4: Advanced Features
-
-- Advanced analytics and insights
-- Full monetization features
-- Performance optimizations
-
-## Success Metrics
-
-### User Engagement
-
-- Daily/Monthly Active Users (DAU/MAU)
-- Session completion rates
-- Pattern discovery and usage rates
-
-### Creator Success
-
-- Creator onboarding completion rate
-- Average patterns created per creator
-- Creator revenue and retention
-
-### Platform Health
-
-- Marketplace transaction volume
-- User satisfaction scores
-- System performance metrics
-
-## Risk Mitigation
-
-### Technical Risks
-
-1. **Data Migration** - Implement gradual rollout with rollback capability
-2. **Performance Impact** - Load testing and optimization before full release
-3. **Breaking Changes** - Maintain backward compatibility throughout
-
-### Business Risks
-
-1. **User Adoption** - Gradual feature rollout with user feedback loops
-2. **Creator Quality** - Verification and review system for creators
-3. **Legal Compliance** - IP protection and licensing framework
-
-## Next Steps
-
-1.  **Creator Dashboard Integration (Completed)**:
-
-    - The Creator Dashboard now fetches and displays patterns from the database using the `PatternStorageService`.
-    - "Edit" and "delete" functionality for patterns on the dashboard are fully implemented.
-    - The "Create New Pattern" button is connected to the updated pattern creation flow.
-
-2.  **Authentication and Authorization (Completed)**:
-
-    - Role-based access control (RBAC) has been implemented to restrict access to creator features.
-    - The UI now reflects the user's role (e.g., showing/hiding creator-specific navigation).
-    - The `useAuth` hook now fetches and provides the user's role.
-
-3.  **Pattern System Unification (Completed)**:
-
-    - The breathing session engine has been updated to handle both predefined and custom `EnhancedCustomPattern` types.
-    - The "Preview" functionality in the pattern builder is now connected to the session engine.
-
-4.  **Marketplace Enhancements (Current)**:
-
-    - Implemented AI-powered recommendations.
-    - Completed the purchase and licensing flow.
-
-5.  **Social Features (Next)**:
-    - Begin development of the User Profile pages and the following system.
-
-This plan ensures a cohesive, well-integrated platform that leverages all existing components while seamlessly incorporating the enhanced creator ecosystem and marketplace features.
+### 1.3 Integration with Existing Flow
+
+**Connect Everything Together:**
+```typescript
+// src/hooks/useBreathingSessionFlow.ts
+export const useBreathingSessionFlow = () => {
+  const { user: flowUser, executeTransaction } = useFlow();
+  const { publishSession } = useLensService();
+  const { createSession, updateSession } = useSupabase();
+
+  const completeSession = async (sessionData: SessionData) => {
+    try {
+      // 1. Save to Supabase
+      const dbSession = await createSession({
+        user_id: flowUser.addr!,
+        pattern_id: sessionData.patternId,
+        duration: sessionData.duration,
+        ai_score: sessionData.aiScore,
+        // ... other session data
+      });
+
+      // 2. Log to Flow blockchain (if user has NFT)
+      if (sessionData.flowNFTId) {
+        const txHash = await executeTransaction(
+          // Use existing deployed contract
+          sessionLoggingTransaction,
+          [/* session data args */]
+        );
+        
+        await updateSession(dbSession.id, {
+          flow_transaction_id: txHash
+        });
+      }
+
+      // 3. Publish to Lens (optional)
+      if (sessionData.shareToLens) {
+        const lensTxHash = await publishSession({
+          patternName: sessionData.patternName,
+          duration: sessionData.duration,
+          score: sessionData.aiScore || 0,
+          flowNFTId: sessionData.flowNFTId
+        });
+
+        await updateSession(dbSession.id, {
+          lens_post_id: lensTxHash
+        });
+      }
+
+      return dbSession;
+    } catch (error) {
+      console.error('Failed to complete session flow:', error);
+      throw error;
+    }
+  };
+
+  return { completeSession };
+};
+```
+
+## Phase 2: Story Protocol Integration (Priority 2)
+
+### 2.1 Real IP Registration
+
+**Replace Placeholder Implementation:**
+```typescript
+// src/services/StoryProtocolService.ts
+import { StoryClient, StoryConfig } from '@story-protocol/core-sdk';
+
+export class StoryProtocolService {
+  private client: StoryClient | null = null;
+
+  async initialize(privateKey: string): Promise<void> {
+    const account = privateKeyToAccount(`0x${privateKey}`);
+    
+    const config: StoryConfig = {
+      account,
+      transport: http('https://testnet.storyrpc.io'),
+      chainId: 'story-testnet',
+    };
+
+    this.client = StoryClient.newClient(config);
+  }
+
+  async registerBreathingPatternIP(patternData: {
+    name: string;
+    description: string;
+    phases: Record<string, number>;
+    flowNFTId?: string;
+  }): Promise<{ ipAssetId: string; txHash: string }> {
+    if (!this.client) throw new Error('Story client not initialized');
+
+    const metadata = {
+      title: patternData.name,
+      description: patternData.description,
+      attributes: [
+        { trait_type: 'Type', value: 'Breathing Pattern' },
+        { trait_type: 'Flow NFT ID', value: patternData.flowNFTId || 'N/A' },
+      ],
+    };
+
+    const response = await this.client.ipAsset.register({
+      nftContract: process.env.VITE_STORY_NFT_CONTRACT!,
+      tokenId: BigInt(Date.now()),
+      metadata,
+    });
+
+    return {
+      ipAssetId: response.ipAssetId!,
+      txHash: response.txHash!,
+    };
+  }
+}
+```
+
+### 2.2 Creator IP Protection Flow
+
+**Integrate with Pattern Creation:**
+```typescript
+// src/components/creator/IPRegistrationFlow.tsx
+export const IPRegistrationFlow: React.FC<{
+  patternData: PatternData;
+  onRegistered?: (ipAssetId: string) => void;
+}> = ({ patternData, onRegistered }) => {
+  const { registerIP, setLicense, isLoading } = useStoryProtocol();
+  
+  const handleRegister = async () => {
+    try {
+      // Register IP
+      const { ipAssetId } = await registerIP(patternData);
+      
+      // Set license terms
+      await setLicense(ipAssetId, {
+        commercial: false,
+        derivatives: true,
+        royaltyPercentage: 5,
+      });
+      
+      onRegistered?.(ipAssetId);
+    } catch (error) {
+      console.error('Failed to register IP:', error);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Register Intellectual Property</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button onClick={handleRegister} disabled={isLoading}>
+          {isLoading ? 'Registering...' : 'Register IP Asset'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+```
+
+## Phase 3: Unified User Experience
+
+### 3.1 Session Complete Modal
+
+**Bring Everything Together:**
+```typescript
+// src/components/unified/SessionCompleteModal.tsx
+export const SessionCompleteModal: React.FC<{
+  sessionData: SessionData;
+  patternData: PatternData;
+}> = ({ sessionData, patternData }) => {
+  return (
+    <Dialog>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Session Complete! 🌬️</DialogTitle>
+        </DialogHeader>
+        
+        <Tabs defaultValue="results">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="results">Results</TabsTrigger>
+            <TabsTrigger value="social">Share</TabsTrigger>
+            <TabsTrigger value="ip">Protect IP</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="results">
+            <SessionResults data={sessionData} />
+          </TabsContent>
+          
+          <TabsContent value="social">
+            <BreathingSessionPost 
+              sessionData={sessionData}
+              onPublished={(txHash) => {
+                toast.success('Shared to Lens!');
+              }}
+            />
+          </TabsContent>
+          
+          <TabsContent value="ip">
+            <IPRegistrationFlow 
+              patternData={patternData}
+              onRegistered={(ipAssetId) => {
+                toast.success('IP registered!');
+              }}
+            />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+};
+```
+
+### 3.2 Cross-Chain Status
+
+**Show Connection Status:**
+```typescript
+// src/components/unified/ChainStatusBar.tsx
+export const ChainStatusBar: React.FC = () => {
+  const { user: flowUser } = useFlow();
+  const { profile: lensProfile } = useLensService();
+  const { isConnected: storyConnected } = useStoryProtocol();
+
+  return (
+    <div className="flex space-x-2 p-2 bg-muted rounded-lg">
+      <Badge variant={flowUser.loggedIn ? "default" : "secondary"}>
+        Flow: {flowUser.loggedIn ? "Connected" : "Disconnected"}
+      </Badge>
+      <Badge variant={lensProfile ? "default" : "secondary"}>
+        Lens: {lensProfile ? "Connected" : "Disconnected"}
+      </Badge>
+      <Badge variant={storyConnected ? "default" : "secondary"}>
+        Story: {storyConnected ? "Connected" : "Disconnected"}
+      </Badge>
+    </div>
+  );
+};
+```
+
+## Implementation Priority
+
+1. **Week 1-3: Lens Protocol** - Real social features
+2. **Week 4-6: Story Protocol** - Real IP protection
+3. **Week 7-8: UI/UX Polish** - Unified experience
+4. **Week 9-10: AI Enhancement** - Better analysis
+5. **Week 11-12: Production Ready** - Testing & deployment
+
+## Success Criteria
+
+**By End of Phase 1:**
+- Users can actually share breathing sessions to Lens
+- Real social profiles and following
+- Lens posts connected to Flow NFTs
+
+**By End of Phase 2:**
+- Creators can register breathing patterns as IP assets
+- License terms management works
+- IP protection integrated with pattern creation
+
+**By End of Phase 3:**
+- Seamless multichain experience
+- Mobile-optimized interface
+- Production-ready error handling
+
+**Final Deliverable:**
+A fully functional multichain breathing wellness platform ready for user testing.

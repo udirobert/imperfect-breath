@@ -15,6 +15,7 @@ interface EnvironmentConfig {
   lens: {
     environment: 'testnet' | 'mainnet';
     apiUrl: string;
+    appAddress: string;
   };
   story: {
     chainId: string;
@@ -71,6 +72,7 @@ export const config: EnvironmentConfig = {
   lens: {
     environment: (import.meta.env.VITE_LENS_ENVIRONMENT as 'testnet' | 'mainnet') || 'testnet',
     apiUrl: import.meta.env.VITE_LENS_API_URL!,
+    appAddress: import.meta.env.VITE_LENS_APP_ADDRESS || '0xC75A89145d765c396fd75CbD16380Eb184Bd2ca7', // Testnet default
   },
   story: {
     chainId: import.meta.env.VITE_STORY_CHAIN_ID || '11155111',
