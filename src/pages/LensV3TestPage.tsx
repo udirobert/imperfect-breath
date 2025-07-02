@@ -1,5 +1,5 @@
-import React from 'react';
-import { LensV3Test } from '@/components/LensV3Test';
+import React from "react";
+import { LensV3Test } from "@/components/LensV3Test";
 
 const LensV3TestPage: React.FC = () => {
   return (
@@ -13,8 +13,14 @@ const LensV3TestPage: React.FC = () => {
             Testing and exploring Lens Protocol V3 SDK functionality
           </p>
           <div className="mt-4 text-sm text-gray-500">
-            <p>This page is for development purposes to understand V3 SDK patterns</p>
-            <p>Use the buttons below to test different aspects of the Lens V3 integration</p>
+            <p>
+              This page is for development purposes to understand V3 SDK
+              patterns
+            </p>
+            <p>
+              Use the buttons below to test different aspects of the Lens V3
+              integration
+            </p>
           </div>
         </div>
 
@@ -22,10 +28,16 @@ const LensV3TestPage: React.FC = () => {
 
         <div className="mt-8 text-center text-sm text-gray-500">
           <p>
-            App Address: <code className="bg-gray-100 px-2 py-1 rounded">DF7gzk-zW-C24tTtRamHCwj8VCuSZ40erZ</code>
+            App Address:{" "}
+            <code className="bg-gray-100 px-2 py-1 rounded">
+              DF7gzk-zW-C24tTtRamHCwj8VCuSZ40erZ
+            </code>
           </p>
           <p className="mt-2">
-            SDK Version: <code className="bg-gray-100 px-2 py-1 rounded">@lens-protocol/react-web@canary</code>
+            SDK Version:{" "}
+            <code className="bg-gray-100 px-2 py-1 rounded">
+              @lens-protocol/client
+            </code>
           </p>
         </div>
       </div>

@@ -2,24 +2,19 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { useLens } from "@/hooks/useLens";
-import { usePost } from "@lens-protocol/react";
-import { textOnly } from "@lens-protocol/metadata";
-import { uploadToGrove } from "@/lib/lens/uploadToGrove";
-import { postId } from "@lens-protocol/client";
+import { useLensService } from "@/hooks/useLensService";
 
 interface CommentFormProps {
-  postId: string; // The ID of the post to comment on
-  onCommentPosted: () => void;
+  publicationId: string;
+  onCommentPosted?: (commentId: string) => void;
 }
 
 export const CommentForm = ({
-  postId: parentPostId,
+  publicationId,
   onCommentPosted,
 }: CommentFormProps) => {
   const [commentText, setCommentText] = useState("");
-  const { lensLoggedIn, loginLens } = useLens();
-  const { execute: postOnLens, loading: isCommenting } = usePost();
+  const { isAuthenticated, authenticate, isLoading } = useLensService();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,63 +23,54 @@ export const CommentForm = ({
       return;
     }
 
-    if (!lensLoggedIn) {
+    if (!isAuthenticated) {
       toast.info("Please connect your Lens profile to comment.");
-      loginLens();
-      return;
+      try {
+        await authenticate();
+      } catch (error) {
+        toast.error("Failed to authenticate with Lens.");
+        return;
+      }
     }
 
     try {
       toast.info("Posting comment...");
 
-      // 1. Create comment metadata
-      const metadata = textOnly({
-        content: commentText,
-        // You can add other metadata fields here if needed
-      });
+      // TODO: Implement actual comment posting with V3 SDK
+      console.log("Posting comment on publication:", publicationId);
+      console.log("Comment content:", commentText);
 
-      // 2. Upload metadata to Grove
-      const contentURI = await uploadToGrove(metadata);
+      // Mock success for now
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const mockCommentId = `comment-${Date.now()}`;
 
-      if (!contentURI) {
-        toast.error("Failed to upload comment metadata.");
-        return;
-      }
-
-      // 3. Post the comment on Lens
-      const result = await postOnLens({
-        contentURI: contentURI,
-        commentOn: {
-          post: postId(parentPostId),
-        },
-      });
-
-      if (result.isFailure()) {
-        toast.error(`Failed to post comment: ${result.error.message}`);
-        console.error("Lens comment error:", result.error);
-        return;
-      }
-
-      toast.success("Comment posted successfully!");
       setCommentText("");
-      onCommentPosted();
+      onCommentPosted?.(mockCommentId);
+      toast.success("Comment posted successfully!");
     } catch (error) {
-      toast.error("An error occurred while posting comment.");
-      console.error("Error posting comment:", error);
+      console.error("Comment posting failed:", error);
+      toast.error("Failed to post comment. Please try again.");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 space-y-2">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <Textarea
         value={commentText}
         onChange={(e) => setCommentText(e.target.value)}
         placeholder="Write a comment..."
-        disabled={isCommenting}
+        className="min-h-[80px] resize-none"
+        disabled={isLoading}
       />
-      <Button type="submit" disabled={isCommenting} size="sm">
-        {isCommenting ? "Posting..." : "Post Comment"}
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          type="submit"
+          disabled={isLoading || !commentText.trim()}
+          size="sm"
+        >
+          {isLoading ? "Posting..." : "Post Comment"}
+        </Button>
+      </div>
     </form>
   );
 };

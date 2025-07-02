@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import { useSession, useLogin, useLogout } from "@lens-protocol/react-web";
+import React, { useState, useEffect } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LENS_APP_ADDRESS } from "@/lib/lens/config";
+import { useLensAuth } from "@/hooks/useLensAuth";
+import { getAppAddress } from "@/lib/lens/config";
 
 export const LensV3Test: React.FC = () => {
   const [testResults, setTestResults] = useState<string[]>([]);
@@ -17,18 +17,16 @@ export const LensV3Test: React.FC = () => {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  // Lens V3 hooks - let's see what actually exists
+  // Lens V3 client hooks
   const {
-    data: session,
-    loading: sessionLoading,
-    error: sessionError,
-  } = useSession();
-  const {
-    execute: loginExecute,
-    loading: loginLoading,
-    error: loginError,
-  } = useLogin();
-  const { execute: logoutExecute, loading: logoutLoading } = useLogout();
+    session,
+    loading: lensLoading,
+    error: lensError,
+    login: lensLogin,
+    logout: lensLogout,
+    resumeSession,
+    getCurrentSession,
+  } = useLensAuth();
 
   const addTestResult = (message: string) => {
     setTestResults((prev) => [
@@ -41,6 +39,11 @@ export const LensV3Test: React.FC = () => {
     setTestResults([]);
     setError(null);
   };
+
+  // Try to resume session on component mount
+  useEffect(() => {
+    resumeSession();
+  }, [resumeSession]);
 
   const testWalletConnection = async () => {
     try {
@@ -65,11 +68,21 @@ export const LensV3Test: React.FC = () => {
   const testLensSession = async () => {
     try {
       setLoading(true);
-      addTestResult("Testing Lens session...");
-      addTestResult(`Session loading: ${sessionLoading}`);
+      addTestResult("Testing Lens V3 session...");
+      addTestResult(`Session loading: ${lensLoading}`);
       addTestResult(`Session data: ${JSON.stringify(session, null, 2)}`);
-      addTestResult(`Session error: ${sessionError?.message || "none"}`);
-      addTestResult(`App address: ${LENS_APP_ADDRESS}`);
+      addTestResult(`Session error: ${lensError || "none"}`);
+      addTestResult(`App address: ${getAppAddress()}`);
+
+      // Try to get current session details
+      const currentSession = await getCurrentSession();
+      if (currentSession) {
+        addTestResult(
+          `Current session: ${JSON.stringify(currentSession, null, 2)}`,
+        );
+      } else {
+        addTestResult("No active authenticated session");
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       setError(errorMsg);
@@ -87,52 +100,19 @@ export const LensV3Test: React.FC = () => {
 
     try {
       setLoading(true);
-      addTestResult("Testing Lens login...");
-      addTestResult(`Using app address: ${LENS_APP_ADDRESS}`);
+      addTestResult("Testing Lens V3 login with GraphQL flow...");
+      addTestResult(`Using app address: ${getAppAddress()}`);
       addTestResult(`User address: ${address}`);
 
-      // Let's try different login parameter patterns
-      const loginAttempts = [
-        // Attempt 1: Required address parameter
-        () => loginExecute({ address }),
+      addTestResult("Starting challenge/sign/authenticate flow...");
 
-        // Attempt 2: Using any to bypass type checking for exploration
-        () =>
-          (loginExecute as typeof loginExecute)({
-            address,
-            app: LENS_APP_ADDRESS,
-          } as Parameters<typeof loginExecute>[0]),
+      const success = await lensLogin();
 
-        // Attempt 3: Alternative structures (bypassing types for exploration)
-        () =>
-          (loginExecute as typeof loginExecute)({
-            wallet: address,
-            appId: LENS_APP_ADDRESS,
-          } as unknown as Parameters<typeof loginExecute>[0]),
-
-        // Attempt 4: Onboarding user pattern
-        () =>
-          (loginExecute as typeof loginExecute)({
-            onboardingUser: {
-              app: LENS_APP_ADDRESS,
-              wallet: address,
-            },
-          } as unknown as Parameters<typeof loginExecute>[0]),
-      ];
-
-      for (let i = 0; i < loginAttempts.length; i++) {
-        try {
-          addTestResult(`Login attempt ${i + 1}...`);
-          const result = await loginAttempts[i]();
-          addTestResult(
-            `Login attempt ${i + 1} result: ${JSON.stringify(result, null, 2)}`,
-          );
-          break; // If successful, break out of loop
-        } catch (attemptError) {
-          addTestResult(
-            `Login attempt ${i + 1} failed: ${attemptError instanceof Error ? attemptError.message : "Unknown error"}`,
-          );
-        }
+      if (success) {
+        addTestResult("Login successful!");
+        addTestResult(`New session: ${JSON.stringify(session, null, 2)}`);
+      } else {
+        addTestResult("Login failed - check error details above");
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
@@ -146,10 +126,16 @@ export const LensV3Test: React.FC = () => {
   const testLensLogout = async () => {
     try {
       setLoading(true);
-      addTestResult("Testing Lens logout...");
+      addTestResult("Testing Lens V3 logout...");
 
-      const result = await logoutExecute();
-      addTestResult(`Logout result: ${JSON.stringify(result, null, 2)}`);
+      const success = await lensLogout();
+
+      if (success) {
+        addTestResult("Logout successful!");
+        addTestResult(`Updated session: ${JSON.stringify(session, null, 2)}`);
+      } else {
+        addTestResult("Logout failed - check error details above");
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
       setError(errorMsg);
@@ -160,20 +146,22 @@ export const LensV3Test: React.FC = () => {
   };
 
   const testSDKExports = () => {
-    addTestResult("Testing SDK exports...");
+    addTestResult("Testing V3 Client SDK exports...");
 
     // Test what's actually available
     try {
       addTestResult(
-        `useSession available: ${typeof useSession === "function"}`,
+        `useLensAuth available: ${typeof useLensAuth === "function"}`,
       );
-      addTestResult(`useLogin available: ${typeof useLogin === "function"}`);
-      addTestResult(`useLogout available: ${typeof useLogout === "function"}`);
+      addTestResult(`lensLogin type: ${typeof lensLogin}`);
+      addTestResult(`lensLogout type: ${typeof lensLogout}`);
+      addTestResult(`resumeSession type: ${typeof resumeSession}`);
+      addTestResult(`getCurrentSession type: ${typeof getCurrentSession}`);
 
-      // Try to inspect the login hook
-      addTestResult(`loginExecute type: ${typeof loginExecute}`);
-      addTestResult(`loginLoading: ${loginLoading}`);
-      addTestResult(`loginError: ${loginError?.message || "none"}`);
+      addTestResult(`Current loading state: ${lensLoading}`);
+      addTestResult(`Current error: ${lensError || "none"}`);
+      addTestResult(`Session authenticated: ${session.isAuthenticated}`);
+      addTestResult(`Session type: ${session.sessionType}`);
     } catch (err) {
       addTestResult(
         `SDK inspection error: ${err instanceof Error ? err.message : "Unknown error"}`,
@@ -185,9 +173,9 @@ export const LensV3Test: React.FC = () => {
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Lens V3 SDK Test Suite
-          <Badge variant={session ? "default" : "secondary"}>
-            {session ? "Authenticated" : "Not Authenticated"}
+          Lens V3 Client SDK Test Suite
+          <Badge variant={session.isAuthenticated ? "default" : "secondary"}>
+            {session.isAuthenticated ? "Authenticated" : "Not Authenticated"}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -206,17 +194,17 @@ export const LensV3Test: React.FC = () => {
           <Card className="p-4">
             <h3 className="font-semibold mb-2">Session Status</h3>
             <p className="text-sm">
-              {sessionLoading
+              {lensLoading
                 ? "Loading..."
-                : session
-                  ? "Active Session"
+                : session.isAuthenticated
+                  ? `Active Session (${session.sessionType})`
                   : "No Session"}
             </p>
           </Card>
 
           <Card className="p-4">
             <h3 className="font-semibold mb-2">App Address</h3>
-            <p className="text-xs break-all">{LENS_APP_ADDRESS}</p>
+            <p className="text-xs break-all">{getAppAddress()}</p>
           </Card>
         </div>
 
@@ -295,31 +283,33 @@ export const LensV3Test: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <p>
-                <strong>Session Loading:</strong> {sessionLoading.toString()}
+                <strong>Session Loading:</strong> {lensLoading.toString()}
               </p>
               <p>
-                <strong>Session Error:</strong>{" "}
-                {sessionError?.message || "None"}
+                <strong>Session Error:</strong> {lensError || "None"}
               </p>
               <p>
-                <strong>Login Loading:</strong> {loginLoading.toString()}
+                <strong>Session Authenticated:</strong>{" "}
+                {session.isAuthenticated.toString()}
               </p>
               <p>
-                <strong>Login Error:</strong> {loginError?.message || "None"}
+                <strong>Session Type:</strong> {session.sessionType || "None"}
               </p>
             </div>
             <div>
               <p>
-                <strong>Logout Loading:</strong> {logoutLoading.toString()}
+                <strong>Has Profile:</strong>{" "}
+                {session.hasProfile?.toString() || "Unknown"}
               </p>
               <p>
-                <strong>Session Data:</strong> {session ? "Present" : "None"}
+                <strong>Has Tokens:</strong>{" "}
+                {session.accessToken ? "Yes" : "No"}
               </p>
               <p>
                 <strong>Wallet Connected:</strong> {isConnected.toString()}
               </p>
               <p>
-                <strong>Environment:</strong> Development
+                <strong>Environment:</strong> Development (V3 Client SDK)
               </p>
             </div>
           </div>

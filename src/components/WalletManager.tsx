@@ -1,7 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFlow } from "@/hooks/useFlow";
 import { useLensService } from "@/hooks/useLensService";
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import {
+  Wallet,
+  Users,
+  LogOut,
+  Info,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const WalletManager = () => {
@@ -11,14 +29,25 @@ export const WalletManager = () => {
     logOut: flowLogOut,
     executeTransaction,
   } = useFlow();
-  const { isAuthenticated, isLoading, error, authenticate, logout } =
-    useLensService();
+
+  const {
+    isAuthenticated,
+    isLoading,
+    error,
+    authenticate,
+    logout,
+    session,
+    profile,
+  } = useLensService();
+
+  const [isFlowSetupLoading, setIsFlowSetupLoading] = useState(false);
 
   useEffect(() => {
     // If Flow user is logged in, ensure their account is set up for NFTs
-    if (flowUser.loggedIn) {
+    if (flowUser.loggedIn && !isFlowSetupLoading) {
       const setupFlowAccount = async () => {
         try {
+          setIsFlowSetupLoading(true);
           const txCode = `
             import ImperfectBreath from 0xImperfectBreath
 
@@ -35,52 +64,198 @@ export const WalletManager = () => {
             }
           `;
           await executeTransaction(txCode);
-          toast.success("Flow account set up successfully!");
+          toast.success("Flow account ready for breathing NFTs!");
         } catch (error) {
           console.error("Failed to set up Flow account:", error);
-          toast.error("Failed to set up Flow account.");
+          // Don't show error toast as this is optional setup
+        } finally {
+          setIsFlowSetupLoading(false);
         }
       };
       setupFlowAccount();
     }
-  }, [flowUser.loggedIn, executeTransaction]);
+  }, [flowUser.loggedIn, executeTransaction, isFlowSetupLoading]);
+
+  const handleLensDisconnect = async () => {
+    try {
+      await logout();
+      toast.success("Successfully disconnected from Lens");
+    } catch (error) {
+      toast.error("Failed to disconnect from Lens");
+    }
+  };
+
+  const handleFlowDisconnect = async () => {
+    try {
+      await flowLogOut();
+      toast.success("Successfully disconnected Flow wallet");
+    } catch (error) {
+      toast.error("Failed to disconnect Flow wallet");
+    }
+  };
+
+  // Get display name for Lens profile
+  const getLensDisplayName = () => {
+    if (session.profile?.displayName) return session.profile.displayName;
+    if (session.profile?.username) return `@${session.profile.username}`;
+    if (session.sessionType === "ONBOARDING_USER") return "New User";
+    return "Lens Profile";
+  };
+
+  // Get shortened address for Flow
+  const getFlowAddress = () => {
+    if (!flowUser.addr) return "";
+    return `${flowUser.addr.slice(0, 6)}...${flowUser.addr.slice(-4)}`;
+  };
 
   return (
-    <div className="flex space-x-2">
-      {/* Flow Wallet Management */}
+    <div className="flex items-center space-x-2">
+      {/* Flow Wallet */}
       {flowUser.loggedIn ? (
-        <Button variant="destructive" size="sm" onClick={flowLogOut}>
-          Disconnect Flow Wallet
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center space-x-2"
+              disabled={isFlowSetupLoading}
+            >
+              <Wallet className="w-4 h-4" />
+              <span>Flow</span>
+              {isFlowSetupLoading ? (
+                <AlertCircle className="w-3 h-3 animate-pulse text-yellow-500" />
+              ) : (
+                <CheckCircle className="w-3 h-3 text-green-500" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Flow Blockchain (Wallet)
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              disabled
+              className="flex flex-col items-start space-y-1"
+            >
+              <span className="font-medium">Connected</span>
+              <span className="text-xs text-muted-foreground font-mono">
+                {getFlowAddress()}
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="flex items-center space-x-2 text-blue-600">
+              <Info className="w-4 h-4" />
+              <span>Used for breathing NFTs</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleFlowDisconnect}
+              className="flex items-center space-x-2 text-red-600"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Disconnect</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : (
-        <Button variant="secondary" size="sm" onClick={flowLogIn}>
-          Connect Flow Wallet
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={flowLogIn}
+          className="flex items-center space-x-2"
+        >
+          <Wallet className="w-4 h-4" />
+          <span>Flow (wallet)</span>
         </Button>
       )}
 
-      {/* Lens Profile Management */}
+      {/* Lens Social */}
       {isAuthenticated ? (
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={logout}
-          disabled={isLoading}
-        >
-          Disconnect Lens Profile
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center space-x-2"
+              disabled={isLoading}
+            >
+              <div className="flex items-center space-x-2">
+                <Avatar className="w-4 h-4">
+                  <AvatarImage
+                    src={session.profile?.picture}
+                    alt={getLensDisplayName()}
+                  />
+                  <AvatarFallback className="text-xs">
+                    {getLensDisplayName().slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="max-w-24 truncate">
+                  {getLensDisplayName()}
+                </span>
+                <CheckCircle className="w-3 h-3 text-green-500" />
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Lens Protocol (Social)
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              disabled
+              className="flex flex-col items-start space-y-1"
+            >
+              <span className="font-medium">{getLensDisplayName()}</span>
+              <div className="flex items-center space-x-2">
+                <Badge variant="secondary" className="text-xs">
+                  {session.sessionType === "ONBOARDING_USER"
+                    ? "New User"
+                    : "Authenticated"}
+                </Badge>
+                {!session.hasProfile && (
+                  <Badge variant="outline" className="text-xs">
+                    No Profile Yet
+                  </Badge>
+                )}
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="flex items-center space-x-2 text-blue-600">
+              <Info className="w-4 h-4" />
+              <span>Used for social features</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLensDisconnect}
+              className="flex items-center space-x-2 text-red-600"
+              disabled={isLoading}
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Disconnect</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : (
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
           onClick={authenticate}
           disabled={isLoading}
+          className="flex items-center space-x-2"
         >
-          Connect Lens Profile
+          <Users className="w-4 h-4" />
+          <span>Lens (social)</span>
+          {isLoading && (
+            <div className="w-3 h-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          )}
         </Button>
       )}
 
+      {/* Error Display */}
       {error && (
-        <div className="text-sm text-red-600 mt-2">Lens Error: {error}</div>
+        <div className="flex items-center space-x-1 text-red-600">
+          <AlertCircle className="w-4 h-4" />
+          <span className="text-xs">Connection Error</span>
+        </div>
       )}
     </div>
   );

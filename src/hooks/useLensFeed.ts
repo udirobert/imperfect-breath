@@ -3,7 +3,7 @@ import { publicClient } from "@/lib/publicClient";
 import { useLensProfile } from "./useLensProfile";
 import { toast } from "sonner";
 import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from "@/lib/lens";
-import { useModernLensFeed, ModernLensPost } from "./useModernLensFeed";
+// Legacy Lens feed hook - using contract calls as fallback
 
 export interface Publication {
   contentURI: string;
@@ -12,39 +12,16 @@ export interface Publication {
   // Add other publication fields as needed
 }
 
-// Helper function to convert ModernLensPost to legacy Publication format
-const convertToLegacyPublication = (
-  modernPost: ModernLensPost,
-): Publication => {
-  return {
-    contentURI: modernPost.metadata?.content || modernPost.content || "",
-    profileIdPointed: BigInt(parseInt(modernPost.author.id, 16) || 0),
-    pubIdPointed: BigInt(parseInt(modernPost.id, 16) || 0),
-  };
-};
+// Legacy Lens feed implementation using contract calls
 
 export const useLensFeed = () => {
   const { lensProfile } = useLensProfile();
   const [feed, setFeed] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Try to use modern Lens V3 SDK first
-  const {
-    feed: modernFeed,
-    loading: modernLoading,
-    error: modernError,
-  } = useModernLensFeed();
+  // Using legacy contract-based implementation
 
   useEffect(() => {
-    // First, try to use the modern Lens V3 SDK
-    if (modernFeed && modernFeed.length > 0 && !modernError) {
-      const legacyFeed = modernFeed.map(convertToLegacyPublication);
-      setFeed(legacyFeed);
-      setLoading(modernLoading);
-      return;
-    }
-
-    // Fallback to legacy implementation if modern V3 SDK fails or no feed found
     const fetchFeedLegacy = async () => {
       if (!lensProfile) {
         setFeed([]);
@@ -111,13 +88,8 @@ export const useLensFeed = () => {
       }
     };
 
-    // Only use legacy if modern V3 SDK didn't work
-    if (!modernFeed?.length && !modernLoading) {
-      fetchFeedLegacy();
-    } else {
-      setLoading(modernLoading);
-    }
-  }, [lensProfile, modernFeed, modernLoading, modernError]);
+    fetchFeedLegacy();
+  }, [lensProfile]);
 
   return { feed, loading };
 };

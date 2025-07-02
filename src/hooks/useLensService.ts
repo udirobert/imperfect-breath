@@ -1,7 +1,5 @@
 import { useCallback } from "react";
 import { useLensAuth } from "./useLensAuth";
-import { useModernLensAccount } from "./useModernLensProfile";
-import { useModernLensFeed } from "./useModernLensFeed";
 
 export interface BreathingSessionData {
   duration: number;
@@ -12,19 +10,17 @@ export interface BreathingSessionData {
 }
 
 export function useLensService() {
-  // V3 Lens hooks
+  // V3 Lens authentication
   const auth = useLensAuth();
-  const account = useModernLensAccount();
-  const feed = useModernLensFeed();
 
   // Authentication methods
   const authenticate = useCallback(async () => {
     return await auth.login();
-  }, [auth.login]);
+  }, [auth]);
 
   const logout = useCallback(async () => {
     return await auth.logout();
-  }, [auth.logout]);
+  }, [auth]);
 
   // Content publishing (placeholder for future implementation)
   const publishSession = useCallback(
@@ -73,26 +69,20 @@ export function useLensService() {
     [auth.session.isAuthenticated],
   );
 
-  // Aggregate loading and error states
-  const isLoading = auth.loading || account.loading || feed.loading;
-  const error = auth.error || account.error || feed.error;
-
   return {
     // Authentication state
     isAuthenticated: auth.session.isAuthenticated,
     session: auth.session,
 
-    // Account/Profile data
-    profile: account.account,
-    hasProfile: account.hasProfile,
-
-    // Feed data
-    feed: feed.feed,
-    feedType: feed.feedType,
+    // Placeholder data (to be implemented with proper V3 SDK calls)
+    profile: null,
+    hasProfile: auth.session.hasProfile,
+    feed: [],
+    feedType: "FOR_YOU" as const,
 
     // Loading and error states
-    isLoading,
-    error,
+    isLoading: auth.loading,
+    error: auth.error,
 
     // Wallet state
     isWalletConnected: auth.isWalletConnected,
@@ -109,14 +99,13 @@ export function useLensService() {
     followAccount,
     unfollowAccount,
 
-    // Refresh actions
-    refreshAccount: account.refresh,
-    refreshFeed: feed.refresh,
+    // Refresh actions (placeholders)
+    refreshAccount: () => console.log("Account refresh not yet implemented"),
+    refreshFeed: () => console.log("Feed refresh not yet implemented"),
 
     // Utilities
     clearError: () => {
-      // Individual hooks handle their own error clearing
-      console.log("Error clearing handled by individual hooks");
+      console.log("Error clearing handled by auth hook");
     },
   };
 }

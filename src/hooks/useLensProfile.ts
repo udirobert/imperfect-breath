@@ -3,10 +3,7 @@ import { publicClient } from "@/lib/publicClient";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from "@/lib/lens";
-import {
-  useModernLensAccount,
-  ModernLensAccount,
-} from "./useModernLensProfile";
+// Legacy Lens profile hook - using contract calls as fallback
 
 export interface LensProfile {
   handle: string;
@@ -17,19 +14,7 @@ export interface LensProfile {
   followingCount: number;
 }
 
-// Helper function to convert ModernLensAccount to legacy LensProfile format
-const convertToLegacyProfile = (
-  modernAccount: ModernLensAccount,
-): LensProfile => {
-  return {
-    handle: modernAccount.username,
-    imageURI: modernAccount.picture || "",
-    pubCount: modernAccount.stats.posts,
-    profileId: parseInt(modernAccount.id, 16) || 0, // Convert hex ID to number
-    followersCount: modernAccount.stats.followers,
-    followingCount: modernAccount.stats.following,
-  };
-};
+// Legacy Lens profile implementation using contract calls
 
 type LensProfileData = {
   pubCount: bigint;
@@ -45,23 +30,9 @@ export const useLensProfile = () => {
   const [lensProfile, setLensProfile] = useState<LensProfile | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Try to use modern Lens V3 SDK first
-  const {
-    account: modernAccount,
-    loading: modernLoading,
-    error: modernError,
-  } = useModernLensAccount();
+  // Using legacy contract-based implementation
 
   useEffect(() => {
-    // First, try to use the modern Lens V3 SDK
-    if (modernAccount && !modernError) {
-      const legacyProfile = convertToLegacyProfile(modernAccount);
-      setLensProfile(legacyProfile);
-      setLoading(modernLoading);
-      return;
-    }
-
-    // Fallback to legacy implementation if modern SDK fails or no profile found
     const fetchLensProfileLegacy = async () => {
       if (!profile?.wallet_address) {
         setLensProfile(null);
@@ -125,13 +96,8 @@ export const useLensProfile = () => {
       }
     };
 
-    // Only use legacy if modern SDK didn't work
-    if (!modernAccount && !modernLoading) {
-      fetchLensProfileLegacy();
-    } else {
-      setLoading(modernLoading);
-    }
-  }, [profile?.wallet_address, modernAccount, modernLoading, modernError]);
+    fetchLensProfileLegacy();
+  }, [profile?.wallet_address]);
 
   return { lensProfile, loading };
 };

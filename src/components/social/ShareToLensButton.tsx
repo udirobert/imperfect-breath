@@ -1,50 +1,50 @@
 import { Button } from "@/components/ui/button";
-import { useLens } from "@/hooks/useLens";
+import { useLensService } from "@/hooks/useLensService";
 import { SessionData } from "@/lib/ai/config";
-import { createLensPostMetadata } from "@/lib/lens/createLensPostMetadata";
-import { uploadToGrove } from "@/lib/lens/uploadToGrove";
-import { usePost } from "@lens-protocol/react";
 import { toast } from "sonner";
-import * as t from "@onflow/types";
 
 interface ShareToLensButtonProps {
   sessionData: SessionData;
   aiAnalysis: string;
 }
 
-export const ShareToLensButton = ({ sessionData, aiAnalysis }: ShareToLensButtonProps) => {
-  const { lensLoggedIn, loginLens } = useLens();
-  const { execute: postOnLens, loading: posting } = usePost();
+export const ShareToLensButton = ({
+  sessionData,
+  aiAnalysis,
+}: ShareToLensButtonProps) => {
+  const { isAuthenticated, authenticate, publishSession, isLoading } =
+    useLensService();
 
   const handleShare = async () => {
-    if (!lensLoggedIn) {
+    if (!isAuthenticated) {
       toast.info("Please connect your Lens profile first.");
-      loginLens();
-      return;
+      try {
+        await authenticate();
+      } catch (error) {
+        toast.error("Failed to authenticate with Lens.");
+        return;
+      }
     }
 
     try {
       toast.info("Preparing to share to Lens...");
-      const metadata = createLensPostMetadata(sessionData, aiAnalysis);
-      const uri = await uploadToGrove(metadata);
 
-      if (!uri) {
-        toast.error("Failed to upload post metadata.");
-        return;
+      const breathingSessionData = {
+        duration: sessionData.sessionDuration || 0,
+        pattern: sessionData.patternName || "Unknown",
+        quality: sessionData.restlessnessScore || 5,
+        notes: aiAnalysis,
+        timestamp: new Date().toISOString(),
+      };
+
+      const result = await publishSession(breathingSessionData);
+
+      if (result) {
+        toast.success("Session shared to Lens successfully!");
+        console.log("Lens post result:", result);
+      } else {
+        toast.error("Failed to share session to Lens.");
       }
-
-      const result = await postOnLens({
-        contentURI: uri,
-      });
-
-      if (result.isFailure()) {
-        toast.error(`Failed to post to Lens: ${result.error.message}`);
-        console.error("Lens post error:", result.error);
-        return;
-      }
-
-      toast.success("Session shared to Lens successfully!");
-      console.log("Lens post result:", result);
     } catch (error) {
       toast.error("An error occurred while sharing to Lens.");
       console.error("Share to Lens error:", error);
@@ -52,8 +52,8 @@ export const ShareToLensButton = ({ sessionData, aiAnalysis }: ShareToLensButton
   };
 
   return (
-    <Button onClick={handleShare} disabled={posting}>
-      {posting ? "Sharing..." : "Share to Lens"}
+    <Button onClick={handleShare} disabled={isLoading}>
+      {isLoading ? "Sharing..." : "Share to Lens"}
     </Button>
   );
 };

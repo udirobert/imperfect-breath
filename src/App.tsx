@@ -5,13 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LensProvider } from "@lens-protocol/react-web";
+
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import { WalletProvider } from "./providers/WalletProvider";
 import { Web3Provider } from "./providers/Web3Provider";
 import { wagmiConfig } from "./lib/wagmi/config";
-import { lensConfig } from "./lib/lens/config";
 
 // Lazy load pages for better performance
 const Index = React.lazy(() => import("./pages/EnhancedIndex"));
@@ -44,53 +43,49 @@ const queryClient = new QueryClient();
 const App = () => (
   <WagmiProvider config={wagmiConfig}>
     <QueryClientProvider client={queryClient}>
-      <LensProvider config={lensConfig}>
-        <WalletProvider>
-          <Web3Provider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Layout>
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/session" element={<BreathingSession />} />
-                      <Route path="/results" element={<Results />} />
-                      <Route path="/progress" element={<Progress />} />
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/diagnostic" element={<DiagnosticPage />} />
-                      <Route path="/ai-settings" element={<AISettings />} />
-                      <Route path="/marketplace" element={<Marketplace />} />
+      <WalletProvider>
+        <Web3Provider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Layout>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/session" element={<BreathingSession />} />
+                    <Route path="/results" element={<Results />} />
+                    <Route path="/progress" element={<Progress />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/diagnostic" element={<DiagnosticPage />} />
+                    <Route path="/ai-settings" element={<AISettings />} />
+                    <Route path="/marketplace" element={<Marketplace />} />
+                    <Route element={<ProtectedRoute requiredRole="creator" />}>
                       <Route
-                        element={<ProtectedRoute requiredRole="creator" />}
-                      >
-                        <Route
-                          path="/creator-dashboard"
-                          element={<CreatorDashboard />}
-                        />
-                        <Route
-                          path="/create-pattern"
-                          element={<CreatePattern />}
-                        />
-                      </Route>
-                      <Route
-                        path="/instructor-onboarding"
-                        element={<InstructorOnboarding />}
+                        path="/creator-dashboard"
+                        element={<CreatorDashboard />}
                       />
-                      <Route path="/profile" element={<UserProfile />} />
-                      <Route path="/community" element={<CommunityFeed />} />
-                      <Route path="/feed" element={<CommunityFeed />} />
-                      <Route path="/lens-test" element={<LensV3TestPage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                </Layout>
-              </BrowserRouter>
-            </TooltipProvider>
-          </Web3Provider>
-        </WalletProvider>
-      </LensProvider>
+                      <Route
+                        path="/create-pattern"
+                        element={<CreatePattern />}
+                      />
+                    </Route>
+                    <Route
+                      path="/instructor-onboarding"
+                      element={<InstructorOnboarding />}
+                    />
+                    <Route path="/profile" element={<UserProfile />} />
+                    <Route path="/community" element={<CommunityFeed />} />
+                    <Route path="/feed" element={<CommunityFeed />} />
+                    <Route path="/lens-test" element={<LensV3TestPage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </BrowserRouter>
+          </TooltipProvider>
+        </Web3Provider>
+      </WalletProvider>
     </QueryClientProvider>
   </WagmiProvider>
 );

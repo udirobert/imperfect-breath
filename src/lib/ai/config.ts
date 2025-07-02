@@ -10,29 +10,29 @@ export interface AIProvider {
 
 export const AI_PROVIDERS: AIProvider[] = [
   {
-    id: 'openai',
-    name: 'OpenAI GPT',
-    description: 'Advanced AI analysis with GPT-4',
+    id: "openai",
+    name: "OpenAI GPT",
+    description: "Advanced AI analysis with GPT-4",
     requiresApiKey: true,
-    apiKeyPlaceholder: 'sk-...',
-    website: 'https://platform.openai.com/api-keys'
+    apiKeyPlaceholder: "sk-...",
+    website: "https://platform.openai.com/api-keys",
   },
   {
-    id: 'anthropic',
-    name: 'Anthropic Claude',
-    description: 'Thoughtful AI insights with Claude',
+    id: "anthropic",
+    name: "Anthropic Claude",
+    description: "Thoughtful AI insights with Claude",
     requiresApiKey: true,
-    apiKeyPlaceholder: 'sk-ant-...',
-    website: 'https://console.anthropic.com/'
+    apiKeyPlaceholder: "sk-ant-...",
+    website: "https://console.anthropic.com/",
   },
   {
-    id: 'google',
-    name: 'Google Gemini',
-    description: 'Google\'s multimodal AI analysis',
+    id: "google",
+    name: "Google Gemini",
+    description: "Google's multimodal AI analysis",
     requiresApiKey: true,
-    apiKeyPlaceholder: 'AIza...',
-    website: 'https://aistudio.google.com/app/apikey'
-  }
+    apiKeyPlaceholder: "AIza...",
+    website: "https://aistudio.google.com/app/apikey",
+  },
 ];
 
 export interface SessionData {
@@ -42,6 +42,8 @@ export interface SessionData {
   breathHoldTime: number; // in seconds
   restlessnessScore: number; // 0-100
   bpm?: number; // Breaths per minute, if calculated
+  landmarks?: number; // Number of facial landmarks detected
+  timestamp?: string; // Session timestamp
   // Add other relevant session metrics here
 }
 
@@ -67,7 +69,7 @@ export interface AIAnalysisResponse {
 }
 
 // Local storage keys for API keys (encrypted)
-const API_KEY_STORAGE_PREFIX = 'breath_ai_key_';
+const API_KEY_STORAGE_PREFIX = "breath_ai_key_";
 
 export class AIConfigManager {
   static setApiKey(provider: string, apiKey: string): void {
@@ -88,11 +90,11 @@ export class AIConfigManager {
   }
 
   static getConfiguredProviders(): AIProvider[] {
-    return AI_PROVIDERS.filter(provider => this.hasApiKey(provider.id));
+    return AI_PROVIDERS.filter((provider) => this.hasApiKey(provider.id));
   }
 
   static clearAllKeys(): void {
-    AI_PROVIDERS.forEach(provider => {
+    AI_PROVIDERS.forEach((provider) => {
       this.removeApiKey(provider.id);
     });
   }
@@ -116,12 +118,19 @@ Provide:
 
 Be encouraging but honest. Focus on practical advice for improving focus, stillness, and breathing technique.`;
 
-export const formatSessionPrompt = (data: SessionData, previousSessions?: SessionData[]): string => {
-  const historyText = previousSessions && previousSessions.length > 0
-    ? `\n\nPrevious sessions for comparison:\n${previousSessions.map((session, i) =>
-        `Session ${i + 1}: ${session.patternName}, Hold: ${session.breathHoldTime}s, Restlessness: ${session.restlessnessScore}, Duration: ${session.sessionDuration}s`
-      ).join('\n')}`
-    : '';
+export const formatSessionPrompt = (
+  data: SessionData,
+  previousSessions?: SessionData[],
+): string => {
+  const historyText =
+    previousSessions && previousSessions.length > 0
+      ? `\n\nPrevious sessions for comparison:\n${previousSessions
+          .map(
+            (session, i) =>
+              `Session ${i + 1}: ${session.patternName}, Hold: ${session.breathHoldTime}s, Restlessness: ${session.restlessnessScore}, Duration: ${session.sessionDuration}s`,
+          )
+          .join("\n")}`
+      : "";
 
   return `Current Session Analysis:
 - Breathing Pattern: ${data.patternName}
