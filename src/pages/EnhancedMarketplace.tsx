@@ -115,10 +115,15 @@ const EnhancedMarketplace = () => {
           reviewService.getAllReviews(),
         ]);
 
-        const reviewsByPattern = allReviews.reduce((acc, review) => {
-          (acc[review.pattern_id] = acc[review.pattern_id] || []).push(review);
-          return acc;
-        }, {} as Record<string, PatternReview[]>);
+        const reviewsByPattern = allReviews.reduce(
+          (acc, review) => {
+            (acc[review.pattern_id] = acc[review.pattern_id] || []).push(
+              review,
+            );
+            return acc;
+          },
+          {} as Record<string, PatternReview[]>,
+        );
 
         const instructorMap = new Map<string, InstructorProfile>();
         fetchedPatterns.forEach((p) => {
@@ -142,7 +147,7 @@ const EnhancedMarketplace = () => {
         });
 
         const marketplacePatterns: MarketplacePattern[] = fetchedPatterns.map(
-          (p: any) => {
+          (p: EnhancedCustomPattern) => {
             const patternReviews = reviewsByPattern[p.id] || [];
             const rating =
               patternReviews.length > 0
@@ -180,7 +185,7 @@ const EnhancedMarketplace = () => {
               trending: false,
               new: false,
             };
-          }
+          },
         );
 
         setPatterns(marketplacePatterns);

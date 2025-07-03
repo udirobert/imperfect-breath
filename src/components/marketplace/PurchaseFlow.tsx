@@ -11,7 +11,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle } from "lucide-react";
 import type { EnhancedCustomPattern } from "@/types/patterns";
-import { demoStoryIntegration } from "@/lib/story/storyClient";
 
 interface PurchaseFlowProps {
   pattern: EnhancedCustomPattern;
@@ -46,9 +45,13 @@ export const PurchaseFlow: React.FC<PurchaseFlowProps> = ({
   const handlePurchase = async () => {
     setIsLoading(true);
     try {
-      const ipId = await demoStoryIntegration.registerPatternDemo(pattern);
-      await demoStoryIntegration.attachLicenseDemo(ipId);
-      // In a real scenario, we would get a real license ID from the transaction
+      // TODO: Re-enable Story Protocol integration when polyfills are resolved
+      console.log("🎯 DEMO: Registering pattern as IP Asset", pattern);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      console.log("🔗 DEMO: Attaching license terms");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       const mockLicenseId = `license_${Date.now()}`;
       setIsSuccess(true);
       setTimeout(() => onPurchaseComplete(mockLicenseId), 2000);

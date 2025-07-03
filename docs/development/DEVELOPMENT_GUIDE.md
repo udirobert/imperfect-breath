@@ -9,6 +9,7 @@ This guide provides comprehensive instructions for developing, testing, and depl
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js 18+** - JavaScript runtime
 - **npm** - Package manager
 - **Flow CLI** - Blockchain interactions
@@ -16,6 +17,7 @@ This guide provides comprehensive instructions for developing, testing, and depl
 - **VS Code** (recommended) - Code editor
 
 ### Initial Setup
+
 ```bash
 # Clone the repository
 git clone [your-repo-url]
@@ -42,9 +44,11 @@ npm run dev
 ## 🔧 Environment Setup
 
 ### Environment Variables
+
 The application uses environment variables for configuration. Never commit `.env` files to version control.
 
 #### Required Variables
+
 ```bash
 # Flow Blockchain Configuration
 VITE_FLOW_NETWORK=testnet
@@ -58,6 +62,7 @@ VITE_DEBUG=true
 ```
 
 #### Optional Variables
+
 ```bash
 # Supabase Database
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -73,6 +78,7 @@ VITE_ENABLE_SOCIAL_FEATURES=false
 ```
 
 ### Automated Setup
+
 ```bash
 # Use the setup script for guided configuration
 npm run flow:setup
@@ -114,12 +120,14 @@ imperfect-breath/
 ## 🔗 Flow Blockchain Integration
 
 ### Current Deployment
+
 - **Network:** Flow Testnet
 - **Contract Address:** `0xb8404e09b36b6623`
 - **Status:** ✅ Live and Verified
 - **Explorer:** [View Contract](https://testnet.flowscan.org/account/0xb8404e09b36b6623)
 
 ### Contract Features
+
 - ✅ **NFT Minting:** Create breathing pattern NFTs
 - ✅ **Collection Management:** Store and organize NFTs
 - ✅ **Marketplace:** List and purchase NFTs
@@ -129,21 +137,23 @@ imperfect-breath/
 ### Development Flow
 
 #### 1. Testing Contract Integration
+
 ```bash
 # Validate Flow integration
 npm run test:flow
 
 # Expected output:
 # ✅ Environment Configuration
-# ✅ FCL Configuration  
+# ✅ FCL Configuration
 # ✅ Contract Deployment
 # ✅ Contract Functions
 # ✅ Script Execution
 ```
 
 #### 2. Connecting to Flow Wallet
+
 ```typescript
-import { flowConfig } from '@/lib/flow/config';
+import { flowConfig } from "@/lib/flow/config";
 
 // Authenticate user
 await flowConfig.authenticate();
@@ -156,8 +166,9 @@ const address = await flowConfig.getUserAddress();
 ```
 
 #### 3. Minting NFTs
+
 ```typescript
-import { flowNFTClient } from '@/lib/flow/nft-client';
+import { flowNFTClient } from "@/lib/flow/nft-client";
 
 // Setup user account (first time only)
 await flowNFTClient.setupAccount();
@@ -167,13 +178,14 @@ const patternData = {
   name: "4-7-8 Breathing",
   description: "Relaxing breathing pattern",
   phases: { inhale: 4, hold: 7, exhale: 8 },
-  audioUrl: "https://example.com/audio.mp3" // optional
+  audioUrl: "https://example.com/audio.mp3", // optional
 };
 
 const txId = await flowNFTClient.mintBreathingPattern(patternData);
 ```
 
 #### 4. Querying Data
+
 ```typescript
 // Get user's NFT collection
 const nftIds = await flowNFTClient.getUserCollection(address);
@@ -190,6 +202,7 @@ const listings = await flowNFTClient.getMarketplaceListings();
 ## 🧪 Testing
 
 ### Unit Tests
+
 ```bash
 # Run all tests
 npm test
@@ -202,6 +215,7 @@ npm run test:coverage
 ```
 
 ### Integration Tests
+
 ```bash
 # Test Flow blockchain integration
 npm run test:flow
@@ -211,6 +225,7 @@ flow scripts execute cadence/scripts/get_collection_ids.cdc --args-json '[{"type
 ```
 
 ### Manual Testing
+
 ```bash
 # Start development server
 npm run dev
@@ -222,30 +237,48 @@ npm run dev
 
 ---
 
-## 🔐 Security Best Practices
+## 🔐 Security Best Practices (Updated from `SECURITY_CHECKLIST.md`)
 
 ### Environment Security
+
 - ✅ Never commit `.env` files
 - ✅ Use different API keys per environment
 - ✅ Store secrets in secure key management
 - ✅ Validate environment on startup
 - ✅ Use HTTPS in production
+- ✅ Ensure `.env` files have 600 permissions (owner read/write only)
+- ✅ Enable secrets scanner (e.g., GitHub Advanced Security)
 
 ### Code Security
+
 - ✅ Input validation on all user inputs
 - ✅ Output sanitization for AI responses
 - ✅ XSS prevention measures
 - ✅ CSRF protection implemented
 - ✅ Dependency vulnerability scanning
+- ✅ Content Security Policy (CSP) configured
+- ✅ Secure HTTP headers set
 
 ### Blockchain Security
+
 - ✅ Private keys never in source code
 - ✅ Transaction validation and limits
 - ✅ Gas optimization and limits
 - ✅ Event monitoring and alerting
 - ✅ Multi-signature for critical operations
+- ✅ Key rotation policy implemented
+- ✅ Hardware wallet for mainnet operations
+
+### API Security
+
+- ✅ API keys rotated regularly (monthly minimum)
+- ✅ Rate limiting configured on all APIs
+- ✅ Input sanitization for AI prompts (e.g., Google Gemini)
+- ✅ Output validation and filtering for API responses
+- ✅ Row Level Security (RLS) enabled for Supabase
 
 ### Development Security
+
 ```bash
 # Check for security vulnerabilities
 npm audit
@@ -260,11 +293,21 @@ git secrets --scan
 npm run lint
 ```
 
+### Deployment Security Checklist
+
+- [ ] Security scan completed before deployment
+- [ ] Dependency vulnerability check passed
+- [ ] Integration tests passed
+- [ ] Environment configuration validated
+- [ ] Backup and rollback plan prepared
+- [ ] Monitoring and alerting configured
+
 ---
 
 ## 📦 Building and Deployment
 
 ### Development Build
+
 ```bash
 # Start development server with hot reload
 npm run dev
@@ -274,6 +317,7 @@ npm run build:dev
 ```
 
 ### Production Build
+
 ```bash
 # Build for production
 npm run build
@@ -282,7 +326,8 @@ npm run build
 npm run preview
 ```
 
-### Deployment to Flow Testnet
+### Deployment to Flow Testnet (Updated from `DEPLOYMENT_GUIDE.md`)
+
 ```bash
 # Deploy smart contract to testnet
 npm run deploy:testnet
@@ -294,7 +339,17 @@ npm run deploy:testnet
 # 4. Verify deployment
 ```
 
+#### Detailed Deployment Steps
+
+1. **Generate Keys**: Use `flow keys generate` to create a key pair for your testnet account. Store the private key securely.
+2. **Create Testnet Account**: Visit the Flow Testnet Faucet (https://testnet-faucet.onflow.org/), paste your public key, and create an account. Copy the account address.
+3. **Update Flow Configuration**: Update `flow.json` with your testnet account address and private key.
+4. **Deploy Contract**: Run `flow project deploy --network testnet` to deploy the `ImperfectBreath` contract.
+5. **Verify Deployment**: Check deployment on Flowscan (https://testnet.flowscan.org/) by searching for your account address.
+6. **Test Contract Functions**: Set up user accounts and mint NFTs using provided Cadence scripts.
+
 ### Contract Updates
+
 ```bash
 # Update existing contract deployment
 flow project deploy --network testnet --update
@@ -303,17 +358,27 @@ flow project deploy --network testnet --update
 npm run test:flow
 ```
 
+#### Mainnet Deployment Considerations
+
+- Change network to `mainnet` in configuration.
+- Create a mainnet account with real FLOW tokens.
+- Deploy using the same process as testnet.
+- Update frontend environment variables with the mainnet contract address.
+
 ---
 
 ## 🛠️ Development Workflow
 
 ### Daily Development
+
 1. **Start Development Environment**
+
    ```bash
    npm run dev
    ```
 
 2. **Validate Changes**
+
    ```bash
    npm run lint
    npm run test:flow
@@ -326,18 +391,22 @@ npm run test:flow
    - Check session logging
 
 ### Feature Development
+
 1. **Create Feature Branch**
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
 2. **Develop and Test**
+
    - Write code following style guidelines
    - Add comprehensive tests
    - Update documentation
    - Test in multiple environments
 
 3. **Code Review Process**
+
    - Create pull request
    - Request security review
    - Address feedback
@@ -354,7 +423,9 @@ npm run test:flow
 ## 🎯 Common Development Tasks
 
 ### Adding New Contract Functions
+
 1. **Update Cadence Contract**
+
    ```cadence
    // Add new function to ImperfectBreath.cdc
    access(all) fun newFunction(): String {
@@ -363,6 +434,7 @@ npm run test:flow
    ```
 
 2. **Update Frontend Client**
+
    ```typescript
    // Add to FlowNFTClient class
    async callNewFunction(): Promise<string> {
@@ -382,12 +454,14 @@ npm run test:flow
    ```
 
 ### Adding New UI Components
+
 1. **Create Component**
+
    ```typescript
    // src/components/YourComponent.tsx
-   import React from 'react';
-   import { Button } from '@/components/ui/button';
-   
+   import React from "react";
+   import { Button } from "@/components/ui/button";
+
    export default function YourComponent() {
      return <Button>Click me</Button>;
    }
@@ -396,15 +470,17 @@ npm run test:flow
 2. **Add to Example Page**
    ```typescript
    // Import and use in FlowIntegrationExample.tsx
-   import YourComponent from '@/components/YourComponent';
+   import YourComponent from "@/components/YourComponent";
    ```
 
 ### Environment Configuration
+
 1. **Add New Environment Variable**
+
    ```bash
    # Add to .env.example
    VITE_NEW_FEATURE_KEY=your_key_here
-   
+
    # Add to your local .env
    VITE_NEW_FEATURE_KEY=actual_key_value
    ```
@@ -424,6 +500,7 @@ npm run test:flow
 ### Common Issues
 
 #### Flow Integration Issues
+
 ```bash
 # Problem: "Contract not found"
 # Solution: Verify contract address in .env
@@ -435,6 +512,7 @@ flow accounts get YOUR_ADDRESS --network testnet
 ```
 
 #### Environment Issues
+
 ```bash
 # Problem: "Environment variable not found"
 # Solution: Check .env file exists and is properly formatted
@@ -446,6 +524,7 @@ chmod 600 .env
 ```
 
 #### Build Issues
+
 ```bash
 # Problem: "Module not found"
 # Solution: Clear cache and reinstall
@@ -460,6 +539,7 @@ npx tsc --noEmit
 ### Debugging Tools
 
 #### Flow Debugging
+
 ```bash
 # Check Flow network status
 flow status --network testnet
@@ -472,15 +552,16 @@ flow accounts get ADDRESS --network testnet
 ```
 
 #### Frontend Debugging
+
 ```typescript
 // Enable debug mode in environment
-VITE_DEBUG=true
+VITE_DEBUG = true;
 
 // Use browser developer tools
-console.log('Debug info:', debugData);
+console.log("Debug info:", debugData);
 
 // Check FCL connection
-console.log('FCL User:', await fcl.currentUser().snapshot());
+console.log("FCL User:", await fcl.currentUser().snapshot());
 ```
 
 ---
@@ -488,6 +569,7 @@ console.log('FCL User:', await fcl.currentUser().snapshot());
 ## 📊 Performance Optimization
 
 ### Frontend Performance
+
 - ✅ Code splitting with lazy loading
 - ✅ Image optimization
 - ✅ Bundle size monitoring
@@ -495,6 +577,7 @@ console.log('FCL User:', await fcl.currentUser().snapshot());
 - ✅ Performance metrics tracking
 
 ### Blockchain Performance
+
 - ✅ Transaction batching
 - ✅ Gas optimization
 - ✅ Query result caching
@@ -502,6 +585,7 @@ console.log('FCL User:', await fcl.currentUser().snapshot());
 - ✅ Connection pooling
 
 ### Monitoring
+
 ```bash
 # Analyze bundle size
 npm run build
@@ -518,6 +602,7 @@ npm run dev
 ## 📚 Resources
 
 ### Documentation
+
 - [Flow Developer Documentation](https://developers.flow.com/)
 - [Cadence Language Reference](https://cadence-lang.org/)
 - [FCL (Flow Client Library)](https://developers.flow.com/tools/clients/fcl-js)
@@ -525,11 +610,13 @@ npm run dev
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 
 ### Tools
+
 - [Flow CLI](https://developers.flow.com/tools/flow-cli/install)
 - [Flowscan Explorer](https://testnet.flowscan.org/)
 - [VS Code Flow Extension](https://marketplace.visualstudio.com/items?itemName=onflow.cadence)
 
 ### Community
+
 - [Flow Discord](https://discord.gg/flow)
 - [Flow Forum](https://forum.onflow.org/)
 - [GitHub Discussions](https://github.com/onflow/flow-go/discussions)
@@ -539,6 +626,7 @@ npm run dev
 ## 🎉 Success Checklist
 
 ### Before You Start
+
 - [ ] Development environment set up
 - [ ] Flow CLI installed and working
 - [ ] Environment variables configured
@@ -546,6 +634,7 @@ npm run dev
 - [ ] Documentation reviewed
 
 ### Development Ready
+
 - [ ] Can connect to Flow testnet
 - [ ] Can interact with deployed contract
 - [ ] UI components rendering correctly
@@ -553,6 +642,7 @@ npm run dev
 - [ ] Security measures in place
 
 ### Production Ready
+
 - [ ] All tests passing
 - [ ] Security audit completed
 - [ ] Performance optimized
@@ -564,5 +654,5 @@ npm run dev
 
 **🌬️ Happy developing! May your code flow as smoothly as perfect breath.**
 
-*Last updated: December 19, 2024*
-*Next review: January 19, 2025*
+_Last updated: December 19, 2024_
+_Next review: January 19, 2025_

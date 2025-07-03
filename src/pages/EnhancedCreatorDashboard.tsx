@@ -49,7 +49,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { demoStoryIntegration } from "@/lib/story/storyClient";
+// import { demoStoryIntegration } from "@/lib/story/storyClient";
 
 interface CreatorStats {
   totalPatterns: number;
@@ -267,7 +267,7 @@ const EnhancedCreatorDashboard = () => {
   const [patterns, setPatterns] = useState<PatternStats[]>(mockPatterns);
   const [stats, setStats] = useState<CreatorStats>(mockCreatorStats);
   const [selectedPattern, setSelectedPattern] = useState<PatternStats | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(false);
 
@@ -282,12 +282,16 @@ const EnhancedCreatorDashboard = () => {
   const handleRegisterIP = async (pattern: PatternStats) => {
     setLoading(true);
     try {
-      const ipAssetId = await demoStoryIntegration.registerPatternDemo(pattern);
+      // TODO: Re-enable Story Protocol when polyfills are resolved
+      console.log("🎯 DEMO: Registering pattern as IP Asset", pattern);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const ipAssetId = `ip_pattern_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       setPatterns((prev) =>
         prev.map((p) =>
-          p.id === pattern.id ? { ...p, ipRegistered: true, ipAssetId } : p
-        )
+          p.id === pattern.id ? { ...p, ipRegistered: true, ipAssetId } : p,
+        ),
       );
     } catch (error) {
       console.error("IP registration failed:", error);

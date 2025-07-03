@@ -2,7 +2,10 @@ import { useState, useCallback, useEffect } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { lensClient } from "@/lib/lens/client";
 import { getAppAddress } from "@/lib/lens/config";
-import { fetchAccountsAvailable } from "@lens-protocol/client/actions";
+import {
+  fetchAccountsAvailable,
+  fetchAccount,
+} from "@lens-protocol/client/actions";
 import { evmAddress } from "@lens-protocol/client";
 
 export interface LensProfile {
@@ -44,24 +47,29 @@ export const useLensAuth = () => {
     if (!walletAddress) return null;
 
     try {
-      console.log("Fetching profile for wallet:", walletAddress);
+      console.log("=== LENS PROFILE FETCH DEBUG ===");
+      console.log("Wallet address:", walletAddress);
+      console.log(
+        "Environment:",
+        import.meta.env.PROD ? "production" : "development",
+      );
+      console.log("App address:", getAppAddress());
+      console.log("Client environment:", "mainnet");
 
-      // Use V3 SDK action to fetch available accounts
-      const result = await fetchAccountsAvailable(lensClient, {
+      // Method 1: Try to find accounts managed by this wallet (most common case)
+      console.log("Method 1: Checking accounts managed by wallet...");
+      const availableResult = await fetchAccountsAvailable(lensClient, {
         managedBy: evmAddress(walletAddress),
         includeOwned: true,
       });
 
-      if (result.isErr()) {
-        console.error("Failed to fetch accounts:", result.error);
-        return null;
-      }
+      console.log("Method 1 result:", availableResult);
 
-      const accounts = result.value.items;
-
-      if (accounts.length > 0) {
-        const account = accounts[0];
+      if (availableResult.isOk() && availableResult.value.items.length > 0) {
+        const account = availableResult.value.items[0];
         const accountData = account.account;
+
+        console.log("✅ Found account via managedBy lookup:", accountData);
 
         return {
           address: accountData.address,
@@ -72,12 +80,48 @@ export const useLensAuth = () => {
           picture: accountData.metadata?.picture || undefined,
           coverPicture: accountData.metadata?.coverPicture || undefined,
         };
+      } else if (availableResult.isOk()) {
+        console.log("Method 1: No accounts found in result");
+      } else {
+        console.log("Method 1 error:", availableResult.error);
       }
 
-      // No accounts found - user needs to create one
+      console.log("Method 1 failed, trying Method 2...");
+
+      // Method 2: Try direct account lookup by wallet address (less common)
+      const directResult = await fetchAccount(lensClient, {
+        address: evmAddress(walletAddress),
+      });
+
+      console.log("Method 2 result:", directResult);
+
+      if (directResult.isOk()) {
+        const accountData = directResult.value;
+        console.log("✅ Found account via direct address lookup:", accountData);
+
+        return {
+          address: accountData.address,
+          username:
+            accountData.username?.value?.replace("lens/", "") || undefined,
+          displayName: accountData.metadata?.name || undefined,
+          bio: accountData.metadata?.bio || undefined,
+          picture: accountData.metadata?.picture || undefined,
+          coverPicture: accountData.metadata?.coverPicture || undefined,
+        };
+      } else {
+        console.log("Method 2 error:", directResult.error);
+      }
+
+      console.log("❌ Both methods failed - no profile found for this wallet");
+      console.log("This could mean:");
+      console.log(
+        "1. Profile exists on different network (mainnet vs testnet)",
+      );
+      console.log("2. Profile is under a different wallet address");
+      console.log("3. Profile was created with different app configuration");
       return null;
     } catch (err) {
-      console.error("Failed to fetch profile:", err);
+      console.error("❌ Failed to fetch profile:", err);
       return null;
     }
   }, [walletAddress]);

@@ -2,7 +2,8 @@ import { testnet, mainnet } from "@lens-protocol/client";
 
 // Environment configuration
 const isProduction = import.meta.env.PROD;
-export const environment = isProduction ? mainnet : testnet;
+// Use mainnet by default since most real Lens profiles are there
+export const environment = mainnet;
 
 // Lens V3 App Configuration from environment
 const LENS_APP_ADDRESS = import.meta.env.VITE_LENS_APP_ADDRESS || "";
@@ -29,8 +30,8 @@ export const getAppAddress = () => {
     return LENS_APP_ADDRESS;
   }
 
-  // Use test app address based on environment
-  return isProduction ? TEST_APP_ADDRESSES.mainnet : TEST_APP_ADDRESSES.testnet;
+  // Use mainnet app address by default since most profiles are there
+  return TEST_APP_ADDRESSES.mainnet;
 };
 
 // Export for backward compatibility (to be removed after migration)

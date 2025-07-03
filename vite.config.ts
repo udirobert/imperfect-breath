@@ -25,13 +25,8 @@ export default defineConfig(({ mode }) => ({
     "process.env": {},
   },
   optimizeDeps: {
-    include: [
-      "buffer",
-      "process",
-      "util",
-      "crypto-browserify",
-      "stream-browserify",
-    ],
+    include: ["process", "util", "crypto-browserify", "stream-browserify"],
+    exclude: ["@story-protocol/core-sdk"],
   },
   build: {
     rollupOptions: {

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { demoStoryIntegration } from "@/lib/story/storyClient";
+// import { demoStoryIntegration } from "@/lib/story/storyClient";
 import { PatternStorageService, CustomPattern } from "@/lib/patternStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { enhancePattern, EnhancedCustomPattern } from "@/types/patterns";
@@ -87,7 +87,7 @@ const CreatorDashboard = () => {
           reviews: 0,
           status: "published", // Default status
           lastUpdated: new Date().toISOString(), // Placeholder
-        })
+        }),
       );
       setPatterns(patternsWithStats);
       setStats((prev) => ({
@@ -120,16 +120,19 @@ const CreatorDashboard = () => {
   const handleRegisterIP = async (pattern: PatternWithStats) => {
     setLoading(true);
     try {
-      // Demo mode - use Story Protocol demo integration
-      const ipAssetId = await demoStoryIntegration.registerPatternDemo(pattern);
+      // TODO: Re-enable Story Protocol when polyfills are resolved
+      console.log("🎯 DEMO: Registering pattern as IP Asset", pattern);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const ipAssetId = `ip_pattern_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Update pattern with IP registration info
       setPatterns((prev) =>
         prev.map((p) =>
           p.id === pattern.id
             ? { ...p, ipRegistered: true, ipHash: ipAssetId }
-            : p
-        )
+            : p,
+        ),
       );
 
       console.log("✅ Demo IP registered successfully:", ipAssetId);
@@ -457,7 +460,7 @@ const CreatorDashboard = () => {
                 <div className="space-y-3">
                   {["stress", "focus", "sleep", "energy"].map((category) => {
                     const categoryPatterns = patterns.filter(
-                      (p) => p.category === category
+                      (p) => p.category === category,
                     );
                     const percentage =
                       (categoryPatterns.length / patterns.length) * 100;
