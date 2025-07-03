@@ -9,14 +9,24 @@ import { useAIFeedback } from "@/hooks/useAIFeedback";
 import { SessionSetup } from "@/components/session/SessionSetup";
 import { SessionInProgress } from "@/components/session/SessionInProgress";
 
+function getInitialPattern(location: ReturnType<typeof useLocation>) {
+  // 1. Try navigation state (preview)
+  if (location.state?.previewPattern) return location.state.previewPattern;
+  // 2. Try localStorage
+  try {
+    const stored = localStorage.getItem("selectedPattern");
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  // 3. Fallback to default free pattern
+  return BREATHING_PATTERNS.box;
+}
+
 const BreathingSession = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const previewPattern = location.state?.previewPattern as
-    | BreathingPattern
-    | undefined;
 
-  const { state, controls } = useBreathingSession(previewPattern);
+  const initialPattern = getInitialPattern(location);
+  const { state, controls } = useBreathingSession(initialPattern);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraInitialized, setCameraInitialized] = useState(false);
   const [cameraRequested, setCameraRequested] = useState(false);

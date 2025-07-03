@@ -124,10 +124,18 @@ export const useBreathingSession = (initialPattern?: BreathingPattern) => {
     currentPhaseIndexRef.current = 0;
     setCycleCount(0);
     setBreathHoldTime(0);
+    // Defensive: ensure pattern and phases exist
+    if (!pattern || !pattern.phases || pattern.phases.length === 0) {
+      setSessionPhase("idle");
+      setPhaseText("No valid pattern selected.");
+      setIsRunning(false);
+      return;
+    }
     const firstPhase = pattern.phases[0];
     setSessionPhase(firstPhase.name as BreathingPhaseName);
     setIsRunning(true);
   };
+
 
   const setReady = () => {
     setSessionPhase("ready");
