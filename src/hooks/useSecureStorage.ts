@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AIConfigManager } from '@/lib/ai/config';
+import { AIConfigManager } from '../lib/ai/config';
 
 interface SecureStorageState {
   isInitialized: boolean;
@@ -9,54 +9,54 @@ interface SecureStorageState {
 }
 
 /**
- * Hook to manage secure storage initialization and migration
+ * Hook to manage storage initialization and migration
  */
 export const useSecureStorage = () => {
   const [state, setState] = useState<SecureStorageState>({
     isInitialized: false,
-    isSupported: false,
+    isSupported: true, // We now always support some form of storage
     error: null,
     migrationComplete: false
   });
 
   useEffect(() => {
-    const initializeSecureStorage = async () => {
+    let isMounted = true;
+    const initializeStorage = async () => {
       try {
-        // Check if secure storage is supported
-        const isSupported = AIConfigManager.isSecureStorageSupported();
-        
-        if (!isSupported) {
-          setState(prev => ({
-            ...prev,
-            isSupported: false,
-            error: 'Secure storage not supported in this browser',
-            isInitialized: true
-          }));
-          return;
-        }
-
-        // Initialize and migrate from localStorage
+        // Initialize with tiered storage approach
         await AIConfigManager.initialize();
-
-        setState(prev => ({
+        
+        // The storage is considered "supported" as we always have a fallback
+        if (isMounted) {
+          setState(prev => ({
           ...prev,
           isSupported: true,
           isInitialized: true,
           migrationComplete: true,
-          error: null
-        }));
-
+            error: null
+          }));
+        }
       } catch (error) {
-        console.error('Failed to initialize secure storage:', error);
-        setState(prev => ({
+        console.error('Failed to initialize storage:', error);
+        
+        // Even if there's an error, we still have memory storage as fallback
+        if (isMounted) {
+          setState(prev => ({
           ...prev,
           error: error instanceof Error ? error.message : 'Unknown error',
-          isInitialized: true
-        }));
+          isInitialized: true,
+            isSupported: true // Still supported through fallbacks
+          }));
+        }
       }
     };
 
-    initializeSecureStorage();
+    initializeStorage();
+    
+    // Cleanup function to prevent state updates if component unmounts
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return state;

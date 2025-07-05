@@ -4,11 +4,17 @@
  */
 
 import React from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DemoIndicator } from "@/components/ui/demo-badge";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { DemoIndicator } from "../ui/demo-badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import {
   Play,
   Star,
@@ -24,8 +30,9 @@ import {
   Volume2,
   DollarSign,
   Crown,
+  ShieldCheck,
 } from "lucide-react";
-import type { EnhancedCustomPattern } from "@/types/patterns";
+import type { EnhancedCustomPattern } from "../../types/patterns";
 
 interface PatternCardProps {
   pattern: EnhancedCustomPattern & { is_demo?: boolean };
@@ -103,7 +110,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
           <div className="flex items-center gap-2">
             {/* Demo Indicator */}
             <DemoIndicator isDemo={pattern.is_demo || false} />
-            
+
             {/* Price/Premium Badge */}
             {showPrice && pattern.licenseSettings?.isCommercial && (
               <div className="flex items-center gap-1 text-primary font-medium">
@@ -182,6 +189,26 @@ export const PatternCard: React.FC<PatternCardProps> = ({
 
         {/* Features */}
         <div className="flex items-center gap-2">
+          {pattern.storyProtocol?.isRegistered && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="text-xs flex items-center gap-1 bg-green-50 text-green-700 border-green-200"
+                  >
+                    <ShieldCheck className="h-3 w-3" />
+                    IP Protected
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    Registered on Story Protocol blockchain
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {(pattern.mediaContent as any)?.instructionalVideo && (
             <Badge
               variant="outline"
@@ -230,7 +257,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onLike(pattern.id)}
+              onClick={() => onLike(pattern.id as string)}
               className={`${isLiked ? "text-red-500 border-red-500" : ""}`}
             >
               <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />

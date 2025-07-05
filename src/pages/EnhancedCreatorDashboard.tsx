@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -29,27 +29,44 @@ import {
   AlertCircle,
   ExternalLink,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "../components/ui/button";
+import { Label } from "../components/ui/label";
+import { Input } from "../components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Progress } from "../components/ui/progress";
+import { Separator } from "../components/ui/separator";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "../components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-// import { demoStoryIntegration } from "@/lib/story/storyClient";
+} from "../components/ui/dropdown-menu";
+import { PatternStorageService } from "../lib/patternStorage";
+import { useAuth } from "../hooks/useAuth";
+import { useStory } from "../hooks/useStory";
+import { useToast } from "../hooks/use-toast";
+
+const patternStorageService = new PatternStorageService();
 
 interface CreatorStats {
   totalPatterns: number;
@@ -267,9 +284,15 @@ const EnhancedCreatorDashboard = () => {
   const [patterns, setPatterns] = useState<PatternStats[]>(mockPatterns);
   const [stats, setStats] = useState<CreatorStats>(mockCreatorStats);
   const [selectedPattern, setSelectedPattern] = useState<PatternStats | null>(
-    null,
+    null
   );
   const [loading, setLoading] = useState(false);
+  const [royaltyPercentage, setRoyaltyPercentage] = useState(10);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { registerBreathingPatternIP, setLicensingTerms } = useStory();
 
   const handleCreatePattern = () => {
     navigate("/create-pattern");
@@ -282,19 +305,76 @@ const EnhancedCreatorDashboard = () => {
   const handleRegisterIP = async (pattern: PatternStats) => {
     setLoading(true);
     try {
-      // TODO: Re-enable Story Protocol when polyfills are resolved
-      console.log("🎯 DEMO: Registering pattern as IP Asset", pattern);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log("Registering pattern as IP Asset", pattern);
 
-      const ipAssetId = `ip_pattern_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Extract phases from pattern data
+      // Note: The PatternStats interface doesn't have config with phases directly,
+      // so we need to fetch the full pattern from storage first
+      const fullPattern = await patternStorageService.getPattern(pattern.id);
+      if (!fullPattern) {
+        throw new Error("Failed to load pattern details");
+      }
 
+      // Convert pattern phases to the format expected by the SDK
+      const patternPhases: Record<string, number> = {};
+
+      if (fullPattern.phases) {
+        // Extract phase durations from pattern config
+        fullPattern.phases.forEach((phase) => {
+          patternPhases[phase.name] = phase.duration;
+        });
+      }
+
+      // Register the pattern with Story Protocol
+      const ipAsset = await registerBreathingPatternIP({
+        name: pattern.name,
+        description: pattern.description,
+        creator: user?.id || "anonymous",
+        patternPhases: patternPhases,
+      });
+
+      if (!ipAsset) {
+        throw new Error("Failed to register IP asset");
+      }
+
+      // Set license terms - commercial use, derivatives, attribution
+      await setLicensingTerms(ipAsset.id, {
+        commercial: true,
+        derivatives: true,
+        attribution: true,
+        royaltyPercentage: royaltyPercentage,
+      });
+
+      // Update pattern with IP registration info
       setPatterns((prev) =>
         prev.map((p) =>
-          p.id === pattern.id ? { ...p, ipRegistered: true, ipAssetId } : p,
-        ),
+          p.id === pattern.id
+            ? { ...p, ipRegistered: true, ipAssetId: ipAsset.id }
+            : p
+        )
       );
+
+      // Update the pattern in storage
+      await patternStorageService.savePattern({
+        ...fullPattern,
+        ipAssetId: ipAsset.id,
+        storyProtocolRegistered: true,
+      });
+
+      toast({
+        title: "IP Registered",
+        description: `Pattern "${pattern.name}" has been registered as IP on Story Protocol.`,
+      });
+
+      console.log("✅ IP registered successfully:", ipAsset.id);
     } catch (error) {
       console.error("IP registration failed:", error);
+      toast({
+        title: "Registration Failed",
+        description:
+          "Could not register the pattern on Story Protocol. Please try again later.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -504,7 +584,7 @@ const EnhancedCreatorDashboard = () => {
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                onClick={() => navigate("/instructor-onboarding")}
+                onClick={() => setShowSettingsDialog(true)}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
@@ -746,6 +826,43 @@ const EnhancedCreatorDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Settings Dialog */}
+      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Creator Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="royalty">Default Royalty Percentage</Label>
+              <Input
+                id="royalty"
+                type="number"
+                min="0"
+                max="50"
+                value={royaltyPercentage}
+                onChange={(e) => setRoyaltyPercentage(Number(e.target.value))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Percentage of license fees you'll receive (0-50%)
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowSettingsDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={() => setShowSettingsDialog(false)}>
+                Save Settings
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Pattern Detail Modal */}
       <Dialog

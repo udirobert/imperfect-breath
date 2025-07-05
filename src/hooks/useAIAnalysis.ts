@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { useFlow } from '@/hooks/useFlow';
-import { config, debugLog } from '@/config/environment';
-import { SupabaseService } from '@/lib/supabase';
-import { useBreathingSessionValidation } from '@/hooks/useValidation';
-import { DataSanitizer } from '@/lib/validation/sanitizer';
+import { useFlow } from '../hooks/useFlow';
+import { config, debugLog } from '../config/environment';
+import { SupabaseService } from '../lib/supabase';
+import { useBreathingSessionValidation } from '../hooks/useValidation';
+import { DataSanitizer } from '../lib/validation/sanitizer';
+import { AIConfigManager } from '../lib/ai/config';
 
 export interface SessionData {
   patternName: string;
@@ -14,7 +15,11 @@ export interface SessionData {
   bpm?: number;
   consistencyScore?: number;
   cycleCount?: number;
+  timestamp?: string;
+  landmarks?: number;
 }
+
+export type AIProvider = 'google' | 'openai' | 'anthropic';
 
 export interface AIAnalysisResult {
   provider: string;
@@ -37,9 +42,11 @@ export const useAIAnalysis = () => {
   const { executeTransaction } = useFlow();
   const { validateSession } = useBreathingSessionValidation();
 
-  const analyzeWithGemini = useCallback(async (
-    sessionData: SessionData
-  ): Promise<AIAnalysisResult | null> => {
+  // Generic function to analyze with any provider
+  const analyzeWithProvider = useCallback(async (
+    sessionData: SessionData,
+    providerId: string
+  ): Promise<AIAnalysisResult> => {
     try {
       // Validate and sanitize session data first
       const validation = validateSession(sessionData);
@@ -49,23 +56,58 @@ export const useAIAnalysis = () => {
 
       const sanitizedData = validation.sanitizedData;
 
-      // Get API key from secure storage
-      const { AIConfigManager } = await import('@/lib/ai/config');
-      const apiKey = await AIConfigManager.getApiKey('google');
+      // Get API key
+      const apiKey = await AIConfigManager.getApiKey(providerId);
       
       if (!apiKey) {
-        throw new Error('Gemini API key not configured. Please add your API key in settings.');
+        throw new Error(`${providerId} API key not configured. Please add your API key in settings.`);
       }
 
+      // Use the appropriate provider
+      switch (providerId) {
+        case 'google':
+          // Ensure data is properly shaped
+          const geminiData: SessionData = {
+            ...sessionData,
+            patternName: sanitizedData.patternName || sessionData.patternName,
+            sessionDuration: sanitizedData.duration || sessionData.sessionDuration,
+            breathHoldTime: sanitizedData.breathHoldTime,
+            restlessnessScore: sanitizedData.restlessnessScore,
+            bpm: sanitizedData.bpm,
+            consistencyScore: sanitizedData.consistencyScore
+          };
+          
+          // Call analyzeWithGemini
+          return analyzeWithGemini(geminiData, apiKey);
+        case 'openai':
+          // Implementation would go here
+          throw new Error('OpenAI integration not implemented yet');
+        case 'anthropic':
+          // Implementation would go here
+          throw new Error('Anthropic integration not implemented yet');
+        default:
+          throw new Error(`Unknown provider: ${providerId}`);
+      }
+    } catch (err) {
+      console.error(`${providerId} analysis failed:`, err);
+      return createErrorFallback(sessionData, err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, [validateSession]);
+
+  const analyzeWithGemini = useCallback(async (
+    sessionData: SessionData,
+    apiKey: string
+  ): Promise<AIAnalysisResult> => {
+    try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-      const prompt = buildAnalysisPrompt(sanitizedData);
+      const prompt = buildAnalysisPrompt(sessionData);
       debugLog('Sending prompt to Gemini:', prompt);
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
+      const text = await response.text();
 
       debugLog('Gemini response:', text);
 
@@ -85,7 +127,7 @@ export const useAIAnalysis = () => {
       } catch (jsonError) {
         console.error("Failed to parse Gemini response as JSON:", sanitizedResponse, jsonError);
         // Fallback if JSON parsing fails
-        parsedResult = createFallbackAnalysis(sanitizedData, sanitizedResponse);
+        parsedResult = createFallbackAnalysis(sessionData, sanitizedResponse);
       }
 
       // Sanitize the parsed result
@@ -108,12 +150,11 @@ export const useAIAnalysis = () => {
 
       debugLog('Processed analysis result:', analysisResult);
       return analysisResult;
-
     } catch (err) {
       console.error('Gemini analysis failed:', err);
-      return createErrorFallback(sessionData, err instanceof Error ? err.message : 'Unknown error');
+      throw err; // Re-throw to be handled by the main analyzeWithProvider function
     }
-  }, [validateSession]);
+  }, []);
 
   const analyzeSession = useCallback(async (
     sessionData: SessionData,
@@ -126,7 +167,7 @@ export const useAIAnalysis = () => {
       const results: AIAnalysisResult[] = [];
 
       // Analyze with Gemini
-      const geminiResult = await analyzeWithGemini(sessionData);
+      const geminiResult = await analyzeWithProvider(sessionData, 'google');
       if (geminiResult) {
         results.push(geminiResult);
       }
@@ -152,7 +193,6 @@ export const useAIAnalysis = () => {
 
       setAnalyses(results);
       return results;
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Analysis failed';
       setError(errorMessage);
@@ -162,11 +202,10 @@ export const useAIAnalysis = () => {
       const fallbackResult = createErrorFallback(sessionData, errorMessage);
       setAnalyses([fallbackResult]);
       return [fallbackResult];
-
     } finally {
       setIsAnalyzing(false);
     }
-  }, [analyzeWithGemini]);
+  }, [analyzeWithProvider]);
 
   const logAnalysisToBlockchain = useCallback(async (
     sessionData: SessionData,
@@ -206,7 +245,6 @@ export const useAIAnalysis = () => {
 
       debugLog('Analysis logged to blockchain:', result.transactionId);
       return result.transactionId;
-
     } catch (err) {
       console.error('Failed to log analysis to blockchain:', err);
       return null;
@@ -218,6 +256,7 @@ export const useAIAnalysis = () => {
     isAnalyzing,
     error,
     analyzeSession,
+    analyzeWithProvider,
     logAnalysisToBlockchain,
     clearAnalyses: () => setAnalyses([]),
     clearError: () => setError(null)

@@ -24,5 +24,10 @@ export type {
   LensFollowersResponse,
 } from './types';
 
-// Main hook
+// Main hook with enhanced capabilities
 export { useLens } from '../../hooks/useLens';
+
+// Enhanced components for testing and implementation
+export { EnhancedLensClient } from './enhanced-lens-client';
+export * from './errors';
+export * from './lens-cache';

@@ -1,11 +1,21 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Progress } from "../components/ui/progress";
+import { Badge } from "../components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import {
   Clock,
   Activity,
@@ -18,15 +28,17 @@ import {
   Shield,
   CheckCircle,
 } from "lucide-react";
-import { BREATHING_PATTERNS } from "@/lib/breathingPatterns";
-import { useSessionHistory } from "@/hooks/useSessionHistory";
-import { useAIAnalysis } from "@/hooks/useAIAnalysis";
-import { AI_PROVIDERS, AIConfigManager, SessionData } from "@/lib/ai/config";
+import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
+import { useSessionHistory } from "../hooks/useSessionHistory";
+import { useAIAnalysis } from "../hooks/useAIAnalysis";
+import { AI_PROVIDERS, AIConfigManager, SessionData } from "../lib/ai/config";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
-// import { demoStoryIntegration } from "@/lib/story/storyClient";
-import { IntegratedSocialFlow } from "@/components/social/IntegratedSocialFlow";
-import { SessionCompleteModal } from "@/components/unified/SessionCompleteModal";
+import { useAuth } from "../hooks/useAuth";
+import { useStory } from "../hooks/useStory";
+import { createStoryProtocolMethods } from "../lib/storyProtocolIntegration";
+import { EnhancedCustomPattern } from "../types/patterns";
+import { IntegratedSocialFlow } from "../components/social/IntegratedSocialFlow";
+import { SessionCompleteModal } from "../components/unified/SessionCompleteModal";
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -47,8 +59,10 @@ const Results = () => {
   const [ipRegistered, setIpRegistered] = useState(false);
   const [isRegisteringIP, setIsRegisteringIP] = useState(false);
   const [showSessionModal, setShowSessionModal] = useState(true);
+  const [ipAssetId, setIpAssetId] = useState<string | null>(null);
 
   const sessionData = useMemo(() => location.state || {}, [location.state]);
+  const storyHook = useStory();
 
   useEffect(() => {
     if (sessionData.patternName && !hasSavedRef.current && user) {
@@ -96,17 +110,19 @@ const Results = () => {
       landmarks: 68, // Assuming 68-point face model
     };
 
-    const previousSessions =
-      history?.slice(-10).map((session) => ({
-        breathHoldTime: session.breath_hold_time,
-        restlessnessScore: session.restlessness_score,
-        patternName: session.pattern_name,
-        sessionDuration: session.session_duration,
-        timestamp: session.created_at || new Date().toISOString(),
-      })) || [];
+    // Create previous sessions array with proper typing
+    const previousSessions = history
+      ? history.slice(-10).map((session) => ({
+          breathHoldTime: session.breath_hold_time,
+          restlessnessScore: session.restlessness_score,
+          patternName: session.pattern_name,
+          sessionDuration: session.session_duration,
+          timestamp: session.created_at || new Date().toISOString(),
+        }))
+      : [];
 
     setShowAIAnalysis(true);
-    await analyzeSession(currentSession, previousSessions || []);
+    await analyzeSession(currentSession);
   };
 
   const handleRegisterIP = async () => {
@@ -117,25 +133,72 @@ const Results = () => {
 
     setIsRegisteringIP(true);
     try {
-      const sessionIPData = {
-        sessionId: `session_${Date.now()}`,
-        patternName: sessionData.patternName,
+      // Find the breathing pattern from the built-in patterns or create a temporary one
+      // BREATHING_PATTERNS is a Record<string, BreathingPattern>, not an array
+      const patternName = sessionData.patternName;
+      const patternToRegister = Object.values(BREATHING_PATTERNS).find(
+        (pattern) => pattern.name === patternName
+      );
+
+      if (!patternToRegister) {
+        toast.error("Pattern not found for registration");
+        return;
+      }
+
+      // Create a temporary enhanced pattern for registration
+      const enhancedPattern: EnhancedCustomPattern = {
+        id: patternToRegister.id || `pattern_${Date.now()}`,
+        name: patternToRegister.name,
+        description:
+          patternToRegister.description ||
+          `Session recorded on ${new Date().toLocaleDateString()}`,
+        category: "performance",
+        difficulty: "intermediate",
         duration: sessionData.sessionDuration || 0,
-        breathHoldTime: sessionData.breathHoldTime || 0,
-        restlessnessScore: sessionData.restlessnessScore || 0,
-        timestamp: new Date().toISOString(),
+        creator: user?.profile?.username || "anonymous",
+        phases: patternToRegister.phases,
+        tags: [],
+        targetAudience: [],
+        primaryBenefits: [],
+        secondaryBenefits: [],
+        instructorName: user?.profile?.username || "anonymous",
+        instructorCredentials: [],
+        licenseSettings: {
+          isCommercial: false,
+          price: 0,
+          currency: "ETH",
+          allowDerivatives: true,
+          attribution: true,
+          commercialUse: false,
+          royaltyPercentage: 5,
+        },
       };
 
-      // TODO: Re-enable Story Protocol when polyfills are resolved
-      console.log("🎯 DEMO: Registering session as IP Asset", sessionIPData);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Create blockchain methods for this pattern
+      const blockchainMethods = createStoryProtocolMethods(
+        enhancedPattern,
+        storyHook
+      );
 
-      const ipAssetId = `ip_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      setIpRegistered(true);
-      toast.success(`Session data registered as IP Asset: ${ipAssetId}`);
+      // Register the pattern as an IP asset
+      const registrationResult = await blockchainMethods.register();
+
+      if (registrationResult && registrationResult.ipId) {
+        setIpAssetId(registrationResult.ipId);
+        setIpRegistered(true);
+        toast.success(
+          `Session data registered as IP Asset: ${registrationResult.ipId}`
+        );
+      } else {
+        throw new Error("Registration did not return a valid IP ID");
+      }
     } catch (error) {
       console.error("Failed to register IP:", error);
-      toast.error("Failed to register session as IP asset");
+      toast.error(
+        `Failed to register session as IP asset: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsRegisteringIP(false);
     }
@@ -158,8 +221,8 @@ const Results = () => {
     restlessnessValue < 20
       ? "bg-green-500"
       : restlessnessValue < 50
-        ? "bg-yellow-500"
-        : "bg-red-500";
+      ? "bg-yellow-500"
+      : "bg-red-500";
 
   const handleShare = async () => {
     const summary = `I just completed a mindful breathing session!
@@ -230,14 +293,12 @@ Check out Mindful Breath!`;
         sessionData={{
           patternName: sessionData.patternName || "Custom Pattern",
           duration: sessionData.sessionDuration || 0,
+          score: sessionData.restlessnessScore
+            ? Math.max(0, 100 - sessionData.restlessnessScore)
+            : 75, // Convert restlessness to a score (lower restlessness = higher score)
           breathHoldTime: sessionData.breathHoldTime || 0,
           restlessnessScore: sessionData.restlessnessScore || 0,
         }}
-        onShare={handleShare}
-        onAIAnalysis={handleAIAnalysis}
-        onRegisterIP={handleRegisterIP}
-        isRegisteringIP={isRegisteringIP}
-        ipRegistered={ipRegistered}
       />
 
       <div className="flex flex-col items-center justify-center text-center animate-fade-in p-4">
@@ -316,8 +377,9 @@ Check out Mindful Breath!`;
                   <CheckCircle className="h-4 w-4" />
                   <AlertDescription>
                     Your session data has been successfully registered as an IP
-                    asset on Story Protocol! This creates a permanent,
-                    verifiable record of your breathing session performance.
+                    asset on Story Protocol with ID: {ipAssetId}. This creates a
+                    permanent, verifiable record of your breathing session
+                    performance.
                   </AlertDescription>
                 </Alert>
               )}
@@ -401,7 +463,7 @@ Check out Mindful Breath!`;
                             <Brain className="w-5 h-5" />
                             {
                               AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider,
+                                (p) => p.id === analysis.provider
                               )?.name
                             }{" "}
                             Analysis
@@ -456,7 +518,7 @@ Check out Mindful Breath!`;
                             <TrendingUp className="w-5 h-5" />
                             {
                               AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider,
+                                (p) => p.id === analysis.provider
                               )?.name
                             }{" "}
                             Scores
@@ -467,7 +529,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.overall,
+                                  analysis.score.overall
                                 )}
                               >
                                 {analysis.score.overall}/100
@@ -477,7 +539,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.focus,
+                                  analysis.score.focus
                                 )}
                               >
                                 {analysis.score.focus}/100
@@ -487,7 +549,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.consistency,
+                                  analysis.score.consistency
                                 )}
                               >
                                 {analysis.score.consistency}/100
@@ -497,7 +559,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.progress,
+                                  analysis.score.progress
                                 )}
                               >
                                 {analysis.score.progress}/100
@@ -532,11 +594,16 @@ Check out Mindful Breath!`;
             Share Results
           </Button>
           {analyses.length > 0 && (
-            <IntegratedSocialFlow 
-              phase="completion" 
-              sessionData={sessionData}
+            <IntegratedSocialFlow
+              phase="completion"
+              sessionData={{
+                ...sessionData,
+                score: sessionData.restlessnessScore
+                  ? Math.max(0, 100 - sessionData.restlessnessScore)
+                  : 75, // Convert restlessness to a score
+              }}
               onSocialAction={(action, data) => {
-                console.log('Social action:', action, data);
+                console.log("Social action:", action, data);
               }}
             />
           )}

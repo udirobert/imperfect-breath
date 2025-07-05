@@ -18,6 +18,8 @@
     "ai:start": "cd eliza-agent-temp && ./start-zen.sh",
     "test:story": "node scripts/test-story-grove-integration.js",
     "test:story:full": "node scripts/test-story-full-integration.js",
+    "test:story:integration": "node scripts/test-story-integration.js",
+    "test:story:sdk": "node scripts/test-story-sdk-integration.js",
     "test:lens": "node scripts/test-lens-integration.js",
     "cleanup:social": "node scripts/cleanup-social-integration.cjs",
     "cleanup:vision": "node scripts/cleanup-vision-system.cjs",
@@ -94,7 +96,7 @@
     "tailwindcss-animation-delay": "^2.0.2",
     "uuid": "^11.1.0",
     "vaul": "^0.9.3",
-    "viem": "^2.21.0",
+    "viem": "^2.31.7",
     "wagmi": "^2.15.6",
     "zod": "^3.23.8"
   },

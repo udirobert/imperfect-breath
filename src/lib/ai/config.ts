@@ -68,42 +68,43 @@ export interface AIAnalysisResponse {
   error?: string;
 }
 
-import { SecureAPIKeyManager } from '@/lib/crypto/secure-storage';
+import { TieredStorageManager } from '../crypto/tiered-storage';
 
 export class AIConfigManager {
   static async setApiKey(provider: string, apiKey: string): Promise<void> {
-    await SecureAPIKeyManager.setAPIKey(provider, apiKey);
+    await TieredStorageManager.setAPIKey(provider, apiKey);
   }
 
   static async getApiKey(provider: string): Promise<string | null> {
-    return await SecureAPIKeyManager.getAPIKey(provider);
+    return await TieredStorageManager.getAPIKey(provider);
   }
 
   static removeApiKey(provider: string): void {
-    SecureAPIKeyManager.removeAPIKey(provider);
+    TieredStorageManager.removeAPIKey(provider);
   }
 
   static hasApiKey(provider: string): boolean {
-    return SecureAPIKeyManager.hasAPIKey(provider);
+    return TieredStorageManager.hasAPIKey(provider);
   }
 
-  static async getConfiguredProviders(): Promise<AIProvider[]> {
-    const configuredProviderIds = SecureAPIKeyManager.getConfiguredProviders();
+  static getConfiguredProviders(): AIProvider[] {
+    const configuredProviderIds = TieredStorageManager.getConfiguredProviders();
     return AI_PROVIDERS.filter((provider) => configuredProviderIds.includes(provider.id));
   }
 
   static clearAllKeys(): void {
-    SecureAPIKeyManager.clearAllAPIKeys();
+    TieredStorageManager.clearAllAPIKeys();
   }
 
   /**
-   * Initialize secure storage and migrate from localStorage if needed
+   * Initialize storage system and migrate from previous storage if needed
    */
   static async initialize(): Promise<void> {
     try {
-      await SecureAPIKeyManager.migrateFromLocalStorage();
+      await TieredStorageManager.initialize();
+      await TieredStorageManager.migrateFromOldStorage();
     } catch (error) {
-      console.warn('Failed to migrate API keys from localStorage:', error);
+      console.warn('Failed to initialize or migrate storage:', error);
     }
   }
 
@@ -111,7 +112,7 @@ export class AIConfigManager {
    * Check if secure storage is supported
    */
   static isSecureStorageSupported(): boolean {
-    return SecureAPIKeyManager['isSupported']?.() ?? false;
+    return TieredStorageManager.isSecureStorageSupported();
   }
 }
 

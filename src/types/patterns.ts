@@ -1,5 +1,5 @@
-import { BreathingPhase, CustomBreathingPhase } from "@/lib/breathingPatterns";
-import { CustomPattern } from "@/lib/patternStorage";
+import { BreathingPhase, CustomBreathingPhase } from "../lib/breathingPatterns";
+import { CustomPattern } from "../lib/patternStorage";
 
 // Re-export the base pattern and phase types for convenience
 export type { CustomPattern, BreathingPhase, CustomBreathingPhase };
@@ -24,6 +24,26 @@ export interface LicenseSettings {
   royaltyPercentage: number;
 }
 
+export interface StoryProtocolMetadata {
+  ipId?: string;          // The ID of the IP asset on Story Protocol
+  registrationTxHash?: string;  // Transaction hash of IP registration
+  licenseTerms?: {
+    commercial: boolean;
+    derivatives: boolean;
+    attribution: boolean;
+    royaltyPercentage: number;
+  };
+  isRegistered: boolean;  // Whether this pattern is registered on Story Protocol
+}
+
+// Methods for Story Protocol integration
+export interface StoryProtocolMethods {
+  register: () => Promise<StoryProtocolMetadata>;
+  setLicenseTerms: (terms: any) => Promise<boolean>;
+  checkRegistrationStatus: () => Promise<boolean>;
+  getLicenseTerms: () => Promise<any>;
+}
+
 export interface BenefitClaim {
   id: string;
   title: string;
@@ -32,9 +52,18 @@ export interface BenefitClaim {
   sources?: string[];
 }
 
-import { Json } from "@/integrations/supabase/types";
+import { Json } from "../integrations/supabase/types";
 
 export interface EnhancedCustomPattern extends CustomPattern {
+  // Base pattern properties
+  id: string;
+  name: string;
+  description: string;
+  category: "stress" | "sleep" | "energy" | "focus" | "performance";
+  difficulty: "beginner" | "intermediate" | "advanced";
+  duration: number;
+  creator: string;
+  phases: any[];
   // Media content as a structured JSON object
   mediaContent?: Json;
 
@@ -56,6 +85,11 @@ export interface EnhancedCustomPattern extends CustomPattern {
 
   // Licensing
   licenseSettings: LicenseSettings;
+  
+  // Story Protocol integration
+  ipId?: string;          // The ID of the IP asset on Story Protocol
+  storyProtocol?: StoryProtocolMetadata;
+  blockchainMethods?: StoryProtocolMethods;
 
   // Advanced features
   hasProgressTracking?: boolean;
@@ -96,6 +130,12 @@ export const enhancePattern = (pattern: CustomPattern): EnhancedCustomPattern =>
     instructorName: pattern.creator, // This should be fetched from a user profile in a real app
     instructorCredentials: [],
     licenseSettings: (pattern.licensingInfo as unknown as LicenseSettings) || defaultLicense,
+    
+    // Story Protocol defaults
+    ipId: undefined,
+    storyProtocol: {
+      isRegistered: false
+    },
     
     // Default advanced features to false
     hasProgressTracking: false,

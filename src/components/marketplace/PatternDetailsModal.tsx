@@ -4,18 +4,13 @@
  */
 
 import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Separator } from "../ui/separator";
+import { Card, CardContent } from "../ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   Play,
   Star,
@@ -36,12 +31,19 @@ import {
   CheckCircle,
   Sparkles,
 } from "lucide-react";
-import type { EnhancedCustomPattern } from "@/types/patterns";
+import type { EnhancedCustomPattern } from "../../types/patterns";
 import { PatternReviewForm } from "./PatternReviewForm";
-import { ReviewService, PatternReview } from "@/lib/reviewService";
-import { useAuth } from "@/hooks/useAuth";
+import { ReviewService, PatternReview } from "../../lib/reviewService";
+import { useAuth } from "../../hooks/useAuth";
 import { useEffect, useState } from "react";
 import { PurchaseFlow } from "./PurchaseFlow";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
+import { Shield, ShieldCheck } from "lucide-react";
 
 const reviewService = new ReviewService();
 
@@ -83,7 +85,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
     if (pattern) {
       setLoadingReviews(true);
       reviewService
-        .getReviewsForPattern(pattern.id)
+        .getReviewsForPattern(pattern.id as string)
         .then(setReviews)
         .finally(() => setLoadingReviews(false));
     }
@@ -97,7 +99,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
       return;
     }
     await reviewService.submitReview({
-      pattern_id: pattern.id,
+      pattern_id: pattern.id as string,
       user_id: user.id,
       rating,
       review_text: reviewText,
@@ -211,7 +213,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onLike?.(pattern.id)}
+                      onClick={() => onLike?.(pattern.id as string)}
                       className={isLiked ? "text-red-500 border-red-500" : ""}
                     >
                       <Heart
@@ -254,12 +256,13 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
 
               {/* Main Content */}
               <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="phases">Phases</TabsTrigger>
                   <TabsTrigger value="benefits">Benefits</TabsTrigger>
                   <TabsTrigger value="reviews">Reviews</TabsTrigger>
                   <TabsTrigger value="instructor">Instructor</TabsTrigger>
+                  <TabsTrigger value="licensing">Licensing</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
@@ -449,7 +452,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                   <div>
                     <h3 className="font-semibold mb-4">Leave a Review</h3>
                     <PatternReviewForm
-                      patternId={pattern.id}
+                      patternId={pattern.id as string}
                       onSubmit={handleReviewSubmit}
                     />
                   </div>
@@ -492,6 +495,109 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                                 </div>
                               </div>
                             )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* Licensing & IP Tab */}
+                <TabsContent value="licensing" className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold mb-4">License Information</h3>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="space-y-4">
+                          {/* IP Registration Status */}
+                          <div className="flex items-start gap-3">
+                            {pattern.storyProtocol?.isRegistered ? (
+                              <>
+                                <ShieldCheck className="h-5 w-5 text-green-600 mt-0.5" />
+                                <div>
+                                  <h4 className="font-medium">
+                                    Blockchain Protected
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    This pattern is registered as intellectual
+                                    property on the Story Protocol blockchain,
+                                    ensuring the creator's rights are protected
+                                    and properly compensated.
+                                  </p>
+                                  {pattern.ipId && (
+                                    <div className="mt-2 p-2 bg-muted rounded text-xs font-mono">
+                                      IP ID: {pattern.ipId}
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                  <h4 className="font-medium">
+                                    Standard Protection
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    This pattern uses traditional copyright
+                                    protection rather than blockchain
+                                    registration.
+                                  </p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {/* License Terms */}
+                          <div className="space-y-3 mt-4">
+                            <h4 className="font-medium">License Terms</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="p-3 bg-muted rounded-lg">
+                                <h5 className="text-sm font-medium">
+                                  Commercial Use
+                                </h5>
+                                <p className="text-sm text-muted-foreground">
+                                  {pattern.storyProtocol?.licenseTerms
+                                    ?.commercial ||
+                                  pattern.licenseSettings.commercialUse
+                                    ? "Allowed"
+                                    : "Not Allowed"}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-muted rounded-lg">
+                                <h5 className="text-sm font-medium">
+                                  Derivatives
+                                </h5>
+                                <p className="text-sm text-muted-foreground">
+                                  {pattern.storyProtocol?.licenseTerms
+                                    ?.derivatives ||
+                                  pattern.licenseSettings.allowDerivatives
+                                    ? "Allowed"
+                                    : "Not Allowed"}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-muted rounded-lg">
+                                <h5 className="text-sm font-medium">
+                                  Attribution
+                                </h5>
+                                <p className="text-sm text-muted-foreground">
+                                  {pattern.storyProtocol?.licenseTerms
+                                    ?.attribution ||
+                                  pattern.licenseSettings.attribution
+                                    ? "Required"
+                                    : "Not Required"}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-muted rounded-lg">
+                                <h5 className="text-sm font-medium">Royalty</h5>
+                                <p className="text-sm text-muted-foreground">
+                                  {pattern.storyProtocol?.licenseTerms
+                                    ?.royaltyPercentage ||
+                                    pattern.licenseSettings.royaltyPercentage}
+                                  %
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </CardContent>
@@ -543,6 +649,28 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                   <p className="text-sm text-muted-foreground">
                     {pattern.postSessionNotes}
                   </p>
+                </div>
+              )}
+
+              {/* Story Protocol Attribution */}
+              {pattern.storyProtocol?.isRegistered && (
+                <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground mt-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1">
+                          <ShieldCheck className="h-3 w-3" />
+                          <span>Protected by Story Protocol</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          This pattern is registered on the Story Protocol
+                          blockchain for IP protection
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               )}
             </div>

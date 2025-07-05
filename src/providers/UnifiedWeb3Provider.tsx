@@ -1,22 +1,25 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useFlow } from '@/hooks/useFlow';
-// Removed deprecated useLensService - functionality moved to useLens
-import { config, debugLog } from '@/config/environment';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useFlow } from "../hooks/useFlow";
+import { useLens } from "../hooks/useLens";
+import { useStory } from "../hooks/useStory";
+import { useAccount } from "wagmi";
+import { config, debugLog } from "../config/environment";
 
 // Unified chain types
-export type Chain = 'flow' | 'lens' | 'story';
+// Full support for all chain types
+export type Chain = "flow" | "lens" | "story";
 
 // Unified user interface
 export interface UnifiedUser {
-  id: string;                                    // Supabase user ID
-  preferredChain: Chain | null;                  // Single active chain
-  flowAddress?: string;                          // USDC payments
-  lensProfileId?: string;                        // Social features  
-  storyAddress?: string;                         // IP registration
-  email?: string;                                // User email
-  displayName?: string;                          // Display name
-  role: 'user' | 'creator' | 'instructor';      // User role
+  id: string; // Supabase user ID
+  preferredChain: Chain | null; // Single active chain
+  flowAddress?: string; // USDC payments
+  lensProfileId?: string; // Social features
+  storyAddress?: string; // IP registration
+  email?: string; // User email
+  displayName?: string; // Display name
+  role: "user" | "creator" | "instructor"; // User role
 }
 
 // Unified context interface
@@ -48,12 +51,14 @@ const Web3Context = createContext<UnifiedWeb3Context | null>(null);
 export const useUnifiedWeb3 = () => {
   const context = useContext(Web3Context);
   if (!context) {
-    throw new Error('useUnifiedWeb3 must be used within UnifiedWeb3Provider');
+    throw new Error("useUnifiedWeb3 must be used within UnifiedWeb3Provider");
   }
   return context;
 };
 
-export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   // State management
   const [user, setUser] = useState<UnifiedUser | null>(null);
   const [activeChain, setActiveChain] = useState<Chain | null>(null);
@@ -62,27 +67,37 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Initialize blockchain hooks
   const flow = useFlow();
-  // const lens = useLens(); // TODO: Integrate when needed
-  // TODO: Add Story Protocol hook when implemented
-  // const story = useStory();
+  const lens = useLens();
+  const story = useStory();
 
   // Computed states
   const isAuthenticated = !!user && !!activeChain;
-  const flowConnected = flow.user.loggedIn;
+  const flowConnected = flow.user.loggedIn ?? false;
   const lensConnected = lens.isAuthenticated;
-  const storyConnected = false; // TODO: Implement Story connection
+  const storyConnected = !!story.client;
 
   // Initialize user session on mount
   useEffect(() => {
     initializeSession();
+    // We intentionally run this only once at mount, so no dependencies are needed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Wallet address for Story Protocol
+  const { address: walletAddress } = useAccount();
 
   // Monitor blockchain connection changes
   useEffect(() => {
     if (user && activeChain) {
       validateActiveConnection();
     }
-  }, [flow.user.loggedIn, lens.isAuthenticated, user, activeChain]);
+  }, [
+    flow.user.loggedIn,
+    lens.isAuthenticated,
+    user,
+    activeChain,
+    storyConnected,
+  ]);
 
   const initializeSession = async () => {
     try {
@@ -90,9 +105,11 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
       setError(null);
 
       // Get Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
-        debugLog('No Supabase session found');
+        debugLog("No Supabase session found");
         setUser(null);
         setActiveChain(null);
         return;
@@ -100,13 +117,13 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
 
       // Fetch user profile from Supabase
       const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
+        .from("users")
+        .select("*")
+        .eq("id", session.user.id)
         .single();
 
       if (profileError) {
-        if (profileError.code === 'PGRST116') {
+        if (profileError.code === "PGRST116") {
           // Create new user profile
           const newUser = await createUserProfile(session.user);
           setUser(newUser);
@@ -122,18 +139,19 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
           storyAddress: profile.ethereum_address,
           email: session.user.email,
           displayName: profile.display_name,
-          role: profile.role || 'user'
+          role: profile.role || "user",
         };
-        
+
         setUser(unifiedUser);
         setActiveChain(profile.preferred_chain as Chain);
-        
-        debugLog('User session initialized:', unifiedUser);
+
+        debugLog("User session initialized:", unifiedUser);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to initialize session';
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to initialize session";
       setError(errorMessage);
-      console.error('Session initialization error:', err);
+      console.error("Session initialization error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -141,13 +159,13 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const createUserProfile = async (authUser: any): Promise<UnifiedUser> => {
     const { data: newProfile, error } = await supabase
-      .from('users')
+      .from("users")
       .insert({
         id: authUser.id,
         email: authUser.email,
         display_name: authUser.user_metadata?.display_name,
-        role: 'user',
-        preferred_chain: null
+        role: "user",
+        preferred_chain: null,
       })
       .select()
       .single();
@@ -159,7 +177,7 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
       preferredChain: null,
       email: authUser.email,
       displayName: newProfile.display_name,
-      role: newProfile.role
+      role: newProfile.role,
     };
   };
 
@@ -167,21 +185,23 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!user || !activeChain) return;
 
     let isConnected = false;
-    
+
     switch (activeChain) {
-      case 'flow':
+      case "flow":
         isConnected = flowConnected && flow.user.addr === user.flowAddress;
         break;
-      case 'lens':
+      case "lens":
         isConnected = lensConnected;
         break;
-      case 'story':
+      case "story":
         isConnected = storyConnected;
         break;
     }
 
     if (!isConnected) {
-      debugLog(`Active chain ${activeChain} is not properly connected, clearing session`);
+      debugLog(
+        `Active chain ${activeChain} is not properly connected, clearing session`
+      );
       await clearActiveChain();
     }
   };
@@ -189,10 +209,10 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
   const clearActiveChain = async () => {
     if (user) {
       await supabase
-        .from('users')
+        .from("users")
         .update({ preferred_chain: null })
-        .eq('id', user.id);
-      
+        .eq("id", user.id);
+
       setUser({ ...user, preferredChain: null });
       setActiveChain(null);
     }
@@ -204,7 +224,7 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
       setError(null);
 
       if (!user) {
-        throw new Error('User must be authenticated with Supabase first');
+        throw new Error("User must be authenticated with Supabase first");
       }
 
       // Disconnect from other chains first
@@ -212,49 +232,69 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
 
       // Connect to the requested chain
       let chainAddress: string | undefined;
-      
+
       switch (chain) {
-        case 'flow':
+        case "flow":
           await flow.logIn();
           if (!flow.user.loggedIn || !flow.user.addr) {
-            throw new Error('Flow login failed');
+            throw new Error("Flow login failed");
           }
           chainAddress = flow.user.addr;
-          
+
           // Set up user collection if needed
           const hasCollection = await flow.checkUserCollection(flow.user.addr);
           if (!hasCollection) {
-            debugLog('Setting up user collection...');
+            debugLog("Setting up user collection...");
             await flow.setupUserCollection();
           }
           break;
 
-        case 'lens':
-          const lensSuccess = await lens.authenticate();
-          if (!lensSuccess) {
-            throw new Error('Lens authentication failed');
+        case "lens":
+          try {
+            await lens.authenticate();
+            if (!lens.isAuthenticated) {
+              throw new Error("Lens authentication failed");
+            }
+            chainAddress = lens.currentAccount?.address || "";
+          } catch (error) {
+            throw new Error(
+              "Lens authentication failed: " +
+                (error instanceof Error ? error.message : "Unknown error")
+            );
           }
-          chainAddress = lens.session.address;
           break;
 
-        case 'story':
-          // TODO: Implement Story Protocol connection
-          throw new Error('Story Protocol integration not yet implemented');
-
-        default:
-          throw new Error(`Unsupported chain: ${chain}`);
+        case "story":
+          try {
+            // Story Protocol client usage - actual implementation
+            if (!walletAddress) {
+              throw new Error("Wallet not connected");
+            }
+            chainAddress = walletAddress;
+            // Check if Story Protocol client is initialized
+            if (!story.client) {
+              throw new Error("Story Protocol client not initialized");
+            }
+          } catch (error) {
+            throw new Error(
+              "Story Protocol connection failed: " +
+                (error instanceof Error ? error.message : "Unknown error")
+            );
+          }
+          break;
       }
 
       // Update user profile in Supabase
       const updates: any = { preferred_chain: chain };
-      if (chain === 'flow') updates.flow_address = chainAddress;
-      if (chain === 'lens') updates.lens_profile_id = lens.session.profileId;
-      if (chain === 'story') updates.ethereum_address = chainAddress;
+      if (chain === "flow") updates.flow_address = chainAddress;
+      if (chain === "lens")
+        updates.lens_profile_id = lens.currentAccount?.address || "";
+      if (chain === "story") updates.ethereum_address = chainAddress;
 
       const { error: updateError } = await supabase
-        .from('users')
+        .from("users")
         .update(updates)
-        .eq('id', user.id);
+        .eq("id", user.id);
 
       if (updateError) throw updateError;
 
@@ -264,7 +304,8 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
 
       debugLog(`Successfully connected to ${chain}:`, chainAddress);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : `Failed to connect to ${chain}`;
+      const errorMessage =
+        err instanceof Error ? err.message : `Failed to connect to ${chain}`;
       setError(errorMessage);
       console.error(`${chain} login error:`, err);
       throw err;
@@ -284,19 +325,19 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
       // Clear preferred chain in database
       if (user) {
         await supabase
-          .from('users')
+          .from("users")
           .update({ preferred_chain: null })
-          .eq('id', user.id);
-        
+          .eq("id", user.id);
+
         setUser({ ...user, preferredChain: null });
       }
-      
+
       setActiveChain(null);
-      debugLog('Successfully logged out from all chains');
+      debugLog("Successfully logged out from all chains");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Logout failed';
+      const errorMessage = err instanceof Error ? err.message : "Logout failed";
       setError(errorMessage);
-      console.error('Logout error:', err);
+      console.error("Logout error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -312,27 +353,49 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const disconnectAllChains = async () => {
-    const promises = [];
-    
+    const promises: Promise<void>[] = [];
+
     if (flowConnected) {
-      promises.push(flow.logOut().catch(err => console.warn('Flow logout error:', err)));
-    }
-    
-    if (lensConnected) {
-      promises.push(lens.logout().catch(err => console.warn('Lens logout error:', err)));
+      promises.push(
+        flow.logOut().catch((err) => console.warn("Flow logout error:", err))
+      );
     }
 
-    // TODO: Add Story disconnect when implemented
-    
+    if (lensConnected) {
+      promises.push(
+        lens.logout().catch((err) => console.warn("Lens logout error:", err))
+      );
+    }
+
+    // Story Protocol doesn't have a formal disconnect method
+    // But we should clean up any state to ensure proper disconnect
+    if (storyConnected) {
+      const storyPromise: Promise<void> = (async () => {
+        try {
+          // Clear story protocol state
+          // The client itself doesn't have a formal disconnect,
+          // but clearing user data ensures a clean state
+          setUser((prevUser) =>
+            prevUser ? { ...prevUser, storyAddress: undefined } : null
+          );
+          debugLog("Story Protocol state cleared");
+        } catch (err) {
+          console.warn("Story Protocol disconnect error:", err);
+        }
+      })();
+
+      promises.push(storyPromise);
+    }
+
     await Promise.all(promises);
   };
 
   const refreshUser = async () => {
     if (user) {
       const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
         .single();
 
       if (profile) {
@@ -343,7 +406,7 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
           lensProfileId: profile.lens_profile_id,
           storyAddress: profile.ethereum_address,
           displayName: profile.display_name,
-          role: profile.role
+          role: profile.role,
         });
       }
     }
@@ -373,13 +436,11 @@ export const UnifiedWeb3Provider: React.FC<{ children: React.ReactNode }> = ({ c
 
     // Utility methods
     refreshUser,
-    clearError
+    clearError,
   };
 
   return (
-    <Web3Context.Provider value={contextValue}>
-      {children}
-    </Web3Context.Provider>
+    <Web3Context.Provider value={contextValue}>{children}</Web3Context.Provider>
   );
 };
 
