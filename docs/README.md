@@ -4,8 +4,10 @@ Welcome to the Imperfect Breath documentation! This directory contains comprehen
 
 ## 📚 Available Guides
 
-### [Technical Guide](./TECHNICAL_GUIDE.md)
+### [Technical Guide](./TechnicalGuide.md)
+
 **For Developers & Technical Users**
+
 - Complete system architecture
 - Development setup and workflow
 - Zen AI agent implementation
@@ -14,8 +16,10 @@ Welcome to the Imperfect Breath documentation! This directory contains comprehen
 - Security considerations
 - Performance optimization
 
-### [Vision System Guide](./VISION_SYSTEM_GUIDE.md)
+### [Vision & AI Guide](./VisionAIGuide.md)
+
 **For Advanced Users & Developers**
+
 - Computer vision capabilities
 - Three-tier adaptive system
 - AI coaching integration
@@ -24,8 +28,10 @@ Welcome to the Imperfect Breath documentation! This directory contains comprehen
 - Performance tuning
 - Custom implementations
 
-### [User Guide](./USER_GUIDE.md)
+### [User Guide](./UserGuide.md)
+
 **For End Users & Practitioners**
+
 - Getting started guide
 - Breathing pattern practice
 - Creating and minting NFTs
@@ -34,13 +40,24 @@ Welcome to the Imperfect Breath documentation! This directory contains comprehen
 - Troubleshooting
 - Success stories
 
+### [Project History & Plans](./ProjectHistoryPlans.md)
+
+**For Contributors & Stakeholders**
+
+- Historical context of development
+- Architectural consolidation plans
+- Cleanup summaries
+- Roadmaps for major components
+
 ## 🎯 Quick Navigation
 
-**New to the Platform?** → Start with [User Guide](./USER_GUIDE.md)
+**New to the Platform?** → Start with [User Guide](./UserGuide.md)
 
-**Want to Develop?** → Check [Technical Guide](./TECHNICAL_GUIDE.md)
+**Want to Develop?** → Check [Technical Guide](./TechnicalGuide.md)
 
-**Interested in AI Vision?** → Read [Vision System Guide](./VISION_SYSTEM_GUIDE.md)
+**Interested in AI Vision?** → Read [Vision & AI Guide](./VisionAIGuide.md)
+
+**Interested in Project History?** → Explore [Project History & Plans](./ProjectHistoryPlans.md)
 
 **Need Help?** → All guides include troubleshooting sections
 
@@ -53,4 +70,4 @@ Welcome to the Imperfect Breath documentation! This directory contains comprehen
 
 ---
 
-*These guides are living documents that evolve with the platform. Last updated: July 2025*
+_These guides are living documents that evolve with the platform. Last updated: July 2025_

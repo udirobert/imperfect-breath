@@ -2,7 +2,13 @@
 
 ## Overview
 
-Imperfect Breath is a production-ready multichain wellness platform that combines ancient breathing wisdom with cutting-edge Web3 technology and AI-powered computer vision. This guide covers the complete technical architecture, development workflow, and deployment process.
+Imperfect Breath is a production-ready multichain wellness platform that combines ancient breathing wisdom with cutting-edge Web3 technology and AI-powered computer vision. This guide provides a detailed overview of the platform's technical architecture, development workflow, deployment process, and security considerations. It serves as a consolidated reference for developers and technical stakeholders, with links to additional specialized documentation for deeper insights.
+
+For user-focused instructions, vision system details, and project history, refer to the following companion documents in the /docs directory:
+
+- **User Guide** (`docs/UserGuide.md`): Instructions for end-users on how to use the platform.
+- **Vision & AI Guide** (`docs/VisionAIGuide.md`): In-depth documentation on the computer vision and AI coaching system.
+- **Project History & Plans** (`docs/ProjectHistoryPlans.md`): Historical context, architectural consolidation plans, and cleanup summaries.
 
 ## 🏗️ System Architecture
 
@@ -69,6 +75,7 @@ Docker (for local blockchain testing)
 ### Environment Setup
 
 1. **Clone and Install**
+
    ```bash
    git clone [your-repo-url]
    cd imperfect-breath
@@ -76,33 +83,35 @@ Docker (for local blockchain testing)
    ```
 
 2. **Environment Configuration**
+
    ```bash
    # Copy templates
    cp .env.example .env
    cp flow.json.example flow.json
-   
+
    # Configure environment variables
    nano .env
    ```
 
 3. **Environment Variables**
+
    ```bash
    # Flow Blockchain (Pre-configured for testnet)
    VITE_FLOW_NETWORK=testnet
    VITE_IMPERFECT_BREATH_ADDRESS=0xb8404e09b36b6623
-   
+
    # AI Features
    VITE_GOOGLE_GEMINI_API_KEY=your_gemini_key
    OPENAI_API_KEY=your_openai_key  # For Zen AI agent
-   
+
    # Database (Optional)
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_key
-   
+
    # Story Protocol
    STORY_PRIVATE_KEY=your_story_private_key
    STORY_RPC_URL=https://testnet.storyrpc.io
-   
+
    # Lens Protocol
    LENS_API_KEY=your_lens_api_key
    LENS_ENVIRONMENT=testnet
@@ -165,12 +174,12 @@ eliza-agent-temp/
 const breathingPatternPlugin: Plugin = {
   name: "breathing-pattern-plugin",
   actions: [
-    createBreathingPatternAction,    // Generate custom patterns
-    analyzeSessionAction,            // Analyze user sessions
-    mintPatternNFTAction,           // Mint patterns as NFTs
-    registerIPAction,               // Register IP rights
-    recommendPatternAction          // Recommend patterns
-  ]
+    createBreathingPatternAction, // Generate custom patterns
+    analyzeSessionAction, // Analyze user sessions
+    mintPatternNFTAction, // Mint patterns as NFTs
+    registerIPAction, // Register IP rights
+    recommendPatternAction, // Recommend patterns
+  ],
 };
 ```
 
@@ -185,17 +194,17 @@ class EnhancedZenCoach extends AIBreathingCoach {
   ): Promise<string> {
     // Get real-time biometric data
     const visionMetrics = await this.visionAnalyzer.analyze(videoStream);
-    
+
     // Enhanced context with objective data
     const enhancedContext = {
       ...userContext,
       currentSession: {
         actualBreathingRate: visionMetrics.breathingRate,
         stressLevel: visionMetrics.stressLevel,
-        postureQuality: visionMetrics.postureQuality
-      }
+        postureQuality: visionMetrics.postureQuality,
+      },
     };
-    
+
     // AI coaching with real data
     return this.generatePersonalizedCoaching(userMessage, enhancedContext);
   }
@@ -204,106 +213,20 @@ class EnhancedZenCoach extends AIBreathingCoach {
 
 ## 🎯 Computer Vision System
 
-### Three-Tier Adaptive Architecture
+For a comprehensive guide on the computer vision system, including its three-tier adaptive architecture (Basic, Standard, Premium), device capability detection, performance optimization, and integration with AI coaching, refer to the **Vision & AI Guide** (`docs/VisionAIGuide.md`).
 
-**Basic Tier (95% compatibility)**
-```typescript
-interface BasicMetrics {
-  movementLevel: number;        // 0-1, movement detection
-  facePresent: boolean;         // Face detection
-  estimatedBreathingRate: number; // Breaths per minute
-  headAlignment: number;        // 0-1, posture quality
-}
-```
+### Key Features
 
-**Standard Tier (80% compatibility)**
-```typescript
-interface StandardMetrics extends BasicMetrics {
-  facialTension: number;        // 0-1, stress indicators
-  postureQuality: number;       // 0-1, upper body posture
-  breathingRhythm: {
-    rate: number;
-    consistency: number;        // 0-1, rhythm regularity
-  };
-  restlessnessScore: number;    // 0-1, overall calmness
-}
-```
-
-**Premium Tier (60% compatibility)**
-```typescript
-interface PremiumMetrics extends StandardMetrics {
-  detailedFacialAnalysis: {
-    nostrilMovement: number;
-    jawTension: number;
-    eyeMovement: number;
-    microExpressions: number;
-  };
-  fullBodyPosture: {
-    spinalAlignment: number;
-    shoulderTension: number;
-    chestExpansion: number;
-  };
-  preciseBreathingMetrics: {
-    rhythmAccuracy: number;     // 0-1, pattern matching
-    depthConsistency: number;
-  };
-}
-```
-
-### Device Capability Detection
-
-```typescript
-class DeviceCapabilityDetector {
-  async detectCapabilities(): Promise<DeviceCapabilities> {
-    return {
-      cpuCores: navigator.hardwareConcurrency || 4,
-      gpuSupport: await this.detectGPUSupport(),
-      wasmSupport: typeof WebAssembly === 'object',
-      cameraResolution: await this.detectCameraCapabilities(),
-      batteryLevel: await this.getBatteryLevel(),
-      isMobile: /Android|iPhone|iPad/i.test(navigator.userAgent),
-      isLowPowerMode: await this.detectLowPowerMode()
-    };
-  }
-  
-  determineOptimalTier(capabilities: DeviceCapabilities): VisionTier {
-    if (capabilities.cpuCores >= 8 && capabilities.gpuSupport) {
-      return 'premium';
-    } else if (capabilities.cpuCores >= 4 && capabilities.wasmSupport) {
-      return 'standard';
-    }
-    return 'basic';
-  }
-}
-```
-
-### Performance Optimization
-
-```typescript
-// Adaptive frame processing
-class OptimizedFrameProcessor {
-  constructor(deviceTier: string) {
-    this.frameSkipRatio = {
-      'basic': 5,     // Process every 5th frame (6 FPS)
-      'standard': 3,  // Process every 3rd frame (10 FPS)
-      'premium': 2    // Process every 2nd frame (15 FPS)
-    }[deviceTier];
-  }
-  
-  async processFrame(frame: VideoFrame): Promise<VisionMetrics | null> {
-    if (this.shouldSkipFrame()) return null;
-    
-    // Process in Web Worker to avoid blocking main thread
-    return await this.processInWorker(frame);
-  }
-}
-```
+- **Adaptive Tiers**: Automatically adjusts to device capabilities, ensuring compatibility across 95% of devices (Basic Tier), 80% (Standard Tier), and 60% (Premium Tier).
+- **Real-Time Analysis**: Provides metrics on breathing rate, posture, movement, and facial tension.
+- **Privacy Focus**: All processing is done locally on the user's device, with no video data stored or transmitted.
 
 ## ⛓️ Blockchain Integration
 
 ### Flow Blockchain
 
 **Smart Contract Architecture**
+
 ```cadence
 // Main contract: ImperfectBreath.cdc
 pub contract ImperfectBreath {
@@ -314,7 +237,7 @@ pub contract ImperfectBreath {
         pub let creator: Address
         pub let metadata: {String: String}
     }
-    
+
     pub resource Collection {
         pub fun deposit(token: @BreathingPattern)
         pub fun withdraw(withdrawID: UInt64): @BreathingPattern
@@ -324,6 +247,7 @@ pub contract ImperfectBreath {
 ```
 
 **Transaction Examples**
+
 ```typescript
 // Mint breathing pattern NFT
 const mintTransaction = `
@@ -359,20 +283,20 @@ class StoryBreathingClient {
       metadata: {
         name: pattern.name,
         description: pattern.description,
-        creator: pattern.creator
-      }
+        creator: pattern.creator,
+      },
     });
-    
+
     // Set licensing terms
     await this.storyClient.attachLicenseTerms({
       ipId: ipAsset.ipId,
       licenseTermsId: this.createLicenseTerms({
         commercialUse: true,
         derivativesAllowed: true,
-        royaltyRate: 1000 // 10%
-      })
+        royaltyRate: 1000, // 10%
+      }),
     });
-    
+
     return { ipAssetId: ipAsset.ipId, licenseId: ipAsset.licenseId };
   }
 }
@@ -386,17 +310,19 @@ class LensBreathingClient {
     const metadata = {
       content: `Just completed a ${session.pattern.name} breathing session! 
                  ${session.duration} minutes of mindful breathing. 🌬️`,
-      tags: ['breathing', 'wellness', 'mindfulness'],
-      attachments: [{
-        type: 'application/json',
-        item: session.metrics
-      }]
+      tags: ["breathing", "wellness", "mindfulness"],
+      attachments: [
+        {
+          type: "application/json",
+          item: session.metrics,
+        },
+      ],
     };
-    
+
     const publication = await this.lensClient.publication.postOnchain({
-      contentURI: await this.uploadToIPFS(metadata)
+      contentURI: await this.uploadToIPFS(metadata),
     });
-    
+
     return publication.id;
   }
 }
@@ -482,6 +408,7 @@ cd eliza-agent-temp && ./start-zen.sh  # AI Agent
 ### Production Deployment
 
 **Frontend (Vercel/Netlify)**
+
 ```bash
 # Build for production
 npm run build
@@ -494,6 +421,7 @@ netlify deploy --prod --dir=dist
 ```
 
 **AI Agent (Cloud Server)**
+
 ```bash
 # Docker deployment
 FROM node:20-alpine
@@ -504,6 +432,7 @@ CMD ["pnpm", "start", "--character=../characters/breathing-coach.character.json"
 ```
 
 **Database (Supabase)**
+
 ```sql
 -- Run migration scripts
 psql -h your-supabase-host -U postgres -d postgres -f migrations/001_initial.sql
@@ -512,6 +441,7 @@ psql -h your-supabase-host -U postgres -d postgres -f migrations/001_initial.sql
 ### Environment Configuration
 
 **Production Environment Variables**
+
 ```bash
 # Flow Blockchain
 VITE_FLOW_NETWORK=mainnet
@@ -541,7 +471,7 @@ class SecureStorage {
     // Use Web Crypto API for encryption
     return CryptoJS.AES.encrypt(data, key).toString();
   }
-  
+
   static storeAPIKey(key: string, value: string): void {
     const encrypted = this.encrypt(value, this.getSessionKey());
     sessionStorage.setItem(key, encrypted);
@@ -555,11 +485,11 @@ const validateBreathingPattern = (pattern: any): BreathingPattern => {
     phases: z.object({
       inhale: z.number().min(1).max(20),
       hold: z.number().min(0).max(30).optional(),
-      exhale: z.number().min(1).max(30)
+      exhale: z.number().min(1).max(30),
     }),
-    difficulty: z.enum(['beginner', 'intermediate', 'advanced'])
+    difficulty: z.enum(["beginner", "intermediate", "advanced"]),
   });
-  
+
   return schema.parse(pattern);
 };
 ```
@@ -571,15 +501,15 @@ const validateBreathingPattern = (pattern: any): BreathingPattern => {
 const validateTransaction = async (transaction: string): Promise<boolean> => {
   // Validate transaction structure
   const parsed = await fcl.decode(transaction);
-  
+
   // Check for malicious code patterns
   const dangerousPatterns = [
     /destroy\s+/,
     /AuthAccount\.save/,
-    /AuthAccount\.load/
+    /AuthAccount\.load/,
   ];
-  
-  return !dangerousPatterns.some(pattern => pattern.test(transaction));
+
+  return !dangerousPatterns.some((pattern) => pattern.test(transaction));
 };
 ```
 
@@ -590,17 +520,17 @@ const validateTransaction = async (transaction: string): Promise<boolean> => {
 class PrivacyPreservingVision {
   private processLocally = true;
   private storeVideoData = false;
-  
+
   async processSession(videoStream: MediaStream): Promise<SessionMetrics> {
     // All processing happens locally
     const metrics = await this.analyzeLocally(videoStream);
-    
+
     // Only store aggregated metrics, never raw video
     await this.storeMetrics(metrics);
-    
+
     // Immediately dispose of video data
     this.disposeVideoData(videoStream);
-    
+
     return metrics;
   }
 }
@@ -612,20 +542,20 @@ class PrivacyPreservingVision {
 
 ```typescript
 // Vision system tests
-describe('VisionSystem', () => {
-  test('should detect device capabilities', async () => {
+describe("VisionSystem", () => {
+  test("should detect device capabilities", async () => {
     const detector = DeviceCapabilityDetector.getInstance();
     const capabilities = await detector.detectCapabilities();
-    
+
     expect(capabilities.cpuCores).toBeGreaterThan(0);
     expect(capabilities.wasmSupport).toBeDefined();
   });
-  
-  test('should adapt to performance constraints', async () => {
+
+  test("should adapt to performance constraints", async () => {
     const visionManager = VisionManager.getInstance();
-    await visionManager.initialize('performance');
-    
-    expect(visionManager.getCurrentTier()).toBe('basic');
+    await visionManager.initialize("performance");
+
+    expect(visionManager.getCurrentTier()).toBe("basic");
   });
 });
 ```
@@ -634,14 +564,14 @@ describe('VisionSystem', () => {
 
 ```typescript
 // Blockchain integration tests
-describe('FlowIntegration', () => {
-  test('should mint breathing pattern NFT', async () => {
+describe("FlowIntegration", () => {
+  test("should mint breathing pattern NFT", async () => {
     const pattern = {
-      name: 'Test Pattern',
+      name: "Test Pattern",
       phases: { inhale: 4, exhale: 6 },
-      difficulty: 'beginner'
+      difficulty: "beginner",
     };
-    
+
     const result = await flowClient.mintBreathingPattern(pattern);
     expect(result.transactionId).toBeDefined();
     expect(result.tokenId).toBeDefined();
@@ -671,20 +601,20 @@ npm run test:memory
 class PerformanceMonitor {
   trackVisionPerformance(metrics: PerformanceMetrics): void {
     // Track CPU usage, memory, frame rate
-    this.analytics.track('vision_performance', {
+    this.analytics.track("vision_performance", {
       cpuUsage: metrics.cpuUsage,
       memoryUsage: metrics.memoryUsage,
       frameRate: metrics.frameRate,
-      tier: this.currentTier
+      tier: this.currentTier,
     });
   }
-  
+
   trackUserEngagement(session: BreathingSession): void {
-    this.analytics.track('session_completed', {
+    this.analytics.track("session_completed", {
       duration: session.duration,
       pattern: session.pattern.name,
       visionEnabled: session.visionMetrics !== null,
-      score: session.score
+      score: session.score,
     });
   }
 }
@@ -696,13 +626,13 @@ class PerformanceMonitor {
 // Comprehensive error handling
 class ErrorTracker {
   trackVisionError(error: VisionError): void {
-    console.error('Vision error:', error);
-    
-    this.analytics.track('vision_error', {
+    console.error("Vision error:", error);
+
+    this.analytics.track("vision_error", {
       code: error.code,
       tier: error.tier,
       recoverable: error.recoverable,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
     });
   }
 }
@@ -718,7 +648,7 @@ class ModelUpdateManager {
   async checkForUpdates(): Promise<void> {
     const availableModels = await this.fetchAvailableModels();
     const currentModels = this.modelLoader.getLoadedModels();
-    
+
     for (const model of availableModels) {
       if (this.shouldUpdate(model, currentModels)) {
         await this.updateModel(model);
@@ -733,9 +663,9 @@ class ModelUpdateManager {
 ```typescript
 // Feature flag system
 const featureFlags = {
-  visionSystem: process.env.VITE_ENABLE_VISION === 'true',
-  premiumTier: process.env.VITE_ENABLE_PREMIUM === 'true',
-  aiCoaching: process.env.VITE_ENABLE_AI_COACHING === 'true'
+  visionSystem: process.env.VITE_ENABLE_VISION === "true",
+  premiumTier: process.env.VITE_ENABLE_PREMIUM === "true",
+  aiCoaching: process.env.VITE_ENABLE_AI_COACHING === "true",
 };
 ```
 
@@ -745,12 +675,14 @@ const featureFlags = {
 
 ```typescript
 // Lazy loading for vision system
-const VisionSystem = lazy(() => import('@/lib/vision'));
+const VisionSystem = lazy(() => import("@/lib/vision"));
 
 // Code splitting by tier
-const BasicVision = lazy(() => import('@/lib/vision/systems/basic-vision'));
-const StandardVision = lazy(() => import('@/lib/vision/systems/standard-vision'));
-const PremiumVision = lazy(() => import('@/lib/vision/systems/premium-vision'));
+const BasicVision = lazy(() => import("@/lib/vision/systems/basic-vision"));
+const StandardVision = lazy(
+  () => import("@/lib/vision/systems/standard-vision")
+);
+const PremiumVision = lazy(() => import("@/lib/vision/systems/premium-vision"));
 ```
 
 ### Caching Strategy
@@ -760,19 +692,21 @@ const PremiumVision = lazy(() => import('@/lib/vision/systems/premium-vision'));
 class ModelCache {
   private cache = new Map<string, any>();
   private maxSize = 100 * 1024 * 1024; // 100MB
-  
+
   async cacheModel(name: string, model: any): Promise<void> {
     if (this.getCacheSize() + this.getModelSize(model) > this.maxSize) {
       await this.evictLeastUsed();
     }
-    
+
     this.cache.set(name, {
       model,
       lastUsed: Date.now(),
-      size: this.getModelSize(model)
+      size: this.getModelSize(model),
     });
   }
 }
 ```
 
-This technical guide provides comprehensive coverage of the platform's architecture, development workflow, and deployment process. The system is designed for production use with proper error handling, security measures, and performance optimization.
+## Conclusion
+
+This Technical Guide provides a consolidated overview of the Imperfect Breath platform's architecture, development processes, and operational considerations. It is designed to be a primary resource for developers while referencing specialized documentation for deeper dives into specific areas such as the vision system and project history. The platform is built for production use with robust error handling, security measures, and performance optimizations, ensuring a scalable and maintainable Web3 wellness solution.
