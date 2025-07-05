@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { useLensService } from '@/hooks/useLensService';
+import { useLens } from '@/hooks/useLens';
 import { useLensFeed } from '@/hooks/useLensFeed';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ interface CommunityStats {
 
 const CommunityFeed: React.FC = () => {
   const { isConnected } = useAccount();
-  const { isAuthenticated, profile, authenticate } = useLensService();
+  const { isAuthenticated, profile, authenticate } = useLens();
   const { posts, isLoading, error, refreshFeed } = useLensFeed();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');

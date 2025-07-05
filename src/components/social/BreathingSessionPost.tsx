@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLensService } from '@/hooks/useLensService';
+import { useLens } from '@/hooks/useLens';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,7 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
   sessionData,
   onPublished
 }) => {
-  const { publishSession, isLoading, isAuthenticated, error } = useLensService();
+  const { publishSession, isLoading, isAuthenticated, error } = useLens();
   const [isPublishing, setIsPublishing] = useState(false);
 
   const handlePublish = async () => {

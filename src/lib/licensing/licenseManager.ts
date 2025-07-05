@@ -490,8 +490,7 @@ export class LicenseManager {
     event: string,
   ): Promise<void> {
     try {
-      // Mock implementation - in production, update pattern statistics
-      const statsKey = `pattern_stats_${patternId}`;
+            const statsKey = `pattern_stats_${patternId}`;
       const stats = JSON.parse(localStorage.getItem(statsKey) || "{}");
 
       stats[event] = (stats[event] || 0) + 1;

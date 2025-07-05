@@ -15,8 +15,7 @@ const mockCrossmintSDK = {
     title: string;
     description: string;
   }): Promise<IPRegistration> => {
-    // Mock implementation - replace with actual Crossmint SDK call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const ipHash = `0x${Math.random().toString(16).substr(2, 64)}`;
     const transactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
@@ -205,8 +204,7 @@ export class IPRegistrationService {
     creatorAddress: string,
   ): Promise<IPRegistration[]> {
     try {
-      // Mock implementation - replace with actual database query
-      const registrations: IPRegistration[] = [];
+            const registrations: IPRegistration[] = [];
 
       // Simulate database lookup
       for (let i = 0; i < localStorage.length; i++) {

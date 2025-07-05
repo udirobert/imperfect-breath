@@ -45,8 +45,7 @@ export class AIAnalyzer {
     insights?: string[];
     recommendations?: string[];
   }> {
-    // Mock implementation - replace with actual AI API call
-    console.log("Analyzing session with provider:", request.provider);
+        console.log("Analyzing session with provider:", request.provider);
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
 

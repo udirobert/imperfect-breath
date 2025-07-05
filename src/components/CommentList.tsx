@@ -1,7 +1,7 @@
 import { Skeleton } from "./ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { useLensService } from "@/hooks/useLensService";
+import { useLens } from "@/hooks/useLens";
 
 interface Comment {
   id: string;
@@ -50,7 +50,7 @@ interface CommentListProps {
 }
 
 export const CommentList = ({ publicationId }: CommentListProps) => {
-  const { isAuthenticated } = useLensService();
+  const { isAuthenticated } = useLens();
 
   const {
     data: comments,

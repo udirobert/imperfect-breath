@@ -4,7 +4,7 @@ import { injected } from "wagmi/connectors";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useLensAuth } from "@/hooks/useLensAuth";
+import { useLens } from "@/hooks/useLens";
 import { getAppAddress } from "@/lib/lens/config";
 
 export const LensV3Test: React.FC = () => {
@@ -26,7 +26,7 @@ export const LensV3Test: React.FC = () => {
     logout: lensLogout,
     resumeSession,
     getCurrentSession,
-  } = useLensAuth();
+  } = useLens();
 
   const addTestResult = (message: string) => {
     setTestResults((prev) => [

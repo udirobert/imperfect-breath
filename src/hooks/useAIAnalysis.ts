@@ -3,6 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useFlow } from '@/hooks/useFlow';
 import { config, debugLog } from '@/config/environment';
 import { SupabaseService } from '@/lib/supabase';
+import { useBreathingSessionValidation } from '@/hooks/useValidation';
+import { DataSanitizer } from '@/lib/validation/sanitizer';
 
 export interface SessionData {
   patternName: string;
@@ -33,19 +35,32 @@ export const useAIAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { executeTransaction } = useFlow();
+  const { validateSession } = useBreathingSessionValidation();
 
   const analyzeWithGemini = useCallback(async (
     sessionData: SessionData
   ): Promise<AIAnalysisResult | null> => {
     try {
-      if (!config.ai.geminiApiKey) {
-        throw new Error('Gemini API key not configured');
+      // Validate and sanitize session data first
+      const validation = validateSession(sessionData);
+      if (!validation.isValid) {
+        throw new Error(`Invalid session data: ${validation.errors.join(', ')}`);
       }
 
-      const genAI = new GoogleGenerativeAI(config.ai.geminiApiKey);
+      const sanitizedData = validation.sanitizedData;
+
+      // Get API key from secure storage
+      const { AIConfigManager } = await import('@/lib/ai/config');
+      const apiKey = await AIConfigManager.getApiKey('google');
+      
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured. Please add your API key in settings.');
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-      const prompt = buildAnalysisPrompt(sessionData);
+      const prompt = buildAnalysisPrompt(sanitizedData);
       debugLog('Sending prompt to Gemini:', prompt);
 
       const result = await model.generateContent(prompt);
@@ -54,32 +69,40 @@ export const useAIAnalysis = () => {
 
       debugLog('Gemini response:', text);
 
+      // Sanitize the response text
+      const sanitizedResponse = DataSanitizer.sanitizeText(text, { maxLength: 5000 });
+
       // Attempt to parse the JSON response
       let parsedResult: any;
       try {
         // Clean the response text to extract JSON
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonMatch = sanitizedResponse.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           parsedResult = JSON.parse(jsonMatch[0]);
         } else {
           throw new Error('No JSON found in response');
         }
       } catch (jsonError) {
-        console.error("Failed to parse Gemini response as JSON:", text, jsonError);
+        console.error("Failed to parse Gemini response as JSON:", sanitizedResponse, jsonError);
         // Fallback if JSON parsing fails
-        parsedResult = createFallbackAnalysis(sessionData, text);
+        parsedResult = createFallbackAnalysis(sanitizedData, sanitizedResponse);
       }
 
+      // Sanitize the parsed result
       const analysisResult: AIAnalysisResult = {
         provider: 'gemini',
-        analysis: parsedResult.analysis || 'Analysis completed successfully.',
-        suggestions: Array.isArray(parsedResult.suggestions) ? parsedResult.suggestions : ['Continue practicing regularly'],
-        nextSteps: Array.isArray(parsedResult.nextSteps) ? parsedResult.nextSteps : ['Try a longer session next time'],
+        analysis: DataSanitizer.sanitizeText(parsedResult.analysis || 'Analysis completed successfully.', { maxLength: 2000 }),
+        suggestions: Array.isArray(parsedResult.suggestions) 
+          ? parsedResult.suggestions.map((s: string) => DataSanitizer.sanitizeText(s, { maxLength: 200 }))
+          : ['Continue practicing regularly'],
+        nextSteps: Array.isArray(parsedResult.nextSteps) 
+          ? parsedResult.nextSteps.map((s: string) => DataSanitizer.sanitizeText(s, { maxLength: 200 }))
+          : ['Try a longer session next time'],
         score: {
-          overall: Math.min(100, Math.max(0, parsedResult.score?.overall || 75)),
-          focus: Math.min(100, Math.max(0, parsedResult.score?.focus || 70)),
-          consistency: Math.min(100, Math.max(0, parsedResult.score?.consistency || 80)),
-          progress: Math.min(100, Math.max(0, parsedResult.score?.progress || 75))
+          overall: Math.min(100, Math.max(0, DataSanitizer.sanitizeNumber(parsedResult.score?.overall, false) || 75)),
+          focus: Math.min(100, Math.max(0, DataSanitizer.sanitizeNumber(parsedResult.score?.focus, false) || 70)),
+          consistency: Math.min(100, Math.max(0, DataSanitizer.sanitizeNumber(parsedResult.score?.consistency, false) || 80)),
+          progress: Math.min(100, Math.max(0, DataSanitizer.sanitizeNumber(parsedResult.score?.progress, false) || 75))
         }
       };
 
@@ -90,7 +113,7 @@ export const useAIAnalysis = () => {
       console.error('Gemini analysis failed:', err);
       return createErrorFallback(sessionData, err instanceof Error ? err.message : 'Unknown error');
     }
-  }, []);
+  }, [validateSession]);
 
   const analyzeSession = useCallback(async (
     sessionData: SessionData,

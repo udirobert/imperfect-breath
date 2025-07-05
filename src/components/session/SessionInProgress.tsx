@@ -5,7 +5,7 @@ import { useBreathingSession } from "@/hooks/useBreathingSession";
 import { SessionHeader } from "./SessionHeader";
 import { SessionControls } from "./SessionControls";
 import { Button } from "@/components/ui/button";
-import type { TrackingStatus, Keypoint } from "@/hooks/useCameraTracking";
+import type { TrackingStatus, Keypoint } from "@/hooks/useVision";
 import { Loader2, Camera } from "lucide-react";
 import VideoFeed from "@/components/VideoFeed";
 

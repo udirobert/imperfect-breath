@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useBreathingSession } from "@/hooks/useBreathingSession";
-import { TrackingStatus, Keypoint } from "@/hooks/useCameraTracking";
+import { TrackingStatus, Keypoint } from "@/hooks/useVision";
 import { Loader2, Camera } from "lucide-react";
 
 const VideoFeed = lazy(() => import("@/components/VideoFeed"));

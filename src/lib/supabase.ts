@@ -19,6 +19,7 @@ export interface Database {
           preferred_chain: string;
           notification_settings: any;
           privacy_settings: any;
+          is_demo: boolean;
           created_at: string;
           updated_at: string;
           last_active_at: string;
@@ -36,6 +37,7 @@ export interface Database {
           preferred_chain?: string;
           notification_settings?: any;
           privacy_settings?: any;
+          is_demo?: boolean;
           created_at?: string;
           updated_at?: string;
           last_active_at?: string;
@@ -53,6 +55,7 @@ export interface Database {
           preferred_chain?: string;
           notification_settings?: any;
           privacy_settings?: any;
+          is_demo?: boolean;
           created_at?: string;
           updated_at?: string;
           last_active_at?: string;
@@ -81,6 +84,7 @@ export interface Database {
           usage_count: number;
           rating_average: number;
           rating_count: number;
+          is_demo: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -106,6 +110,7 @@ export interface Database {
           usage_count?: number;
           rating_average?: number;
           rating_count?: number;
+          is_demo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -131,6 +136,7 @@ export interface Database {
           usage_count?: number;
           rating_average?: number;
           rating_count?: number;
+          is_demo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -155,6 +161,7 @@ export interface Database {
           device_info?: any;
           flow_transaction_id?: string;
           lens_post_id?: string;
+          is_demo: boolean;
           started_at: string;
           completed_at?: string;
           created_at: string;
@@ -201,6 +208,7 @@ export interface Database {
           device_info?: any;
           flow_transaction_id?: string;
           lens_post_id?: string;
+          is_demo?: boolean;
           started_at?: string;
           completed_at?: string;
           created_at?: string;
@@ -286,14 +294,21 @@ export class SupabaseService {
     return data;
   }
 
-  static async getPublicPatterns(limit = 20, offset = 0) {
-    const { data, error } = await supabase
+  static async getPublicPatterns(limit = 20, offset = 0, includeDemoData = false) {
+    let query = supabase
       .from('breathing_patterns')
       .select(`
         *,
-        creator:users(id, username, display_name, avatar_url)
+        creator:users(id, username, display_name, avatar_url, is_demo)
       `)
-      .eq('is_public', true)
+      .eq('is_public', true);
+
+    // Filter out demo data by default
+    if (!includeDemoData) {
+      query = query.eq('is_demo', false);
+    }
+
+    const { data, error } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     
@@ -324,14 +339,21 @@ export class SupabaseService {
     return data;
   }
 
-  static async getUserSessions(userId: string, limit = 50) {
-    const { data, error } = await supabase
+  static async getUserSessions(userId: string, limit = 50, includeDemoData = false) {
+    let query = supabase
       .from('breathing_sessions')
       .select(`
         *,
-        pattern:breathing_patterns(id, name, category)
+        pattern:breathing_patterns(id, name, category, is_demo)
       `)
-      .eq('user_id', userId)
+      .eq('user_id', userId);
+
+    // Filter out demo data by default
+    if (!includeDemoData) {
+      query = query.eq('is_demo', false);
+    }
+
+    const { data, error } = await query
       .order('started_at', { ascending: false })
       .limit(limit);
     

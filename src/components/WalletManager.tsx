@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useFlow } from "@/hooks/useFlow";
-import { useLensService } from "@/hooks/useLensService";
+import { useLens } from "@/hooks/useLens";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -38,7 +38,7 @@ export const WalletManager = () => {
     logout,
     session,
     profile,
-  } = useLensService();
+  } = useLens();
 
   const [isFlowSetupLoading, setIsFlowSetupLoading] = useState(false);
 

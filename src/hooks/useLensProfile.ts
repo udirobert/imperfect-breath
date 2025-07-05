@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { publicClient } from "@/lib/publicClient";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
-import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from "@/lib/lens";
+// Mock ABI for legacy contract calls - this hook should be deprecated
+const LENS_HUB_ABI = [] as const;
+// Use a hardcoded address for now since lensTestnet is not exported
+const LENS_HUB_ADDRESS = "0x4fbffF20302F3326B20052ab9C217C44F6480900" as const;
 // Legacy Lens profile hook - using contract calls as fallback
 
 export interface LensProfile {
@@ -43,7 +46,7 @@ export const useLensProfile = () => {
       try {
         // 1. Get the default profile ID for the wallet address
         const profileId = await publicClient.readContract({
-          address: LENS_HUB_CONTRACT_ADDRESS,
+          address: LENS_HUB_ADDRESS,
           abi: LENS_HUB_ABI,
           functionName: "defaultProfile",
           args: [profile.wallet_address],
@@ -56,21 +59,21 @@ export const useLensProfile = () => {
 
         // 2. Get the profile data using the profile ID
         const lensData = (await publicClient.readContract({
-          address: LENS_HUB_CONTRACT_ADDRESS,
+          address: LENS_HUB_ADDRESS,
           abi: LENS_HUB_ABI,
           functionName: "getProfile",
           args: [profileId],
         })) as LensProfileData;
 
         const followersCount = (await publicClient.readContract({
-          address: LENS_HUB_CONTRACT_ADDRESS,
+          address: LENS_HUB_ADDRESS,
           abi: LENS_HUB_ABI,
           functionName: "getFollowersCount",
           args: [profileId],
         })) as bigint;
 
         const followingCount = (await publicClient.readContract({
-          address: LENS_HUB_CONTRACT_ADDRESS,
+          address: LENS_HUB_ADDRESS,
           abi: LENS_HUB_ABI,
           functionName: "getFollowingCount",
           args: [profileId],

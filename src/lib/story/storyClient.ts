@@ -1,3 +1,8 @@
+/**
+ * @deprecated This hook/client is deprecated. Use useStory() from '@/hooks/useStoryConsolidated' instead.
+ * This file will be removed in a future version.
+ */
+
 import { StoryClient, StoryConfig } from "@story-protocol/core-sdk";
 import { http } from "viem";
 import { privateKeyToAccount, Address } from "viem/accounts";

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useFlow } from "@/hooks/useFlow";
-import { useLensService } from "@/hooks/useLensService";
+import { useLens } from "@/hooks/useLens";
 import { config, debugLog } from "@/config/environment";
 
 // Multichain user identity
@@ -59,7 +59,7 @@ export const Web3Provider = ({ children }: { children: React.ReactNode }) => {
 
   // Initialize blockchain hooks
   const flow = useFlow();
-  const lens = useLensService();
+  const lens = useLens();
 
   // Update user state when blockchain connections change
   useEffect(() => {

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import { useBreathingSession } from "@/hooks/useBreathingSession";
 import { BreathingPattern, BREATHING_PATTERNS } from "@/lib/breathingPatterns";
-import { useCameraTracking } from "@/hooks/useCameraTracking";
+import { useVision } from "@/hooks/useVision";
 import { useAIFeedback } from "@/hooks/useAIFeedback";
 
 import { SessionSetup } from "@/components/session/SessionSetup";
@@ -43,7 +43,7 @@ const BreathingSession = () => {
     trackingStatus,
     initializeCamera,
     cleanup,
-  } = useCameraTracking({
+  } = useVision({
     videoRef,
     isTracking,
   });

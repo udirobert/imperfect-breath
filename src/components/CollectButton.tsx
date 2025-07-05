@@ -1,14 +1,14 @@
 import { Button } from "./ui/button";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
-import { useLensService } from "@/hooks/useLensService";
+import { useLens } from "@/hooks/useLens";
 
 interface CollectButtonProps {
   publicationId: string; // The ID of the publication to collect
 }
 
 export const CollectButton = ({ publicationId }: CollectButtonProps) => {
-  const { isAuthenticated, authenticate, isLoading } = useLensService();
+  const { isAuthenticated, authenticate, isLoading } = useLens();
 
   const handleCollect = async () => {
     if (!isAuthenticated) {

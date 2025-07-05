@@ -60,13 +60,13 @@ const EnhancedIndex = () => {
       title: "Monetize Your Expertise",
       description:
         "Earn from your unique breathing techniques through blockchain IP protection",
-      highlight: "Earn $100-5000+/month",
+      highlight: "Early Platform - Growing",
     },
     {
       icon: Users,
       title: "Global Reach",
-      description: "Share your techniques with millions of users worldwide",
-      highlight: "15,000+ active users",
+      description: "Share your techniques with users worldwide",
+      highlight: "Growing Community",
     },
     {
       icon: Shield,
@@ -85,25 +85,28 @@ const EnhancedIndex = () => {
 
   const testimonials = [
     {
-      name: "Sarah Chen",
-      role: "Yoga Instructor",
+      name: "Platform Beta Tester",
+      role: "Early Adopter",
       content:
-        "I've earned over $2,000 in my first month sharing my custom breathing patterns. The platform makes it so easy!",
-      rating: 5,
+        "The blockchain-based IP protection concept is innovative. Looking forward to seeing the platform grow.",
+      rating: 4,
+      isDemo: true,
     },
     {
-      name: "Dr. Michael Torres",
-      role: "Breathwork Therapist",
+      name: "Wellness Professional",
+      role: "Industry Expert",
       content:
-        "The IP protection gives me confidence to share my proprietary techniques. Game-changing for our industry.",
-      rating: 5,
+        "The multichain approach to wellness content is unique. Excited about the potential for creators.",
+      rating: 4,
+      isDemo: true,
     },
     {
-      name: "Emma Williams",
-      role: "Meditation Teacher",
+      name: "Tech Enthusiast",
+      role: "Web3 User",
       content:
-        "My students love the guided sessions I create here. The audio integration is seamless.",
-      rating: 5,
+        "Interesting use case for blockchain technology in the wellness space. Platform has potential.",
+      rating: 4,
+      isDemo: true,
     },
   ];
 
@@ -335,6 +338,13 @@ const EnhancedIndex = () => {
             {testimonials.map((testimonial, index) => (
               <Card key={index} className="relative">
                 <CardContent className="p-6">
+                  {testimonial.isDemo && (
+                    <div className="mb-3">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        Early Feedback
+                      </Badge>
+                    </div>
+                  )}
                   <div className="flex mb-3">
                     {[...Array(testimonial.rating)].map((_, i) => (
                       <Star
@@ -367,34 +377,40 @@ const EnhancedIndex = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                500+
+                Beta
               </div>
               <div className="text-sm text-muted-foreground">
-                Expert Instructors
+                Platform Stage
               </div>
             </div>
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                15K+
+                3
               </div>
-              <div className="text-sm text-muted-foreground">Active Users</div>
+              <div className="text-sm text-muted-foreground">Blockchains Integrated</div>
             </div>
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                2M+
+                Web3
               </div>
               <div className="text-sm text-muted-foreground">
-                Sessions Completed
+                Native Platform
               </div>
             </div>
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                $50K+
+                USDC
               </div>
               <div className="text-sm text-muted-foreground">
-                Instructor Earnings
+                Unified Currency
               </div>
             </div>
+          </div>
+          
+          <div className="mt-8 text-center">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              Platform in active development - Join our growing community
+            </Badge>
           </div>
         </div>
       </div>

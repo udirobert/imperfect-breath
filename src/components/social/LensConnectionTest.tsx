@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAccount } from 'wagmi';
-import { useLensService } from '@/hooks/useLensService';
+import { useLens } from '@/hooks/useLens';
 import { WalletConnection } from '@/components/wallet/WalletConnection';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,7 @@ export const LensConnectionTest: React.FC = () => {
     authenticate, 
     logout,
     publishSession 
-  } = useLensService();
+  } = useLens();
   
   const { isConnected, chain } = useAccount();
   const isOnLensTestnet = chain?.id === lensTestnet.id;

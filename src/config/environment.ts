@@ -20,6 +20,8 @@ interface EnvironmentConfig {
   story: {
     chainId: string;
     rpcUrl: string;
+    privateKey?: string;
+    isTestnet: boolean;
   };
   ai: {
     geminiApiKey: string;
@@ -77,6 +79,8 @@ export const config: EnvironmentConfig = {
   story: {
     chainId: import.meta.env.VITE_STORY_CHAIN_ID || '11155111',
     rpcUrl: import.meta.env.VITE_STORY_RPC_URL!,
+    privateKey: import.meta.env.VITE_STORY_PRIVATE_KEY,
+    isTestnet: import.meta.env.VITE_STORY_NETWORK !== 'mainnet',
   },
   ai: {
     geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY!,

@@ -68,35 +68,50 @@ export interface AIAnalysisResponse {
   error?: string;
 }
 
-// Local storage keys for API keys (encrypted)
-const API_KEY_STORAGE_PREFIX = "breath_ai_key_";
+import { SecureAPIKeyManager } from '@/lib/crypto/secure-storage';
 
 export class AIConfigManager {
-  static setApiKey(provider: string, apiKey: string): void {
-    // In a production app, you'd want to encrypt these keys
-    localStorage.setItem(`${API_KEY_STORAGE_PREFIX}${provider}`, apiKey);
+  static async setApiKey(provider: string, apiKey: string): Promise<void> {
+    await SecureAPIKeyManager.setAPIKey(provider, apiKey);
   }
 
-  static getApiKey(provider: string): string | null {
-    return localStorage.getItem(`${API_KEY_STORAGE_PREFIX}${provider}`);
+  static async getApiKey(provider: string): Promise<string | null> {
+    return await SecureAPIKeyManager.getAPIKey(provider);
   }
 
   static removeApiKey(provider: string): void {
-    localStorage.removeItem(`${API_KEY_STORAGE_PREFIX}${provider}`);
+    SecureAPIKeyManager.removeAPIKey(provider);
   }
 
   static hasApiKey(provider: string): boolean {
-    return !!this.getApiKey(provider);
+    return SecureAPIKeyManager.hasAPIKey(provider);
   }
 
-  static getConfiguredProviders(): AIProvider[] {
-    return AI_PROVIDERS.filter((provider) => this.hasApiKey(provider.id));
+  static async getConfiguredProviders(): Promise<AIProvider[]> {
+    const configuredProviderIds = SecureAPIKeyManager.getConfiguredProviders();
+    return AI_PROVIDERS.filter((provider) => configuredProviderIds.includes(provider.id));
   }
 
   static clearAllKeys(): void {
-    AI_PROVIDERS.forEach((provider) => {
-      this.removeApiKey(provider.id);
-    });
+    SecureAPIKeyManager.clearAllAPIKeys();
+  }
+
+  /**
+   * Initialize secure storage and migrate from localStorage if needed
+   */
+  static async initialize(): Promise<void> {
+    try {
+      await SecureAPIKeyManager.migrateFromLocalStorage();
+    } catch (error) {
+      console.warn('Failed to migrate API keys from localStorage:', error);
+    }
+  }
+
+  /**
+   * Check if secure storage is supported
+   */
+  static isSecureStorageSupported(): boolean {
+    return SecureAPIKeyManager['isSupported']?.() ?? false;
   }
 }
 

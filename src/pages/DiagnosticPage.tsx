@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useCameraTracking } from "@/hooks/useCameraTracking";
+import { useVision } from "@/hooks/useVision";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LensConnectionTest } from "@/components/social/LensConnectionTest";
 import {
@@ -36,7 +36,7 @@ const DiagnosticPage = () => {
     trackingStatus,
     isModelsLoaded,
     initializeCamera,
-  } = useCameraTracking({
+  } = useVision({
     videoRef,
     isTracking: isTestingActive,
   });

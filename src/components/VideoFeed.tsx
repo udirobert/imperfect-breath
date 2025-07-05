@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import type { TrackingStatus, Keypoint } from "@/hooks/useCameraTracking";
+import type { TrackingStatus, Keypoint } from "@/hooks/useVision";
 import { Loader2 } from "lucide-react";
 
 interface VideoFeedProps {
@@ -18,7 +18,7 @@ const VideoFeed = ({
   trackingStatus,
   className,
 }: VideoFeedProps) => {
-  // Camera initialization is now handled by the useCameraTracking hook
+  // Camera initialization is now handled by the useVision hook
 
   // VideoFeed component for camera display
 

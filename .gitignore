@@ -16,7 +16,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
-!.env.development
+# NEVER track .env.development - it may contain real secrets
 
 # Flow-specific security files
 *.pkey

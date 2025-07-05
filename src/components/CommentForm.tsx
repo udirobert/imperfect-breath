@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { useLensService } from "@/hooks/useLensService";
+import { useLens } from "@/hooks/useLens";
 
 interface CommentFormProps {
   publicationId: string;
@@ -14,7 +14,7 @@ export const CommentForm = ({
   onCommentPosted,
 }: CommentFormProps) => {
   const [commentText, setCommentText] = useState("");
-  const { isAuthenticated, authenticate, isLoading } = useLensService();
+  const { isAuthenticated, authenticate, isLoading } = useLens();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

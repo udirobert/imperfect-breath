@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DemoIndicator } from "@/components/ui/demo-badge";
 import {
   Play,
   Star,
@@ -27,7 +28,7 @@ import {
 import type { EnhancedCustomPattern } from "@/types/patterns";
 
 interface PatternCardProps {
-  pattern: EnhancedCustomPattern;
+  pattern: EnhancedCustomPattern & { is_demo?: boolean };
   onPlay: (pattern: EnhancedCustomPattern) => void;
   onLike?: (patternId: string) => void;
   isLiked?: boolean;
@@ -99,17 +100,22 @@ export const PatternCard: React.FC<PatternCardProps> = ({
             </div>
           </div>
 
-          {/* Price/Premium Badge */}
-          {showPrice && pattern.licenseSettings?.isCommercial && (
-            <div className="flex items-center gap-1 text-primary font-medium">
-              <DollarSign className="h-4 w-4" />
-              {pattern.licenseSettings.price} {pattern.licenseSettings.currency}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Demo Indicator */}
+            <DemoIndicator isDemo={pattern.is_demo || false} />
+            
+            {/* Price/Premium Badge */}
+            {showPrice && pattern.licenseSettings?.isCommercial && (
+              <div className="flex items-center gap-1 text-primary font-medium">
+                <DollarSign className="h-4 w-4" />
+                {pattern.licenseSettings.price} USDC
+              </div>
+            )}
 
-          {!pattern.licenseSettings?.isCommercial && (
-            <Badge variant="secondary">Free</Badge>
-          )}
+            {!pattern.licenseSettings?.isCommercial && (
+              <Badge variant="secondary">Free</Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
 
