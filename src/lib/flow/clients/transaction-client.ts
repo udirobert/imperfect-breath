@@ -4,13 +4,16 @@
  */
 
 import BaseFlowClient from './base-client';
-import type { 
-  EVMBatchCall, 
-  CallOutcome, 
-  BatchTransactionResult, 
+import type {
+  EVMBatchCall,
+  CallOutcome,
+  BatchTransactionResult,
   FlowTransactionResult,
-  TransactionStatus 
+  TransactionStatus
 } from '../types';
+import { handleError } from '@/lib/utils/error-utils';
+import { startTimer, timed } from '@/lib/utils/performance-utils';
+import { getCache } from '@/lib/utils/cache-utils';
 
 export interface TransactionOptions {
   gasLimit?: number;
@@ -28,6 +31,7 @@ export interface BatchOptions {
 export class TransactionClient {
   private baseClient: BaseFlowClient;
   private pendingTransactions = new Map<string, Promise<FlowTransactionResult>>();
+  private cache = getCache();
   
   constructor() {
     this.baseClient = BaseFlowClient.getInstance();
@@ -41,6 +45,8 @@ export class TransactionClient {
     args: any[] = [],
     options: TransactionOptions = {}
   ): Promise<FlowTransactionResult> {
+    const endTimer = startTimer('executeTransaction');
+    
     const {
       gasLimit = 1000,
       timeout = 30000,
@@ -68,6 +74,7 @@ export class TransactionClient {
         
         // Check if transaction succeeded
         if (result.status === 4 && !result.errorMessage) {
+          endTimer();
           return result;
         } else {
           throw new Error(`Transaction failed: ${result.errorMessage || 'Unknown error'}`);
@@ -83,7 +90,8 @@ export class TransactionClient {
       }
     }
     
-    throw lastError || new Error('Transaction failed after all retries');
+    endTimer();
+    throw handleError('execute transaction', lastError || new Error('Transaction failed after all retries'));
   }
   
   /**
@@ -97,6 +105,8 @@ export class TransactionClient {
     }>,
     batchOptions: BatchOptions = {}
   ): Promise<BatchTransactionResult[]> {
+    const endTimer = startTimer('executeBatchTransactions');
+    
     const {
       maxConcurrent = 3,
       failFast = false,
@@ -106,82 +116,90 @@ export class TransactionClient {
     const results: BatchTransactionResult[] = [];
     const chunks = this.chunkArray(transactions, maxConcurrent);
     
-    for (const chunk of chunks) {
-      const chunkPromises = chunk.map(async (tx, index) => {
+    try {
+      for (const chunk of chunks) {
+        const chunkPromises = chunk.map(async (tx, index) => {
+          try {
+            const result = await this.executeTransaction(tx.script, tx.args, tx.options);
+            
+            return {
+              txId: result.statusString, // Use status string as identifier
+              results: [{
+                success: true,
+                returnData: JSON.stringify(result.events),
+                gasUsed: 0, // Flow doesn't expose gas usage directly
+                error: undefined
+              }],
+              isError: false,
+              totalGasUsed: 0
+            } as BatchTransactionResult;
+            
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            
+            if (failFast) {
+              throw error;
+            }
+            
+            return {
+              txId: `failed-${index}`,
+              results: [{
+                success: false,
+                returnData: '',
+                gasUsed: 0,
+                error: errorMessage
+              }],
+              isError: true,
+              totalGasUsed: 0
+            } as BatchTransactionResult;
+          }
+        });
+        
         try {
-          const result = await this.executeTransaction(tx.script, tx.args, tx.options);
-          
-          return {
-            txId: result.statusString, // Use status string as identifier
-            results: [{
-              success: true,
-              returnData: JSON.stringify(result.events),
-              gasUsed: 0, // Flow doesn't expose gas usage directly
-              error: undefined
-            }],
-            isError: false,
-            totalGasUsed: 0
-          } as BatchTransactionResult;
-          
+          const chunkResults = await Promise.all(chunkPromises);
+          results.push(...chunkResults);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          
           if (failFast) {
             throw error;
           }
-          
-          return {
-            txId: `failed-${index}`,
-            results: [{
-              success: false,
-              returnData: '',
-              gasUsed: 0,
-              error: errorMessage
-            }],
-            isError: true,
-            totalGasUsed: 0
-          } as BatchTransactionResult;
-        }
-      });
-      
-      try {
-        const chunkResults = await Promise.all(chunkPromises);
-        results.push(...chunkResults);
-      } catch (error) {
-        if (failFast) {
-          throw error;
         }
       }
+      
+      // Retry failures if requested
+      if (retryFailures) {
+        const failedIndices = results
+          .map((result, index) => ({ result, index }))
+          .filter(({ result }) => result.isError)
+          .map(({ index }) => index);
+        
+        for (const index of failedIndices) {
+          try {
+            const tx = transactions[index];
+            const retryResult = await this.executeTransaction(tx.script, tx.args, tx.options);
+            
+            results[index] = {
+              txId: retryResult.statusString,
+              results: [{
+                success: true,
+                returnData: JSON.stringify(retryResult.events),
+                gasUsed: 0,
+                error: undefined
+              }],
+              isError: false,
+              totalGasUsed: 0
+            };
+          } catch (error) {
+            // Keep original failure
+          }
+        }
+      }
+    } catch (error) {
+      endTimer();
+      throw handleError('execute batch transactions', error);
     }
     
-    // Retry failures if requested
-    if (retryFailures) {
-      const failedIndices = results
-        .map((result, index) => ({ result, index }))
-        .filter(({ result }) => result.isError)
-        .map(({ index }) => index);
-      
-      for (const index of failedIndices) {
-        try {
-          const tx = transactions[index];
-          const retryResult = await this.executeTransaction(tx.script, tx.args, tx.options);
-          
-          results[index] = {
-            txId: retryResult.statusString,
-            results: [{
-              success: true,
-              returnData: JSON.stringify(retryResult.events),
-              gasUsed: 0,
-              error: undefined
-            }],
-            isError: false,
-            totalGasUsed: 0
-          };
-        } catch (error) {
-          // Keep original failure
-        }
-      }
-    }
+    const duration = endTimer();
+    console.log(`Executed ${results.length} transactions in batch in ${duration.toFixed(2)}ms`);
     
     return results;
   }
@@ -190,6 +208,8 @@ export class TransactionClient {
    * Execute EVM batch calls (for COA integration)
    */
   async executeEVMBatchCalls(calls: EVMBatchCall[]): Promise<BatchTransactionResult> {
+    const endTimer = startTimer('executeEVMBatchCalls');
+    
     try {
       // This would integrate with Flow's EVM functionality
       // For now, simulate the batch execution
@@ -202,16 +222,19 @@ export class TransactionClient {
       
       const totalGasUsed = results.reduce((sum, result) => sum + result.gasUsed, 0);
       
-      return {
+      const result = {
         txId: `batch-${Date.now()}`,
         results,
         isError: false,
         totalGasUsed
       };
+      
+      endTimer();
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Batch execution failed';
       
-      return {
+      const failedResult = {
         txId: `failed-batch-${Date.now()}`,
         results: calls.map(() => ({
           success: false,
@@ -222,6 +245,9 @@ export class TransactionClient {
         isError: true,
         totalGasUsed: 0
       };
+      
+      endTimer();
+      return failedResult;
     }
   }
   
@@ -229,7 +255,29 @@ export class TransactionClient {
    * Get transaction status with caching
    */
   async getTransactionStatus(txId: string): Promise<TransactionStatus> {
-    return this.baseClient.getTransactionStatus(txId);
+    const endTimer = startTimer('getTransactionStatus');
+    const cacheKey = `tx-status-${txId}`;
+    
+    // Check cache first (short TTL for transaction status)
+    const cached = this.cache.get<TransactionStatus>(cacheKey);
+    if (cached) {
+      endTimer();
+      return cached;
+    }
+    
+    try {
+      const status = await this.baseClient.getTransactionStatus(txId);
+      
+      // Cache status for 5 seconds (except for final statuses which we can cache longer)
+      const ttl = status === 'SEALED' || status === 'EXPIRED' ? 60000 : 5000;
+      this.cache.set(cacheKey, status, ttl);
+      
+      endTimer();
+      return status;
+    } catch (error) {
+      endTimer();
+      throw handleError('get transaction status', error);
+    }
   }
   
   /**
@@ -239,18 +287,36 @@ export class TransactionClient {
     txIds: string[],
     onUpdate: (txId: string, status: TransactionStatus) => void
   ): Promise<void> {
-    const monitors = txIds.map(txId => this.monitorTransaction(txId, onUpdate));
-    await Promise.all(monitors);
+    const endTimer = startTimer('monitorTransactions');
+    try {
+      const monitors = txIds.map(txId => this.monitorTransaction(txId, onUpdate));
+      await Promise.all(monitors);
+      endTimer();
+    } catch (error) {
+      endTimer();
+      throw handleError('monitor transactions', error);
+    }
   }
   
   /**
    * Cancel pending transaction (if possible)
    */
   async cancelTransaction(txId: string): Promise<boolean> {
-    // Flow doesn't support transaction cancellation
-    // Remove from pending transactions
-    this.pendingTransactions.delete(txId);
-    return false;
+    const endTimer = startTimer('cancelTransaction');
+    try {
+      // Flow doesn't support transaction cancellation
+      // Remove from pending transactions
+      this.pendingTransactions.delete(txId);
+      
+      // Clear any cached status
+      this.cache.delete(`tx-status-${txId}`);
+      
+      endTimer();
+      return false;
+    } catch (error) {
+      endTimer();
+      throw handleError('cancel transaction', error);
+    }
   }
   
   /**
@@ -274,12 +340,12 @@ export class TransactionClient {
    */
   private async monitorTransaction(
     txId: string,
-    onStatusChange: (status: TransactionStatus) => void
+    onStatusChange: (txId: string, status: TransactionStatus) => void
   ): Promise<void> {
     const checkStatus = async () => {
       try {
         const status = await this.getTransactionStatus(txId);
-        onStatusChange(status);
+        onStatusChange(txId, status);
         
         if (status === 'SEALED' || status === 'EXPIRED') {
           return;
@@ -288,11 +354,11 @@ export class TransactionClient {
         // Continue monitoring
         setTimeout(checkStatus, 1000);
       } catch (error) {
-        console.error('Error monitoring transaction:', error);
+        console.error(`Error monitoring transaction ${txId}:`, error);
       }
     };
     
-    checkStatus();
+    await checkStatus();
   }
   
   /**

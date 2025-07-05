@@ -5,19 +5,23 @@
 
 import * as fcl from '@onflow/fcl';
 import * as types from '@onflow/types';
-import type { 
-  FlowConfig, 
-  FlowAccount, 
-  FlowTransaction, 
+import type {
+  FlowConfig,
+  FlowAccount,
+  FlowTransaction,
   FlowTransactionResult,
   TransactionStatus,
-  FlowError 
+  FlowError
 } from '../types';
+import { handleError } from '@/lib/utils/error-utils';
+import { startTimer, timed } from '@/lib/utils/performance-utils';
+import { getCache } from '@/lib/utils/cache-utils';
 
 export class BaseFlowClient {
   private static instance: BaseFlowClient | null = null;
   private isInitialized = false;
   private config: FlowConfig | null = null;
+  private cache = getCache();
   
   private constructor() {}
   
@@ -35,7 +39,10 @@ export class BaseFlowClient {
    * Initialize Flow client with configuration
    */
   async initialize(config: FlowConfig): Promise<void> {
+    const endTimer = startTimer('initialize');
+    
     if (this.isInitialized && this.config?.network === config.network) {
+      endTimer();
       return;
     }
     
@@ -54,10 +61,11 @@ export class BaseFlowClient {
       this.config = config;
       this.isInitialized = true;
       
-      console.log(`Flow client initialized for ${config.network}`);
+      const duration = endTimer();
+      console.log(`Flow client initialized for ${config.network} in ${duration.toFixed(2)}ms`);
     } catch (error) {
-      console.error('Failed to initialize Flow client:', error);
-      throw this.createFlowError('INIT_FAILED', 'Failed to initialize Flow client', error);
+      endTimer();
+      throw handleError('initialize Flow client', error);
     }
   }
   
@@ -65,12 +73,21 @@ export class BaseFlowClient {
    * Get account information
    */
   async getAccount(address: string): Promise<FlowAccount> {
+    const endTimer = startTimer('getAccount');
     this.ensureInitialized();
+    
+    // Check cache first
+    const cacheKey = `account-${address}`;
+    const cached = this.cache.get<FlowAccount>(cacheKey);
+    if (cached) {
+      endTimer();
+      return cached;
+    }
     
     try {
       const account = await fcl.account(address);
       
-      return {
+      const result = {
         address: account.address,
         balance: account.balance,
         keys: account.keys.map((key: any) => ({
@@ -83,9 +100,15 @@ export class BaseFlowClient {
           revoked: key.revoked,
         })),
       };
+      
+      // Cache account info for 60 seconds
+      this.cache.set(cacheKey, result, 60000);
+      
+      endTimer();
+      return result;
     } catch (error) {
-      console.error('Failed to get account:', error);
-      throw this.createFlowError('ACCOUNT_FETCH_FAILED', `Failed to get account ${address}`, error);
+      endTimer();
+      throw handleError(`get account ${address}`, error);
     }
   }
   
@@ -93,6 +116,7 @@ export class BaseFlowClient {
    * Execute a script (read-only)
    */
   async executeScript<T = any>(script: string, args: any[] = []): Promise<T> {
+    const endTimer = startTimer('executeScript');
     this.ensureInitialized();
     
     try {
@@ -101,10 +125,11 @@ export class BaseFlowClient {
         args: (arg: any, t: any) => args.map((value, index) => arg(value, this.inferType(value))),
       });
       
+      endTimer();
       return result;
     } catch (error) {
-      console.error('Script execution failed:', error);
-      throw this.createFlowError('SCRIPT_EXECUTION_FAILED', 'Failed to execute script', error);
+      endTimer();
+      throw handleError('execute script', error);
     }
   }
   
@@ -121,6 +146,7 @@ export class BaseFlowClient {
       authorizers?: string[];
     } = {}
   ): Promise<string> {
+    const endTimer = startTimer('sendTransaction');
     this.ensureInitialized();
     
     try {
@@ -129,16 +155,17 @@ export class BaseFlowClient {
         args: (arg: any, t: any) => args.map((value) => arg(value, this.inferType(value))),
         proposer: options.proposer ? fcl.proposer : undefined,
         payer: options.payer ? fcl.payer : undefined,
-        authorizations: options.authorizers ? 
-          options.authorizers.map(() => fcl.authorization) : 
+        authorizations: options.authorizers ?
+          options.authorizers.map(() => fcl.authorization) :
           [fcl.authz],
         limit: options.gasLimit || 1000,
       });
       
+      endTimer();
       return txId;
     } catch (error) {
-      console.error('Transaction failed:', error);
-      throw this.createFlowError('TRANSACTION_FAILED', 'Failed to send transaction', error);
+      endTimer();
+      throw handleError('send transaction', error);
     }
   }
   
@@ -146,14 +173,17 @@ export class BaseFlowClient {
    * Get transaction status
    */
   async getTransactionStatus(txId: string): Promise<TransactionStatus> {
+    const endTimer = startTimer('getTransactionStatus');
     this.ensureInitialized();
     
     try {
       const tx = await fcl.tx(txId).snapshot();
-      return tx.status as TransactionStatus;
+      endTimer();
+      // Cast through unknown to avoid type error
+      return tx.status as unknown as TransactionStatus;
     } catch (error) {
-      console.error('Failed to get transaction status:', error);
-      throw this.createFlowError('TX_STATUS_FAILED', `Failed to get status for transaction ${txId}`, error);
+      endTimer();
+      throw handleError(`get status for transaction ${txId}`, error);
     }
   }
   
@@ -161,21 +191,25 @@ export class BaseFlowClient {
    * Wait for transaction to be sealed
    */
   async waitForTransaction(txId: string, timeout: number = 30000): Promise<FlowTransactionResult> {
+    const endTimer = startTimer('waitForTransaction');
     this.ensureInitialized();
     
     try {
       const result = await fcl.tx(txId).onceSealed();
       
-      return {
+      const txResult = {
         status: result.status,
         statusCode: result.statusCode,
         statusString: result.statusString,
         errorMessage: result.errorMessage || '',
         events: result.events || [],
       };
+      
+      endTimer();
+      return txResult;
     } catch (error) {
-      console.error('Failed to wait for transaction:', error);
-      throw this.createFlowError('TX_WAIT_FAILED', `Failed to wait for transaction ${txId}`, error);
+      endTimer();
+      throw handleError(`wait for transaction ${txId}`, error);
     }
   }
   
@@ -183,13 +217,16 @@ export class BaseFlowClient {
    * Get current user
    */
   async getCurrentUser(): Promise<any> {
+    const endTimer = startTimer('getCurrentUser');
     this.ensureInitialized();
     
     try {
-      return await fcl.currentUser().snapshot();
+      const user = await fcl.currentUser().snapshot();
+      endTimer();
+      return user;
     } catch (error) {
-      console.error('Failed to get current user:', error);
-      throw this.createFlowError('USER_FETCH_FAILED', 'Failed to get current user', error);
+      endTimer();
+      throw handleError('get current user', error);
     }
   }
   
@@ -197,13 +234,15 @@ export class BaseFlowClient {
    * Authenticate user
    */
   async authenticate(): Promise<void> {
+    const endTimer = startTimer('authenticate');
     this.ensureInitialized();
     
     try {
       await fcl.authenticate();
+      endTimer();
     } catch (error) {
-      console.error('Authentication failed:', error);
-      throw this.createFlowError('AUTH_FAILED', 'Authentication failed', error);
+      endTimer();
+      throw handleError('authenticate user', error);
     }
   }
   
@@ -211,13 +250,15 @@ export class BaseFlowClient {
    * Unauthenticate user
    */
   async unauthenticate(): Promise<void> {
+    const endTimer = startTimer('unauthenticate');
     this.ensureInitialized();
     
     try {
       await fcl.unauthenticate();
+      endTimer();
     } catch (error) {
-      console.error('Unauthentication failed:', error);
-      throw this.createFlowError('UNAUTH_FAILED', 'Unauthentication failed', error);
+      endTimer();
+      throw handleError('unauthenticate user', error);
     }
   }
   
@@ -226,8 +267,9 @@ export class BaseFlowClient {
    */
   subscribeToUser(callback: (user: any) => void): () => void {
     this.ensureInitialized();
-    
-    return fcl.currentUser().subscribe(callback);
+    console.log('Subscribing to user changes');
+    // Cast the return value to the correct type
+    return fcl.currentUser().subscribe(callback) as unknown as () => void;
   }
   
   /**
@@ -258,7 +300,7 @@ export class BaseFlowClient {
    */
   private ensureInitialized(): void {
     if (!this.isInitialized) {
-      throw this.createFlowError('NOT_INITIALIZED', 'Flow client not initialized');
+      throw handleError('ensure client is initialized', new Error('Flow client not initialized'));
     }
   }
   
@@ -302,14 +344,26 @@ export class BaseFlowClient {
   }
   
   /**
-   * Create standardized Flow error
+   * Get the current account address
    */
-  private createFlowError(code: string, message: string, originalError?: any): FlowError {
-    return {
-      code,
-      message,
-      details: originalError,
-    };
+  getCurrentUserAddress(): string | null {
+    if (!this.isInitialized) {
+      return null;
+    }
+    
+    try {
+      // Access the current user synchronously
+      const currentUser = fcl.currentUser();
+      const user = currentUser.snapshot();
+      
+      // Safely access properties with type assertions
+      return user && typeof user === 'object' && 'addr' in user
+        ? user.addr as string
+        : null;
+    } catch (error) {
+      console.warn('Failed to get current account address:', error);
+      return null;
+    }
   }
 }
 

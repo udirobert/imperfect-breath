@@ -4,13 +4,16 @@
  */
 
 import BaseFlowClient from './base-client';
-import type { 
-  BreathingPatternNFT, 
-  BreathingPatternAttributes, 
-  NFTMetadata, 
+import type {
+  BreathingPatternNFT,
+  BreathingPatternAttributes,
+  NFTMetadata,
   RoyaltyInfo,
-  FlowTransactionResult 
+  FlowTransactionResult
 } from '../types';
+import { handleError } from '@/lib/utils/error-utils';
+import { startTimer, timed } from '@/lib/utils/performance-utils';
+import { getCache } from '@/lib/utils/cache-utils';
 
 // Cadence scripts and transactions
 const SCRIPTS = {
@@ -147,6 +150,7 @@ const TRANSACTIONS = {
 
 export class NFTClient {
   private baseClient: BaseFlowClient;
+  private cache = getCache();
   
   constructor() {
     this.baseClient = BaseFlowClient.getInstance();
@@ -156,13 +160,13 @@ export class NFTClient {
    * Setup account for NFT collection
    */
   async setupAccount(): Promise<string> {
+    const endTimer = startTimer('setupAccount');
     try {
       const txId = await this.baseClient.sendTransaction(TRANSACTIONS.SETUP_ACCOUNT);
       await this.baseClient.waitForTransaction(txId);
       return txId;
     } catch (error) {
-      console.error('Failed to setup account:', error);
-      throw error;
+      throw handleError('setup NFT account', error);
     }
   }
   
@@ -175,6 +179,7 @@ export class NFTClient {
     recipient: string,
     royalties: RoyaltyInfo[] = []
   ): Promise<string> {
+    const endTimer = startTimer('mintBreathingPattern');
     try {
       // Convert royalties to Cadence format
       const cadenceRoyalties = royalties.map(royalty => ({
@@ -205,25 +210,40 @@ export class NFTClient {
         throw new Error(`Transaction failed: ${result.errorMessage}`);
       }
       
+      // Invalidate any cached NFTs for this account
+      this.cache.delete(`nfts-${recipient}`);
+      
       return txId;
     } catch (error) {
-      console.error('Failed to mint breathing pattern:', error);
-      throw error;
+      throw handleError('mint breathing pattern', error);
+    } finally {
+      endTimer();
     }
   }
   
   /**
    * Transfer NFT to another account
    */
-  async transferNFT(nftId: string, recipient: string): Promise<string> {
+  async transferNFT(nftId: string, recipient: string, sender?: string): Promise<string> {
+    const endTimer = startTimer('transferNFT');
     try {
       const args = [recipient, parseInt(nftId)];
       const txId = await this.baseClient.sendTransaction(TRANSACTIONS.TRANSFER_NFT, args);
       await this.baseClient.waitForTransaction(txId);
+      
+      // Invalidate any cached NFTs for both accounts
+      if (sender) {
+        this.cache.delete(`nfts-${sender}`);
+        this.cache.delete(`nft-ids-${sender}`);
+      }
+      this.cache.delete(`nfts-${recipient}`);
+      this.cache.delete(`nft-ids-${recipient}`);
+      
       return txId;
     } catch (error) {
-      console.error('Failed to transfer NFT:', error);
-      throw error;
+      throw handleError('transfer NFT', error);
+    } finally {
+      endTimer();
     }
   }
   
@@ -231,12 +251,27 @@ export class NFTClient {
    * Get NFT IDs owned by an account
    */
   async getNFTIds(account: string): Promise<string[]> {
+    const endTimer = startTimer('getNFTIds');
+    const cacheKey = `nft-ids-${account}`;
+    
+    // Try to get from cache first
+    const cached = this.cache.get<string[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
     try {
       const ids = await this.baseClient.executeScript<number[]>(SCRIPTS.GET_NFT_IDS, [account]);
-      return ids.map(id => id.toString());
+      const stringIds = ids.map(id => id.toString());
+      
+      // Cache for 1 minute
+      this.cache.set(cacheKey, stringIds, 60000);
+      
+      return stringIds;
     } catch (error) {
-      console.error('Failed to get NFT IDs:', error);
-      return [];
+      throw handleError('get NFT IDs', error);
+    } finally {
+      endTimer();
     }
   }
   
@@ -244,9 +279,18 @@ export class NFTClient {
    * Get NFT metadata
    */
   async getNFTMetadata(account: string, nftId: string): Promise<BreathingPatternNFT | null> {
+    const endTimer = startTimer('getNFTMetadata');
+    const cacheKey = `nft-metadata-${account}-${nftId}`;
+    
+    // Try to get from cache first
+    const cached = this.cache.get<BreathingPatternNFT>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
     try {
       const metadata = await this.baseClient.executeScript(
-        SCRIPTS.GET_NFT_METADATA, 
+        SCRIPTS.GET_NFT_METADATA,
         [account, parseInt(nftId)]
       );
       
@@ -254,7 +298,7 @@ export class NFTClient {
         return null;
       }
       
-      return {
+      const nft: BreathingPatternNFT = {
         id: nftId,
         name: metadata.name,
         description: metadata.description,
@@ -283,9 +327,15 @@ export class NFTClient {
           })),
         },
       };
+      
+      // Cache for 5 minutes
+      this.cache.set(cacheKey, nft, 5 * 60 * 1000);
+      
+      return nft;
     } catch (error) {
-      console.error('Failed to get NFT metadata:', error);
-      return null;
+      throw handleError('get NFT metadata', error);
+    } finally {
+      endTimer();
     }
   }
   
@@ -293,21 +343,43 @@ export class NFTClient {
    * Get all NFTs owned by an account
    */
   async getAllNFTs(account: string): Promise<BreathingPatternNFT[]> {
+    const outerTimer = startTimer('getAllNFTs');
+    const cacheKey = `nfts-${account}`;
+    
+    // Try to get from cache first
+    const cached = this.cache.get<BreathingPatternNFT[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
+    const endTimer = startTimer('getAllNFTs-fetch');
+    
     try {
       const ids = await this.getNFTIds(account);
       const nfts: BreathingPatternNFT[] = [];
       
-      for (const id of ids) {
-        const nft = await this.getNFTMetadata(account, id);
+      // Use Promise.all for parallel execution
+      const nftPromises = ids.map(id => this.getNFTMetadata(account, id));
+      const results = await Promise.all(nftPromises);
+      
+      for (const nft of results) {
         if (nft) {
           nfts.push(nft);
         }
       }
       
+      // Cache for 2 minutes
+      this.cache.set(cacheKey, nfts, 2 * 60 * 1000);
+      
+      const duration = endTimer();
+      console.log(`Fetched ${nfts.length} NFTs in ${duration.toFixed(2)}ms`);
+      
       return nfts;
     } catch (error) {
-      console.error('Failed to get all NFTs:', error);
-      return [];
+      endTimer();
+      throw handleError('get all NFTs', error);
+    } finally {
+      outerTimer();
     }
   }
   
@@ -315,11 +387,13 @@ export class NFTClient {
    * Get collection length
    */
   async getCollectionLength(account: string): Promise<number> {
+    const endTimer = startTimer('getCollectionLength');
     try {
       return await this.baseClient.executeScript<number>(SCRIPTS.GET_COLLECTION_LENGTH, [account]);
     } catch (error) {
-      console.error('Failed to get collection length:', error);
-      return 0;
+      throw handleError('get collection length', error);
+    } finally {
+      endTimer();
     }
   }
   
@@ -327,11 +401,15 @@ export class NFTClient {
    * Check if account has collection setup
    */
   async hasCollectionSetup(account: string): Promise<boolean> {
+    const endTimer = startTimer('hasCollectionSetup');
     try {
       await this.baseClient.executeScript(SCRIPTS.GET_COLLECTION_LENGTH, [account]);
       return true;
     } catch (error) {
+      // This is not a true error case - just checking if collection exists
       return false;
+    } finally {
+      endTimer();
     }
   }
   
@@ -347,6 +425,10 @@ export class NFTClient {
     }>
   ): Promise<string[]> {
     const txIds: string[] = [];
+    const endTimer = startTimer('batchMintPatterns');
+    
+    // Track recipients to invalidate caches later
+    const recipients = new Set<string>();
     
     for (const pattern of patterns) {
       try {
@@ -357,11 +439,21 @@ export class NFTClient {
           pattern.royalties
         );
         txIds.push(txId);
+        recipients.add(pattern.recipient);
       } catch (error) {
-        console.error('Failed to mint pattern in batch:', error);
-        // Continue with other patterns
+        // Log but continue with other patterns
+        console.error(`Failed to mint pattern "${pattern.metadata.name}":`, error);
       }
     }
+    
+    // Invalidate caches for all recipients
+    recipients.forEach(recipient => {
+      this.cache.delete(`nfts-${recipient}`);
+      this.cache.delete(`nft-ids-${recipient}`);
+    });
+    
+    const duration = endTimer();
+    console.log(`Batch minted ${txIds.length}/${patterns.length} patterns in ${duration.toFixed(2)}ms`);
     
     return txIds;
   }
@@ -370,13 +462,15 @@ export class NFTClient {
    * Get NFT events
    */
   async getNFTEvents(nftId: string): Promise<any[]> {
+    const endTimer = startTimer('getNFTEvents');
     try {
       // This would require a more complex script to fetch events
-      // For now, return empty array
+      // TODO: Implement event fetching when needed
       return [];
     } catch (error) {
-      console.error('Failed to get NFT events:', error);
-      return [];
+      throw handleError('get NFT events', error);
+    } finally {
+      endTimer();
     }
   }
 }

@@ -6,29 +6,16 @@
 
 import * as fcl from '@onflow/fcl';
 import { config } from '@/config/environment';
-
-// Types for batched transactions
-export interface EVMBatchCall {
-  address: string;
-  abi: any[];
-  functionName: string;
-  args?: any[];
-  value?: bigint;
-  gas?: number;
-}
-
-export interface CallOutcome {
-  hash: string;
-  status: 'passed' | 'failed';
-  errorMessage: string;
-}
-
-export interface BatchTransactionResult {
-  isPending: boolean;
-  isError: boolean;
-  txId: string;
-  results: CallOutcome[];
-}
+import {
+  EVMBatchCall,
+  CallOutcome,
+  BatchTransactionResult,
+  encodeFunctionCall,
+  parseEVMResults
+} from './utils/batch-transactions';
+import { handleError } from '@/lib/utils/error-utils';
+import { startTimer } from '@/lib/utils/performance-utils';
+import { getCache } from '@/lib/utils/cache-utils';
 
 /**
  * Enhanced Flow Client for breathing pattern operations
@@ -53,8 +40,8 @@ export class EnhancedFlowClient {
     if (this.isInitialized) return;
 
     fcl.config({
-      'accessNode.api': config.flow.accessNodeAPI,
-      'discovery.wallet': config.flow.walletDiscovery,
+      'accessNode.api': config.flow.accessNode,
+      'discovery.wallet': config.flow.discoveryWallet,
       'app.detail.title': 'Imperfect Breath',
       'app.detail.icon': 'https://imperfect-breath.app/icon.png',
       '0xImperfectBreath': config.flow.contractAddress,
@@ -112,17 +99,24 @@ export class EnhancedFlowClient {
   /**
    * Execute batched EVM transactions through Cadence
    */
+  /**
+   * Execute batched EVM transactions through Cadence
+   * @param calls Array of EVM function calls to execute
+   * @param mustPass If true, transaction will revert if any call fails
+   * @returns Transaction result with status of each call
+   */
   async executeBatchedTransactions(
     calls: EVMBatchCall[],
     mustPass: boolean = true
   ): Promise<BatchTransactionResult> {
+    const endTimer = startTimer('executeBatchedTransactions');
     await this.initialize();
 
     try {
       // Convert calls to the format expected by Cadence
       const cadenceCalls = calls.map(call => ({
         to: call.address,
-        data: this.encodeFunctionCall(call),
+        data: encodeFunctionCall(call),
         gasLimit: call.gas || 100000,
         value: call.value || 0
       }));
@@ -182,7 +176,10 @@ export class EnhancedFlowClient {
       const result = await fcl.tx(txId).onceSealed();
       
       // Parse EVM transaction results from events
-      const evmResults = this.parseEVMResults(result.events);
+      const evmResults = parseEVMResults(result.events);
+
+      const duration = endTimer();
+      console.log(`Batched transaction completed in ${duration.toFixed(2)}ms`);
 
       return {
         isPending: false,
@@ -192,7 +189,8 @@ export class EnhancedFlowClient {
       };
 
     } catch (error) {
-      console.error('Batched transaction failed:', error);
+      endTimer(); // Record time even on error
+      const appError = handleError('execute batched transactions', error);
       return {
         isPending: false,
         isError: true,
@@ -251,6 +249,9 @@ export class EnhancedFlowClient {
 
   /**
    * Create sponsored transaction for walletless onboarding
+   * @param userAddress User address to sponsor
+   * @param sessionData Breathing session data
+   * @returns Transaction ID
    */
   async createSponsoredBreathingSession(
     userAddress: string,
@@ -260,46 +261,55 @@ export class EnhancedFlowClient {
       score: number;
     }
   ): Promise<string> {
+    const endTimer = startTimer('createSponsoredBreathingSession');
     await this.initialize();
 
-    const transaction = `
-      import ImperfectBreath from 0xImperfectBreath
+    try {
+      const transaction = `
+        import ImperfectBreath from 0xImperfectBreath
 
-      transaction(userAddress: Address, patternId: String, duration: UFix64, score: UFix64) {
-        prepare(sponsor: AuthAccount) {
-          // Sponsor pays for the transaction
-          let userAccount = getAccount(userAddress)
-          
-          // Log breathing session data
-          ImperfectBreath.logBreathingSession(
-            user: userAddress,
-            patternId: patternId,
-            duration: duration,
-            score: score
-          )
+        transaction(userAddress: Address, patternId: String, duration: UFix64, score: UFix64) {
+          prepare(sponsor: AuthAccount) {
+            // Sponsor pays for the transaction
+            let userAccount = getAccount(userAddress)
+            
+            // Log breathing session data
+            ImperfectBreath.logBreathingSession(
+              user: userAddress,
+              patternId: patternId,
+              duration: duration,
+              score: score
+            )
+          }
         }
-      }
-    `;
+      `;
 
-    const txId = await fcl.mutate({
-      cadence: transaction,
-      args: (arg: any, t: any) => [
-        arg(userAddress, t.Address),
-        arg(sessionData.patternId, t.String),
-        arg(sessionData.duration.toFixed(2), t.UFix64),
-        arg(sessionData.score.toFixed(2), t.UFix64)
-      ],
-      proposer: fcl.authz, // Sponsor account
-      payer: fcl.authz,     // Sponsor pays
-      authorizations: [fcl.authz],
-      limit: 9999
-    });
+      const txId = await fcl.mutate({
+        cadence: transaction,
+        args: (arg: any, t: any) => [
+          arg(userAddress, t.Address),
+          arg(sessionData.patternId, t.String),
+          arg(sessionData.duration.toFixed(2), t.UFix64),
+          arg(sessionData.score.toFixed(2), t.UFix64)
+        ],
+        proposer: fcl.authz, // Sponsor account
+        payer: fcl.authz,     // Sponsor pays
+        authorizations: [fcl.authz],
+        limit: 9999
+      });
 
-    return txId;
+      endTimer();
+      return txId;
+    } catch (error) {
+      endTimer();
+      throw handleError('create sponsored breathing session', error);
+    }
   }
 
   /**
    * Generate random breathing pattern using Flow's native VRF
+   * @param basePattern Base pattern to generate variations from
+   * @returns Random pattern variation
    */
   async generateRandomBreathingPattern(
     basePattern: {
@@ -317,111 +327,83 @@ export class EnhancedFlowClient {
     rest: number;
     randomSeed: string;
   }> {
+    const endTimer = startTimer('generateRandomBreathingPattern');
     await this.initialize();
 
-    const script = `
-      access(all) fun main(
-        baseName: String,
-        baseInhale: UInt64,
-        baseHold: UInt64,
-        baseExhale: UInt64,
-        baseRest: UInt64
-      ): {String: AnyStruct} {
-        // Use Flow's native randomness
-        let randomSeed = revertibleRandom<UInt64>()
-        
-        // Generate variations based on random seed
-        let inhaleVariation = (randomSeed % 3) + 1 // 1-3 second variation
-        let holdVariation = (randomSeed % 5) + 1   // 1-5 second variation
-        let exhaleVariation = (randomSeed % 4) + 1 // 1-4 second variation
-        let restVariation = (randomSeed % 2) + 1   // 1-2 second variation
-        
-        return {
-          "name": baseName.concat(" Variation ").concat(randomSeed.toString()),
-          "inhale": baseInhale + inhaleVariation,
-          "hold": baseHold + holdVariation,
-          "exhale": baseExhale + exhaleVariation,
-          "rest": baseRest + restVariation,
-          "randomSeed": randomSeed.toString()
+    // Check cache first
+    const cacheKey = `random-pattern-${basePattern.name}-${basePattern.inhale}-${basePattern.hold}-${basePattern.exhale}-${basePattern.rest}`;
+    const cache = getCache();
+    const cachedPattern = cache.get<any>(cacheKey);
+    
+    if (cachedPattern) {
+      console.log('Using cached random pattern');
+      endTimer();
+      return cachedPattern;
+    }
+
+    try {
+      const script = `
+        access(all) fun main(
+          baseName: String,
+          baseInhale: UInt64,
+          baseHold: UInt64,
+          baseExhale: UInt64,
+          baseRest: UInt64
+        ): {String: AnyStruct} {
+          // Use Flow's native randomness
+          let randomSeed = revertibleRandom<UInt64>()
+          
+          // Generate variations based on random seed
+          let inhaleVariation = (randomSeed % 3) + 1 // 1-3 second variation
+          let holdVariation = (randomSeed % 5) + 1   // 1-5 second variation
+          let exhaleVariation = (randomSeed % 4) + 1 // 1-4 second variation
+          let restVariation = (randomSeed % 2) + 1   // 1-2 second variation
+          
+          return {
+            "name": baseName.concat(" Variation ").concat(randomSeed.toString()),
+            "inhale": baseInhale + inhaleVariation,
+            "hold": baseHold + holdVariation,
+            "exhale": baseExhale + exhaleVariation,
+            "rest": baseRest + restVariation,
+            "randomSeed": randomSeed.toString()
+          }
         }
-      }
-    `;
+      `;
 
-    const result = await fcl.query({
-      cadence: script,
-      args: (arg: any, t: any) => [
-        arg(basePattern.name, t.String),
-        arg(basePattern.inhale, t.UInt64),
-        arg(basePattern.hold, t.UInt64),
-        arg(basePattern.exhale, t.UInt64),
-        arg(basePattern.rest, t.UInt64)
-      ]
-    });
+      const result = await fcl.query({
+        cadence: script,
+        args: (arg: any, t: any) => [
+          arg(basePattern.name, t.String),
+          arg(basePattern.inhale, t.UInt64),
+          arg(basePattern.hold, t.UInt64),
+          arg(basePattern.exhale, t.UInt64),
+          arg(basePattern.rest, t.UInt64)
+        ]
+      });
 
-    return {
-      name: result.name,
-      inhale: parseInt(result.inhale),
-      hold: parseInt(result.hold),
-      exhale: parseInt(result.exhale),
-      rest: parseInt(result.rest),
-      randomSeed: result.randomSeed
-    };
+      const pattern = {
+        name: result.name,
+        inhale: parseInt(result.inhale),
+        hold: parseInt(result.hold),
+        exhale: parseInt(result.exhale),
+        rest: parseInt(result.rest),
+        randomSeed: result.randomSeed
+      };
+      
+      // Cache the result for 1 hour
+      cache.set(cacheKey, pattern, 60 * 60 * 1000);
+      
+      const duration = endTimer();
+      console.log(`Generated random pattern in ${duration.toFixed(2)}ms`);
+      
+      return pattern;
+    } catch (error) {
+      endTimer();
+      throw handleError('generate random breathing pattern', error);
+    }
   }
 
-  /**
-   * Helper: Encode function call for EVM
-   */
-  private encodeFunctionCall(call: EVMBatchCall): string {
-    // This is a simplified version - in production you'd use a proper ABI encoder
-    // For now, we'll return a placeholder that works with our contract
-    const functionSelector = this.getFunctionSelector(call.functionName);
-    const encodedArgs = this.encodeArguments(call.args || []);
-    return functionSelector + encodedArgs;
-  }
-
-  /**
-   * Helper: Get function selector (first 4 bytes of keccak256 hash)
-   */
-  private getFunctionSelector(functionName: string): string {
-    // Simplified - in production use proper keccak256
-    const signatures: Record<string, string> = {
-      'mintBreathingPattern': '0xa0712d68',
-      'logSession': '0xb1234567',
-      'approve': '0x095ea7b3',
-      'transfer': '0xa9059cbb'
-    };
-    return signatures[functionName] || '0x00000000';
-  }
-
-  /**
-   * Helper: Encode function arguments
-   */
-  private encodeArguments(args: any[]): string {
-    // Simplified encoding - in production use proper ABI encoding
-    return args.map(arg => {
-      if (typeof arg === 'string') {
-        return arg.padStart(64, '0');
-      } else if (typeof arg === 'number') {
-        return arg.toString(16).padStart(64, '0');
-      }
-      return '0'.repeat(64);
-    }).join('');
-  }
-
-  /**
-   * Helper: Parse EVM results from Cadence transaction events
-   */
-  private parseEVMResults(events: any[]): CallOutcome[] {
-    // Parse EVM transaction results from Flow events
-    // This would need to be implemented based on actual event structure
-    return events
-      .filter(event => event.type.includes('EVM'))
-      .map(event => ({
-        hash: event.data?.hash || '0x' + Math.random().toString(16).substr(2, 64),
-        status: event.data?.status === 'successful' ? 'passed' : 'failed',
-        errorMessage: event.data?.errorMessage || ''
-      }));
-  }
+  // Removed helper methods that were moved to batch-transactions.ts
 }
 
 export default EnhancedFlowClient;
