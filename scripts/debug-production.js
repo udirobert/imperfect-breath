@@ -10,9 +10,14 @@
  * Usage: node scripts/debug-production.js
  */
 
-const fs = require("fs");
-const path = require("path");
-const { execSync } = require("child_process");
+import fs from "fs";
+import path from "path";
+import { execSync } from "child_process";
+import { fileURLToPath } from "url";
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configuration
 const DIST_DIR = path.resolve(__dirname, "../dist");
@@ -220,6 +225,12 @@ function provideRecommendations() {
     "   Make sure React is properly loaded before any component rendering"
   );
   console.log("   Consider removing React.StrictMode in production");
+
+  console.log(`\n${colors.cyan}5. For large bundle sizes:${colors.reset}`);
+  console.log("   Consider implementing code splitting with dynamic imports");
+  console.log(
+    "   Configure manualChunks in vite.config.ts to better split vendor code"
+  );
 }
 
 // Run all checks

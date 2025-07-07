@@ -1,139 +1,199 @@
 /**
- * Wallet Provider Compatibility Script
- * This script runs before any other scripts to handle wallet provider conflicts
- * Specifically targeting Backpack extension conflicts
+ * Wallet Provider Compatibility Script - Fixed Version
+ *
+ * This script handles wallet provider conflicts between extensions
+ * and uses a safe approach to avoid property redefinition errors
  */
 
 (function () {
-  // Save the original console methods
+  // Use a closure to avoid polluting global scope
   const originalConsole = {
     log: console.log,
     warn: console.warn,
     error: console.error,
   };
 
-  // Flag to detect wallet provider conflicts
-  let walletProviderConflicts = false;
+  // Store wallet info without modifying window.ethereum
+  try {
+    // Initialize provider tracking
+    window.__walletInfo = {
+      providerHistory: [],
+      conflicts: false,
+      initialized: Date.now(),
+    };
 
-  // Store the original provider if it exists
-  if (typeof window !== "undefined" && window.ethereum) {
-    window.__originalEthereum = window.ethereum;
+    // Record the initial state of ethereum
+    if (typeof window !== "undefined" && window.ethereum) {
+      const initialProvider = window.ethereum;
+      window.__walletInfo.original = initialProvider;
+      window.__walletInfo.current = initialProvider;
 
-    // Log when a wallet tries to override ethereum
+      window.__walletInfo.providerHistory.push({
+        name: "initial",
+        timestamp: Date.now(),
+        isBackpack: initialProvider._isBackpack || false,
+      });
+
+      originalConsole.log("Original ethereum provider detected and preserved");
+    }
+
+    // Create a safe monitoring function using getters/setters only if possible
+    // We'll use Object.getOwnPropertyDescriptor to check if ethereum is configurable
     const ethereumDescriptor = Object.getOwnPropertyDescriptor(
       window,
       "ethereum"
     );
 
-    if (ethereumDescriptor && ethereumDescriptor.configurable) {
-      Object.defineProperty(window, "ethereum", {
-        configurable: true,
-        enumerable: true,
-        get: function () {
-          return window.__originalEthereum;
-        },
-        set: function (newValue) {
-          // Detect conflict if the new value is different from current
-          if (newValue !== window.__originalEthereum) {
-            walletProviderConflicts = true;
-            originalConsole.warn(
-              "Wallet provider conflict detected: Another wallet is trying to override window.ethereum"
-            );
-          }
+    // Only try to set up monitoring if the property is configurable or doesn't exist yet
+    if (!ethereumDescriptor || ethereumDescriptor.configurable) {
+      originalConsole.log("Setting up safe ethereum monitoring");
 
-          // Store the new provider while preserving the original
-          window.__latestEthereum = newValue;
+      // Create a storage for the actual provider reference
+      const providerStorage = {
+        current: window.ethereum,
+      };
 
-          // If Backpack is detected, handle it specially
-          if (
-            newValue &&
-            typeof newValue === "object" &&
-            newValue._isBackpack
-          ) {
-            originalConsole.log(
-              "Backpack wallet detected, using special handling"
-            );
+      // Define a safe property descriptor
+      try {
+        Object.defineProperty(window, "ethereum", {
+          configurable: true, // Keep it configurable for compatibility
+          enumerable: true, // Make sure it's visible
+          get: function () {
+            return providerStorage.current;
+          },
+          set: function (newProvider) {
+            // Track the change
+            window.__walletInfo.providerHistory.push({
+              name:
+                newProvider && newProvider._isBackpack ? "backpack" : "unknown",
+              timestamp: Date.now(),
+              isBackpack: (newProvider && newProvider._isBackpack) || false,
+            });
 
-            // Keep Backpack's reference but don't let it override the property
-            window.__backpackEthereum = newValue;
+            // Store the previous provider
+            window.__walletInfo.previous = providerStorage.current;
 
-            // Create merged provider if needed
-            if (
-              window.__originalEthereum &&
-              window.__originalEthereum !== newValue
-            ) {
-              window.__mergedProvider = {
-                ...window.__originalEthereum,
-                // Add Backpack-specific properties
-                _isBackpack: true,
-                // Make sure request method works for both
-                request: async function (payload) {
-                  try {
-                    if (
-                      window.__backpackEthereum &&
-                      typeof window.__backpackEthereum.request === "function"
-                    ) {
-                      return await window.__backpackEthereum.request(payload);
-                    } else if (
-                      window.__originalEthereum &&
-                      typeof window.__originalEthereum.request === "function"
-                    ) {
-                      return await window.__originalEthereum.request(payload);
-                    }
-                  } catch (error) {
-                    originalConsole.error("Error in ethereum.request:", error);
-                    throw error;
-                  }
-                },
-              };
+            // Always store latest provider
+            window.__walletInfo.current = newProvider;
 
-              // Use merged provider
-              window.__originalEthereum = window.__mergedProvider;
-            } else {
-              // Just use Backpack if it's the first provider
-              window.__originalEthereum = newValue;
+            if (newProvider !== providerStorage.current) {
+              window.__walletInfo.conflicts = true;
+              originalConsole.warn("Wallet provider changed");
+
+              // Special handling for Backpack
+              if (newProvider && newProvider._isBackpack) {
+                window.__walletInfo.backpack = newProvider;
+              }
             }
-          } else {
-            // For non-Backpack wallets, just store the latest
-            window.__originalEthereum = newValue;
-          }
-        },
-      });
-    }
-  }
 
-  // Create detection and recovery function
-  window.__fixWalletConflicts = function () {
-    if (walletProviderConflicts) {
+            // Update the storage
+            providerStorage.current = newProvider;
+          },
+        });
+      } catch (propError) {
+        originalConsole.error(
+          "Failed to setup ethereum property monitoring:",
+          propError
+        );
+      }
+    } else {
+      // Property is not configurable, use a different approach
+      originalConsole.warn(
+        "ethereum property is not configurable, using alternative tracking"
+      );
+
+      // Set up an interval to check for changes to window.ethereum
+      const monitorInterval = setInterval(function () {
+        const currentProvider = window.ethereum;
+
+        // If the provider has changed
+        if (currentProvider !== window.__walletInfo.current) {
+          window.__walletInfo.previous = window.__walletInfo.current;
+          window.__walletInfo.current = currentProvider;
+          window.__walletInfo.conflicts = true;
+
+          window.__walletInfo.providerHistory.push({
+            name:
+              currentProvider && currentProvider._isBackpack
+                ? "backpack"
+                : "unknown",
+            timestamp: Date.now(),
+            isBackpack:
+              (currentProvider && currentProvider._isBackpack) || false,
+          });
+
+          // Special handling for Backpack
+          if (currentProvider && currentProvider._isBackpack) {
+            window.__walletInfo.backpack = currentProvider;
+          }
+
+          originalConsole.warn("Wallet provider changed (detected by monitor)");
+        }
+      }, 1000);
+
+      // Store the interval ID so it can be cleared if needed
+      window.__walletInfo.monitorInterval = monitorInterval;
+    }
+
+    // Add a recovery function that doesn't try to modify the property directly
+    window.__fixWalletConflicts = function () {
+      if (!window.__walletInfo.conflicts) {
+        return true; // No conflicts detected
+      }
+
       originalConsole.log("Attempting to fix wallet provider conflicts...");
 
-      // First try the merged provider if we have one
-      if (window.__mergedProvider) {
-        window.ethereum = window.__mergedProvider;
-        return true;
-      }
+      try {
+        // Check if we have the property descriptor
+        const descriptor = Object.getOwnPropertyDescriptor(window, "ethereum");
 
-      // If Backpack is trying to override, let it
-      if (window.__backpackEthereum) {
-        window.ethereum = window.__backpackEthereum;
-        return true;
-      }
+        if (descriptor && descriptor.configurable) {
+          // We can safely modify the property
 
-      // Use the latest provider as fallback
-      if (window.__latestEthereum) {
-        window.ethereum = window.__latestEthereum;
-        return true;
+          // Prefer Backpack if detected (special handling)
+          if (window.__walletInfo.backpack) {
+            originalConsole.log("Using Backpack provider");
+            window.ethereum = window.__walletInfo.backpack;
+            return true;
+          }
+
+          // Otherwise use latest provider
+          if (window.__walletInfo.current) {
+            window.ethereum = window.__walletInfo.current;
+            return true;
+          }
+        } else {
+          // Cannot modify property directly
+          originalConsole.warn(
+            "Cannot modify ethereum property - using workaround"
+          );
+
+          // Store information for other scripts to use
+          window.__walletInfo.preferredProvider =
+            window.__walletInfo.backpack ||
+            window.__walletInfo.current ||
+            window.__walletInfo.original;
+
+          // Return the status
+          return window.__walletInfo.preferredProvider !== undefined;
+        }
+      } catch (error) {
+        originalConsole.error(
+          "Error during wallet conflict resolution:",
+          error
+        );
+        return false;
       }
 
       return false;
-    }
-    return true; // No conflicts to fix
-  };
+    };
 
-  // Run detection on DOM content loaded
-  document.addEventListener("DOMContentLoaded", function () {
+    // Run the fix after a delay to let wallet extensions initialize
     setTimeout(function () {
       window.__fixWalletConflicts();
-    }, 500); // Small delay to let wallets initialize
-  });
+    }, 1000);
+  } catch (error) {
+    // Global error handler
+    originalConsole.error("Wallet adapter error:", error);
+  }
 })();
