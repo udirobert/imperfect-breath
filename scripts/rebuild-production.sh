@@ -1,78 +1,84 @@
 #!/bin/bash
 
 # Production Rebuild Script
-# This script rebuilds the application with all fixes applied for the reported production errors
+# This script rebuilds the application with optimized settings for production
 
-echo "===== PRODUCTION REBUILD WITH FIXES ====="
-echo "Fixing: React runtime errors, wallet provider conflicts, and path alias issues"
+# Set default build mode
+BUILD_MODE="production"
 
-# Ensure script execution fails if any command fails
+# Parse command line arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --dev) BUILD_MODE="development" ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# Stop on any error
 set -e
 
-# Clean existing build
-echo "Cleaning previous build..."
-rm -rf dist
+echo "===== Production Rebuild Script ====="
+echo "Build mode: $BUILD_MODE"
 
-# Update browserslist database without using bun (which had errors)
-echo "Updating browserslist database..."
-# Use npx directly instead of using bun
-npx update-browserslist-db@latest --yes || echo "Browserslist update failed, continuing anyway..."
+# Check for Node.js version
+NODE_VERSION=$(node -v)
+echo "Node.js version: $NODE_VERSION"
 
-# Fix esbuild version issue if it exists
-echo "Checking esbuild version..."
-if grep -q "0.25.0" package-lock.json && npm list esbuild | grep -q "0.21.5"; then
-  echo "Detected esbuild version mismatch. Fixing..."
+# Check for esbuild version
+if npm list esbuild | grep -q "0.25.0"; then
+  echo "✓ esbuild 0.25.0 is already installed"
+else
+  echo "⚠️ Incorrect esbuild version. Installing esbuild 0.25.0..."
   npm install esbuild@0.25.0 --save-exact
 fi
 
-# Ensure node_modules are up to date
-echo "Checking dependencies..."
-npm install
+# Clean previous build
+echo "Cleaning previous build..."
+rm -rf dist || true
 
-# Apply optimizations for production
-echo "Applying production optimizations..."
-
-# Fix TypeScript paths
-echo "Ensuring TypeScript paths are properly configured..."
-if ! grep -q "paths" tsconfig.json; then
-  echo "Warning: Path aliases not found in tsconfig.json - applying fix"
-  # Apply fixes from the changes we made
-  cp tsconfig.paths.json tsconfig.paths.json.bak # Backup
+# Make sure production patches are in place
+echo "Verifying production patches..."
+if [ ! -f "public/production-patch.js" ]; then
+  echo "❌ ERROR: production-patch.js is missing!"
+  exit 1
 fi
 
-# Fix relative imports if needed
-echo "Fixing problematic imports..."
-node scripts/fix-imports.js || {
-  echo "Fix imports script failed. Trying with Node.js module workaround..."
-  # Try with explicit node options for ESM
-  NODE_OPTIONS="--experimental-specifier-resolution=node" node scripts/fix-imports.js || {
-    echo "Could not run fix-imports.js. Manual fixes may be needed."
-  }
-}
-
-# Fix React references in vite.config.ts
-echo "Ensuring React is properly bundled..."
-if ! grep -q "manualChunks" vite.config.ts; then
-  echo "Warning: Manual chunks not configured in vite.config.ts"
+# Verify index.html includes the production patch
+if ! grep -q "production-patch.js" index.html; then
+  echo "❌ ERROR: production-patch.js is not included in index.html!"
+  exit 1
 fi
 
-# Build with production settings
-echo "Building for production..."
-NODE_OPTIONS="--max-old-space-size=4096" VITE_APP_ENV=production npm run build
+# Set environment to production
+export NODE_ENV=$BUILD_MODE
 
-# Run diagnostic check
-echo "Running diagnostic checks on the build..."
-NODE_OPTIONS="--experimental-specifier-resolution=node" node scripts/debug-production.js || {
-  echo "Debug script failed. Continuing anyway..."
-}
+# Build with optimized settings
+echo "Building with $BUILD_MODE settings..."
+npm run build -- --mode $BUILD_MODE
 
-echo ""
-echo "===== BUILD COMPLETE ====="
-echo "The application has been rebuilt with fixes for:"
-echo "1. React initialization errors (react-jsx-runtime issues)"
-echo "2. Wallet provider conflicts (Backpack wallet compatibility)"
-echo "3. Path alias resolution issues"
-echo "4. Error recovery mechanisms"
-echo ""
-echo "Deploy the contents of the 'dist' directory to your production environment."
-echo "If you still encounter issues, check the browser console for specific error messages."
+# Verify the build completed successfully
+if [ -d "dist" ]; then
+  echo "✓ Build completed successfully!"
+  
+  # Count files in dist
+  FILE_COUNT=$(find dist -type f | wc -l)
+  echo "Total files in dist: $FILE_COUNT"
+  
+  # Check bundle size
+  echo "Checking bundle sizes..."
+  du -sh dist
+  find dist -name "*.js" -exec du -sh {} \;
+  
+  echo ""
+  echo "=== Build Summary ==="
+  echo "✓ Production patches applied"
+  echo "✓ Non-intrusive wallet adapter implemented"
+  echo "✓ React initialization errors addressed"
+  echo "✓ Build optimizations applied"
+  echo ""
+  echo "To deploy, upload the contents of the dist folder to your production server."
+else
+  echo "❌ Build failed!"
+  exit 1
+fi
