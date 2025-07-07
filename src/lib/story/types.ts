@@ -21,25 +21,9 @@ export interface IPAsset {
   registrationDate: string;
 }
 
-export interface LicenseTerms {
-  transferable: boolean;
-  royaltyPolicy: string;
-  defaultMintingFee: bigint;
-  expiration: bigint;
-  commercialUse: boolean;
-  commercialAttribution: boolean;
-  commercializerChecker: string;
-  commercializerCheckerData: string;
-  commercialRevShare: number;
-  commercialRevCeiling: bigint;
-  derivativesAllowed: boolean;
-  derivativesAttribution: boolean;
-  derivativesApproval: boolean;
-  derivativesReciprocal: boolean;
-  derivativeRevCeiling: bigint;
-  currency: string;
-  uri: string;
-}
+import type { LicenseTerms as BlockchainLicenseTerms } from '../../types/blockchain';
+
+export type LicenseTerms = BlockchainLicenseTerms;
 
 export interface IPMetadata {
   title: string;
@@ -85,6 +69,7 @@ export interface IPRegistrationResult {
   licenseTermsId?: string;
   error?: string;
   explorerUrl?: string;
+  uiOnly?: boolean; // Flag for browser-only mock results
 }
 
 export interface LicenseRegistrationResult {
@@ -92,6 +77,7 @@ export interface LicenseRegistrationResult {
   licenseTermsId?: string;
   txHash?: string;
   error?: string;
+  uiOnly?: boolean; // Flag for browser-only mock results
 }
 
 export interface DerivativeRegistrationResult {
@@ -102,6 +88,7 @@ export interface DerivativeRegistrationResult {
   parentIpIds: string[];
   licenseTermsIds: string[];
   error?: string;
+  uiOnly?: boolean; // Flag for browser-only mock results
 }
 
 // License template types

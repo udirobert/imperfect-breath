@@ -79,10 +79,11 @@ export const PatternCard: React.FC<PatternCardProps> = ({
       .toUpperCase();
   };
 
-  // Mock rating and stats - in real app, these would come from the pattern data
-  const rating = 4.5;
-  const reviewCount = 128;
-  const sessionCount = 1240;
+  // Get actual data from pattern object
+  // Safely access properties that might not exist in the type definition
+  const rating = (pattern as any).rating || 0;
+  const reviewCount = (pattern as any).reviews || 0;
+  const sessionCount = pattern.sessionCount || 0;
 
   return (
     <Card className="hover:shadow-lg transition-shadow cursor-pointer group">
@@ -112,14 +113,14 @@ export const PatternCard: React.FC<PatternCardProps> = ({
             <DemoIndicator isDemo={pattern.is_demo || false} />
 
             {/* Price/Premium Badge */}
-            {showPrice && pattern.licenseSettings?.isCommercial && (
+            {showPrice && pattern.licenseSettings?.commercialUse && (
               <div className="flex items-center gap-1 text-primary font-medium">
                 <DollarSign className="h-4 w-4" />
                 {pattern.licenseSettings.price} USDC
               </div>
             )}
 
-            {!pattern.licenseSettings?.isCommercial && (
+            {!pattern.licenseSettings?.commercialUse && (
               <Badge variant="secondary">Free</Badge>
             )}
           </div>
@@ -170,8 +171,8 @@ export const PatternCard: React.FC<PatternCardProps> = ({
 
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              <span>{rating}</span>
-              <span>({reviewCount})</span>
+              <span>{rating.toFixed(1)}</span>
+              <span>({reviewCount > 0 ? reviewCount : "No reviews"})</span>
             </div>
           </div>
 
@@ -257,21 +258,31 @@ export const PatternCard: React.FC<PatternCardProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onLike(pattern.id as string)}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent card click propagation
+                onLike(pattern.id as string);
+              }}
               className={`${isLiked ? "text-red-500 border-red-500" : ""}`}
+              disabled={!pattern.id}
+              title={!pattern.id ? "Cannot like this pattern" : undefined}
             >
               <Heart className={`h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
             </Button>
           )}
         </div>
 
-        {/* Usage Stats */}
+        {/* Usage Stats - Real data from blockchain */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
           <div className="flex items-center gap-1">
             <Users className="h-3 w-3" />
-            <span>{sessionCount.toLocaleString()} sessions</span>
+            <span>
+              {typeof sessionCount === "number"
+                ? sessionCount.toLocaleString()
+                : "0"}{" "}
+              sessions
+            </span>
           </div>
-          {pattern.licenseSettings?.isCommercial && (
+          {pattern.licenseSettings?.commercialUse && (
             <div className="flex items-center gap-1">
               <Crown className="h-3 w-3" />
               <span>Premium</span>

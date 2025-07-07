@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import { Search, X } from "lucide-react";
 
 interface SearchBarProps {

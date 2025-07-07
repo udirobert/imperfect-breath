@@ -87,6 +87,11 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
       reviewService
         .getReviewsForPattern(pattern.id as string)
         .then(setReviews)
+        .catch((error) => {
+          console.error("Error fetching reviews:", error);
+          // Show error state instead of silently failing
+          setReviews([]);
+        })
         .finally(() => setLoadingReviews(false));
     }
   }, [pattern]);
@@ -128,10 +133,13 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
       .toUpperCase();
   };
 
-  // Mock data - in real app, these would come from the pattern
-  const rating = 4.5;
-  const reviewCount = 128;
-  const sessionCount = 1240;
+  // Calculate the rating from reviews, or use fallback values if not available
+  const rating =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
+  const reviewCount = reviews.length;
+  const sessionCount = pattern.sessionCount || 0;
   const isPremium = pattern.licenseSettings.isCommercial;
   const needsPurchase = isPremium && !hasAccess;
 

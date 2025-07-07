@@ -1,4 +1,5 @@
-import type { BlockchainConfig } from "@/types/blockchain";
+import type { BlockchainConfig } from "../../types/blockchain";
+import { lensChain } from "../publicClient";
 
 // Environment variables with fallbacks
 const getEnvVar = (name: string, fallback?: string): string => {
@@ -12,11 +13,7 @@ const getEnvVar = (name: string, fallback?: string): string => {
 
 // Blockchain configuration
 export const blockchainConfig: BlockchainConfig = {
-  tomo: {
-    projectId: getEnvVar("VITE_TOMO_PROJECT_ID", "demo_project_id"),
-    apiKey: getEnvVar("VITE_TOMO_API_KEY", "demo_api_key"),
-    network: getEnvVar("VITE_TOMO_NETWORK", "testnet") as "mainnet" | "testnet",
-  },
+  environment: getEnvVar("VITE_BLOCKCHAIN_ENVIRONMENT", "testnet") as "mainnet" | "testnet",
   crossmint: {
     projectId: getEnvVar("VITE_CROSSMINT_PROJECT_ID", "demo_project_id"),
     apiKey: getEnvVar("VITE_CROSSMINT_API_KEY", "demo_api_key"),
@@ -26,12 +23,16 @@ export const blockchainConfig: BlockchainConfig = {
   },
   storyProtocol: {
     apiKey: getEnvVar("VITE_STORY_PROTOCOL_API_KEY", "demo_api_key"),
-    chainId: parseInt(getEnvVar("VITE_STORY_PROTOCOL_CHAIN_ID", "1")),
+    chainId: parseInt(getEnvVar("VITE_STORY_PROTOCOL_CHAIN_ID", "1315")),
     contractAddress: getEnvVar(
       "VITE_STORY_PROTOCOL_CONTRACT_ADDRESS",
       "0x0000000000000000000000000000000000000000",
     ),
   },
+  connectKit: {
+    projectId: getEnvVar("VITE_WALLETCONNECT_PROJECT_ID", "demo_project_id"),
+    appName: getEnvVar("VITE_APP_NAME", "Imperfect Breath"),
+  }
 };
 
 // Network configurations
@@ -39,7 +40,7 @@ export const networkConfig = {
   mainnet: {
     chainId: 1,
     name: "Ethereum Mainnet",
-    rpcUrl: "https://eth-mainnet.g.alchemy.com/v2/your-api-key",
+    rpcUrl: `https://eth-mainnet.g.alchemy.com/v2/${getEnvVar("VITE_ALCHEMY_API_KEY", "your-api-key")}`,
     blockExplorer: "https://etherscan.io",
     currency: {
       name: "Ether",
@@ -47,37 +48,37 @@ export const networkConfig = {
       decimals: 18,
     },
   },
-  testnet: {
-    chainId: 11155111,
-    name: "Sepolia Testnet",
-    rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/your-api-key",
-    blockExplorer: "https://sepolia.etherscan.io",
+  flowTestnet: {
+    chainId: 16,
+    name: "Flow Testnet",
+    rpcUrl: getEnvVar("VITE_FLOW_TESTNET_RPC_URL", "https://rest-testnet.onflow.org"),
+    blockExplorer: "https://testnet.flowscan.org",
     currency: {
-      name: "Sepolia Ether",
-      symbol: "SEP",
+      name: "Flow Token",
+      symbol: "FLOW",
+      decimals: 8,
+    },
+  },
+  aeneid: {
+    chainId: 1315,
+    name: "Story Protocol Aeneid Testnet",
+    rpcUrl: getEnvVar("VITE_STORY_PROTOCOL_RPC_URL", "https://aeneid.storyrpc.io"),
+    blockExplorer: "https://aeneid.storyscan.io",
+    currency: {
+      name: "IP",
+      symbol: "IP",
       decimals: 18,
     },
   },
-  polygon: {
-    chainId: 137,
-    name: "Polygon Mainnet",
-    rpcUrl: "https://polygon-mainnet.g.alchemy.com/v2/your-api-key",
-    blockExplorer: "https://polygonscan.com",
+  lensTestnet: {
+    chainId: lensChain.id,
+    name: lensChain.name,
+    rpcUrl: lensChain.rpcUrls.default.http[0],
+    blockExplorer: lensChain.blockExplorers?.default.url || "https://explorer.testnet.lens.xyz",
     currency: {
-      name: "MATIC",
-      symbol: "MATIC",
-      decimals: 18,
-    },
-  },
-  mumbai: {
-    chainId: 80001,
-    name: "Mumbai Testnet",
-    rpcUrl: "https://polygon-mumbai.g.alchemy.com/v2/your-api-key",
-    blockExplorer: "https://mumbai.polygonscan.com",
-    currency: {
-      name: "MATIC",
-      symbol: "MATIC",
-      decimals: 18,
+      name: lensChain.nativeCurrency.name,
+      symbol: lensChain.nativeCurrency.symbol,
+      decimals: lensChain.nativeCurrency.decimals,
     },
   },
 };
@@ -128,20 +129,15 @@ export const featureFlags = {
   enableWalletConnect:
     getEnvVar("VITE_ENABLE_WALLET_CONNECT", "true") === "true",
   enableMetamask: getEnvVar("VITE_ENABLE_METAMASK", "true") === "true",
-  enableTomoWallet: getEnvVar("VITE_ENABLE_TOMO_WALLET", "true") === "true",
+  enableConnectKit: getEnvVar("VITE_ENABLE_CONNECT_KIT", "true") === "true",
   enableIPRegistration:
     getEnvVar("VITE_ENABLE_IP_REGISTRATION", "true") === "true",
   enableLicensing: getEnvVar("VITE_ENABLE_LICENSING", "true") === "true",
-  enableMockMode: getEnvVar("VITE_ENABLE_MOCK_MODE", "true") === "true",
+  enableMockMode: false, // No more mock mode - always use real blockchain interactions
 };
 
 // API endpoints
 export const apiEndpoints = {
-  tomo: {
-    auth: "https://api.tomo.com/auth",
-    wallet: "https://api.tomo.com/wallet",
-    user: "https://api.tomo.com/user",
-  },
   crossmint: {
     base:
       blockchainConfig.crossmint.environment === "production"
@@ -155,12 +151,17 @@ export const apiEndpoints = {
     ip: "/api/v1/ip",
     license: "/api/v1/license",
   },
+  connectKit: {
+    base: "https://connect.family",
+    auth: "/api/auth",
+    wallet: "/api/wallet",
+  }
 };
 
 // Validation functions
 export const validateConfig = (): boolean => {
   const requiredVars = [
-    "VITE_TOMO_PROJECT_ID",
+    "VITE_WALLETCONNECT_PROJECT_ID",
     "VITE_CROSSMINT_PROJECT_ID",
     "VITE_STORY_PROTOCOL_API_KEY",
   ];
@@ -194,7 +195,7 @@ export const initializeBlockchain = async (): Promise<boolean> => {
 
     console.log("✅ Blockchain configuration initialized successfully");
     console.log("📊 Configuration:", {
-      network: blockchainConfig.tomo.network,
+      network: blockchainConfig.environment,
       environment: blockchainConfig.crossmint.environment,
       mockMode: featureFlags.enableMockMode,
     });
@@ -206,16 +207,21 @@ export const initializeBlockchain = async (): Promise<boolean> => {
   }
 };
 
-// Export current network config
+// Export current network config based on environment
 export const getCurrentNetworkConfig = () => {
-  const network = blockchainConfig.tomo.network;
-  return network === "mainnet" ? networkConfig.mainnet : networkConfig.testnet;
+  const environment = blockchainConfig.environment;
+  if (environment === "mainnet") {
+    return networkConfig.mainnet;
+  } else {
+    // Use Lens testnet for default testnet environment
+    return networkConfig.lensTestnet;
+  }
 };
 
 // Export current contract addresses
 export const getCurrentContractAddresses = () => {
-  const network = blockchainConfig.tomo.network;
-  return network === "mainnet"
+  const environment = blockchainConfig.environment;
+  return environment === "mainnet"
     ? contractAddresses.mainnet
     : contractAddresses.testnet;
 };
@@ -254,5 +260,5 @@ export const isProduction = () => {
 };
 
 export const getNetworkName = () => {
-  return blockchainConfig.tomo.network === "mainnet" ? "Mainnet" : "Testnet";
+  return blockchainConfig.environment === "mainnet" ? "Mainnet" : "Testnet";
 };

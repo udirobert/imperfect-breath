@@ -1,12 +1,22 @@
 import { StorageClient, immutable } from "@lens-chain/storage-client";
-// TODO: Replace with proper chain configuration
-// import { chains } from "wagmi/chains"; // Using wagmi chains for chain ID
+import { lensChain, lensChainMainnet } from "../publicClient";
+import { config } from "../../config/environment";
 
 const storageClient = StorageClient.create();
 
+/**
+ * Uploads data to Grove storage service for Lens Protocol
+ * @param data Any JSON-serializable data to be stored
+ * @returns The URI of the uploaded content
+ */
 export async function uploadToGrove(data: any) {
   try {
-    const acl = immutable(chains.sepolia.id); // Using Sepolia for Lens Testnet
+    // Use the appropriate chain ID based on environment
+    const chainId = config.lens.environment === "testnet" 
+      ? lensChain.id 
+      : lensChainMainnet.id;
+      
+    const acl = immutable(chainId);
     const response = await storageClient.uploadAsJson(data, { acl });
     console.log("Uploaded to Grove:", response);
     return response.uri;

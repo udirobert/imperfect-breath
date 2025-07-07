@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { publicClient } from '@/providers/Web3Provider';
+import { publicClient } from '../providers/Web3Provider';
 import { toast } from 'sonner';
-import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from '@/lib/lens';
+import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from '../lib/lens';
 import { Publication } from './useLensFeed';
 
 export const useComments = (profileId: bigint, pubId: bigint) => {

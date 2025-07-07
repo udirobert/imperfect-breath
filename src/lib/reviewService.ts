@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../integrations/supabase/client';
 
 export interface PatternReview {
   id?: string;
@@ -39,13 +39,13 @@ export class ReviewService {
 
       if (error) {
         console.error('Error fetching reviews from Supabase:', error);
-        return [];
+        throw new Error(`Failed to fetch reviews: ${error.message}`);
       }
 
-      return data;
+      return data || [];
     } catch (error) {
       console.error('Error fetching reviews:', error);
-      return [];
+      throw new Error(`Failed to fetch reviews for pattern ${patternId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -57,13 +57,13 @@ export class ReviewService {
 
       if (error) {
         console.error('Error fetching all reviews from Supabase:', error);
-        return [];
+        throw new Error(`Failed to fetch all reviews: ${error.message}`);
       }
 
-      return data;
+      return data || [];
     } catch (error) {
       console.error('Error fetching all reviews:', error);
-      return [];
+      throw new Error(`Failed to fetch all reviews: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

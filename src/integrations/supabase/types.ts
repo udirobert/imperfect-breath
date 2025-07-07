@@ -1,3 +1,8 @@
+/**
+ * Supabase Database Types
+ * Generated types for the Supabase database schema
+ */
+
 export type Json =
   | string
   | number
@@ -6,108 +11,134 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
-      patterns: {
-        Row: {
-          category: string
-          created_at: string | null
-          creator: string
-          description: string | null
-          difficulty: string
-          duration: number
-          id: string
-          ip_hash: string | null
-          name: string
-          phases: Json
-        }
-        Insert: {
-          category: string
-          created_at?: string | null
-          creator: string
-          description?: string | null
-          difficulty: string
-          duration: number
-          id: string
-          ip_hash?: string | null
-          name: string
-          phases: Json
-        }
-        Update: {
-          category?: string
-          created_at?: string | null
-          creator?: string
-          description?: string | null
-          difficulty?: string
-          duration?: number
-          id?: string
-          ip_hash?: string | null
-          name?: string
-          phases?: Json
-        }
-        Relationships: []
-      }
       sessions: {
         Row: {
-          breath_hold_time: number
-          created_at: string
           id: string
-          pattern_name: string
-          restlessness_score: number
-          session_duration: number
+          created_at: string
           user_id: string
+          pattern_name: string
+          session_duration: number
+          breath_hold_time: number
+          restlessness_score: number
+          quality_score?: number | null
+          notes?: string | null
+          ip_registered?: boolean | null
+          ip_asset_id?: string | null
         }
         Insert: {
-          breath_hold_time: number
-          created_at?: string
           id?: string
-          pattern_name: string
-          restlessness_score: number
-          session_duration: number
+          created_at?: string
           user_id: string
+          pattern_name: string
+          session_duration: number
+          breath_hold_time: number
+          restlessness_score: number
+          quality_score?: number | null
+          notes?: string | null
+          ip_registered?: boolean | null
+          ip_asset_id?: string | null
         }
         Update: {
-          breath_hold_time?: number
-          created_at?: string
           id?: string
-          pattern_name?: string
-          restlessness_score?: number
-          session_duration?: number
+          created_at?: string
           user_id?: string
+          pattern_name?: string
+          session_duration?: number
+          breath_hold_time?: number
+          restlessness_score?: number
+          quality_score?: number | null
+          notes?: string | null
+          ip_registered?: boolean | null
+          ip_asset_id?: string | null
         }
-        Relationships: []
       }
-      users: {
+      patterns: {
         Row: {
           id: string
-          role: string
-          creator_verified: boolean
-          wallet_address: string | null
-          wallet_signature: string | null
+          created_at: string
+          user_id: string
+          name: string
+          description: string
+          inhale: number
+          hold: number
+          exhale: number
+          rest: number
+          is_public: boolean
+          ip_registered?: boolean | null
+          ip_asset_id?: string | null
+          lens_post_id?: string | null
+          license_terms?: Json | null
         }
         Insert: {
-          id: string
-          role?: string
-          creator_verified?: boolean
-          wallet_address?: string | null
-          wallet_signature?: string | null
+          id?: string
+          created_at?: string
+          user_id: string
+          name: string
+          description: string
+          inhale: number
+          hold: number
+          exhale: number
+          rest: number
+          is_public?: boolean
+          ip_registered?: boolean | null
+          ip_asset_id?: string | null
+          lens_post_id?: string | null
+          license_terms?: Json | null
         }
         Update: {
           id?: string
-          role?: string
-          creator_verified?: boolean
-          wallet_address?: string | null
-          wallet_signature?: string | null
+          created_at?: string
+          user_id?: string
+          name?: string
+          description?: string
+          inhale?: number
+          hold?: number
+          exhale?: number
+          rest?: number
+          is_public?: boolean
+          ip_registered?: boolean | null
+          ip_asset_id?: string | null
+          lens_post_id?: string | null
+          license_terms?: Json | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "users_id_fkey"
-            columns: ["id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
+      }
+      user_profiles: {
+        Row: {
+          id: string
+          created_at: string
+          user_id: string
+          display_name?: string | null
+          bio?: string | null
+          lens_profile_id?: string | null
+          flow_address?: string | null
+          story_address?: string | null
+          has_completed_onboarding: boolean
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          user_id: string
+          display_name?: string | null
+          bio?: string | null
+          lens_profile_id?: string | null
+          flow_address?: string | null
+          story_address?: string | null
+          has_completed_onboarding?: boolean
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          user_id?: string
+          display_name?: string | null
+          bio?: string | null
+          lens_profile_id?: string | null
+          flow_address?: string | null
+          story_address?: string | null
+          has_completed_onboarding?: boolean
+        }
       }
     }
     Views: {
@@ -124,114 +155,3 @@ export type Database = {
     }
   }
 }
-
-type DefaultSchema = Database[Extract<keyof Database, "public">]
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const

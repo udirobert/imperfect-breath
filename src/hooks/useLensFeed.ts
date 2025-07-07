@@ -1,95 +1,110 @@
-import { useState, useEffect } from "react";
-import { publicClient } from "@/lib/publicClient";
-import { useLensProfile } from "./useLensProfile";
+import { useState, useEffect, useCallback } from "react";
+import { useLensContext } from "./lens-context-adapter";
+import { TimelineItem } from "./lens-types";
 import { toast } from "sonner";
-import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from "@/lib/lens";
-// Legacy Lens feed hook - using contract calls as fallback
 
 export interface Publication {
   contentURI: string;
   profileIdPointed: bigint;
   pubIdPointed: bigint;
-  // Add other publication fields as needed
+  // Fields updated with modern structure
+  id: string;
+  content: string;
+  createdAt: string;
+  profile: {
+    id: string;
+    name?: string;
+    handle: string;
+    picture?: string;
+  };
+  stats: {
+    comments: number;
+    mirrors: number;
+    reactions: number;
+  };
 }
 
-// Legacy Lens feed implementation using contract calls
-
 export const useLensFeed = () => {
-  const { lensProfile } = useLensProfile();
   const [feed, setFeed] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  const {
+    isAuthenticated,
+    timeline,
+    fetchTimeline,
+    fetchBreathingContent,
+    isLoading
+  } = useLensContext();
 
-  // Using legacy contract-based implementation
+  // Enhanced fetching that tries both timeline methods
+  const fetchFeed = useCallback(async () => {
+    if (!isAuthenticated) {
+      setFeed([]);
+      return;
+    }
 
-  useEffect(() => {
-    const fetchFeedLegacy = async () => {
-      if (!lensProfile) {
-        setFeed([]);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // 1. Get the list of profiles the user follows
-        const followedProfileIds = (await publicClient.readContract({
-          address: LENS_HUB_CONTRACT_ADDRESS,
-          abi: LENS_HUB_ABI,
-          functionName: "getFollows",
-          args: [lensProfile.profileId],
-        })) as bigint[];
-
-        // 2. Fetch the latest publication from each followed profile
-        const publicationsPromises = followedProfileIds.map(
-          async (profileId) => {
-            try {
-              const pubCount = await publicClient
-                .readContract({
-                  address: LENS_HUB_CONTRACT_ADDRESS,
-                  abi: LENS_HUB_ABI,
-                  functionName: "getProfile",
-                  args: [profileId],
-                })
-                .then((data) => (data as { pubCount: number }).pubCount);
-
-              if (pubCount > 0) {
-                const pub = await publicClient.readContract({
-                  address: LENS_HUB_CONTRACT_ADDRESS,
-                  abi: LENS_HUB_ABI,
-                  functionName: "getPub",
-                  args: [profileId, pubCount],
-                });
-                return pub as Publication;
-              }
-              return null;
-            } catch (error) {
-              console.error(
-                `Failed to fetch publication for profile ${profileId}:`,
-                error,
-              );
-              return null; // Continue if one profile fails
-            }
-          },
-        );
-
-        const publications = (await Promise.all(publicationsPromises)).filter(
-          (p) => p !== null,
-        ) as Publication[];
-
-        setFeed(publications);
-      } catch (error: unknown) {
-        console.error("Error fetching Lens feed:", error);
-        toast.error("Could not fetch Lens feed.", {
-          description:
-            "There was an issue fetching publications from followed profiles.",
+    setLoading(true);
+    try {
+      // First try to fetch breathing-specific content
+      await fetchBreathingContent();
+      
+      // If that doesn't yield results, fall back to general timeline
+      if (!timeline || timeline.length === 0) {
+        await fetchTimeline({
+          contentFocus: ["TEXT", "IMAGE", "VIDEO", "AUDIO"],
+          tags: ["breathing", "wellness", "meditation"]
         });
-        setFeed([]);
-      } finally {
-        setLoading(false);
       }
-    };
+      
+      // Map timeline data to Publications
+      if (timeline && timeline.length > 0) {
+        // Convert timeline items to Publication format
+        const publications = timeline.map((item: TimelineItem) => ({
+          ...item,
+          // Ensure all required fields are present
+          contentURI: item.contentURI || "",
+          profileIdPointed: BigInt(item.profileId || 0),
+          pubIdPointed: BigInt(item.pubId || 0),
+          // Add modern fields with fallbacks
+          id: item.id || `${item.profileId}-${item.pubId}`,
+          content: item.content || item.contentURI || "",
+          createdAt: item.createdAt || new Date().toISOString(),
+          profile: {
+            id: item.profile?.id || "",
+            name: item.profile?.name,
+            handle: item.profile?.handle || "unknown",
+            picture: item.profile?.picture
+          },
+          stats: {
+            comments: item.stats?.comments || 0,
+            mirrors: item.stats?.mirrors || 0,
+            reactions: item.stats?.reactions || 0
+          }
+        }));
+        
+        setFeed(publications);
+      } else {
+        setFeed([]);
+      }
+    } catch (error: unknown) {
+      console.error("Error fetching Lens feed:", error);
+      toast.error("Could not fetch Lens feed.", {
+        description: "There was an issue fetching your timeline.",
+      });
+      setFeed([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, timeline, fetchTimeline, fetchBreathingContent]);
 
-    fetchFeedLegacy();
-  }, [lensProfile]);
+  // Fetch feed on mount and when dependencies change
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
 
-  return { feed, loading };
+  return {
+    feed,
+    loading: loading || isLoading,
+    refreshFeed: fetchFeed
+  };
 };

@@ -12,7 +12,7 @@ const LENS_APP_ADDRESS = import.meta.env.VITE_LENS_APP_ADDRESS || "";
 export const LENS_HUB_CONTRACT_ADDRESS =
   isProduction
     ? "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d" // Mainnet
-    : "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82"; // Testnet/Mumbai
+    : "0x22A95EBb7B9Ee51A2A104C8c89F48128B92f7A59"; // Lens Chain Testnet
 
 // Lens Hub ABI - minimal version with required methods
 export const LENS_HUB_ABI = [

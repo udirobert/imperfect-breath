@@ -124,146 +124,9 @@ interface PatternStats {
   userSatisfaction: number;
 }
 
-const mockCreatorStats: CreatorStats = {
-  totalPatterns: 8,
-  totalEarnings: 15.24,
-  monthlyEarnings: 4.83,
-  totalStudents: 12450,
-  avgRating: 4.7,
-  totalSessions: 89234,
-  conversionRate: 23.4,
-  topCategory: "stress",
-};
-
-const mockPatterns: PatternStats[] = [
-  {
-    id: "pattern_1",
-    name: "Ocean Waves Stress Relief",
-    description:
-      "My signature calming technique inspired by 15 years of teaching. Perfect for beginners struggling with anxiety.",
-    category: "stress",
-    difficulty: "beginner",
-    createdAt: "2024-01-15T10:30:00Z",
-    lastUpdated: "2024-01-16T14:20:00Z",
-    status: "published",
-    hasVideo: true,
-    hasAudio: true,
-    hasGuided: true,
-    duration: 12000,
-    expectedSessionDuration: 10,
-    totalSessions: 15420,
-    uniqueUsers: 3240,
-    rating: 4.8,
-    reviews: 847,
-    favorites: 1205,
-    price: 0.05,
-    currency: "ETH",
-    isFree: false,
-    totalEarnings: 8.45,
-    monthlyEarnings: 2.12,
-    licenseSales: 169,
-    ipRegistered: true,
-    ipAssetId: "ip_ocean_waves_123",
-    completionRate: 87,
-    retentionRate: 64,
-    userSatisfaction: 92,
-  },
-  {
-    id: "pattern_2",
-    name: "Power Focus for Professionals",
-    description:
-      "Advanced 4-7-8 technique I developed for executive coaching. Proven to boost focus by 85% in clinical trials.",
-    category: "focus",
-    difficulty: "intermediate",
-    createdAt: "2024-01-10T08:15:00Z",
-    lastUpdated: "2024-01-12T16:45:00Z",
-    status: "published",
-    hasVideo: true,
-    hasAudio: false,
-    hasGuided: true,
-    duration: 19000,
-    expectedSessionDuration: 15,
-    totalSessions: 8960,
-    uniqueUsers: 1824,
-    rating: 4.9,
-    reviews: 524,
-    favorites: 892,
-    price: 0.12,
-    currency: "ETH",
-    isFree: false,
-    totalEarnings: 4.56,
-    monthlyEarnings: 1.83,
-    licenseSales: 38,
-    ipRegistered: true,
-    ipAssetId: "ip_power_focus_456",
-    completionRate: 78,
-    retentionRate: 71,
-    userSatisfaction: 95,
-  },
-  {
-    id: "pattern_3",
-    name: "Free Beginner's Introduction",
-    description:
-      "Free introductory pattern to get people started with breathwork. Great for building your audience.",
-    category: "stress",
-    difficulty: "beginner",
-    createdAt: "2024-01-05T12:00:00Z",
-    lastUpdated: "2024-01-05T12:00:00Z",
-    status: "published",
-    hasVideo: false,
-    hasAudio: false,
-    hasGuided: false,
-    duration: 8000,
-    expectedSessionDuration: 5,
-    totalSessions: 28450,
-    uniqueUsers: 8904,
-    rating: 4.5,
-    reviews: 1256,
-    favorites: 2341,
-    price: 0,
-    currency: "ETH",
-    isFree: true,
-    totalEarnings: 0,
-    monthlyEarnings: 0,
-    licenseSales: 0,
-    ipRegistered: false,
-    completionRate: 91,
-    retentionRate: 45,
-    userSatisfaction: 82,
-  },
-  {
-    id: "pattern_4",
-    name: "Sleep Sanctuary (Premium)",
-    description:
-      "My most popular pattern for insomnia. Includes guided meditation and nature sounds. 95% success rate.",
-    category: "sleep",
-    difficulty: "beginner",
-    createdAt: "2024-01-08T20:30:00Z",
-    lastUpdated: "2024-01-14T09:15:00Z",
-    status: "published",
-    hasVideo: false,
-    hasAudio: true,
-    hasGuided: true,
-    duration: 18000,
-    expectedSessionDuration: 20,
-    totalSessions: 12340,
-    uniqueUsers: 2876,
-    rating: 4.9,
-    reviews: 987,
-    favorites: 1834,
-    price: 0.08,
-    currency: "ETH",
-    isFree: false,
-    totalEarnings: 2.23,
-    monthlyEarnings: 0.88,
-    licenseSales: 28,
-    ipRegistered: true,
-    ipAssetId: "ip_sleep_sanctuary_789",
-    completionRate: 95,
-    retentionRate: 89,
-    userSatisfaction: 97,
-  },
-];
+// Import APIs for real data
+import { getCreatorPatterns, getCreatorStats } from "../lib/api/creatorService";
+import { handleError } from "../lib/utils/error-utils";
 
 const categoryIcons = {
   stress: Heart,
@@ -281,18 +144,47 @@ const statusColors = {
 
 const EnhancedCreatorDashboard = () => {
   const navigate = useNavigate();
-  const [patterns, setPatterns] = useState<PatternStats[]>(mockPatterns);
-  const [stats, setStats] = useState<CreatorStats>(mockCreatorStats);
+  const [patterns, setPatterns] = useState<PatternStats[]>([]);
+  const [stats, setStats] = useState<CreatorStats | null>(null);
   const [selectedPattern, setSelectedPattern] = useState<PatternStats | null>(
     null
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [royaltyPercentage, setRoyaltyPercentage] = useState(10);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
   const { registerBreathingPatternIP, setLicensingTerms } = useStory();
+
+  // Fetch real creator data on component mount
+  useEffect(() => {
+    const fetchCreatorData = async () => {
+      setLoading(true);
+      try {
+        // Fetch patterns and stats in parallel
+        const [creatorPatterns, creatorStats] = await Promise.all([
+          getCreatorPatterns(),
+          getCreatorStats(),
+        ]);
+
+        setPatterns(creatorPatterns);
+        setStats(creatorStats);
+      } catch (error) {
+        console.error("Failed to load creator data:", error);
+        toast({
+          title: "Failed to load data",
+          description:
+            "Could not load your creator data. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCreatorData();
+  }, [toast]);
 
   const handleCreatePattern = () => {
     navigate("/create-pattern");
@@ -305,11 +197,13 @@ const EnhancedCreatorDashboard = () => {
   const handleRegisterIP = async (pattern: PatternStats) => {
     setLoading(true);
     try {
-      console.log("Registering pattern as IP Asset", pattern);
+      // Directly use the Lens Chain blockchain integration
+      // No more mock data or fallbacks
+      if (!user?.id) {
+        throw new Error("User must be authenticated to register IP");
+      }
 
       // Extract phases from pattern data
-      // Note: The PatternStats interface doesn't have config with phases directly,
-      // so we need to fetch the full pattern from storage first
       const fullPattern = await patternStorageService.getPattern(pattern.id);
       if (!fullPattern) {
         throw new Error("Failed to load pattern details");
@@ -319,33 +213,38 @@ const EnhancedCreatorDashboard = () => {
       const patternPhases: Record<string, number> = {};
 
       if (fullPattern.phases) {
-        // Extract phase durations from pattern config
         fullPattern.phases.forEach((phase) => {
           patternPhases[phase.name] = phase.duration;
         });
       }
 
-      // Register the pattern with Story Protocol
+      // Use real blockchain registration
       const ipAsset = await registerBreathingPatternIP({
         name: pattern.name,
         description: pattern.description,
-        creator: user?.id || "anonymous",
+        creator: user.id,
         patternPhases: patternPhases,
       });
 
-      if (!ipAsset) {
-        throw new Error("Failed to register IP asset");
+      if (!ipAsset || !ipAsset.id) {
+        throw new Error("Transaction failed: No IP asset ID returned");
       }
 
-      // Set license terms - commercial use, derivatives, attribution
-      await setLicensingTerms(ipAsset.id, {
+      // Set real licensing terms on the blockchain
+      const licensingResult = await setLicensingTerms(ipAsset.id, {
         commercial: true,
         derivatives: true,
         attribution: true,
         royaltyPercentage: royaltyPercentage,
       });
 
-      // Update pattern with IP registration info
+      if (!licensingResult.success) {
+        throw new Error(
+          "Failed to set licensing terms: " + licensingResult.error
+        );
+      }
+
+      // Update pattern in our local state
       setPatterns((prev) =>
         prev.map((p) =>
           p.id === pattern.id
@@ -354,7 +253,7 @@ const EnhancedCreatorDashboard = () => {
         )
       );
 
-      // Update the pattern in storage
+      // Update the pattern in persistent storage
       await patternStorageService.savePattern({
         ...fullPattern,
         ipAssetId: ipAsset.id,
@@ -362,11 +261,9 @@ const EnhancedCreatorDashboard = () => {
       });
 
       toast({
-        title: "IP Registered",
-        description: `Pattern "${pattern.name}" has been registered as IP on Story Protocol.`,
+        title: "IP Registered Successfully",
+        description: `Pattern "${pattern.name}" has been registered as IP on Lens Chain using Story Protocol.`,
       });
-
-      console.log("✅ IP registered successfully:", ipAsset.id);
     } catch (error) {
       console.error("IP registration failed:", error);
       toast({
@@ -379,6 +276,20 @@ const EnhancedCreatorDashboard = () => {
       setLoading(false);
     }
   };
+
+  // If loading, show a loading state
+  if (loading || !stats) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">
+            Loading your creator dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const PatternCard = ({ pattern }: { pattern: PatternStats }) => {
     const CategoryIcon = categoryIcons[pattern.category];

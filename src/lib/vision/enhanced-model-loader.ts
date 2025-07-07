@@ -2,6 +2,8 @@ import type { IModelLoader, VisionTier } from './types';
 import { SimpleCache, getCache } from '../utils/cache-utils';
 import { startTimer, timed } from '../utils/performance-utils';
 import { handleError, createError, AppError } from '../utils/error-utils';
+// Import TensorFlow directly - no fallbacks
+import * as tf from '@tensorflow/tfjs';
 
 interface ModelConfig {
   url: string;
@@ -348,23 +350,21 @@ export class EnhancedModelLoader implements IModelLoader {
       }
 
       const modelData = await response.arrayBuffer();
+   
+      if (!tf) {
+        throw new Error('TensorFlow.js is required for model loading');
+      }
       
-      // In a real implementation, this would be:
-      // return await tf.loadLayersModel(tf.io.fromMemory(modelData));
-      
-      // For now, return a mock model
-      return {
-        predict: (input: any) => {
-          // Mock prediction
-          return new Promise(resolve => {
-            setTimeout(() => resolve({}), 10);
-          });
-        },
-        dispose: () => {
-          // Mock disposal
-          console.log(`Disposed model from ${url}`);
-        }
-      };
+      try {
+        // Use the actual TensorFlow.js loader - with proper import handling
+        // The tfjsConverter is not available directly on the tf object
+        // Instead, we should use the proper TFLite loader
+        return await tf.loadGraphModel(url);
+      } catch (tfLiteError) {
+        console.error('Error loading with TFLite converter:', tfLiteError);
+        // Try loading as a layers model as fallback method
+        return await tf.loadLayersModel(tf.io.fromMemory(modelData));
+      }
     } catch (error) {
       throw handleError(`load TensorFlow Lite model from ${url}`, error);
     } finally {
@@ -388,17 +388,94 @@ export class EnhancedModelLoader implements IModelLoader {
       }
 
       const wasmBytes = await response.arrayBuffer();
-      const wasmModule = await WebAssembly.instantiate(wasmBytes);
       
+      // Determine if we need to fetch any imports
+      const importURL = `${url.substring(0, url.lastIndexOf('.'))}.imports.json`;
+      let imports = {};
+      
+      try {
+        const importsResponse = await fetch(importURL);
+        if (importsResponse.ok) {
+          imports = await importsResponse.json();
+        }
+      } catch (e) {
+        console.log('No imports file found, using default WebAssembly environment');
+        // Use standard memory and table setup if no imports file
+        imports = {
+          env: {
+            memory: new WebAssembly.Memory({ initial: 10, maximum: 100 }),
+            table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' })
+          }
+        };
+      }
+      
+      // Instantiate the WASM module with proper imports
+      const { instance, module } = await WebAssembly.instantiate(wasmBytes, imports);
+      
+      // Create a wrapper with a proper interface
       return {
-        module: wasmModule,
-        process: (input: any) => {
-          // Mock processing
-          return new Promise(resolve => {
-            setTimeout(() => resolve({}), 5);
-          });
+        module: module,
+        instance: instance,
+        
+        // Real processing implementation
+        process: async (input: any) => {
+          // Convert input to the format expected by the WASM module
+          if (input instanceof ImageData || input instanceof HTMLImageElement) {
+            // Get image data if input is an HTML element
+            const imageData = input instanceof ImageData
+              ? input
+              : this.imageToImageData(input);
+            
+            const { data, width, height } = imageData;
+            
+            // Check if the appropriate processing function exists
+            if (instance.exports.process_image) {
+              // Allocate memory for the image in WASM memory
+              const bytesPerPixel = 4; // RGBA
+              const size = width * height * bytesPerPixel;
+              const ptr = (instance.exports.malloc as CallableFunction)(size);
+              
+              // Get a view of the WASM memory
+              const memory = (instance.exports.memory as WebAssembly.Memory);
+              const heap = new Uint8Array(memory.buffer);
+              
+              // Copy image data to WASM memory
+              heap.set(new Uint8Array(data.buffer), ptr);
+              
+              // Process the image
+              const resultPtr = (instance.exports.process_image as CallableFunction)(
+                ptr, width, height
+              );
+              
+              // Extract the result
+              const resultView = new Uint8Array(memory.buffer, resultPtr);
+              const resultLength = resultView.findIndex(b => b === 0);
+              const resultString = new TextDecoder().decode(resultView.slice(0, resultLength));
+              
+              // Free allocated memory
+              (instance.exports.free as CallableFunction)(ptr);
+              (instance.exports.free as CallableFunction)(resultPtr);
+              
+              // Parse and return the result
+              try {
+                return JSON.parse(resultString);
+              } catch (e) {
+                return { result: resultString };
+              }
+            } else {
+              throw new Error('WASM module does not export a process_image function');
+            }
+          } else {
+            throw new Error('Unsupported input format for WASM processing');
+          }
         },
+        
+        // Proper dispose function that cleans up resources
         dispose: () => {
+          // Call cleanup function if available
+          if (instance.exports.cleanup && typeof instance.exports.cleanup === 'function') {
+            (instance.exports.cleanup as CallableFunction)();
+          }
           console.log(`Disposed WASM model from ${url}`);
         }
       };
@@ -448,6 +525,19 @@ export class EnhancedModelLoader implements IModelLoader {
     } finally {
       endTimer();
     }
+  }
+
+  /**
+   * Helper method to convert an HTML image element to ImageData
+   * Used by the WASM model loader
+   */
+  private imageToImageData(img: HTMLImageElement): ImageData {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    return ctx.getImageData(0, 0, img.width, img.height);
   }
 
   /**

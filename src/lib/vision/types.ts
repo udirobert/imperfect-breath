@@ -1,112 +1,84 @@
-// Core types for the vision system
-export type VisionTier = 'basic' | 'standard' | 'premium' | 'none' | 'loading';
+/**
+ * Available vision tiers that determine feature availability
+ */
+export type VisionTier = 'loading' | 'basic' | 'standard' | 'premium';
 
-export type PerformanceMode = 'auto' | 'performance' | 'quality';
+/**
+ * Performance modes that balance quality vs resource usage
+ */
+export type PerformanceMode = 'performance' | 'auto' | 'quality';
 
-export interface DeviceCapabilities {
-  cpuCores: number;
-  gpuSupport: boolean;
-  wasmSupport: boolean;
-  cameraResolution: string;
-  batteryLevel?: number;
-  thermalState?: 'nominal' | 'fair' | 'serious' | 'critical';
-  isMobile: boolean;
-  isLowPowerMode: boolean;
-}
-
-export interface VisionConfig {
-  tier: VisionTier;
-  cameraConstraints: MediaStreamConstraints;
-  modelVariant: 'mobile' | 'desktop';
-  processingInterval: number;
-  frameSkipRatio: number;
-  batteryOptimization: boolean;
-  maxConcurrentProcessing: number;
-}
-
-// Metrics interfaces for different tiers
-export interface BaseMetrics {
-  timestamp: number;
+/**
+ * Core vision metrics interface - metrics available across all tiers
+ */
+export interface VisionMetrics {
+  /**
+   * Overall confidence in the vision analysis (0-1)
+   */
   confidence: number;
-}
-
-export interface BasicMetrics extends BaseMetrics {
+  
+  /**
+   * Level of movement detected (0-1, lower is better/less movement)
+   */
   movementLevel: number;
-  facePresent: boolean;
-  estimatedBreathingRate: number;
-  headAlignment: number;
+  
+  /**
+   * Timestamp of the last metrics update
+   */
+  lastUpdateTime: number;
+  
+  /**
+   * Estimated breathing rate in breaths per minute (standard+ tiers)
+   */
+  estimatedBreathingRate?: number;
+  
+  /**
+   * Quality of user's posture (0-1, higher is better) (standard+ tiers)
+   */
+  postureQuality?: number;
+  
+  /**
+   * Detected restlessness (0-1, lower is better) (premium tier)
+   */
+  restlessnessScore?: number;
+  
+  /**
+   * Estimated focus level (0-1, higher is better) (premium tier)
+   */
+  focusLevel?: number;
 }
 
-export interface StandardMetrics extends BasicMetrics {
-  facialTension: number;
-  postureQuality: number;
-  breathingRhythm: {
-    rate: number;
-    consistency: number;
-  };
-  restlessnessScore: number;
-}
-
-export interface PremiumMetrics extends StandardMetrics {
-  detailedFacialAnalysis: {
-    nostrilMovement: number;
-    jawTension: number;
-    eyeMovement: number;
-    microExpressions: number;
-  };
-  fullBodyPosture: {
-    spinalAlignment: number;
-    shoulderTension: number;
-    chestExpansion: number;
-    overallPosture: number;
-  };
-  preciseBreathingMetrics: {
-    actualRate: number;
-    targetRate: number;
-    rhythmAccuracy: number;
-    depthConsistency: number;
-  };
-  advancedRestlessnessScore: {
-    overall: number;
-    components: {
-      faceMovement: number;
-      eyeMovement: number;
-      postureShifts: number;
-      breathingIrregularity: number;
-    };
-  };
-}
-
-export type VisionMetrics = BasicMetrics | StandardMetrics | PremiumMetrics;
-
+/**
+ * System performance metrics
+ */
 export interface PerformanceMetrics {
-  cpuUsage: number;
-  memoryUsage: number;
+  /**
+   * Current frame rate in frames per second
+   */
   frameRate: number;
-  frameDrops: number;
+  
+  /**
+   * CPU usage percentage (0-100)
+   */
+  cpuUsage: number;
+  
+  /**
+   * Memory usage in MB
+   */
+  memoryUsage: number;
+  
+  /**
+   * Estimated battery impact (0-100, higher means more drain)
+   */
   batteryImpact: number;
-  thermalState: string;
-}
-
-// Vision system interface
-export interface IVisionSystem {
-  initialize(): Promise<void>;
-  getMetrics(): Promise<VisionMetrics>;
-  updateConfig(config: Partial<VisionConfig>): Promise<void>;
-  dispose(): Promise<void>;
-}
-
-// Model loading interface
-export interface IModelLoader {
-  loadModel(modelName: string, priority: 'high' | 'medium' | 'low'): Promise<any>;
-  isModelLoaded(modelName: string): boolean;
-  unloadModel(modelName: string): Promise<void>;
-}
-
-// Performance monitoring interface
-export interface IPerformanceMonitor {
-  startMonitoring(): void;
-  stopMonitoring(): void;
-  getCurrentMetrics(): Promise<PerformanceMetrics>;
-  onPerformanceChange(callback: (metrics: PerformanceMetrics) => void): void;
+  
+  /**
+   * Number of frames dropped in the last second
+   */
+  frameDrops: number;
+  
+  /**
+   * Current thermal state of the device ('normal', 'elevated', 'critical')
+   */
+  thermalState: 'normal' | 'elevated' | 'critical';
 }

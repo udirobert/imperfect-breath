@@ -11,9 +11,9 @@ import type {
   FlowTransactionResult,
   TransactionStatus
 } from '../types';
-import { handleError } from '@/lib/utils/error-utils';
-import { startTimer, timed } from '@/lib/utils/performance-utils';
-import { getCache } from '@/lib/utils/cache-utils';
+import { handleError } from '../../../lib/utils/error-utils';
+import { startTimer, timed } from '../../../lib/utils/performance-utils';
+import { SimpleCache } from '../../../lib/utils/cache-utils';
 
 export interface TransactionOptions {
   gasLimit?: number;
@@ -31,7 +31,7 @@ export interface BatchOptions {
 export class TransactionClient {
   private baseClient: BaseFlowClient;
   private pendingTransactions = new Map<string, Promise<FlowTransactionResult>>();
-  private cache = getCache();
+  private cache = SimpleCache.getInstance();
   
   constructor() {
     this.baseClient = BaseFlowClient.getInstance();
@@ -63,7 +63,11 @@ export class TransactionClient {
         
         // Monitor status if callback provided
         if (onStatusChange) {
-          this.monitorTransaction(txId, onStatusChange);
+          // Create an adapter function to match the expected signature
+          const statusAdapter = (_txId: string, status: TransactionStatus) => {
+            onStatusChange(status);
+          };
+          this.monitorTransaction(txId, statusAdapter);
         }
         
         // Wait for completion with timeout
@@ -210,44 +214,144 @@ export class TransactionClient {
   async executeEVMBatchCalls(calls: EVMBatchCall[]): Promise<BatchTransactionResult> {
     const endTimer = startTimer('executeEVMBatchCalls');
     
+    // Validate calls array
+    if (!calls || calls.length === 0) {
+      throw new Error('No EVM calls provided for batch execution');
+    }
+    
     try {
-      // This would integrate with Flow's EVM functionality
-      // For now, simulate the batch execution
-      const results: CallOutcome[] = calls.map((call, index) => ({
-        success: true,
-        returnData: `0x${'0'.repeat(64)}`, // Mock return data
-        gasUsed: 21000,
-        error: undefined
+      // Create a Flow transaction to execute the EVM batch calls
+      // This uses Flow's EVM compatibility layer through a Cadence script
+      
+      // Create script for batch execution
+      const batchScript = `
+        import FlowEVMBatching from 0xFLOWEVMBATCHING
+        import FlowToken from 0xFLOWTOKEN
+        
+        transaction(
+          batchTargets: [Address],
+          batchData: [String],
+          batchValues: [UFix64],
+          batchGasLimits: [UInt64]
+        ) {
+          let signer: AuthAccount
+          
+          prepare(acct: AuthAccount) {
+            self.signer = acct
+          }
+          
+          execute {
+            // Prepare EVM context from signer account
+            let evmContext = FlowEVMBatching.getEVMContext(self.signer)
+            
+            // Execute batch calls and collect results
+            let results: [FlowEVMBatching.CallResult] = []
+            var totalGasUsed: UInt64 = 0
+            
+            for i, target in batchTargets {
+              let value = batchValues[i]
+              let data = batchData[i]
+              let gasLimit = batchGasLimits[i]
+              
+              // Execute the call
+              let result = evmContext.call(
+                to: target,
+                data: data,
+                value: value,
+                gasLimit: gasLimit
+              )
+              
+              // Track gas used
+              totalGasUsed = totalGasUsed + result.gasUsed
+              
+              // Store result
+              results.append(result)
+            }
+            
+            // Emit event with batch results
+            emit BatchCompleted(
+              count: UInt32(batchTargets.length),
+              totalGasUsed: totalGasUsed,
+              results: results
+            )
+          }
+          
+          event BatchCompleted(
+            count: UInt32,
+            totalGasUsed: UInt64,
+            results: [FlowEVMBatching.CallResult]
+          )
+        }
+      `;
+      
+      // Prepare arguments for the batch transaction
+      const batchTargets = calls.map(call => call.to);
+      const batchData = calls.map(call => call.data);
+      const batchValues = calls.map(call => call.value || '0');
+      const batchGasLimits = calls.map(call => call.gasLimit || 100000);
+      
+      // Execute the transaction
+      const txId = await this.baseClient.sendTransaction(
+        batchScript,
+        [batchTargets, batchData, batchValues, batchGasLimits],
+        { gasLimit: Math.max(...batchGasLimits) * batchGasLimits.length }
+      );
+      
+      // Wait for transaction to be sealed
+      const txResult = await this.baseClient.waitForTransaction(txId);
+      
+      if (txResult.status !== 4) { // 4 is SEALED status
+        throw new Error(`Batch transaction failed: ${txResult.errorMessage || 'Unknown error'}`);
+      }
+      
+      // Process the events to extract results
+      const batchCompletedEvent = txResult.events.find(
+        event => event.type.includes('BatchCompleted')
+      );
+      
+      if (!batchCompletedEvent) {
+        throw new Error('Failed to find batch completion event in transaction');
+      }
+      
+      // Extract results from event data
+      const eventData = batchCompletedEvent.data;
+      const totalGasUsed = parseInt(eventData.totalGasUsed, 10);
+      const resultsList = eventData.results || [];
+      
+      // Format results
+      const results: CallOutcome[] = resultsList.map((res: any, index: number) => ({
+        success: res.success,
+        returnData: res.returnData || '',
+        gasUsed: parseInt(res.gasUsed, 10),
+        error: res.error
       }));
       
-      const totalGasUsed = results.reduce((sum, result) => sum + result.gasUsed, 0);
+      // If results list is empty or incomplete, fill with placeholders
+      if (results.length < calls.length) {
+        for (let i = results.length; i < calls.length; i++) {
+          results.push({
+            success: false,
+            returnData: '',
+            gasUsed: 0,
+            error: 'Result not available'
+          });
+        }
+      }
       
-      const result = {
-        txId: `batch-${Date.now()}`,
+      const result: BatchTransactionResult = {
+        txId,
         results,
-        isError: false,
+        isError: results.some(r => !r.success),
         totalGasUsed
       };
       
       endTimer();
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Batch execution failed';
-      
-      const failedResult = {
-        txId: `failed-batch-${Date.now()}`,
-        results: calls.map(() => ({
-          success: false,
-          returnData: '',
-          gasUsed: 0,
-          error: errorMessage
-        })),
-        isError: true,
-        totalGasUsed: 0
-      };
-      
+      console.error('EVM batch execution failed:', error);
       endTimer();
-      return failedResult;
+      // Don't create a mock result - propagate the error
+      throw handleError('execute EVM batch calls', error);
     }
   }
   
@@ -299,20 +403,20 @@ export class TransactionClient {
   }
   
   /**
-   * Cancel pending transaction (if possible)
+   * Cancel pending transaction
    */
   async cancelTransaction(txId: string): Promise<boolean> {
     const endTimer = startTimer('cancelTransaction');
     try {
-      // Flow doesn't support transaction cancellation
-      // Remove from pending transactions
+      // Remove from pending transactions tracking
       this.pendingTransactions.delete(txId);
       
       // Clear any cached status
       this.cache.delete(`tx-status-${txId}`);
       
+      // Flow doesn't support transaction cancellation - throw error instead of silent failure
       endTimer();
-      return false;
+      throw new Error('Transaction cancellation is not supported on Flow blockchain');
     } catch (error) {
       endTimer();
       throw handleError('cancel transaction', error);
@@ -388,6 +492,26 @@ export class TransactionClient {
       chunks.push(array.slice(i, i + size));
     }
     return chunks;
+  }
+  
+  /**
+   * Execute an EVM call (single call version of batch)
+   */
+  async executeEVMCall(call: EVMBatchCall): Promise<CallOutcome> {
+    try {
+      const batchResult = await this.executeEVMBatchCalls([call]);
+      
+      // Return the first result if successful
+      if (batchResult.results && batchResult.results.length > 0) {
+        return batchResult.results[0];
+      }
+      
+      throw new Error('Failed to execute EVM call');
+    } catch (error) {
+      console.error('EVM call execution failed:', error);
+      // Propagate the error instead of returning a mock failure object
+      throw handleError('execute EVM call', error);
+    }
   }
 }
 

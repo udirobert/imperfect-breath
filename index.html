@@ -37,15 +37,7 @@
 
     <body>
         <div id="root"></div>
-        <script>
-            // Polyfill for Node.js globals in browser environment
-            if (typeof global === "undefined") {
-                var global = globalThis;
-            }
-            if (typeof process === "undefined") {
-                var process = { env: {} };
-            }
-        </script>
+        <!-- Node.js polyfills are now handled by vite-plugin-node-polyfills -->
         <script type="module" src="/src/main.tsx"></script>
     </body>
 </html>

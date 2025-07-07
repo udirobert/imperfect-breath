@@ -1,17 +1,43 @@
 /**
  * Integrated Social Flow Component
  * Seamlessly integrates Lens Protocol social features throughout the user journey
+ *
+ * UPDATED FOR LENS v3:
+ * - Lens Protocol is now on Lens chain (no longer on Polygon)
+ * - SDK structure has changed: timeline is now an array of posts, not an object with items property
+ * - Property names have changed: avatar->picture, createdAt->timestamp, stats->engagement, etc.
+ * - Auth flow has been simplified
  */
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import { Button } from "../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "../../components/ui/avatar";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
+import { Textarea } from "../../components/ui/textarea";
+import { toast } from "sonner";
 import {
   Heart,
   Share2,
@@ -27,11 +53,11 @@ import {
   CheckCircle,
   UserPlus,
   UserMinus,
-} from 'lucide-react';
-import { useLens } from '@/hooks/useLens';
+} from "lucide-react";
+import { useLens } from "../../hooks/useLens";
 
 interface SocialContextProps {
-  phase: 'discovery' | 'session' | 'completion' | 'community';
+  phase: "discovery" | "session" | "completion" | "community";
   sessionData?: {
     patternName: string;
     duration: number;
@@ -63,7 +89,7 @@ interface TrendingPattern {
   name: string;
   usageCount: number;
   avgScore: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
 }
 
 export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
@@ -84,14 +110,16 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
   } = useLens();
 
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
-  const [trendingPatterns, setTrendingPatterns] = useState<TrendingPattern[]>([]);
+  const [trendingPatterns, setTrendingPatterns] = useState<TrendingPattern[]>(
+    []
+  );
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const [shareText, setShareText] = useState('');
+  const [shareText, setShareText] = useState("");
   const [loadingPosts, setLoadingPosts] = useState(false);
 
   // Load community data when component mounts or phase changes
   useEffect(() => {
-    if (phase === 'community' || phase === 'discovery') {
+    if (phase === "community" || phase === "discovery") {
       loadCommunityData();
     }
   }, [phase, isAuthenticated]);
@@ -99,159 +127,307 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
   const loadCommunityData = async () => {
     setLoadingPosts(true);
     try {
-      // Load trending patterns (mock data for now)
-      setTrendingPatterns([
-        { name: '4-7-8 Relaxation', usageCount: 1247, avgScore: 87, trend: 'up' },
-        { name: 'Box Breathing', usageCount: 892, avgScore: 82, trend: 'up' },
-        { name: 'Wim Hof Method', usageCount: 634, avgScore: 91, trend: 'stable' },
-        { name: 'Coherent Breathing', usageCount: 445, avgScore: 85, trend: 'down' },
-      ]);
+      // Not authenticated - can't load community data
+      if (!isAuthenticated || !currentAccount) {
+        setCommunityPosts([]);
+        setTrendingPatterns([]);
+        toast.error("Please connect to Lens Protocol to see community content");
+        return;
+      }
 
-      // Load community posts
-      if (isAuthenticated && currentAccount) {
-        try {
-          const timeline = await getTimeline(currentAccount.address);
-          // Convert timeline to community posts format
-          const posts: CommunityPost[] = timeline.items.map((item, index) => ({
+      // Get trending patterns from the blockchain with authentication
+      try {
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+
+        // Add auth token if available
+        if (localStorage.getItem("lens_auth_token")) {
+          headers["Authorization"] = `Bearer ${localStorage.getItem(
+            "lens_auth_token"
+          )}`;
+        }
+
+        const response = await fetch("/api/patterns/trending", {
+          method: "GET",
+          headers,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.message ||
+              `Error ${response.status}: Failed to fetch trending patterns`
+          );
+        }
+
+        const data = await response.json();
+
+        // Validate data structure
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid trending patterns data format");
+        }
+
+        setTrendingPatterns(data);
+      } catch (error) {
+        console.error("Failed to load trending patterns:", error);
+        setTrendingPatterns([]);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load trending patterns"
+        );
+      }
+
+      // Load community posts from Lens Protocol
+      try {
+        // Updated for Lens SDK v3: timeline is now returned as an array directly
+        const timeline = await getTimeline(currentAccount.address);
+
+        if (!timeline || !Array.isArray(timeline)) {
+          throw new Error("Invalid timeline data");
+        }
+
+        // Convert timeline to community posts format with proper metadata handling
+        const posts: CommunityPost[] = timeline.map((item) => {
+          // Properly extract metadata with type checking
+          const metadata = item.metadata || {};
+
+          return {
             id: item.id,
             author: {
               address: item.author.address,
-              username: item.author.username,
-              name: item.author.name,
-              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.author.address}`,
+              username: item.author.username || "",
+              name: item.author.name || "",
+              avatar:
+                item.author.picture ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.author.address}`,
             },
-            content: item.content,
-            patternName: extractPatternName(item.content),
-            duration: extractDuration(item.content),
-            score: extractScore(item.content),
-            likes: Math.floor(Math.random() * 50) + 5,
-            comments: Math.floor(Math.random() * 20) + 1,
-            timestamp: item.createdAt,
-            isLiked: Math.random() > 0.7,
-          }));
-          setCommunityPosts(posts);
-        } catch (error) {
-          console.error('Failed to load timeline:', error);
-          // Fallback to mock data
-          loadMockCommunityPosts();
-        }
-      } else {
-        loadMockCommunityPosts();
+            content: item.content || "",
+            patternName: extractPatternName(item.content || "", metadata),
+            duration: extractDuration(item.content || "", metadata),
+            score: extractScore(item.content || "", metadata),
+            likes: item.engagement?.likes || 0,
+            comments: item.engagement?.comments || 0,
+            timestamp: item.timestamp || new Date().toISOString(),
+            isLiked: item.engagement?.isLiked || false,
+          };
+        });
+
+        setCommunityPosts(posts);
+      } catch (error) {
+        console.error("Failed to load timeline:", error);
+        setCommunityPosts([]);
+        toast.error("Failed to load community posts");
       }
     } catch (error) {
-      console.error('Failed to load community data:', error);
-      loadMockCommunityPosts();
+      console.error("Failed to load community data:", error);
+      setCommunityPosts([]);
+      setTrendingPatterns([]);
+      toast.error("Failed to load community data");
     } finally {
       setLoadingPosts(false);
     }
   };
 
-  const loadMockCommunityPosts = () => {
-    setCommunityPosts([
-      {
-        id: '1',
-        author: {
-          address: '0x1234...5678',
-          username: 'breathmaster',
-          name: 'Sarah Chen',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
-        },
-        content: 'Just completed a 10-minute 4-7-8 session! Feeling so much calmer. The vision tracking really helped me stay focused. 🌬️',
-        patternName: '4-7-8 Relaxation',
-        duration: 600,
-        score: 89,
-        likes: 23,
-        comments: 5,
-        timestamp: '2024-01-15T10:30:00Z',
-        isLiked: false,
-      },
-      {
-        id: '2',
-        author: {
-          address: '0x9876...4321',
-          username: 'zenwarrior',
-          name: 'Alex Kim',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
-        },
-        content: 'New personal best with Box Breathing! 15 minutes straight with 95% consistency. The AI feedback was spot on. 💪',
-        patternName: 'Box Breathing',
-        duration: 900,
-        score: 95,
-        likes: 41,
-        comments: 12,
-        timestamp: '2024-01-15T09:15:00Z',
-        isLiked: true,
-      },
-    ]);
-  };
-
   const handleAuthenticate = async () => {
     try {
       await authenticate();
-      toast.success('Connected to Lens Protocol!');
+      toast.success("Connected to Lens Protocol!");
       loadCommunityData();
     } catch (error) {
-      toast.error('Failed to connect to Lens Protocol');
+      toast.error("Failed to connect to Lens Protocol");
     }
   };
 
   const handleShare = async () => {
-    if (!sessionData) return;
+    if (!sessionData) {
+      toast.error("No session data available to share");
+      return;
+    }
+
+    if (!isAuthenticated || !currentAccount) {
+      toast.error("Please connect to Lens Protocol first");
+      return;
+    }
 
     try {
+      setShowShareDialog(true);
+
+      // Format session data with text content
+      const sessionContent =
+        shareText ||
+        `I just completed a ${
+          sessionData.patternName
+        } breathing session for ${formatDuration(
+          sessionData.duration
+        )} with a score of ${sessionData.score}%${
+          sessionData.insights && sessionData.insights.length > 0
+            ? `. Insights: ${sessionData.insights.join(", ")}`
+            : ""
+        }`;
+
+      // Call the Lens Protocol API to share
       const postHash = await shareBreathingSession({
         patternName: sessionData.patternName,
         duration: sessionData.duration,
         score: sessionData.score,
         insights: sessionData.insights || [],
+        content: sessionContent,
       });
 
-      toast.success('Session shared to Lens Protocol!');
+      if (!postHash) {
+        throw new Error("Failed to get transaction hash");
+      }
+
+      toast.success("Session shared to Lens Protocol!");
       setShowShareDialog(false);
-      onSocialAction?.('shared', { postHash, sessionData });
+      setShareText(""); // Clear the text for next time
+      onSocialAction?.("shared", { postHash, sessionData });
+
+      // Refresh community data to show the new post
+      setTimeout(() => loadCommunityData(), 2000);
     } catch (error) {
-      toast.error('Failed to share session');
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("Failed to share session:", error);
+      toast.error(`Failed to share session: ${errorMessage}`);
     }
   };
 
   const handleLike = async (postId: string) => {
-    // In a real implementation, this would call Lens Protocol's like/react functionality
-    setCommunityPosts(prev =>
-      prev.map(post =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
-    );
-    toast.success(communityPosts.find(p => p.id === postId)?.isLiked ? 'Unliked' : 'Liked!');
-  };
+    if (!isAuthenticated || !currentAccount) {
+      toast.error("Please connect to Lens Protocol first");
+      return;
+    }
 
-  const handleFollow = async (address: string) => {
     try {
-      await followAccount(address);
-      toast.success('Following user!');
+      // Find the post to get current status
+      const post = communityPosts.find((p) => p.id === postId);
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      // Optimistically update UI
+      setCommunityPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                isLiked: !post.isLiked,
+                likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+              }
+            : post
+        )
+      );
+
+      // Call the Lens Protocol API through our backend
+      // This ensures proper authentication and error handling
+      const result = await fetch(`/api/social/react`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("lens_auth_token")}`,
+        },
+        body: JSON.stringify({
+          publicationId: postId,
+          reaction: "UPVOTE",
+          remove: post.isLiked,
+        }),
+      });
+
+      const data = await result.json();
+
+      if (!result.ok) {
+        throw new Error(data.message || "Failed to react to post");
+      }
+
+      toast.success(post.isLiked ? "Removed like" : "Added like");
     } catch (error) {
-      toast.error('Failed to follow user');
+      console.error("Failed to like post:", error);
+
+      // Revert optimistic update on failure
+      setCommunityPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                isLiked: !post.isLiked,
+                likes: post.isLiked ? post.likes + 1 : post.likes - 1,
+              }
+            : post
+        )
+      );
+
+      toast.error("Failed to like post");
     }
   };
 
-  const extractPatternName = (content: string): string => {
-    const patterns = ['4-7-8', 'Box Breathing', 'Wim Hof', 'Coherent'];
-    return patterns.find(p => content.includes(p)) || 'Custom Pattern';
+  const handleFollow = async (address: string) => {
+    if (!isAuthenticated || !currentAccount) {
+      toast.error("Please connect to Lens Protocol first");
+      return;
+    }
+
+    try {
+      // Call the Lens Protocol follow function
+      const result = await followAccount(address);
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to follow user");
+      }
+
+      toast.success("Following user!");
+      // Refresh community data to show updated follow status
+      loadCommunityData();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("Failed to follow user:", error);
+      toast.error(`Failed to follow user: ${errorMessage}`);
+    }
   };
 
-  const extractDuration = (content: string): number => {
+  // Helper functions to safely extract pattern metadata
+  const extractPatternName = (content: string, metadata: any): string => {
+    // Try to get from proper metadata first
+    if (metadata?.breathingPattern?.name) {
+      return metadata.breathingPattern.name;
+    }
+
+    // Fallback to content parsing if necessary
+    const patternRegex =
+      /(4-7-8|Box Breathing|Wim Hof|Coherent Breathing|Alternate Nostril|Diaphragmatic|Progressive Relaxation)/i;
+    const match = content.match(patternRegex);
+    return match ? match[1] : "Custom Pattern";
+  };
+
+  const extractDuration = (content: string, metadata: any): number => {
+    // Try to get from proper metadata first
+    if (
+      metadata?.breathingPattern?.duration &&
+      typeof metadata.breathingPattern.duration === "number"
+    ) {
+      return metadata.breathingPattern.duration;
+    }
+
+    // Fallback to content parsing if necessary
     const match = content.match(/(\d+)[\s-]?minutes?/i);
     return match ? parseInt(match[1]) * 60 : 300;
   };
 
-  const extractScore = (content: string): number => {
+  const extractScore = (content: string, metadata: any): number => {
+    // Try to get from proper metadata first
+    if (
+      metadata?.breathingPattern?.score &&
+      typeof metadata.breathingPattern.score === "number"
+    ) {
+      return metadata.breathingPattern.score;
+    }
+
+    // Fallback to content parsing if necessary
     const match = content.match(/(\d+)%/);
-    return match ? parseInt(match[1]) : Math.floor(Math.random() * 40) + 60;
+    return match ? parseInt(match[1]) : 75; // Default reasonable score instead of random
   };
 
   const formatDuration = (seconds: number): string => {
@@ -262,16 +438,18 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
   const formatTimeAgo = (timestamp: string): string => {
     const now = new Date();
     const time = new Date(timestamp);
-    const diffInHours = Math.floor((now.getTime() - time.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
+    const diffInHours = Math.floor(
+      (now.getTime() - time.getTime()) / (1000 * 60 * 60)
+    );
+
+    if (diffInHours < 1) return "Just now";
     if (diffInHours < 24) return `${diffInHours}h ago`;
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
   // Render different content based on phase
   switch (phase) {
-    case 'discovery':
+    case "discovery":
       return (
         <div className="space-y-6">
           {/* Social Authentication */}
@@ -280,13 +458,20 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-blue-900">Join the Community</h3>
+                    <h3 className="font-semibold text-blue-900">
+                      Join the Community
+                    </h3>
                     <p className="text-blue-700 text-sm">
-                      Connect with Lens Protocol to share sessions and discover patterns
+                      Connect with Lens Protocol to share sessions and discover
+                      patterns
                     </p>
                   </div>
                   <Button onClick={handleAuthenticate} disabled={isLoading}>
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Users className="w-4 h-4" />
+                    )}
                     Connect
                   </Button>
                 </div>
@@ -305,7 +490,10 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
             <CardContent>
               <div className="grid gap-3">
                 {trendingPatterns.map((pattern, index) => (
-                  <div key={pattern.name} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div
+                    key={pattern.name}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="text-xs">
                         #{index + 1}
@@ -313,14 +501,21 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                       <div>
                         <p className="font-medium">{pattern.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {pattern.usageCount} sessions • {pattern.avgScore}% avg score
+                          {pattern.usageCount} sessions • {pattern.avgScore}%
+                          avg score
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {pattern.trend === 'up' && <TrendingUp className="w-4 h-4 text-green-500" />}
-                      {pattern.trend === 'down' && <TrendingUp className="w-4 h-4 text-red-500 rotate-180" />}
-                      {pattern.trend === 'stable' && <div className="w-4 h-4 rounded-full bg-gray-400" />}
+                      {pattern.trend === "up" && (
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                      )}
+                      {pattern.trend === "down" && (
+                        <TrendingUp className="w-4 h-4 text-red-500 rotate-180" />
+                      )}
+                      {pattern.trend === "stable" && (
+                        <div className="w-4 h-4 rounded-full bg-gray-400" />
+                      )}
                       <Button size="sm" variant="outline">
                         Try It
                       </Button>
@@ -333,7 +528,7 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
         </div>
       );
 
-    case 'session':
+    case "session":
       return (
         <div className="space-y-4">
           {/* Live Community Motivation */}
@@ -361,7 +556,9 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                   <div className="flex items-center gap-2">
                     <Avatar className="w-6 h-6">
                       <AvatarImage src={currentAccount?.picture} />
-                      <AvatarFallback>{currentAccount?.name?.[0] || '?'}</AvatarFallback>
+                      <AvatarFallback>
+                        {currentAccount?.name?.[0] || "?"}
+                      </AvatarFallback>
                     </Avatar>
                     <span className="text-sm">
                       Share this session when complete?
@@ -377,7 +574,7 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
         </div>
       );
 
-    case 'completion':
+    case "completion":
       return (
         <div className="space-y-6">
           {/* Immediate Share Options */}
@@ -392,10 +589,15 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
               {!isAuthenticated ? (
                 <div className="text-center space-y-3">
                   <p className="text-muted-foreground">
-                    Connect to Lens Protocol to share your session with the community
+                    Connect to Lens Protocol to share your session with the
+                    community
                   </p>
                   <Button onClick={handleAuthenticate} disabled={isLoading}>
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Users className="w-4 h-4 mr-2" />}
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Users className="w-4 h-4 mr-2" />
+                    )}
                     Connect & Share
                   </Button>
                 </div>
@@ -403,10 +605,16 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-green-500" />
-                    <span className="text-sm">Connected as {currentAccount?.username || currentAccount?.name}</span>
+                    <span className="text-sm">
+                      Connected as{" "}
+                      {currentAccount?.username || currentAccount?.name}
+                    </span>
                   </div>
-                  
-                  <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+
+                  <Dialog
+                    open={showShareDialog}
+                    onOpenChange={setShowShareDialog}
+                  >
                     <DialogTrigger asChild>
                       <Button className="w-full">
                         <Share2 className="w-4 h-4 mr-2" />
@@ -421,10 +629,15 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                         <div className="p-4 bg-gray-50 rounded-lg">
                           <div className="flex items-center justify-between text-sm">
                             <span>Pattern: {sessionData?.patternName}</span>
-                            <span>Duration: {formatDuration(sessionData?.duration || 0)}</span>
+                            <span>
+                              Duration:{" "}
+                              {formatDuration(sessionData?.duration || 0)}
+                            </span>
                           </div>
                           <div className="mt-2">
-                            <span className="text-sm">Score: {sessionData?.score}/100</span>
+                            <span className="text-sm">
+                              Score: {sessionData?.score}/100
+                            </span>
                           </div>
                         </div>
                         <Textarea
@@ -433,11 +646,20 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                           onChange={(e) => setShareText(e.target.value)}
                         />
                         <div className="flex gap-2">
-                          <Button onClick={handleShare} disabled={isLoading} className="flex-1">
-                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          <Button
+                            onClick={handleShare}
+                            disabled={isLoading}
+                            className="flex-1"
+                          >
+                            {isLoading ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : null}
                             Share
                           </Button>
-                          <Button variant="outline" onClick={() => setShowShareDialog(false)}>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowShareDialog(false)}
+                          >
                             Cancel
                           </Button>
                         </div>
@@ -459,33 +681,65 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Recent sessions with {sessionData?.patternName}</span>
-                  <Badge variant="outline">
-                    {Math.floor(Math.random() * 20) + 5} today
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-lg font-bold">{Math.floor(Math.random() * 30) + 70}</p>
-                    <p className="text-xs text-muted-foreground">Avg Score</p>
+                {loadingPosts ? (
+                  <div className="p-4 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Loading pattern statistics...
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-lg font-bold">{Math.floor(Math.random() * 10) + 5}m</p>
-                    <p className="text-xs text-muted-foreground">Avg Duration</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold">{Math.floor(Math.random() * 50) + 100}</p>
-                    <p className="text-xs text-muted-foreground">Total Users</p>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>
+                        Recent sessions with {sessionData?.patternName}
+                      </span>
+                      <Badge variant="outline">
+                        {trendingPatterns.find(
+                          (p) => p.name === sessionData?.patternName
+                        )?.usageCount || 0}{" "}
+                        recent
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <p className="text-lg font-bold">
+                          {trendingPatterns.find(
+                            (p) => p.name === sessionData?.patternName
+                          )?.avgScore || 0}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Avg Score
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold">
+                          {formatDuration(sessionData?.duration || 0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Your Duration
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold">
+                          {communityPosts.filter(
+                            (p) => p.patternName === sessionData?.patternName
+                          ).length || 0}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Community Posts
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
       );
 
-    case 'community':
+    case "community":
       return (
         <div className="space-y-6">
           <Tabs defaultValue="feed" className="w-full">
@@ -498,7 +752,9 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
               {loadingPosts ? (
                 <div className="text-center py-8">
                   <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                  <p className="text-muted-foreground mt-2">Loading community posts...</p>
+                  <p className="text-muted-foreground mt-2">
+                    Loading community posts...
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -508,11 +764,15 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                         <div className="flex items-start gap-3">
                           <Avatar className="w-10 h-10">
                             <AvatarImage src={post.author.avatar} />
-                            <AvatarFallback>{post.author.name?.[0] || '?'}</AvatarFallback>
+                            <AvatarFallback>
+                              {post.author.name?.[0] || "?"}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{post.author.name || post.author.username}</span>
+                              <span className="font-medium">
+                                {post.author.name || post.author.username}
+                              </span>
                               <Badge variant="outline" className="text-xs">
                                 {post.patternName}
                               </Badge>
@@ -536,9 +796,13 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleLike(post.id)}
-                                className={post.isLiked ? 'text-red-500' : ''}
+                                className={post.isLiked ? "text-red-500" : ""}
                               >
-                                <Heart className={`w-4 h-4 mr-1 ${post.isLiked ? 'fill-current' : ''}`} />
+                                <Heart
+                                  className={`w-4 h-4 mr-1 ${
+                                    post.isLiked ? "fill-current" : ""
+                                  }`}
+                                />
                                 {post.likes}
                               </Button>
                               <Button variant="ghost" size="sm">
@@ -553,7 +817,9 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleFollow(post.author.address)}
+                                  onClick={() =>
+                                    handleFollow(post.author.address)
+                                  }
                                 >
                                   <UserPlus className="w-4 h-4 mr-1" />
                                   Follow
@@ -587,8 +853,12 @@ export const IntegratedSocialFlow: React.FC<SocialContextProps> = ({
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold">{pattern.avgScore}%</p>
-                          <p className="text-xs text-muted-foreground">avg score</p>
+                          <p className="text-lg font-bold">
+                            {pattern.avgScore}%
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            avg score
+                          </p>
                         </div>
                       </div>
                     </CardContent>

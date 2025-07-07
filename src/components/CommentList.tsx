@@ -1,7 +1,7 @@
 import { Skeleton } from "./ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useQuery } from "@tanstack/react-query";
-import { useLens } from "@/hooks/useLens";
+import { useLens } from "../hooks/useLens";
 
 interface Comment {
   id: string;
@@ -59,37 +59,43 @@ export const CommentList = ({ publicationId }: CommentListProps) => {
   } = useQuery({
     queryKey: ["comments", publicationId],
     queryFn: async (): Promise<Comment[]> => {
-      // TODO: Implement actual comment fetching with V3 SDK
-      console.log("Fetching comments for publication:", publicationId);
+      // Use the Lens client to fetch comments
+      const { isAuthenticated } = useLens();
 
-      // Mock data for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!isAuthenticated) {
+        return [];
+      }
 
-      return [
-        {
-          id: "comment-1",
-          content: "Great post! Thanks for sharing your breathing session.",
+      try {
+        // Get the account from the context
+        const { currentAccount } = useLens();
+        if (!currentAccount) return [];
+
+        const timeline = await useLens().getTimeline(currentAccount.address);
+
+        // Filter for comments on this publication
+        const comments = timeline.filter((post) => {
+          // In Lens V3, we can check if a post is a comment by checking
+          // if it has a commentOn property pointing to our publicationId
+          return post.commentOn && post.commentOn.id === publicationId;
+        });
+
+        // Map to the Comment type
+        return comments.map((comment) => ({
+          id: comment.id,
+          content: comment.content,
           author: {
-            id: "user-1",
-            username: "breathingfan",
-            displayName: "Breathing Fan",
-            avatar: undefined,
+            id: comment.author.address,
+            username: comment.author.username || "anonymous",
+            displayName: comment.author.name,
+            avatar: comment.author.picture,
           },
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: "comment-2",
-          content:
-            "This inspired me to try the same pattern. How did you find the experience?",
-          author: {
-            id: "user-2",
-            username: "mindfulnessseeker",
-            displayName: "Mindfulness Seeker",
-            avatar: undefined,
-          },
-          createdAt: new Date(Date.now() - 1800000).toISOString(),
-        },
-      ];
+          createdAt: comment.timestamp || new Date().toISOString(),
+        }));
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+        return [];
+      }
     },
     enabled: !!publicationId,
   });

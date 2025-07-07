@@ -5,7 +5,7 @@
  */
 
 import * as fcl from '@onflow/fcl';
-import { config } from '@/config/environment';
+import { config } from '../../config/environment';
 import {
   EVMBatchCall,
   CallOutcome,
@@ -13,9 +13,9 @@ import {
   encodeFunctionCall,
   parseEVMResults
 } from './utils/batch-transactions';
-import { handleError } from '@/lib/utils/error-utils';
-import { startTimer } from '@/lib/utils/performance-utils';
-import { getCache } from '@/lib/utils/cache-utils';
+import { handleError } from '../../lib/utils/error-utils';
+import { startTimer } from '../../lib/utils/performance-utils';
+import { getCache } from '../../lib/utils/cache-utils';
 
 /**
  * Enhanced Flow Client for breathing pattern operations
@@ -60,7 +60,7 @@ export class EnhancedFlowClient {
     await this.initialize();
     const user = await fcl.currentUser().snapshot();
     return {
-      addr: user.addr,
+      addr: user.addr || null, // Convert undefined to null to match return type
       loggedIn: !!user.addr
     };
   }

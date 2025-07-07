@@ -3,10 +3,14 @@
  * Integrates with our multichain breathing app ecosystem
  */
 
-import { Plugin, Action, Evaluator, Provider } from '@elizaos/core';
-import { EnhancedFlowClient } from '../../lib/flow/enhanced-flow-client';
-import { LensBreathingClient } from '../../lib/lens/lens-client';
-import { StoryBreathingClient } from '../../lib/story/story-client';
+import { Plugin, Action, Evaluator, Provider, Runtime, Message, Callback } from '@elizaos/core';
+
+/**
+ * Note: This plugin references blockchain services (Flow, Lens, Story Protocol)
+ * in its response text, but the actual blockchain interactions would be
+ * implemented in the consuming application. The blockchain clients would
+ * be used at that point.
+ */
 
 // Breathing pattern interfaces
 interface BreathingPattern {
@@ -98,12 +102,12 @@ const createBreathingPatternAction: Action = {
     "generate a personalized pattern"
   ],
   description: "Creates a custom breathing pattern based on user needs and preferences",
-  validate: async (runtime, message) => {
+  validate: async (runtime: Runtime, message: Message): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
-    return text.includes("create") && 
+    return text.includes("create") &&
            (text.includes("breathing") || text.includes("pattern") || text.includes("technique"));
   },
-  handler: async (runtime, message, state, options, callback) => {
+  handler: async (runtime: Runtime, message: Message, state: any, options: any, callback?: Callback): Promise<boolean> => {
     try {
       // Extract user preferences from message
       const userInput = message.content.text;
@@ -180,12 +184,12 @@ const analyzeBreathingSessionAction: Action = {
     "how did I do with my breathing"
   ],
   description: "Analyzes a breathing session and provides personalized feedback",
-  validate: async (runtime, message) => {
+  validate: async (runtime: Runtime, message: Message): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
     return (text.includes("analyze") || text.includes("feedback") || text.includes("review")) &&
            (text.includes("breathing") || text.includes("session") || text.includes("practice"));
   },
-  handler: async (runtime, message, state, options, callback) => {
+  handler: async (runtime: Runtime, message: Message, state: any, options: any, callback?: Callback): Promise<boolean> => {
     try {
       // Extract session data from message or state
       const sessionData = extractSessionData(message.content.text);
@@ -201,13 +205,13 @@ const analyzeBreathingSessionAction: Action = {
 - Quality: ${analysis.qualityScore}/10
 
 **What went well:**
-${analysis.positives.map(p => `✅ ${p}`).join('\n')}
+${analysis.positives.map((p: string) => `✅ ${p}`).join('\n')}
 
 **Areas for improvement:**
-${analysis.improvements.map(i => `🎯 ${i}`).join('\n')}
+${analysis.improvements.map((i: string) => `🎯 ${i}`).join('\n')}
 
 **Personalized recommendations:**
-${analysis.recommendations.map(r => `💡 ${r}`).join('\n')}
+${analysis.recommendations.map((r: string) => `💡 ${r}`).join('\n')}
 
 Would you like me to:
 📈 Log this session on the blockchain for progress tracking?
@@ -261,12 +265,12 @@ const mintBreathingNFTAction: Action = {
     "make this pattern an NFT"
   ],
   description: "Mints a breathing pattern as an NFT on Flow blockchain",
-  validate: async (runtime, message) => {
+  validate: async (runtime: Runtime, message: Message): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
     return (text.includes("mint") || text.includes("nft") || text.includes("blockchain")) &&
            (text.includes("pattern") || text.includes("breathing"));
   },
-  handler: async (runtime, message, state, options, callback) => {
+  handler: async (runtime: Runtime, message: Message, state: any, options: any, callback?: Callback): Promise<boolean> => {
     try {
       // Get pattern from state or create new one
       const pattern = state?.pattern || extractPatternFromMessage(message.content.text);
@@ -340,7 +344,7 @@ Your breathing pattern is now a true digital asset that you own forever! Want me
 
 // Provider: Breathing Pattern Recommendations
 const breathingPatternProvider: Provider = {
-  get: async (runtime, message, state) => {
+  get: async (runtime: Runtime, message: Message, state: any): Promise<string> => {
     const userNeeds = extractUserNeeds(message.content.text);
     const recommendations = getPatternRecommendations(userNeeds);
     
@@ -362,11 +366,11 @@ const breathingKnowledgeEvaluator: Evaluator = {
   name: "BREATHING_KNOWLEDGE",
   similes: ["breathing expertise", "wellness knowledge", "breathwork understanding"],
   description: "Evaluates the agent's breathing and wellness knowledge",
-  validate: async (runtime, message) => {
+  validate: async (runtime: Runtime, message: Message): Promise<boolean> => {
     const text = message.content.text.toLowerCase();
     return text.includes("breathing") || text.includes("wellness") || text.includes("breathwork");
   },
-  handler: async (runtime, message) => {
+  handler: async (runtime: Runtime, message: Message): Promise<{score: number, feedback: string, suggestions: string[]}> => {
     const knowledge = assessBreathingKnowledge(message.content.text);
     return {
       score: knowledge.score,
@@ -475,6 +479,7 @@ function generateBreathingAnalysis(sessionData: any): any {
 
 async function simulateMintNFT(pattern: BreathingPattern): Promise<any> {
   // Simulate NFT minting - in real implementation would call Flow client
+  // When implementing for production, you would import and use the consolidated clients
   return {
     tokenId: Math.floor(Math.random() * 1000000),
     contractAddress: "0xb8404e09b36b6623",

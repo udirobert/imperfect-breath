@@ -1,19 +1,19 @@
-// Tomo SDK Types
-export interface TomoUser {
+// Wallet Types - using ConnectKit/Avara
+export interface WalletUser {
   id: string;
   email?: string;
-  wallet: TomoWallet;
+  wallet: UserWallet;
   profile: UserProfile;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface TomoWallet {
+export interface UserWallet {
   address: string;
   chainId: number;
   balance: string;
   network: "mainnet" | "testnet";
-  provider: "metamask" | "walletconnect" | "tomo";
+  provider: "metamask" | "walletconnect" | "coinbase" | "other";
 }
 
 export interface UserProfile {
@@ -32,7 +32,7 @@ export interface UserProfile {
 export type AuthProvider = "google" | "apple" | "email" | "wallet";
 
 export interface AuthResult {
-  user: TomoUser;
+  user: WalletUser;
   token: string;
   refreshToken: string;
 }
@@ -54,7 +54,7 @@ export interface IPRegistration {
   contentHash: string;
   timestamp: string;
   verified: boolean;
-  royaltyPercentage: number;
+  royaltyPercent: number;
   licensingTerms: LicenseTerms[];
 }
 
@@ -78,12 +78,15 @@ export interface LicenseTerms {
   id: string;
   type: "personal" | "commercial" | "exclusive";
   price: number; // in wei
-  currency: "ETH" | "MATIC" | "USDC";
+  currency: "ETH" | "USDC";
   duration?: number; // days, null for perpetual
-  attribution: boolean;
-  modifications: boolean;
-  resale: boolean;
+  attributionRequired: boolean;
+  derivativeWorks: boolean; // renamed from modifications
+  commercialUse: boolean; // renamed from resale for consistency
+  royaltyPercent: number; // added for consistency
   maxUsers?: number;
+  uri?: string;
+  defaultMintingFee?: bigint;
 }
 
 export interface LicenseAgreement {
@@ -203,11 +206,7 @@ export interface BlockchainEvent {
 
 // Configuration Types
 export interface BlockchainConfig {
-  tomo: {
-    projectId: string;
-    apiKey: string;
-    network: "mainnet" | "testnet";
-  };
+  environment: "mainnet" | "testnet";
   crossmint: {
     projectId: string;
     apiKey: string;
@@ -217,5 +216,9 @@ export interface BlockchainConfig {
     apiKey: string;
     chainId: number;
     contractAddress: string;
+  };
+  connectKit: {
+    projectId: string;
+    appName: string;
   };
 }

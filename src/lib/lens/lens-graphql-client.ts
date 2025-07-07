@@ -3,10 +3,10 @@
  * Real implementation using Lens Protocol v3 API
  */
 
-import { config } from '@/config/environment';
+import { config } from '../../config/environment';
 
 // Lens Protocol GraphQL endpoint
-const LENS_API_URL = config.lens.apiUrl || 'https://api-v2-mumbai.lens.dev';
+const LENS_API_URL = config.lens.apiUrl || 'https://api.testnet.lens.xyz/graphql';
 
 // GraphQL client for Lens Protocol
 export class LensGraphQLClient {
@@ -70,7 +70,7 @@ export class LensGraphQLClient {
     text: string;
   }> {
     const query = `
-      mutation Challenge($request: ChallengeRequest!) {
+      query Challenge($request: ChallengeRequest!) {
         challenge(request: $request) {
           id
           text
@@ -80,11 +80,9 @@ export class LensGraphQLClient {
 
     const variables = {
       request: {
-        accountOwner: {
-          app: config.lens.appAddress,
-          account: accountAddress,
-          owner: ownerAddress,
-        },
+        signedBy: ownerAddress,
+        for: accountAddress,
+        appId: config.app.name,
       },
     };
 
@@ -105,11 +103,18 @@ export class LensGraphQLClient {
     idToken: string;
   }> {
     const query = `
-      mutation Authenticate($request: SignedAuthChallenge!) {
+      mutation Authenticate($request: SignedAuthChallengeRequest!) {
         authenticate(request: $request) {
-          accessToken
-          refreshToken
-          idToken
+          ... on AuthenticationToken {
+            accessToken
+            refreshToken
+            idToken
+          }
+          ... on AuthenticationWithFallbackData {
+            accessToken
+            refreshToken
+            idToken
+          }
         }
       }
     `;
@@ -150,14 +155,16 @@ export class LensGraphQLClient {
     const query = `
       query CurrentSession {
         currentSession {
-          signer
-          account {
-            address
-            metadata {
-              name
-            }
-            username {
-              value
+          ... on Session {
+            authenticated
+            user {
+              address
+              metadata {
+                displayName
+              }
+              primaryUsername {
+                displayName
+              }
             }
           }
         }
@@ -167,19 +174,19 @@ export class LensGraphQLClient {
     try {
       const result = await this.makeGraphQLRequest<{
         currentSession: {
-          signer: string;
-          account: {
+          authenticated: boolean;
+          user: {
             address: string;
-            metadata?: { name?: string };
-            username?: { value: string };
+            metadata?: { displayName?: string };
+            primaryUsername?: { displayName: string };
           };
         };
       }>(query, {}, true);
 
       return {
-        signer: result.currentSession.signer,
-        name: result.currentSession.account.metadata?.name,
-        username: result.currentSession.account.username?.value,
+        signer: result.currentSession.user.address,
+        name: result.currentSession.user.metadata?.displayName,
+        username: result.currentSession.user.primaryUsername?.displayName,
       };
     } catch (error) {
       console.error('Failed to get current session:', error);
@@ -197,19 +204,25 @@ export class LensGraphQLClient {
     picture?: string;
   }>> {
     const query = `
-      query AccountsAvailable($request: AccountsAvailableRequest!) {
-        accountsAvailable(request: $request) {
+      query AccountsAvailable($request: AccountsRequest!) {
+        accounts(request: $request) {
           items {
-            account {
-              address
-              username {
-                value
-              }
-              metadata {
-                name
-                picture
+            address
+            primaryUsername {
+              displayName
+            }
+            metadata {
+              displayName
+              picture {
+                optimized {
+                  uri
+                }
               }
             }
+          }
+          pageInfo {
+            prev
+            next
           }
         }
       }
@@ -217,32 +230,39 @@ export class LensGraphQLClient {
 
     const variables = {
       request: {
-        managedBy: walletAddress,
-        includeOwned: true,
+        where: {
+          ownedBy: walletAddress,
+        },
       },
     };
 
     try {
       const result = await this.makeGraphQLRequest<{
-        accountsAvailable: {
+        accounts: {
           items: Array<{
-            account: {
-              address: string;
-              username?: { value: string };
-              metadata?: {
-                name?: string;
-                picture?: string;
+            address: string;
+            primaryUsername?: { displayName: string };
+            metadata?: {
+              displayName?: string;
+              picture?: {
+                optimized?: {
+                  uri: string;
+                };
               };
             };
           }>;
+          pageInfo: {
+            prev?: string;
+            next?: string;
+          };
         };
       }>(query, variables);
 
-      return result.accountsAvailable.items.map((item) => ({
-        address: item.account.address,
-        username: item.account.username?.value,
-        name: item.account.metadata?.name,
-        picture: item.account.metadata?.picture,
+      return result.accounts.items.map((item) => ({
+        address: item.address,
+        username: item.primaryUsername?.displayName,
+        name: item.metadata?.displayName,
+        picture: item.metadata?.picture?.optimized?.uri,
       }));
     } catch (error) {
       console.error('Failed to get available accounts:', error);
@@ -261,13 +281,10 @@ export class LensGraphQLClient {
     const query = `
       mutation Post($request: PostRequest!) {
         post(request: $request) {
-          ... on PostResponse {
-            hash
+          ... on RelaySuccess {
+            txHash
           }
-          ... on PostOperationValidationFailed {
-            reason
-          }
-          ... on TransactionWillFail {
+          ... on LensProfileManagerRelayError {
             reason
           }
         }
@@ -293,18 +310,18 @@ export class LensGraphQLClient {
     const variables = { request };
 
     const result = await this.makeGraphQLRequest<{
-      post: { hash?: string; reason?: string };
+      post: { txHash?: string; reason?: string };
     }>(query, variables, true);
 
-    if (result.post.reason) {
+    if ('reason' in result.post) {
       throw new Error(`Post creation failed: ${result.post.reason}`);
     }
 
-    if (!result.post.hash) {
+    if (!('txHash' in result.post) || !result.post.txHash) {
       throw new Error('Post creation failed: No hash returned');
     }
 
-    return { hash: result.post.hash };
+    return { hash: result.post.txHash };
   }
 
   /**
@@ -314,13 +331,10 @@ export class LensGraphQLClient {
     const query = `
       mutation Follow($request: FollowRequest!) {
         follow(request: $request) {
-          ... on FollowResponse {
-            hash
+          ... on RelaySuccess {
+            txHash
           }
-          ... on AccountFollowOperationValidationFailed {
-            reason
-          }
-          ... on TransactionWillFail {
+          ... on LensProfileManagerRelayError {
             reason
           }
         }
@@ -338,18 +352,18 @@ export class LensGraphQLClient {
     const variables = { request };
 
     const result = await this.makeGraphQLRequest<{
-      follow: { hash?: string; reason?: string };
+      follow: { txHash?: string; reason?: string };
     }>(query, variables, true);
 
-    if (result.follow.reason) {
+    if ('reason' in result.follow) {
       throw new Error(`Follow failed: ${result.follow.reason}`);
     }
 
-    if (!result.follow.hash) {
+    if (!('txHash' in result.follow) || !result.follow.txHash) {
       throw new Error('Follow failed: No hash returned');
     }
 
-    return { hash: result.follow.hash };
+    return { hash: result.follow.txHash };
   }
 
   /**
@@ -359,13 +373,10 @@ export class LensGraphQLClient {
     const query = `
       mutation Unfollow($request: UnfollowRequest!) {
         unfollow(request: $request) {
-          ... on UnfollowResponse {
-            hash
+          ... on RelaySuccess {
+            txHash
           }
-          ... on AccountFollowOperationValidationFailed {
-            reason
-          }
-          ... on TransactionWillFail {
+          ... on LensProfileManagerRelayError {
             reason
           }
         }
@@ -383,18 +394,18 @@ export class LensGraphQLClient {
     const variables = { request };
 
     const result = await this.makeGraphQLRequest<{
-      unfollow: { hash?: string; reason?: string };
+      unfollow: { txHash?: string; reason?: string };
     }>(query, variables, true);
 
-    if (result.unfollow.reason) {
+    if ('reason' in result.unfollow) {
       throw new Error(`Unfollow failed: ${result.unfollow.reason}`);
     }
 
-    if (!result.unfollow.hash) {
+    if (!('txHash' in result.unfollow) || !result.unfollow.txHash) {
       throw new Error('Unfollow failed: No hash returned');
     }
 
-    return { hash: result.unfollow.hash };
+    return { hash: result.unfollow.txHash };
   }
 
   /**
@@ -421,12 +432,16 @@ export class LensGraphQLClient {
         followers(request: $request) {
           items {
             address
-            username {
-              value
+            primaryUsername {
+              displayName
             }
             metadata {
-              name
-              picture
+              displayName
+              picture {
+                optimized {
+                  uri
+                }
+              }
             }
           }
           pageInfo {
@@ -461,10 +476,14 @@ export class LensGraphQLClient {
       followers: {
         items: Array<{
           address: string;
-          username?: { value: string };
+          primaryUsername?: { displayName: string };
           metadata?: {
-            name?: string;
-            picture?: string;
+            displayName?: string;
+            picture?: {
+              optimized?: {
+                uri: string;
+              };
+            };
           };
         }>;
         pageInfo: {
@@ -477,9 +496,9 @@ export class LensGraphQLClient {
     return {
       items: result.followers.items.map((item) => ({
         address: item.address,
-        username: item.username?.value,
-        name: item.metadata?.name,
-        picture: item.metadata?.picture,
+        username: item.primaryUsername?.displayName,
+        name: item.metadata?.displayName,
+        picture: item.metadata?.picture?.optimized?.uri,
       })),
       pageInfo: result.followers.pageInfo,
     };
@@ -509,12 +528,16 @@ export class LensGraphQLClient {
         following(request: $request) {
           items {
             address
-            username {
-              value
+            primaryUsername {
+              displayName
             }
             metadata {
-              name
-              picture
+              displayName
+              picture {
+                optimized {
+                  uri
+                }
+              }
             }
           }
           pageInfo {
@@ -549,10 +572,14 @@ export class LensGraphQLClient {
       following: {
         items: Array<{
           address: string;
-          username?: { value: string };
+          primaryUsername?: { displayName: string };
           metadata?: {
-            name?: string;
-            picture?: string;
+            displayName?: string;
+            picture?: {
+              optimized?: {
+                uri: string;
+              };
+            };
           };
         }>;
         pageInfo: {
@@ -565,9 +592,9 @@ export class LensGraphQLClient {
     return {
       items: result.following.items.map((item) => ({
         address: item.address,
-        username: item.username?.value,
-        name: item.metadata?.name,
-        picture: item.metadata?.picture,
+        username: item.primaryUsername?.displayName,
+        name: item.metadata?.displayName,
+        picture: item.metadata?.picture?.optimized?.uri,
       })),
       pageInfo: result.following.pageInfo,
     };
@@ -600,20 +627,24 @@ export class LensGraphQLClient {
       query Timeline($request: TimelineRequest!) {
         timeline(request: $request) {
           items {
-            id
-            metadata {
-              content
-            }
-            author {
-              address
-              username {
-                value
-              }
+            ... on Post {
+              id
               metadata {
-                name
+                ... on TextOnlyMetadata {
+                  content
+                }
               }
+              by {
+                address
+                primaryUsername {
+                  displayName
+                }
+                metadata {
+                  displayName
+                }
+              }
+              createdAt
             }
-            createdAt
           }
           pageInfo {
             prev
@@ -645,11 +676,11 @@ export class LensGraphQLClient {
       timeline: {
         items: Array<{
           id: string;
-          metadata: { content: string };
-          author: {
+          metadata: { content?: string };
+          by: {
             address: string;
-            username?: { value: string };
-            metadata?: { name?: string };
+            primaryUsername?: { displayName: string };
+            metadata?: { displayName?: string };
           };
           createdAt: string;
         }>;
@@ -663,11 +694,11 @@ export class LensGraphQLClient {
     return {
       items: result.timeline.items.map((item) => ({
         id: item.id,
-        content: item.metadata.content,
+        content: item.metadata.content || '',
         author: {
-          address: item.author.address,
-          username: item.author.username?.value,
-          name: item.author.metadata?.name,
+          address: item.by.address,
+          username: item.by.primaryUsername?.displayName,
+          name: item.by.metadata?.displayName,
         },
         createdAt: item.createdAt,
       })),
@@ -686,9 +717,11 @@ export class LensGraphQLClient {
     const query = `
       mutation Refresh($request: RefreshRequest!) {
         refresh(request: $request) {
-          accessToken
-          refreshToken
-          idToken
+          ... on AuthenticationToken {
+            accessToken
+            refreshToken
+            idToken
+          }
         }
       }
     `;
@@ -719,7 +752,11 @@ export class LensGraphQLClient {
   async revokeAuthentication(authenticationId?: string): Promise<void> {
     const query = `
       mutation RevokeAuthentication($request: RevokeAuthenticationRequest!) {
-        revokeAuthentication(request: $request)
+        revokeAuthentication(request: $request) {
+          ... on RevokeAuthenticationResult {
+            success
+          }
+        }
       }
     `;
 
@@ -727,10 +764,25 @@ export class LensGraphQLClient {
       request: authenticationId ? { authenticationId } : {},
     };
 
-    await this.makeGraphQLRequest(query, variables, true);
+    const result = await this.makeGraphQLRequest<{
+      revokeAuthentication: {
+        success: boolean;
+      };
+    }>(query, variables, true);
+    
+    if (!result.revokeAuthentication.success) {
+      throw new Error('Failed to revoke authentication');
+    }
 
     // Clear stored access token
     this.accessToken = null;
+  }
+  
+  /**
+   * Get the API URL
+   */
+  getApiUrl(): string {
+    return this.apiUrl;
   }
 }
 

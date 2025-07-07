@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
+import { WalletUser, UserWallet } from "../types/blockchain";
 
-// Blockchain features disabled until Tomo SDK is configured
+// Blockchain features configuration
 const BLOCKCHAIN_FEATURES_ENABLED = false;
 
 export type UserRole = "user" | "creator" | "instructor";
@@ -70,7 +71,7 @@ export const useAuth = () => {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: string, session: Session | null) => {
         setSession(session);
         if (session?.user) {
           await fetchProfile(session.user.id);
@@ -119,14 +120,14 @@ export const useAuth = () => {
     }
   }, [session]);
 
-  // Disabled blockchain features
+  // Temporarily disabled blockchain features
   const loginWithWallet = useCallback(async () => {
-    alert("Wallet features coming soon! Tomo SDK integration in progress.");
+    alert("Wallet features coming soon! ConnectKit integration in progress.");
     throw new Error("Blockchain features not yet available");
   }, []);
 
   const connectWallet = useCallback(async () => {
-    alert("Wallet features coming soon! Tomo SDK integration in progress.");
+    alert("Wallet features coming soon! ConnectKit integration in progress.");
     throw new Error("Blockchain features not yet available");
   }, []);
 
@@ -158,7 +159,7 @@ export const useAuth = () => {
     refreshProfile,
 
     // Blockchain features (disabled)
-    tomoUser: null,
+    walletUser: null,
     wallet: null,
     walletConnection: { isConnected: false },
     loginWithWallet,

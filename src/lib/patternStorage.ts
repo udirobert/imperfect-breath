@@ -11,6 +11,7 @@ export interface CustomPattern {
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   duration: number;
   creator: string; // User UUID
+  tags?: string[];
   ipHash?: string;
   
   // Fields from integration plan

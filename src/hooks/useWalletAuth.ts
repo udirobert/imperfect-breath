@@ -1,12 +1,12 @@
 import { useState } from "react";
-// TODO: Replace with proper multichain implementation
-// import { useAccount, useSignMessage } from "wagmi";
+import { useAccount, useSignMessage } from "wagmi";
 import { useAuth } from "./useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 import { toast } from "sonner";
+import { lensChain } from "../lib/publicClient";
 
 export const useWalletAuth = () => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const { user, profile, refreshProfile } = useAuth();
   const { signMessageAsync } = useSignMessage();
   const [loading, setLoading] = useState(false);
@@ -27,6 +27,12 @@ export const useWalletAuth = () => {
       return;
     }
 
+    // Check if connected to the right network (Lens Chain)
+    if (chain && chain.id !== lensChain.id) {
+      toast.error(`Please switch to ${lensChain.name} network to continue.`);
+      return;
+    }
+
     setLoading(true);
     try {
       const message = `Sign this message to link your wallet to your Imperfect Breath account. Address: ${address}`;
@@ -34,7 +40,12 @@ export const useWalletAuth = () => {
 
       const { error } = await supabase
         .from("users")
-        .update({ wallet_address: address, wallet_signature: signature })
+        .update({ 
+          wallet_address: address, 
+          wallet_signature: signature,
+          wallet_chain_id: lensChain.id,
+          wallet_chain_name: lensChain.name
+        })
         .eq("id", user.id);
 
       if (error) {
@@ -63,7 +74,12 @@ export const useWalletAuth = () => {
     try {
       const { error } = await supabase
         .from("users")
-        .update({ wallet_address: null, wallet_signature: null })
+        .update({ 
+          wallet_address: null, 
+          wallet_signature: null,
+          wallet_chain_id: null,
+          wallet_chain_name: null
+        })
         .eq("id", user.id);
 
       if (error) {
@@ -82,5 +98,16 @@ export const useWalletAuth = () => {
     }
   };
 
-  return { linkWallet, unlinkWallet, loading, isLinked: !!profile?.wallet_address };
+  // Helper to check if wallet is on the correct network (Lens Chain)
+  const isOnCorrectNetwork = () => {
+    return chain && chain.id === lensChain.id;
+  };
+
+  return { 
+    linkWallet, 
+    unlinkWallet, 
+    loading, 
+    isLinked: !!profile?.wallet_address,
+    isOnCorrectNetwork 
+  };
 };

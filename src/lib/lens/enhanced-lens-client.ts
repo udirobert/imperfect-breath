@@ -5,9 +5,8 @@
  */
 
 import EnhancedGraphQLClient from './enhanced-graphql-client';
-import { StorageClient } from '@lens-chain/storage-client';
-import { chains } from '@lens-chain/sdk/viem';
-import { immutable } from '@lens-chain/storage-client';
+import { storageClient } from './storage';
+import { lensChain, lensChainMainnet } from '../publicClient';
 import { textOnly, image, MediaImageMimeType } from '@lens-protocol/metadata';
 import { withRetry } from '../utils/retry-utils';
 import { getLensCache } from './lens-cache';
@@ -28,11 +27,11 @@ import type {
   LensFollowersResponse
 } from './types';
 
+// Import Lens app addresses from config
+import { TEST_APP_ADDRESSES, getAppAddress } from './config';
+
 // Lens app addresses for authentication
-const LENS_APP_ADDRESSES = {
-  testnet: '0xC75A89145d765c396fd75CbD16380Eb184Bd2ca7',
-  mainnet: '0x8A5Cc31180c37078e1EbA2A23c861Acf351a97cE'
-};
+const LENS_APP_ADDRESSES = TEST_APP_ADDRESSES;
 
 // Default retry options for storage operations
 const STORAGE_RETRY_OPTIONS = {
@@ -52,21 +51,19 @@ export class EnhancedLensClient {
   private authTokens: LensAuthTokens | null = null;
   private currentAccount: LensAccount | null = null;
   private graphqlClient: EnhancedGraphQLClient;
-  private storageClient: StorageClient;
   private lensCache = getLensCache();
 
   constructor(isTestnet: boolean = true) {
     this.isTestnet = isTestnet;
     this.appAddress = isTestnet ? LENS_APP_ADDRESSES.testnet : LENS_APP_ADDRESSES.mainnet;
     
-    // Initialize enhanced GraphQL client
-    const apiUrl = isTestnet 
-      ? 'https://api-v2-mumbai.lens.dev' 
-      : 'https://api-v2.lens.dev';
+    // Initialize enhanced GraphQL client with official Lens v3 endpoints
+    const apiUrl = isTestnet
+      ? 'https://api-mumbai.lens.dev'
+      : 'https://api.lens.dev';
     this.graphqlClient = new EnhancedGraphQLClient(apiUrl);
     
-    // Initialize Grove storage client
-    this.storageClient = StorageClient.create();
+    // Storage client is now imported directly
   }
 
   /**
@@ -175,7 +172,11 @@ export class EnhancedLensClient {
       const metadata = textOnly({
         content,
         tags: ['breathing', 'wellness', 'meditation', 'imperfect-breath'],
-        appId: 'imperfect-breath'
+        appId: 'imperfect-breath',
+        marketplace: {
+          name: 'Imperfect Breath',
+          description: 'Breathing session shared from Imperfect Breath'
+        }
       });
 
       // Upload metadata to Grove with retry
@@ -225,13 +226,21 @@ export class EnhancedLensClient {
             type: patternData.imageUri.endsWith('.png') ? MediaImageMimeType.PNG : MediaImageMimeType.JPEG
           },
           tags: ['breathing-pattern', 'nft', 'wellness', 'flow-blockchain'],
-          appId: 'imperfect-breath'
+          appId: 'imperfect-breath',
+          marketplace: {
+            name: patternData.name,
+            description: patternData.description
+          }
         });
       } else {
         metadata = textOnly({
           content,
           tags: ['breathing-pattern', 'nft', 'wellness', 'flow-blockchain'],
-          appId: 'imperfect-breath'
+          appId: 'imperfect-breath',
+          marketplace: {
+            name: patternData.name,
+            description: patternData.description
+          }
         });
       }
 
@@ -263,7 +272,11 @@ export class EnhancedLensClient {
       const metadata = textOnly({
         content: comment,
         tags: ['breathing', 'wellness', 'comment'],
-        appId: 'imperfect-breath'
+        appId: 'imperfect-breath',
+        marketplace: {
+          name: 'Comment on Breathing Session',
+          description: 'Comment on a breathing session from Imperfect Breath'
+        }
       });
 
       const metadataUri = await this.uploadMetadata(metadata);
@@ -296,7 +309,11 @@ export class EnhancedLensClient {
       const metadata = textOnly({
         content: quoteText,
         tags: ['breathing', 'wellness', 'quote'],
-        appId: 'imperfect-breath'
+        appId: 'imperfect-breath',
+        marketplace: {
+          name: 'Quote on Breathing Session',
+          description: 'Quote of a breathing session from Imperfect Breath'
+        }
       });
 
       const metadataUri = await this.uploadMetadata(metadata);
@@ -333,8 +350,16 @@ export class EnhancedLensClient {
       }
 
       // Not in cache, fetch from API
+      // For Lens v3, we need to add metadata.tags
+      let v3Filters = undefined;
+      if (filters) {
+        v3Filters = filters.tags
+          ? { ...filters, metadata: { tags: { anyOf: filters.tags } } }
+          : filters;
+      }
+      
       const timeline = await this.graphqlClient.getTimeline(accountAddress, {
-        filter: filters,
+        filter: v3Filters,
         limit: 25
       });
       
@@ -349,10 +374,10 @@ export class EnhancedLensClient {
         },
         timestamp: item.createdAt,
         engagement: {
-          likes: Math.floor(Math.random() * 50) + 5,
-          comments: Math.floor(Math.random() * 20) + 1,
-          shares: Math.floor(Math.random() * 10) + 1,
-          isLiked: Math.random() > 0.7,
+          likes: 0, // In v3 we'd get this from item.stats.reactions
+          comments: 0, // In v3 we'd get this from item.stats.comments
+          shares: 0, // In v3 we'd get this from item.stats.mirrors + item.stats.quotes
+          isLiked: false,
         }
       }));
       
@@ -383,10 +408,9 @@ export class EnhancedLensClient {
 
     try {
       // Define highlight filters
+      // For Lens v3, we use metadata.tags filter
       const highlightFilters = {
-        metadata: {
-          tags: { anyOf: ['breathing', 'wellness', 'meditation'] }
-        }
+        tags: ['breathing', 'wellness', 'meditation']
       };
       
       // Check cache first
@@ -628,11 +652,8 @@ export class EnhancedLensClient {
   private async uploadMetadata(metadata: any): Promise<string> {
     try {
       return await withRetry(async () => {
-        // Use Grove storage for real metadata uploads
-        const chainId = this.isTestnet ? chains.testnet.id : chains.mainnet.id;
-        const acl = immutable(chainId);
-        
-        const response = await this.storageClient.uploadAsJson(metadata, { acl });
+        // Use the imported storageClient instead of class property
+        const response = await storageClient.uploadAsJson(metadata);
         return response.uri;
       }, STORAGE_RETRY_OPTIONS);
     } catch (error) {

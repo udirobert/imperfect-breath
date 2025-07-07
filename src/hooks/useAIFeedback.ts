@@ -1,34 +1,36 @@
+import { useCallback } from 'react';
 
-import { useEffect } from 'react';
-import { useBreathingSession } from './useBreathingSession';
-
-type UseAIFeedbackProps = {
+interface AIFeedbackProps {
   isRunning: boolean;
   isFinished: boolean;
-  speak: ReturnType<typeof useBreathingSession>['controls']['speak'];
+  speak: (text: string) => void;
   cycleCount: number;
-  sessionPhase: ReturnType<typeof useBreathingSession>['state']['sessionPhase'];
+  sessionPhase: string;
   patternKey: string;
-};
+}
 
-// This hook provides extra flavor during the session.
-export const useAIFeedback = ({
-  isRunning,
-  isFinished,
-  speak,
-  cycleCount,
-  sessionPhase,
-  patternKey,
-}: UseAIFeedbackProps) => {
-  useEffect(() => {
+/**
+ * Provides AI-powered coaching and feedback during breathing sessions
+ */
+export const useAIFeedback = (props: AIFeedbackProps) => {
+  const { isRunning, isFinished, speak, cycleCount, sessionPhase, patternKey } = props;
+
+  // This is a simplified implementation that could be expanded with actual AI integration
+  const generateFeedback = useCallback(() => {
     if (!isRunning || isFinished) return;
 
-    if (cycleCount === 1 && sessionPhase === 'inhale') {
-      speak("Great start. Keep your focus on the breath.", { rate: 1.1, pitch: 1.1 });
+    // Example feedback logic based on session state
+    if (cycleCount === 5) {
+      speak("You're doing great! Try to keep your breathing rhythm consistent.");
+    } else if (cycleCount === 10) {
+      speak("Halfway there. Notice how your body is starting to relax.");
+    } else if (cycleCount === 20) {
+      speak("Excellent progress. Focus on deepening your breath for the final stretch.");
     }
+  }, [isRunning, isFinished, speak, cycleCount]);
 
-    if (patternKey === 'wim-hof' && cycleCount > 10 && cycleCount % 5 === 0) {
-        speak("You're doing great. Deeper breaths.", { rate: 1.1, pitch: 1.1 });
-    }
-  }, [isRunning, isFinished, speak, cycleCount, sessionPhase, patternKey]);
+  // Example implementation - in a real app, this would be triggered by specific events
+  return {
+    generateFeedback
+  };
 };

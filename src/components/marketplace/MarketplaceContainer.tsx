@@ -8,9 +8,9 @@ import { SearchBar } from "./SearchBar";
 import { CategoryFilter } from "./CategoryFilter";
 import { ResultsHeader } from "./ResultsHeader";
 import { PatternCard } from "./PatternCard";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Separator } from "../../components/ui/separator";
 import {
   Loader2,
   RefreshCw,
@@ -21,7 +21,7 @@ import {
   Moon,
   Award,
 } from "lucide-react";
-import type { EnhancedCustomPattern } from "@/types/patterns";
+import type { EnhancedCustomPattern } from "../../types/patterns";
 
 interface MarketplaceContainerProps {
   patterns: EnhancedCustomPattern[];
@@ -90,13 +90,30 @@ export const MarketplaceContainer: React.FC<MarketplaceContainerProps> = ({
             (a.licenseSettings.price || 0) - (b.licenseSettings.price || 0);
           break;
         case "rating":
-          // Mock rating comparison - in real app, this would use actual ratings
-          comparison = Math.random() - 0.5;
+          // Use properties available in EnhancedCustomPattern for rating comparison
+          // Use primaryBenefits length as a proxy for quality/rating
+          const aRatingProxy = a.primaryBenefits.length;
+          const bRatingProxy = b.primaryBenefits.length;
+          comparison = aRatingProxy - bRatingProxy;
+
+          // If primaryBenefits are equal, sort by difficulty as secondary criteria
+          if (comparison === 0) {
+            const difficultyMap = { beginner: 0, intermediate: 1, advanced: 2 };
+            comparison =
+              (difficultyMap[a.difficulty] || 0) -
+              (difficultyMap[b.difficulty] || 0);
+          }
           break;
         case "popularity":
         default:
-          // Mock popularity comparison - in real app, this would use actual metrics
-          comparison = Math.random() - 0.5;
+          // Use available properties as proxies for popularity
+          // Instructor name length as a very basic proxy (in a real app, you'd use actual metrics)
+          comparison = a.instructorName.length - b.instructorName.length;
+
+          // Secondary sorting criteria
+          if (comparison === 0) {
+            comparison = a.name.localeCompare(b.name);
+          }
           break;
       }
 

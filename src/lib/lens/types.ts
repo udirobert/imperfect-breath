@@ -34,6 +34,7 @@ export interface BreathingSession {
   breathHoldTime?: number;
   restlessnessScore?: number;
   cycles?: number;
+  content?: string; // Text content for social sharing
 }
 
 export interface SocialPost {

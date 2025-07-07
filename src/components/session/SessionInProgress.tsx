@@ -1,13 +1,13 @@
 import React from "react";
-import BreathingAnimation from "@/components/BreathingAnimation";
-import { BreathingPhaseName } from "@/lib/breathingPatterns";
-import { useBreathingSession } from "@/hooks/useBreathingSession";
+import BreathingAnimation from "../../components/BreathingAnimation";
+import { BreathingPhaseName } from "../../lib/breathingPatterns";
+import { useBreathingSession } from "../../hooks/useBreathingSession";
 import { SessionHeader } from "./SessionHeader";
 import { SessionControls } from "./SessionControls";
-import { Button } from "@/components/ui/button";
-import type { TrackingStatus, Keypoint } from "@/hooks/useVision";
+import { Button } from "../../components/ui/button";
+import { TrackingStatus, Keypoint } from "../../hooks/visionTypes";
 import { Loader2, Camera } from "lucide-react";
-import VideoFeed from "@/components/VideoFeed";
+import VideoFeed from "../../components/VideoFeed";
 
 type SessionInProgressProps = {
   state: ReturnType<typeof useBreathingSession>["state"];

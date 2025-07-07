@@ -4,15 +4,14 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import VisionEngine from '@/lib/vision/core/vision-engine';
-import CameraManager from '@/lib/vision/camera/camera-manager';
-import type { 
-  VisionTier, 
-  VisionMetrics, 
-  PerformanceMetrics,
-  VisionConfig 
-} from '@/lib/vision/types';
-import type { CameraState, CameraConfig } from '@/lib/vision/camera/camera-manager';
+import VisionEngine from '../lib/vision/core/vision-engine';
+import CameraManager from '../lib/vision/camera/camera-manager';
+import type {
+  VisionTier,
+  VisionMetrics,
+  PerformanceMetrics
+} from '../lib/vision/types';
+import type { CameraState, CameraConfig } from '../lib/vision/camera/camera-manager';
 
 interface UseVisionConfig {
   tier: VisionTier;
@@ -59,7 +58,7 @@ interface UseVisionReturn {
   getPerformanceReport: () => PerformanceMetrics | null;
 }
 
-export const useVision = (initialConfig: UseVisionConfig = { tier: 'none' }): UseVisionReturn => {
+export const useVision = (initialConfig: UseVisionConfig = { tier: 'none' as unknown as VisionTier }): UseVisionReturn => {
   // Vision engine and camera manager instances
   const visionEngine = useRef<VisionEngine>(VisionEngine.getInstance());
   const cameraManager = useRef<CameraManager>(CameraManager.getInstance());

@@ -1,30 +1,45 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Users, 
-  MessageCircle, 
-  Share, 
-  Heart, 
-  Loader2, 
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Textarea } from "../../components/ui/textarea";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "../../components/ui/avatar";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import {
+  Users,
+  MessageCircle,
+  Share,
+  Heart,
+  Loader2,
   CheckCircle,
   AlertCircle,
   Eye,
-  Send
-} from 'lucide-react';
-import { useLensContext } from '@/providers/LensProvider';
-import { useAccount } from 'wagmi';
-import { toast } from '@/hooks/use-toast';
+  Send,
+} from "lucide-react";
+import { useLensContext } from "../../providers/LensProvider";
+import { useAccount } from "wagmi";
+import { toast } from "../../hooks/use-toast";
 
 export const LensSocialHub: React.FC = () => {
-  const [selectedAccount, setSelectedAccount] = useState<string>('');
-  const [postContent, setPostContent] = useState('');
-  const [commentContent, setCommentContent] = useState('');
-  const [selectedPostId, setSelectedPostId] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState<string>("");
+  const [postContent, setPostContent] = useState("");
+  const [commentContent, setCommentContent] = useState("");
+  const [selectedPostId, setSelectedPostId] = useState("");
 
   const { address } = useAccount();
   const {
@@ -44,7 +59,7 @@ export const LensSocialHub: React.FC = () => {
     fetchBreathingContent,
     isPosting,
     isCommenting,
-    clearError
+    clearError,
   } = useLensContext();
 
   const handleAuthenticate = async () => {
@@ -52,7 +67,7 @@ export const LensSocialHub: React.FC = () => {
       toast({
         title: "No account selected",
         description: "Please select a Lens account to authenticate with.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -66,8 +81,9 @@ export const LensSocialHub: React.FC = () => {
     } catch (err) {
       toast({
         title: "Authentication failed",
-        description: err instanceof Error ? err.message : "Failed to connect to Lens",
-        variant: "destructive"
+        description:
+          err instanceof Error ? err.message : "Failed to connect to Lens",
+        variant: "destructive",
       });
     }
   };
@@ -83,7 +99,7 @@ export const LensSocialHub: React.FC = () => {
       toast({
         title: "Logout failed",
         description: "Failed to disconnect from Lens",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -92,8 +108,9 @@ export const LensSocialHub: React.FC = () => {
     if (!postContent.trim()) {
       toast({
         title: "Empty post",
-        description: "Please enter some content for your breathing session post.",
-        variant: "destructive"
+        description:
+          "Please enter some content for your breathing session post.",
+        variant: "destructive",
       });
       return;
     }
@@ -107,16 +124,19 @@ export const LensSocialHub: React.FC = () => {
         insights: [
           "Improved focus during the session",
           "Felt more relaxed afterwards",
-          "Breathing rhythm became more natural"
-        ]
+          "Breathing rhythm became more natural",
+        ],
       };
 
       const postHash = await postBreathingSession(sessionData);
-      setPostContent('');
-      
+      setPostContent("");
+
       toast({
         title: "Session shared!",
-        description: `Your breathing session has been posted to Lens. Hash: ${postHash.slice(0, 10)}...`,
+        description: `Your breathing session has been posted to Lens. Hash: ${postHash.slice(
+          0,
+          10
+        )}...`,
       });
 
       // Refresh timeline
@@ -124,8 +144,9 @@ export const LensSocialHub: React.FC = () => {
     } catch (err) {
       toast({
         title: "Post failed",
-        description: err instanceof Error ? err.message : "Failed to share session",
-        variant: "destructive"
+        description:
+          err instanceof Error ? err.message : "Failed to share session",
+        variant: "destructive",
       });
     }
   };
@@ -134,17 +155,21 @@ export const LensSocialHub: React.FC = () => {
     try {
       const patternData = {
         name: "Custom Box Breathing",
-        description: "A personalized 4-4-4-4 breathing pattern for focus and calm",
+        description:
+          "A personalized 4-4-4-4 breathing pattern for focus and calm",
         nftId: "123456",
         contractAddress: "0x1234567890abcdef",
-        imageUri: "https://example.com/pattern-image.png"
+        imageUri: "https://example.com/pattern-image.png",
       };
 
       const postHash = await shareBreathingPattern(patternData);
-      
+
       toast({
         title: "Pattern shared!",
-        description: `Your breathing pattern NFT has been shared on Lens. Hash: ${postHash.slice(0, 10)}...`,
+        description: `Your breathing pattern NFT has been shared on Lens. Hash: ${postHash.slice(
+          0,
+          10
+        )}...`,
       });
 
       // Refresh timeline
@@ -152,8 +177,9 @@ export const LensSocialHub: React.FC = () => {
     } catch (err) {
       toast({
         title: "Share failed",
-        description: err instanceof Error ? err.message : "Failed to share pattern",
-        variant: "destructive"
+        description:
+          err instanceof Error ? err.message : "Failed to share pattern",
+        variant: "destructive",
       });
     }
   };
@@ -163,25 +189,29 @@ export const LensSocialHub: React.FC = () => {
       toast({
         title: "Missing information",
         description: "Please select a post and enter a comment.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
       const commentHash = await commentOnPost(selectedPostId, commentContent);
-      setCommentContent('');
-      setSelectedPostId('');
-      
+      setCommentContent("");
+      setSelectedPostId("");
+
       toast({
         title: "Comment posted!",
-        description: `Your comment has been added. Hash: ${commentHash.slice(0, 10)}...`,
+        description: `Your comment has been added. Hash: ${commentHash.slice(
+          0,
+          10
+        )}...`,
       });
     } catch (err) {
       toast({
         title: "Comment failed",
-        description: err instanceof Error ? err.message : "Failed to post comment",
-        variant: "destructive"
+        description:
+          err instanceof Error ? err.message : "Failed to post comment",
+        variant: "destructive",
       });
     }
   };
@@ -248,8 +278,8 @@ export const LensSocialHub: React.FC = () => {
                           key={account.address}
                           className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                             selectedAccount === account.address
-                              ? 'border-green-500 bg-green-50 dark:bg-green-950'
-                              : 'border-gray-200 hover:border-gray-300'
+                              ? "border-green-500 bg-green-50 dark:bg-green-950"
+                              : "border-gray-200 hover:border-gray-300"
                           }`}
                           onClick={() => setSelectedAccount(account.address)}
                         >
@@ -257,15 +287,19 @@ export const LensSocialHub: React.FC = () => {
                             <Avatar className="h-8 w-8">
                               <AvatarImage src={account.picture} />
                               <AvatarFallback>
-                                {account.name?.charAt(0) || account.address.slice(2, 4).toUpperCase()}
+                                {account.name?.charAt(0) ||
+                                  account.address.slice(2, 4).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-medium">
-                                {account.name || account.username || 'Unnamed Account'}
+                                {account.name ||
+                                  account.username ||
+                                  "Unnamed Account"}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {account.address.slice(0, 8)}...{account.address.slice(-6)}
+                                {account.address.slice(0, 8)}...
+                                {account.address.slice(-6)}
                               </p>
                             </div>
                             {selectedAccount === account.address && (
@@ -287,7 +321,7 @@ export const LensSocialHub: React.FC = () => {
                         Authenticating...
                       </>
                     ) : (
-                      'Connect to Lens'
+                      "Connect to Lens"
                     )}
                   </Button>
                 </>
@@ -307,7 +341,7 @@ export const LensSocialHub: React.FC = () => {
                         Loading...
                       </>
                     ) : (
-                      'Refresh Accounts'
+                      "Refresh Accounts"
                     )}
                   </Button>
                 </div>
@@ -319,15 +353,18 @@ export const LensSocialHub: React.FC = () => {
                 <Avatar>
                   <AvatarImage src={currentAccount?.picture} />
                   <AvatarFallback>
-                    {currentAccount?.name?.charAt(0) || 'U'}
+                    {currentAccount?.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="font-medium">
-                    {currentAccount?.name || currentAccount?.username || 'Connected Account'}
+                    {currentAccount?.name ||
+                      currentAccount?.username ||
+                      "Connected Account"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {currentAccount?.address.slice(0, 8)}...{currentAccount?.address.slice(-6)}
+                    {currentAccount?.address.slice(0, 8)}...
+                    {currentAccount?.address.slice(-6)}
                   </p>
                 </div>
                 <Badge variant="default">Connected</Badge>
@@ -342,7 +379,12 @@ export const LensSocialHub: React.FC = () => {
             <div className="mt-4 p-3 bg-red-50 dark:bg-red-950 rounded-lg flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-500" />
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-              <Button onClick={clearError} variant="ghost" size="sm" className="ml-auto">
+              <Button
+                onClick={clearError}
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+              >
                 Dismiss
               </Button>
             </div>
@@ -381,7 +423,7 @@ export const LensSocialHub: React.FC = () => {
                     )}
                     Share Breathing Session
                   </Button>
-                  
+
                   <Button
                     onClick={handleSharePattern}
                     disabled={isPosting}
@@ -423,7 +465,7 @@ export const LensSocialHub: React.FC = () => {
                       Loading...
                     </>
                   ) : (
-                    'Refresh Timeline'
+                    "Refresh Timeline"
                   )}
                 </Button>
 
@@ -432,14 +474,16 @@ export const LensSocialHub: React.FC = () => {
                     {timeline.slice(0, 5).map((item, index) => (
                       <div key={index} className="p-4 border rounded-lg">
                         <p className="text-sm text-muted-foreground">
-                          Timeline item {index + 1} - Content would be displayed here
+                          Timeline item {index + 1} - Content would be displayed
+                          here
                         </p>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-center py-8">
-                    No timeline content available. Share your first breathing session!
+                    No timeline content available. Share your first breathing
+                    session!
                   </p>
                 )}
               </CardContent>
@@ -482,7 +526,9 @@ export const LensSocialHub: React.FC = () => {
 
                 <Button
                   onClick={handleComment}
-                  disabled={isCommenting || !commentContent.trim() || !selectedPostId}
+                  disabled={
+                    isCommenting || !commentContent.trim() || !selectedPostId
+                  }
                   className="w-full"
                 >
                   {isCommenting ? (

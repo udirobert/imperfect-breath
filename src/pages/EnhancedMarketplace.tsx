@@ -18,30 +18,48 @@ import {
   TrendingUp,
   Crown,
   Verified,
+  Shield,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import IPAssetRegistration from "../components/IPAssetRegistration";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { PatternStorageService } from "@/lib/patternStorage";
-import { ReviewService, PatternReview } from "@/lib/reviewService";
-import { useAuth } from "@/hooks/useAuth";
-import { PatternRecommendationEngine } from "@/lib/ai/recommendations";
-import { PatternDetailsModal } from "@/components/marketplace/PatternDetailsModal";
+} from "../components/ui/select";
+import { PatternStorageService } from "../lib/patternStorage";
+import { ReviewService, PatternReview } from "../lib/reviewService";
+import { useAuth } from "../hooks/useAuth";
+import { PatternRecommendationEngine } from "../lib/ai/recommendations";
+import { PatternDetailsModal } from "../components/marketplace/PatternDetailsModal";
 import {
   EnhancedCustomPattern,
   defaultLicense,
   LicenseSettings,
-} from "@/types/patterns";
+} from "../types/patterns";
 
 const patternStorageService = new PatternStorageService();
 const reviewService = new ReviewService();
@@ -100,6 +118,7 @@ const EnhancedMarketplace = () => {
   const [selectedPattern, setSelectedPattern] =
     useState<MarketplacePattern | null>(null);
   const [licensedPatterns, setLicensedPatterns] = useState<string[]>([]);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
 
   // Advanced filter states
   const [showFree, setShowFree] = useState(false);
@@ -115,15 +134,10 @@ const EnhancedMarketplace = () => {
           reviewService.getAllReviews(),
         ]);
 
-        const reviewsByPattern = allReviews.reduce(
-          (acc, review) => {
-            (acc[review.pattern_id] = acc[review.pattern_id] || []).push(
-              review,
-            );
-            return acc;
-          },
-          {} as Record<string, PatternReview[]>,
-        );
+        const reviewsByPattern = allReviews.reduce((acc, review) => {
+          (acc[review.pattern_id] = acc[review.pattern_id] || []).push(review);
+          return acc;
+        }, {} as Record<string, PatternReview[]>);
 
         const instructorMap = new Map<string, InstructorProfile>();
         fetchedPatterns.forEach((p) => {
@@ -147,7 +161,7 @@ const EnhancedMarketplace = () => {
         });
 
         const marketplacePatterns: MarketplacePattern[] = fetchedPatterns.map(
-          (p: EnhancedCustomPattern) => {
+          (p) => {
             const patternReviews = reviewsByPattern[p.id] || [];
             const rating =
               patternReviews.length > 0
@@ -156,7 +170,7 @@ const EnhancedMarketplace = () => {
                 : 0;
             const instructor = instructorMap.get(p.creator)!;
             const licenseSettings =
-              (p.licensingInfo as LicenseSettings) || defaultLicense;
+              (p.licensingInfo as unknown as LicenseSettings) || defaultLicense;
 
             return {
               ...p,
@@ -185,7 +199,7 @@ const EnhancedMarketplace = () => {
               trending: false,
               new: false,
             };
-          },
+          }
         );
 
         setPatterns(marketplacePatterns);
@@ -746,6 +760,15 @@ const EnhancedMarketplace = () => {
         )}
 
         <Tabs defaultValue="patterns" className="w-full">
+          <div className="flex justify-end mb-6">
+            <Button
+              onClick={() => setShowRegisterDialog(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700"
+            >
+              <Shield className="h-4 w-4" />
+              Register Your Pattern
+            </Button>
+          </div>
           <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
             <TabsTrigger value="patterns">Browse Patterns</TabsTrigger>
             <TabsTrigger value="instructors">Featured Instructors</TabsTrigger>
@@ -821,6 +844,27 @@ const EnhancedMarketplace = () => {
           }
         />
       )}
+
+      {/* IP Asset Registration Dialog */}
+      <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Register Your Breathing Pattern as IP
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="mb-4">
+              <p className="text-muted-foreground">
+                Protect your unique breathing technique by registering it on the
+                blockchain. This gives you verifiable ownership and lets you set
+                licensing terms.
+              </p>
+            </div>
+            <IPAssetRegistration />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

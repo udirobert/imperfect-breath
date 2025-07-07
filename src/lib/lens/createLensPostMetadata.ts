@@ -1,5 +1,5 @@
 import { textOnly } from "@lens-protocol/metadata";
-import { SessionData } from "@/lib/ai/config";
+import { SessionData } from "../../lib/ai/config";
 
 export function createLensPostMetadata(sessionData: SessionData, aiAnalysis: string) {
   const content = `Just completed a ${sessionData.patternName} session on Breath Flow Vision!\n\n` +

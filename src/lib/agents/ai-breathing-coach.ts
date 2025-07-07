@@ -5,7 +5,7 @@
 
 import { EnhancedFlowClient } from '../flow/enhanced-flow-client';
 import { LensBreathingClient } from '../lens/lens-client';
-import { StoryBreathingClient } from '../story/story-client';
+import { storyClient } from '../story';
 import { SecureAPIKeyManager } from '../crypto/secure-storage';
 
 export interface AICoachConfig {
@@ -45,7 +45,6 @@ export interface BreathingSessionAnalysis {
 export class AIBreathingCoach {
   private flowClient: EnhancedFlowClient;
   private lensClient: LensBreathingClient;
-  private storyClient: StoryBreathingClient;
   private config: AICoachConfig;
   private isInitialized = false;
 
@@ -53,7 +52,7 @@ export class AIBreathingCoach {
     this.config = config;
     this.flowClient = EnhancedFlowClient.getInstance();
     this.lensClient = new LensBreathingClient(true); // testnet
-    this.storyClient = new StoryBreathingClient(true); // testnet
+    // Using the consolidated Story client instance
   }
 
   /**
@@ -210,11 +209,31 @@ export class AIBreathingCoach {
     instructions: string;
   }> {
     try {
-      // Create child account using Flow's Account Linking
-      const agentAccount = await this.flowClient.storyClient.account.createChildAccount({
-        parentAddress: userAddress,
-        publicKeys: [this.getAgentPublicKey()]
+      // Register an IP asset to represent the AI agent on Story Protocol
+      const agentPublicKey = this.getAgentPublicKey();
+      
+      // Register the agent as an IP asset with Story Protocol
+      const agentRegistration = await storyClient.registerBreathingPatternIP({
+        name: `AI Breathing Coach Agent`,
+        description: `Managed AI agent for breathing coach services linked to user ${userAddress}`,
+        creator: userAddress,
+        inhale: 0,
+        hold: 0,
+        exhale: 0,
+        rest: 0,
+        tags: ['ai-agent', 'breathing-coach', 'beginner']
       });
+      
+      if (!agentRegistration || !agentRegistration.ipId) {
+        throw new Error('Failed to register agent with Story Protocol');
+      }
+      
+      // Use the registered IP ID as the agent's address
+      const agentAccount = {
+        address: agentRegistration.ipId,
+        publicKey: agentPublicKey,
+        parentAddress: userAddress
+      };
 
       // Set up automated capabilities
       const capabilities = [
@@ -488,6 +507,19 @@ What would you like to share?`,
       message: guidance.message,
       followUp: guidance.followUp
     };
+  }
+
+  private generatePatternExplanation(pattern: any, preferences: any): string {
+    // Generate an explanation for the created pattern
+    const benefitsText = pattern.benefits.join(', ');
+    const difficultyLevel = pattern.difficulty || preferences.experience || 'beginner';
+    
+    return `This custom ${pattern.name} is designed specifically for ${preferences.goal}.
+    
+With a rhythm of ${pattern.inhale}-${pattern.hold}-${pattern.exhale}-${pattern.rest}, this pattern is
+optimized for ${difficultyLevel} practitioners.
+
+The pattern helps with ${benefitsText}. Practice this pattern for 5-10 minutes daily for best results.`;
   }
 
   private generatePatternFromPreferences(preferences: any): any {

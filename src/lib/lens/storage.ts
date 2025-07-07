@@ -1,11 +1,18 @@
 // Grove storage client for Lens metadata
 import { StorageClient, immutable } from '@lens-chain/storage-client';
+import { lensChain, lensChainMainnet } from "../publicClient";
+import { config } from "../../config/environment";
 
 // Create Grove storage client
 const groveClient = StorageClient.create();
 
-// ACL configuration for immutable content
-const acl = immutable();
+// Get the appropriate chain ID based on environment
+const chainId = config.lens.environment === "testnet" 
+  ? lensChain.id 
+  : lensChainMainnet.id;
+
+// ACL configuration for immutable content with chain ID
+const acl = immutable(chainId);
 
 export interface LensStorageClient {
   uploadAsJson(data: any): Promise<{ uri: string; gatewayUrl: string }>;

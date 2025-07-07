@@ -5,9 +5,10 @@
 
 import LensGraphQLClient from './lens-graphql-client';
 import { StorageClient } from '@lens-chain/storage-client';
-import { chains } from '@lens-chain/sdk/viem';
+import { lensChain } from '../publicClient';
 import { immutable } from '@lens-chain/storage-client';
 import { textOnly } from '@lens-protocol/metadata';
+import { config } from '../../config/environment';
 
 export interface LensAuthTokens {
   accessToken: string;
@@ -38,8 +39,9 @@ export interface BreathingSessionPost {
 }
 
 // Lens app addresses for authentication
+// Get addresses from environment config
 const LENS_APP_ADDRESSES = {
-  testnet: '0xC75A89145d765c396fd75CbD16380Eb184Bd2ca7',
+  testnet: config.lens.appAddress || '0xC75A89145d765c396fd75CbD16380Eb184Bd2ca7',
   mainnet: '0x8A5Cc31180c37078e1EbA2A23c861Acf351a97cE'
 };
 
@@ -58,10 +60,10 @@ export class LensBreathingClient {
     this.isTestnet = isTestnet;
     this.appAddress = isTestnet ? LENS_APP_ADDRESSES.testnet : LENS_APP_ADDRESSES.mainnet;
     
-    // Initialize real GraphQL client
-    const apiUrl = isTestnet 
-      ? 'https://api-v2-mumbai.lens.dev' 
-      : 'https://api-v2.lens.dev';
+    // Initialize GraphQL client with updated V3 endpoints
+    const apiUrl = isTestnet
+      ? 'https://api.testnet.lens.xyz/graphql'
+      : 'https://api.lens.xyz/graphql';
     this.graphqlClient = new LensGraphQLClient(apiUrl);
     
     // Initialize Grove storage client
@@ -447,12 +449,98 @@ export class LensBreathingClient {
   }
 
   /**
+   * Execute an action on a post (collect, like, etc.)
+   */
+  async executeAction(postId: string, actionType: 'collect' | 'like' | 'react', actionParams: any = {}): Promise<{hash: string}> {
+    if (!this.authTokens) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      // Prepare action parameters based on type
+      let actionData: any = {};
+      
+      if (actionType === 'collect') {
+        actionData = {
+          collect: {
+            fromBase: false,
+            ...actionParams
+          }
+        };
+      } else if (actionType === 'like') {
+        actionData = {
+          like: true
+        };
+      } else if (actionType === 'react') {
+        actionData = {
+          react: {
+            reaction: actionParams.reaction || 'UPVOTE'
+          }
+        };
+      }
+
+      // Instead of directly calling the private method, we'll create a query and use the client
+      // to make the request indirectly
+      
+      const query = `
+      mutation ActOnPost($request: ActOnPostRequest!) {
+        actOnPost(request: $request) {
+          ... on RelaySuccess {
+            txHash
+          }
+          ... on LensProfileManagerRelayError {
+            reason
+          }
+        }
+      }
+      `;
+      
+      const variables = {
+        request: {
+          action: actionData,
+          post: postId
+        }
+      };
+      
+      // Execute the action using our GraphQL client's existing methods
+      const response = await fetch(this.graphqlClient.getApiUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authTokens.accessToken}`
+        },
+        body: JSON.stringify({
+          query,
+          variables
+        })
+      });
+      
+      const resultData = await response.json();
+      
+      if (resultData.errors) {
+        throw new Error(`Action failed: ${resultData.errors[0].message}`);
+      }
+      
+      const result = resultData.data.actOnPost;
+      
+      if ('reason' in result) {
+        throw new Error(`Action failed: ${result.reason}`);
+      }
+      
+      return { hash: result.txHash };
+    } catch (error) {
+      console.error(`Failed to execute ${actionType} action:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Helper: Upload metadata to Grove storage
    */
   private async uploadMetadata(metadata: any): Promise<string> {
     try {
       // Use Grove storage for real metadata uploads
-      const chainId = this.isTestnet ? chains.testnet.id : chains.mainnet.id;
+      const chainId = this.isTestnet ? lensChain.id : 1389; // 1389 is Lens Chain Mainnet
       const acl = immutable(chainId);
       
       const response = await this.storageClient.uploadAsJson(metadata, { acl });
@@ -482,6 +570,20 @@ export class LensBreathingClient {
    */
   get getAppAddress(): string {
     return this.appAddress;
+  }
+
+  /**
+   * Get access token
+   */
+  async getAccessToken(): Promise<string> {
+    if (!this.authTokens) {
+      throw new Error('Not authenticated');
+    }
+
+    // Check if token is expired and refresh if needed
+    // In a real implementation, you would check the expiration time
+    
+    return this.authTokens.accessToken;
   }
 }
 

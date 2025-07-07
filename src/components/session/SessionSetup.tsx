@@ -1,12 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { BREATHING_PATTERNS, BreathingPattern } from "@/lib/breathingPatterns";
-import { useBreathingSession } from "@/hooks/useBreathingSession";
+import { Button } from "../../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
+import { Label } from "../../components/ui/label";
+import { Switch } from "../../components/ui/switch";
+import {
+  BREATHING_PATTERNS,
+  BreathingPattern,
+} from "../../lib/breathingPatterns";
+import { useBreathingSession } from "../../hooks/useBreathingSession";
 
 type PatternKey = keyof typeof BREATHING_PATTERNS;
 
@@ -24,14 +32,15 @@ const formatTime = (seconds: number) => {
 };
 
 const formatSessionDuration = (pattern: BreathingPattern) => {
-  if (pattern.cycles === Infinity) {
-    return "Continuous Practice";
-  }
-  const oneCycleDuration = pattern.phases.reduce(
-    (sum, phase) => sum + phase.duration,
-    0,
-  );
-  const totalSeconds = (pattern.cycles * oneCycleDuration) / 1000;
+  // Calculate total duration based on inhale, hold, exhale, rest
+  const oneCycleDuration =
+    pattern.inhale + pattern.hold + pattern.exhale + pattern.rest;
+
+  // Estimate roughly 30 cycles for a session
+  const cycles = 30;
+  const totalSeconds = oneCycleDuration * cycles;
+
+  // Format the duration
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
   let durationString = "";
@@ -66,21 +75,23 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
               <div>
                 <Label className="text-lg mb-2 block">Choose Your Rhythm</Label>
                 <RadioGroup
-                  defaultValue={state.pattern.key}
+                  defaultValue={state.pattern.id}
                   onValueChange={(value) =>
-                    controls.selectPattern(value as PatternKey)
+                    controls.selectPattern(
+                      BREATHING_PATTERNS[value as PatternKey]
+                    )
                   }
                   className="grid grid-cols-1 sm:grid-cols-3 gap-4"
                 >
                   {Object.values(BREATHING_PATTERNS).map((p) => (
-                    <div key={p.key}>
+                    <div key={p.id}>
                       <RadioGroupItem
-                        value={p.key}
-                        id={p.key}
+                        value={p.id}
+                        id={p.id}
                         className="peer sr-only"
                       />
                       <Label
-                        htmlFor={p.key}
+                        htmlFor={p.id}
                         className="flex flex-col text-center items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
                       >
                         <span className="font-semibold">{p.name}</span>

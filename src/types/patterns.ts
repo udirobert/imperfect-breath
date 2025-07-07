@@ -15,23 +15,22 @@ export interface MediaContent {
 }
 
 export interface LicenseSettings {
-  isCommercial: boolean;
   price: number;
   currency: "ETH" | "USDC";
-  allowDerivatives: boolean;
-  attribution: boolean;
+  derivativeWorks: boolean;
+  attributionRequired: boolean;
   commercialUse: boolean;
-  royaltyPercentage: number;
+  royaltyPercent: number;
 }
 
 export interface StoryProtocolMetadata {
   ipId?: string;          // The ID of the IP asset on Story Protocol
   registrationTxHash?: string;  // Transaction hash of IP registration
   licenseTerms?: {
-    commercial: boolean;
-    derivatives: boolean;
-    attribution: boolean;
-    royaltyPercentage: number;
+    commercialUse: boolean;
+    derivativeWorks: boolean;
+    attributionRequired: boolean;
+    royaltyPercent: number;
   };
   isRegistered: boolean;  // Whether this pattern is registered on Story Protocol
 }
@@ -108,13 +107,12 @@ export const defaultBenefit: BenefitClaim = {
 };
 
 export const defaultLicense: LicenseSettings = {
-  isCommercial: false,
   price: 0,
   currency: "ETH",
-  allowDerivatives: false,
-  attribution: true,
+  derivativeWorks: false,
+  attributionRequired: true,
   commercialUse: false,
-  royaltyPercentage: 10,
+  royaltyPercent: 10,
 };
 
 // Utility function to convert CustomPattern to EnhancedCustomPattern

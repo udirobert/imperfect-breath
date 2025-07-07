@@ -1,62 +1,68 @@
-// TODO: Replace with proper multichain implementation
-// import { useAccount, useWriteContract } from 'wagmi';
 import { useState } from 'react';
-import { LENS_HUB_ABI, LENS_HUB_CONTRACT_ADDRESS } from '@/lib/lens';
+import { LensClient } from '../lib/lens';
 import { toast } from 'sonner';
 import { useCallback } from 'react';
-import { useLensProfile } from './useLensProfile';
+import { useLensAccount } from './useLensAccount';
 
 export const useComment = () => {
-  const { address, chain } = useAccount();
-  const { lensProfile } = useLensProfile();
-  const { writeContractAsync, isPending, error } = useWriteContract();
+  const [isCommenting, setIsCommenting] = useState(false);
+  const [commentError, setCommentError] = useState<Error | null>(null);
+  const { lensAccount } = useLensAccount();
+  
+  // Get Lens client instance
+  const lensClient = new LensClient(true); // Use testnet by default
 
-  const comment = useCallback(async (profileIdPointed: bigint, pubIdPointed: bigint, contentURI: string) => {
-    if (!lensProfile) {
-      toast.error("You must have a Lens profile to comment.");
+  const comment = useCallback(async (postId: string, commentText: string) => {
+    if (!postId) {
+      toast.error("Invalid post ID.");
       return;
     }
-    if (!address || !chain) {
-      toast.error("Please connect your wallet.");
+    
+    if (!commentText || commentText.trim() === '') {
+      toast.error("Comment text cannot be empty.");
       return;
     }
+    
+    if (!lensAccount) {
+      toast.error("You must have a Lens account to comment.");
+      return;
+    }
+
+    if (!lensClient.isAuthenticated) {
+      toast.error("Please authenticate with Lens first.");
+      return;
+    }
+
+    setIsCommenting(true);
+    setCommentError(null);
 
     try {
-      const vars = {
-        profileId: lensProfile.profileId,
-        contentURI,
-        profileIdPointed,
-        pubIdPointed,
-        referenceModuleData: [],
-        collectModule: '0x0000000000000000000000000000000000000000', // No collect module for comments
-        collectModuleInitData: [],
-        referenceModule: '0x0000000000000000000000000000000000000000',
-        referenceModuleInitData: [],
-      };
-
-      const tx = await writeContractAsync({
-        address: LENS_HUB_CONTRACT_ADDRESS,
-        abi: LENS_HUB_ABI,
-        functionName: 'comment',
-        args: [vars],
-        account: address,
-        chain: chain,
-      });
+      toast.info("Processing comment...");
+      
+      // In Lens V3, we directly use the commentOnPost method from the LensClient
+      // The client handles metadata creation, storage, and posting
+      const result = await lensClient.commentOnPost(postId, commentText);
+      
       toast.success("Comment transaction sent!", {
-        description: `Transaction hash: ${tx}`,
+        description: `Transaction hash: ${result}`,
       });
-      return tx;
+      
+      return result;
     } catch (err) {
       console.error("Comment transaction failed:", err);
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setCommentError(err instanceof Error ? err : new Error(errorMessage));
       toast.error("Comment failed", {
-        description: (err as Error).message || "An unknown error occurred.",
+        description: errorMessage,
       });
+    } finally {
+      setIsCommenting(false);
     }
-  }, [writeContractAsync, address, chain, lensProfile]);
+  }, [lensClient, lensAccount]);
 
   return {
     comment,
-    isCommenting: isPending,
-    commentError: error,
+    isCommenting,
+    commentError,
   };
 };

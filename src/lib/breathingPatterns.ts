@@ -1,101 +1,121 @@
+/**
+ * Default breathing pattern definitions
+ * Provides standard patterns used in the application
+ */
 
-export type BreathingPhaseName = 'inhale' | 'hold' | 'exhale' | 'pause';
+export type BreathingPhaseName = 'inhale' | 'hold' | 'exhale' | 'rest';
 
-export type BreathingPhase = {
-  name: BreathingPhaseName | string; // Allow both standard names and custom strings
+export interface BreathingPhase {
+  name: BreathingPhaseName;
   duration: number;
-  text: string;
-  instruction?: string; // Optional instruction field for enhanced patterns
-};
+}
 
-// Extended phase type for custom patterns that allows more flexibility
-export type CustomBreathingPhase = {
-  name: string; // Allow any string for custom phases
+export interface CustomBreathingPhase {
+  name: 'inhale' | 'hold' | 'exhale' | 'rest';
   duration: number;
-  text: string;
-  instruction?: string;
-};
+  text?: string;
+}
 
-export type BreathingPattern = {
-  id?: string;
-  key?: 'box' | 'resonant' | 'wimHof';
+export interface BreathingPattern {
+  id: string;
   name: string;
-  description?: string;
-  cycles?: number; // Use Infinity for continuous patterns
-  phases: BreathingPhase[];
-  hasBreathHold?: boolean;
-};
-
-// Utility functions for phase creation
-export const createBreathingPhase = (
-  name: BreathingPhaseName, 
-  duration: number, 
-  text: string,
-  instruction?: string
-): BreathingPhase => ({
-  name,
-  duration,
-  text,
-  instruction
-});
-
-export const createCustomPhase = (
-  name: string, 
-  duration: number, 
-  text: string,
-  instruction?: string
-): CustomBreathingPhase => ({
-  name,
-  duration,
-  text,
-  instruction
-});
-
-// Validate that a phase name is a valid BreathingPhaseName
-export const isValidPhaseName = (name: string): name is BreathingPhaseName => {
-  return ['inhale', 'hold', 'exhale', 'pause'].includes(name);
-};
-
-// Convert seconds to display format
-export const formatPhaseDuration = (durationInSeconds: number): string => {
-  if (durationInSeconds < 1000) {
-    return `${durationInSeconds}ms`;
-  }
-  return `${(durationInSeconds / 1000).toFixed(1)}s`;
-};
+  description: string;
+  inhale: number;
+  hold: number;
+  exhale: number;
+  rest: number;
+  benefits: string[];
+}
 
 export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
   box: {
-    key: 'box',
+    id: 'box',
     name: 'Box Breathing',
-    cycles: Infinity,
-    hasBreathHold: false,
-    phases: [
-      { name: 'inhale', duration: 4000, text: 'Breathe In...' },
-      { name: 'hold', duration: 4000, text: 'Hold' },
-      { name: 'exhale', duration: 4000, text: 'Breathe Out...' },
-      { name: 'hold', duration: 4000, text: 'Hold' },
-    ],
+    description: 'Equal duration for all phases - excellent for focus and stress reduction',
+    inhale: 4,
+    hold: 4,
+    exhale: 4,
+    rest: 4,
+    benefits: ['Stress reduction', 'Improved focus', 'Mental clarity']
   },
-  resonant: {
-    key: 'resonant',
-    name: 'Resonant Breathing',
-    cycles: Infinity,
-    hasBreathHold: false,
-    phases: [
-      { name: 'inhale', duration: 5500, text: 'Breathe In...' },
-      { name: 'exhale', duration: 5500, text: 'Breathe Out...' },
-    ],
+  
+  relaxation: {
+    id: 'relaxation',
+    name: 'Relaxation Breath',
+    description: 'Longer exhale promotes relaxation and parasympathetic response',
+    inhale: 4,
+    hold: 7,
+    exhale: 8,
+    rest: 0,
+    benefits: ['Anxiety relief', 'Better sleep', 'Relaxation', 'Stress reduction']
   },
-  wimHof: {
-    key: 'wimHof',
-    name: 'Wim Hof',
-    cycles: 30,
-    hasBreathHold: true,
-    phases: [
-      // Wim Hof is more about rhythm than strict timing, this is an approximation
-      { name: 'inhale', duration: 1500, text: 'Breathe In Deeply' },
-      { name: 'exhale', duration: 1500, text: 'Let Go' },
-    ],
+  
+  wim_hof: {
+    id: 'wim_hof',
+    name: 'Wim Hof Method',
+    description: 'Powerful breathing technique for energy and immune system strength',
+    inhale: 2,
+    hold: 0,
+    exhale: 1,
+    rest: 0,
+    benefits: ['Energy increase', 'Immune system boost', 'Cold tolerance']
   },
+  
+  energy: {
+    id: 'energy',
+    name: 'Energy Breath',
+    description: 'Quick, energizing breath pattern to increase alertness',
+    inhale: 3,
+    hold: 2,
+    exhale: 4,
+    rest: 1,
+    benefits: ['Energy boost', 'Increased alertness', 'Morning activation']
+  },
+  
+  sleep: {
+    id: 'sleep',
+    name: 'Sleep Breath',
+    description: 'Calming pattern designed to prepare the body for sleep',
+    inhale: 4,
+    hold: 6,
+    exhale: 8,
+    rest: 3,
+    benefits: ['Improved sleep quality', 'Reduced insomnia', 'Evening relaxation']
+  },
+  
+  mindfulness: {
+    id: 'mindfulness',
+    name: 'Mindfulness Breath',
+    description: 'Simple pattern for meditation and present-moment awareness',
+    inhale: 5,
+    hold: 0,
+    exhale: 5,
+    rest: 0,
+    benefits: ['Meditation support', 'Present moment awareness', 'Anxiety reduction']
+  }
 };
+
+/**
+ * Get a breathing pattern by id
+ */
+export function getPattern(id: string): BreathingPattern | undefined {
+  return BREATHING_PATTERNS[id];
+}
+
+/**
+ * Get all available breathing patterns
+ */
+export function getAllPatterns(): BreathingPattern[] {
+  return Object.values(BREATHING_PATTERNS);
+}
+
+/**
+ * Get patterns filtered by benefit
+ */
+export function getPatternsByBenefit(benefit: string): BreathingPattern[] {
+  return Object.values(BREATHING_PATTERNS).filter(pattern => 
+    pattern.benefits.some(b => b.toLowerCase().includes(benefit.toLowerCase()))
+  );
+}
+
+export default BREATHING_PATTERNS;

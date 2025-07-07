@@ -59,7 +59,7 @@ export function useEnhancedVision(options: {
       setError(error);
       onError(error);
       setIsInitialized(false);
-      return 'none' as VisionTier;
+      return 'none' as unknown as VisionTier;
     }
   }, [initialMode, visionManager, modelLoader, onError]);
   
@@ -182,7 +182,7 @@ export function useEnhancedVision(options: {
       
       await visionManager.dispose();
       setIsInitialized(false);
-      setCurrentTier('none');
+      setCurrentTier('none' as unknown as VisionTier);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       console.error('Error during cleanup:', error);

@@ -7,19 +7,19 @@ import {
   Flag,
   Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import type { CustomPattern } from "@/lib/ai/providers";
+} from "../../components/ui/dialog";
+import { Textarea } from "../../components/ui/textarea";
+import { Input } from "../../components/ui/input";
+import { useToast } from "../../hooks/use-toast";
+import type { CustomPattern } from "../../lib/patternStorage";
 
 interface SocialActionsProps {
   pattern: CustomPattern & {
@@ -68,28 +68,8 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
   const [newComment, setNewComment] = useState("");
   const [reportReason, setReportReason] = useState("");
   const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
   const { toast } = useToast();
-
-  // Mock comments data
-  const mockComments: Comment[] = [
-    {
-      id: "1",
-      userId: "user1",
-      userName: "Sarah M.",
-      content:
-        "This pattern really helped me with my anxiety. Thank you for sharing!",
-      createdAt: "2024-01-15T10:30:00Z",
-      likes: 12,
-    },
-    {
-      id: "2",
-      userId: "user2",
-      userName: "Mike Chen",
-      content: "Perfect for my morning routine. The timing is just right.",
-      createdAt: "2024-01-14T16:45:00Z",
-      likes: 8,
-    },
-  ];
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -162,26 +142,30 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
     if (!newComment.trim()) return;
     try {
       await onComment(pattern.id, newComment);
-      const comment: Comment = {
-        id: Date.now().toString(),
-        userId: "current_user",
-        userName: "You",
-        content: newComment,
-        createdAt: new Date().toISOString(),
-        likes: 0,
-      };
-      setComments([comment, ...comments]);
+
+      // Refresh comments from API instead of manually adding
+      setIsLoadingComments(true);
+      const response = await fetch(`/api/patterns/${pattern.id}/comments`);
+      if (!response.ok) {
+        throw new Error("Failed to refresh comments");
+      }
+      const updatedComments = await response.json();
+      setComments(updatedComments);
+
       setNewComment("");
       toast({
         title: "Comment added!",
         description: "Your comment has been posted",
       });
     } catch (error) {
+      console.error("Error posting comment:", error);
       toast({
         title: "Error",
         description: "Failed to post comment",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingComments(false);
     }
   };
 
@@ -214,7 +198,7 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60),
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
     );
 
     if (diffInHours < 1) return "Just now";
@@ -244,7 +228,37 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
       </Button>
 
       {/* Comment Button */}
-      <Dialog open={showComments} onOpenChange={setShowComments}>
+      <Dialog
+        open={showComments}
+        onOpenChange={(open) => {
+          setShowComments(open);
+          if (open) {
+            // Fetch comments when dialog opens
+            setIsLoadingComments(true);
+            fetch(`/api/patterns/${pattern.id}/comments`)
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("Failed to fetch comments");
+                }
+                return response.json();
+              })
+              .then((data) => {
+                setComments(data);
+              })
+              .catch((error) => {
+                console.error("Error fetching comments:", error);
+                toast({
+                  title: "Error",
+                  description: "Failed to load comments",
+                  variant: "destructive",
+                });
+              })
+              .finally(() => {
+                setIsLoadingComments(false);
+              });
+          }
+        }}
+      >
         <DialogTrigger asChild>
           <Button
             variant="ghost"
@@ -276,34 +290,48 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
 
             {/* Comments List */}
             <div className="space-y-4">
-              {[...comments, ...mockComments].map((comment) => (
-                <div key={comment.id} className="border-b pb-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                      <span className="text-xs font-semibold">
-                        {comment.userName.charAt(0)}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">
-                          {comment.userName}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatTimeAgo(comment.createdAt)}
+              {isLoadingComments ? (
+                <div className="text-center py-8">
+                  <p>Loading comments...</p>
+                </div>
+              ) : comments.length > 0 ? (
+                comments.map((comment) => (
+                  <div key={comment.id} className="border-b pb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="text-xs font-semibold">
+                          {comment.userName.charAt(0)}
                         </span>
                       </div>
-                      <p className="text-sm">{comment.content}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Button variant="ghost" size="sm" className="h-6 px-2">
-                          <Heart className="h-3 w-3 mr-1" />
-                          {comment.likes}
-                        </Button>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm">
+                            {comment.userName}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatTimeAgo(comment.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-sm">{comment.content}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2"
+                          >
+                            <Heart className="h-3 w-3 mr-1" />
+                            {comment.likes}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p>No comments yet. Be the first to share your thoughts!</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </DialogContent>
@@ -386,7 +414,9 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
         className="flex items-center gap-1"
       >
         <Bookmark
-          className={`${iconSize} ${pattern.isBookmarked ? "fill-current" : ""}`}
+          className={`${iconSize} ${
+            pattern.isBookmarked ? "fill-current" : ""
+          }`}
         />
         {!compact && <span>Save</span>}
       </Button>

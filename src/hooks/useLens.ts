@@ -4,9 +4,10 @@
  * Enhanced with robust error handling, caching, and retry mechanisms
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
-import { EnhancedLensClient } from '@/lib/lens/enhanced-lens-client';
+import { EnhancedLensClient } from '../lib/lens/enhanced-lens-client';
+import * as socialService from '../lib/api/socialService';
 import type {
   LensAuthTokens,
   LensAccount,
@@ -15,7 +16,7 @@ import type {
   SocialActionResult,
   CommunityStats,
   TrendingPattern,
-} from '@/lib/lens/types';
+} from '../lib/lens/types';
 import {
   LensError,
   LensAuthenticationError,
@@ -23,7 +24,7 @@ import {
   LensRateLimitError,
   LensSocialActionError,
   LensStorageError
-} from '@/lib/lens/errors';
+} from '../lib/lens/errors';
 import { toast } from 'sonner';
 
 interface UseLensReturn {
@@ -99,18 +100,54 @@ export const useLens = (): UseLensReturn => {
   
   // Community data
   const [communityStats, setCommunityStats] = useState<CommunityStats>({
-    activeUsers: 2847,
-    currentlyBreathing: 47,
-    sessionsToday: 15432,
-    totalSessions: 284756,
+    activeUsers: 0,
+    currentlyBreathing: 0,
+    sessionsToday: 0,
+    totalSessions: 0,
   });
   
-  const [trendingPatterns, setTrendingPatterns] = useState<TrendingPattern[]>([
-    { name: '4-7-8 Relaxation', usageCount: 1247, avgScore: 87, trend: 'up' },
-    { name: 'Box Breathing', usageCount: 892, avgScore: 82, trend: 'up' },
-    { name: 'Wim Hof Method', usageCount: 634, avgScore: 91, trend: 'stable' },
-    { name: 'Coherent Breathing', usageCount: 445, avgScore: 85, trend: 'down' },
-  ]);
+  const [trendingPatterns, setTrendingPatterns] = useState<TrendingPattern[]>([]);
+  
+  // Fetch real community stats from API
+  useEffect(() => {
+    const fetchCommunityStats = async () => {
+      try {
+        // Use the actual API endpoint
+        const response = await fetch('/api/community/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setCommunityStats(data);
+        } else {
+          throw new Error(`Error ${response.status}: Failed to fetch community stats`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch community stats:', error);
+        // Don't show toast for this background operation
+      }
+    };
+    
+    const fetchTrendingPatterns = async () => {
+      try {
+        // Use our new socialService
+        const patterns = await socialService.getTrendingPatterns();
+        setTrendingPatterns(patterns);
+      } catch (error) {
+        console.error('Failed to fetch trending patterns:', error);
+        // Don't show toast for this background operation
+      }
+    };
+    
+    fetchCommunityStats();
+    fetchTrendingPatterns();
+    
+    // Refresh data every 5 minutes
+    const interval = setInterval(() => {
+      fetchCommunityStats();
+      fetchTrendingPatterns();
+    }, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   // Helper to handle errors
   const handleError = useCallback((err: unknown) => {
@@ -251,16 +288,19 @@ export const useLens = (): UseLensReturn => {
     setIsLoading(true);
     
     try {
-      const hash = await lensClient.createBreathingSessionPost({
+      // Use our socialService to share breathing sessions
+      const hash = await socialService.shareBreathingSession({
         patternName: session.patternName,
         duration: session.duration,
         score: session.score,
         insights: session.insights,
-        sessionId: session.id,
-        nftId: session.nftId,
+        content: session.content
       });
       
-      // Enhanced Lens client will handle cache invalidation
+      // Refresh timeline data to show the new post
+      if (currentAccount?.address) {
+        setTimeout(() => getTimeline(currentAccount.address), 2000);
+      }
       
       return { success: true, hash };
     } catch (error) {
@@ -345,10 +385,24 @@ export const useLens = (): UseLensReturn => {
   }, [isAuthenticated, lensClient, currentAccount, handleError]);
   
   const likePost = useCallback(async (postId: string): Promise<SocialActionResult> => {
-    // Note: Lens Protocol doesn't have built-in likes, this would need to be implemented
-    // as reactions or custom functionality
-    return { success: false, error: 'Like functionality not implemented in Lens Protocol' };
-  }, []);
+    if (!isAuthenticated) {
+      return { success: false, error: 'Not authenticated' };
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Use our socialService to react to posts
+      const success = await socialService.reactToPost(postId, false);
+      return { success, hash: postId };
+    } catch (error) {
+      handleError(error);
+      const errorMessage = error instanceof Error ? error.message : 'Like failed';
+      return { success: false, error: errorMessage };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, handleError]);
   
   const commentOnPost = useCallback(async (postId: string, comment: string): Promise<SocialActionResult> => {
     if (!isAuthenticated) {
@@ -377,24 +431,31 @@ export const useLens = (): UseLensReturn => {
     setIsLoading(true);
     
     try {
-      const timeline = await lensClient.getTimeline(accountAddress);
+      // Use our socialService to get timeline
+      const result = await socialService.getTimeline(accountAddress);
       
-      // Convert to standardized format
-      return timeline.map((item, index) => ({
+      if (!result || !result.items) {
+        throw new Error("Invalid timeline data");
+      }
+      
+      // Convert to standardized format with real engagement data
+      return result.items.map((item) => ({
         id: item.id,
         content: item.content,
         author: {
           address: item.author.address,
           username: item.author.username,
           name: item.author.name,
+          avatar: item.author.avatar,
         },
         engagement: {
-          likes: Math.floor(Math.random() * 50) + 5,
-          comments: Math.floor(Math.random() * 20) + 1,
-          shares: Math.floor(Math.random() * 10) + 1,
-          isLiked: Math.random() > 0.7,
+          likes: item.stats?.reactions || 0,
+          comments: item.stats?.comments || 0,
+          shares: item.stats?.mirrors || 0,
+          isLiked: item.reaction?.isReacted || false
         },
-        timestamp: item.timestamp,
+        timestamp: item.createdAt,
+        metadata: item.metadata,
       }));
     } catch (error) {
       handleError(error);
@@ -439,23 +500,34 @@ export const useLens = (): UseLensReturn => {
   const refreshData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Refresh community stats (mock data for now)
-      setCommunityStats({
-        activeUsers: Math.floor(Math.random() * 1000) + 2000,
-        currentlyBreathing: Math.floor(Math.random() * 50) + 20,
-        sessionsToday: Math.floor(Math.random() * 5000) + 10000,
-        totalSessions: Math.floor(Math.random() * 50000) + 250000,
-      });
+      // Fetch real community stats
+      try {
+        const statsResponse = await fetch('/api/community/stats');
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setCommunityStats(statsData);
+        }
+      } catch (statsError) {
+        console.error('Failed to refresh community stats:', statsError);
+      }
       
-      // Refresh trending patterns (mock data for now)
-      setTrendingPatterns(prev => prev.map(pattern => ({
-        ...pattern,
-        usageCount: pattern.usageCount + Math.floor(Math.random() * 10),
-        avgScore: Math.max(70, Math.min(95, pattern.avgScore + (Math.random() - 0.5) * 4)),
-      })));
+      // Fetch real trending patterns
+      try {
+        const patternsResponse = await fetch('/api/patterns/trending');
+        if (patternsResponse.ok) {
+          const patternsData = await patternsResponse.json();
+          setTrendingPatterns(patternsData);
+        }
+      } catch (patternsError) {
+        console.error('Failed to refresh trending patterns:', patternsError);
+      }
       
-      // Enhanced Lens client will handle cache invalidation on refresh
+      // Refresh timeline data if we have a current account
+      if (currentAccount?.address) {
+        await getTimeline(currentAccount.address);
+      }
       
+      // Enhanced Lens client will handle cache invalidation
     } catch (error) {
       handleError(error);
       console.error('Failed to refresh data:', error);

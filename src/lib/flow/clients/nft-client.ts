@@ -11,9 +11,9 @@ import type {
   RoyaltyInfo,
   FlowTransactionResult
 } from '../types';
-import { handleError } from '@/lib/utils/error-utils';
-import { startTimer, timed } from '@/lib/utils/performance-utils';
-import { getCache } from '@/lib/utils/cache-utils';
+import { handleError } from '../../../lib/utils/error-utils';
+import { startTimer, timed } from '../../../lib/utils/performance-utils';
+import { getCache } from '../../../lib/utils/cache-utils';
 
 // Cadence scripts and transactions
 const SCRIPTS = {

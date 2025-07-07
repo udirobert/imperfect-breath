@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
-import { useLens } from "@/hooks/useLens";
+import { useLens } from "../hooks/useLens";
 
 interface CommentFormProps {
   publicationId: string;
@@ -36,16 +36,16 @@ export const CommentForm = ({
     try {
       toast.info("Posting comment...");
 
-      // TODO: Implement actual comment posting with V3 SDK
-      console.log("Posting comment on publication:", publicationId);
-      console.log("Comment content:", commentText);
+      // Use the Lens Client to post a comment
+      const { commentOnPost } = useLens();
+      const result = await commentOnPost(publicationId, commentText);
 
-      // Mock success for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const mockCommentId = `comment-${Date.now()}`;
+      if (!result.success) {
+        throw new Error(result.error || "Failed to post comment");
+      }
 
       setCommentText("");
-      onCommentPosted?.(mockCommentId);
+      onCommentPosted?.(result.hash);
       toast.success("Comment posted successfully!");
     } catch (error) {
       console.error("Comment posting failed:", error);

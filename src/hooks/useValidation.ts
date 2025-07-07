@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { InputValidator, ValidationResult } from '@/lib/validation/input-validator';
-import { DataSanitizer } from '@/lib/validation/sanitizer';
+import { InputValidator, ValidationResult } from '../lib/validation/input-validator';
+import { DataSanitizer } from '../lib/validation/sanitizer';
 
 interface ValidationState {
   errors: Record<string, string[]>;

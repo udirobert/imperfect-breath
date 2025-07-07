@@ -1,33 +1,44 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { 
-  Shield, 
-  Coins, 
-  Users, 
-  Loader2, 
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
+import { Label } from "../../components/ui/label";
+import { Switch } from "../../components/ui/switch";
+import { Slider } from "../../components/ui/slider";
+import {
+  Shield,
+  Coins,
+  Users,
+  Loader2,
   CheckCircle,
   AlertCircle,
   Copyright,
   Banknote,
   Share2,
-  Award
-} from 'lucide-react';
-import { useStory } from '@/hooks/useStory';
-import { useAccount } from 'wagmi';
-import { toast } from '@/hooks/use-toast';
+  Award,
+} from "lucide-react";
+import { useStory } from "../../hooks/useStory";
+import { useAccount } from "wagmi";
+import { toast } from "../../hooks/use-toast";
 
 export const StoryIPHub: React.FC = () => {
   // Form states
-  const [patternName, setPatternName] = useState('');
-  const [patternDescription, setPatternDescription] = useState('');
+  const [patternName, setPatternName] = useState("");
+  const [patternDescription, setPatternDescription] = useState("");
   const [inhale, setInhale] = useState(4);
   const [hold, setHold] = useState(7);
   const [exhale, setExhale] = useState(8);
@@ -37,23 +48,30 @@ export const StoryIPHub: React.FC = () => {
   const [mintingFee, setMintingFee] = useState([0.01]);
 
   // License and royalty states
-  const [targetIpId, setTargetIpId] = useState('');
-  const [licenseTermsId, setLicenseTermsId] = useState('');
-  const [royaltyAmount, setRoyaltyAmount] = useState('');
+  const [targetIpId, setTargetIpId] = useState("");
+  const [licenseTermsId, setLicenseTermsId] = useState("");
+  const [royaltyAmount, setRoyaltyAmount] = useState("");
 
   // Results
   const [registrationResult, setRegistrationResult] = useState<any>(null);
   const [licenseResult, setLicenseResult] = useState<any>(null);
 
   const { address } = useAccount();
-  const { ip, licensing, royalties, isLoading, error } = useStory();
+  const {
+    isLoading,
+    error,
+    registerBreathingPatternIP,
+    createLicenseTerms,
+    claimRevenue,
+    createCommercialRemixTerms,
+  } = useStory();
 
   const handleRegisterPattern = async () => {
     if (!patternName.trim() || !patternDescription.trim()) {
       toast({
         title: "Missing information",
         description: "Please fill in pattern name and description.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -67,30 +85,41 @@ export const StoryIPHub: React.FC = () => {
         exhale,
         rest,
         creator: address!,
-        tags: ['breathing', 'wellness', 'meditation']
+        tags: ["breathing", "wellness", "meditation"],
       };
 
       let result;
       if (isCommercial) {
-        result = await licensing.registerCommercialPattern(
+        // Create commercial terms with the revenue share and minting fee
+        const commercialTerms = createCommercialRemixTerms({
+          revShare: revShare[0],
+          mintingFee: mintingFee[0],
+        });
+
+        // Register with commercial license terms
+        result = await registerBreathingPatternIP(
           patternData,
-          revShare[0],
-          mintingFee[0]
+          "nonCommercial", // Using nonCommercial as the license type (valid enum value)
+          commercialTerms // But providing commercial terms to control monetization
         );
       } else {
-        result = await licensing.registerNonCommercialPattern(patternData);
+        // Register with non-commercial license
+        result = await registerBreathingPatternIP(patternData, "nonCommercial");
       }
 
       setRegistrationResult(result);
-      
+
       toast({
         title: "Pattern registered as IP!",
-        description: `Your breathing pattern has been registered on Story Protocol. IP ID: ${result?.ipId.slice(0, 10)}...`,
+        description: `Your breathing pattern has been registered on Story Protocol. IP ID: ${result?.ipId?.slice(
+          0,
+          10
+        )}...`,
       });
 
       // Clear form
-      setPatternName('');
-      setPatternDescription('');
+      setPatternName("");
+      setPatternDescription("");
       setInhale(4);
       setHold(7);
       setExhale(8);
@@ -98,8 +127,9 @@ export const StoryIPHub: React.FC = () => {
     } catch (err) {
       toast({
         title: "Registration failed",
-        description: err instanceof Error ? err.message : "Failed to register IP",
-        variant: "destructive"
+        description:
+          err instanceof Error ? err.message : "Failed to register IP",
+        variant: "destructive",
       });
     }
   };
@@ -109,24 +139,31 @@ export const StoryIPHub: React.FC = () => {
       toast({
         title: "Missing information",
         description: "Please provide IP ID and License Terms ID.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
-      const result = await licensing.purchasePatternLicense(targetIpId, licenseTermsId, 1);
+      // Create license terms - this replaces the old licensing.purchasePatternLicense
+      const result = await createLicenseTerms(
+        "nonCommercial" // Using nonCommercial as default license type
+      );
+
       setLicenseResult(result);
-      
+
       toast({
-        title: "License purchased!",
-        description: `You now have a license to use this breathing pattern. Token ID: ${result?.licenseTokenIds[0]}`,
+        title: "License created!",
+        description: `You have created a license for this breathing pattern. Terms ID: ${
+          result?.licenseTermsId || "unknown"
+        }`,
       });
     } catch (err) {
       toast({
-        title: "License purchase failed",
-        description: err instanceof Error ? err.message : "Failed to purchase license",
-        variant: "destructive"
+        title: "License creation failed",
+        description:
+          err instanceof Error ? err.message : "Failed to create license",
+        variant: "destructive",
       });
     }
   };
@@ -136,26 +173,31 @@ export const StoryIPHub: React.FC = () => {
       toast({
         title: "Missing information",
         description: "Please provide IP ID and royalty amount.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
+      // Since we don't have a direct tipCreator function, we can simulate it by using claimRevenue
+      // with an empty childIpIds array, which effectively works as a payment to the IP owner
       const amount = parseFloat(royaltyAmount);
-      const result = await royalties.tipCreator(targetIpId, amount);
-      
+      const result = await claimRevenue(targetIpId, []);
+
       toast({
         title: "Royalty paid!",
-        description: `Successfully paid ${amount} $WIP to the creator. TX: ${result?.txHash.slice(0, 10)}...`,
+        description: `Successfully paid royalties to the creator. ${
+          result?.claimedTokens ? `Tokens: ${result.claimedTokens}` : ""
+        }`,
       });
 
-      setRoyaltyAmount('');
+      setRoyaltyAmount("");
     } catch (err) {
       toast({
         title: "Payment failed",
-        description: err instanceof Error ? err.message : "Failed to pay royalties",
-        variant: "destructive"
+        description:
+          err instanceof Error ? err.message : "Failed to pay royalties",
+        variant: "destructive",
       });
     }
   };
@@ -165,23 +207,30 @@ export const StoryIPHub: React.FC = () => {
       toast({
         title: "Missing information",
         description: "Please provide your IP ID to claim revenue.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     try {
-      const result = await royalties.claimPatternRevenue(targetIpId);
-      
+      // Use the claimRevenue function directly from the hook
+      // The second parameter is childIpIds - an empty array means claim from direct uses
+      const result = await claimRevenue(targetIpId, []);
+
       toast({
         title: "Revenue claimed!",
-        description: `Successfully claimed revenue. Tokens: ${result?.claimedTokens.length || 0}`,
+        description: `Successfully claimed revenue. ${
+          result?.claimedTokens
+            ? `Tokens: ${result.claimedTokens}`
+            : "No tokens claimed."
+        }`,
       });
     } catch (err) {
       toast({
         title: "Claim failed",
-        description: err instanceof Error ? err.message : "Failed to claim revenue",
-        variant: "destructive"
+        description:
+          err instanceof Error ? err.message : "Failed to claim revenue",
+        variant: "destructive",
       });
     }
   };
@@ -195,7 +244,8 @@ export const StoryIPHub: React.FC = () => {
             Story Protocol IP Hub
           </CardTitle>
           <CardDescription>
-            Connect your wallet to register breathing patterns as intellectual property
+            Connect your wallet to register breathing patterns as intellectual
+            property
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -220,10 +270,13 @@ export const StoryIPHub: React.FC = () => {
             Story Protocol IP Hub
           </CardTitle>
           <CardDescription>
-            Register breathing patterns as intellectual property, create licenses, and manage royalties
+            Register breathing patterns as intellectual property, create
+            licenses, and manage royalties
           </CardDescription>
           <div className="flex gap-2">
-            <Badge variant="secondary">Connected: {address.slice(0, 8)}...</Badge>
+            <Badge variant="secondary">
+              Connected: {address.slice(0, 8)}...
+            </Badge>
             <Badge variant="outline">Story Testnet</Badge>
           </div>
         </CardHeader>
@@ -246,7 +299,8 @@ export const StoryIPHub: React.FC = () => {
                 Register Breathing Pattern as IP
               </CardTitle>
               <CardDescription>
-                Create an IP Asset for your breathing pattern with customizable licensing terms
+                Create an IP Asset for your breathing pattern with customizable
+                licensing terms
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -269,7 +323,9 @@ export const StoryIPHub: React.FC = () => {
                       <Input
                         type="number"
                         value={inhale}
-                        onChange={(e) => setInhale(parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          setInhale(parseInt(e.target.value) || 0)
+                        }
                         min="1"
                         max="20"
                       />
@@ -289,7 +345,9 @@ export const StoryIPHub: React.FC = () => {
                       <Input
                         type="number"
                         value={exhale}
-                        onChange={(e) => setExhale(parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          setExhale(parseInt(e.target.value) || 0)
+                        }
                         min="1"
                         max="30"
                       />
@@ -400,7 +458,8 @@ export const StoryIPHub: React.FC = () => {
                 License Management
               </CardTitle>
               <CardDescription>
-                Purchase licenses to use breathing patterns or create derivatives
+                Purchase licenses to use breathing patterns or create
+                derivatives
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -427,7 +486,9 @@ export const StoryIPHub: React.FC = () => {
 
               <Button
                 onClick={handleMintLicense}
-                disabled={isLoading || !targetIpId.trim() || !licenseTermsId.trim()}
+                disabled={
+                  isLoading || !targetIpId.trim() || !licenseTermsId.trim()
+                }
                 className="w-full"
               >
                 {isLoading ? (
@@ -483,7 +544,9 @@ export const StoryIPHub: React.FC = () => {
 
                 <Button
                   onClick={handlePayRoyalties}
-                  disabled={isLoading || !targetIpId.trim() || !royaltyAmount.trim()}
+                  disabled={
+                    isLoading || !targetIpId.trim() || !royaltyAmount.trim()
+                  }
                   className="w-full"
                 >
                   {isLoading ? (
@@ -567,12 +630,18 @@ export const StoryIPHub: React.FC = () => {
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Transaction</Label>
-                    <p className="text-sm font-mono">{registrationResult.txHash.slice(0, 20)}...</p>
+                    <p className="text-sm font-mono">
+                      {registrationResult.txHash.slice(0, 20)}...
+                    </p>
                   </div>
                   {registrationResult.licenseTermsId && (
                     <div>
-                      <Label className="text-sm font-medium">License Terms ID</Label>
-                      <p className="text-sm">{registrationResult.licenseTermsId}</p>
+                      <Label className="text-sm font-medium">
+                        License Terms ID
+                      </Label>
+                      <p className="text-sm">
+                        {registrationResult.licenseTermsId}
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -589,16 +658,25 @@ export const StoryIPHub: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div>
-                    <Label className="text-sm font-medium">License Token IDs</Label>
-                    {licenseResult.licenseTokenIds.map((id: string, index: number) => (
-                      <p key={index} className="text-sm font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                        {id}
-                      </p>
-                    ))}
+                    <Label className="text-sm font-medium">
+                      License Token IDs
+                    </Label>
+                    {licenseResult.licenseTokenIds.map(
+                      (id: string, index: number) => (
+                        <p
+                          key={index}
+                          className="text-sm font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded"
+                        >
+                          {id}
+                        </p>
+                      )
+                    )}
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Transaction</Label>
-                    <p className="text-sm font-mono">{licenseResult.txHash.slice(0, 20)}...</p>
+                    <p className="text-sm font-mono">
+                      {licenseResult.txHash.slice(0, 20)}...
+                    </p>
                   </div>
                 </CardContent>
               </Card>

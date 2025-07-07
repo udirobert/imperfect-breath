@@ -1,125 +1,175 @@
-# Imperfect Breath
+# Story Protocol Integration for Browser Environments
 
-**Breath Flow Vision** is a decentralized wellness platform where users can truly own, practice, and trade unique breathing patterns as on-chain assets, powered by a multichain architecture and AI-enhanced computer vision.
+This project demonstrates a solution for using the Story Protocol SDK in browser environments by implementing a server-side proxy pattern. This approach resolves the Node.js dependency issues that arise when trying to use the SDK directly in the browser.
 
-## 🌬️ What Makes This Special
+## The Problem
 
-- **🤖 AI Breathing Coach (Zen)**: Intelligent coaching with real-time computer vision feedback
-- **⛓️ Multichain Architecture**: Flow (NFTs), Story Protocol (IP), Lens Protocol (Social)
-- **🎯 Computer Vision**: Real-time analysis of breathing, posture, and focus
-- **💰 Creator Economy**: Mint, protect, and monetize breathing patterns
-- **📱 Adaptive Performance**: Works on any device from budget phones to high-end desktops
+The Story Protocol SDK relies on several Node.js-specific modules that are difficult to polyfill in browser environments. Attempting to directly use the SDK in a browser-based application leads to complex bundling issues and runtime errors.
 
-## 🚀 Quick Start
+## The Solution
+
+Instead of trying to make the SDK work directly in the browser, we've implemented a server-side proxy approach:
+
+1. **Server Component**: A Node.js Express server that interacts with the Story Protocol SDK
+2. **REST API**: A set of endpoints that expose SDK functionality
+3. **Frontend Client**: A TypeScript client that communicates with the server API instead of using the SDK directly
+
+This architecture provides several advantages:
+
+- Separates blockchain interaction logic from the frontend
+- Simplifies private key management (keys stay on the server)
+- Avoids complex polyfilling and bundling issues
+- Provides a clean API for frontend developers
+
+## Project Structure
+
+```
+/
+├── server/                  # Server-side proxy for Story Protocol SDK
+│   ├── server.js            # Express server implementation
+│   ├── package.json         # Server dependencies
+│   ├── .env                 # Server environment configuration
+│   └── README.md            # Server documentation
+│
+├── src/
+│   ├── lib/story/           # Story Protocol integration
+│   │   ├── clients/         # Client implementations
+│   │   │   ├── consolidated-client.ts  # Direct SDK client (Node.js only)
+│   │   │   └── api-client.ts           # API client (browser-compatible)
+│   │   ├── config.ts        # Client configuration
+│   │   ├── types.ts         # Shared type definitions
+│   │   └── useStoryProtocol.ts  # React hook for using Story Protocol
+│   │
+│   └── components/          # React components
+│       └── IPAssetRegistration.tsx  # Example IP registration component
+│
+├── .env                     # Frontend environment configuration
+├── vite.config.ts           # Vite configuration
+└── index.html               # Main HTML file
+```
+
+## Setup Instructions
+
+### Server Setup
+
+1. Navigate to the server directory:
 
 ```bash
-# Clone and install
-git clone [your-repo-url]
-cd imperfect-breath
+cd server
+```
+
+2. Install dependencies:
+
+```bash
 npm install
+```
 
-# Set up environment
+3. Create a `.env` file based on `.env.example`:
+
+```bash
 cp .env.example .env
-cp flow.json.example flow.json
+```
 
-# Start development
+4. Edit the `.env` file to include your private key and RPC URL:
+
+```
+PRIVATE_KEY=your_private_key_here
+RPC_URL=your_rpc_url_here
+```
+
+5. Start the server:
+
+```bash
 npm run dev
 ```
 
-## 🎯 Live Demo
+The server will start on port 3001 by default.
 
-**Contract Address**: `0xb8404e09b36b6623` (Flow Testnet)  
-**Status**: ✅ Live and fully functional
+### Frontend Setup
 
-Try the enhanced breathing sessions with AI vision coaching at `/vision-demo`
+1. From the project root, install dependencies:
 
-## 📚 Documentation
-
-- **[Technical Guide](./docs/TechnicalGuide.md)** - Complete development, deployment, and architecture guide
-- **[Vision & AI Guide](./docs/VisionAIGuide.md)** - In-depth documentation on computer vision and AI coaching features
-- **[User Guide](./docs/UserGuide.md)** - How to use the platform, create patterns, and mint NFTs
-- **[Project History & Plans](./docs/ProjectHistoryPlans.md)** - Historical context, architectural plans, and cleanup summaries
-
-## 🏗️ Architecture
-
-```
-User Experience → Zen AI Agent → Multichain Actions
-     ↓               ↓              ↓
-Computer Vision → Pattern Analysis → Blockchain
-     ↓               ↓              ↓
-Real-time Data → AI Coaching → NFT/IP/Social
+```bash
+npm install
 ```
 
-**Three Specialized Blockchains:**
+2. Create a `.env` file (if not already created):
 
-- **Flow**: NFT minting, marketplace, payments
-- **Story Protocol**: IP registration, licensing, royalties
-- **Lens Protocol**: Social profiles, community, sharing
+```
+VITE_STORY_API_URL=http://localhost:3001/api
+VITE_STORY_NETWORK=testnet
+```
 
-## 🎮 Key Features
+3. Start the development server:
 
-### For Users
+```bash
+npm run dev
+```
 
-- **AI Vision Coaching**: Real-time feedback on breathing technique and posture
-- **Personalized Patterns**: Custom breathing techniques generated by AI
-- **NFT Ownership**: Own your breathing patterns as tradeable digital assets
-- **Progress Tracking**: Comprehensive analytics and session history
+## Usage
 
-### For Creators
+### Using the Story Protocol Client
 
-- **IP Protection**: Register patterns with Story Protocol for royalty protection
-- **Revenue Streams**: Direct sales, licensing, and automated royalties
-- **Creator Tools**: Advanced pattern builder with AI assistance
-- **Community Building**: Social features via Lens Protocol
+The integration provides two client implementations:
 
-## 🔧 Tech Stack
+1. `ConsolidatedStoryClient`: Direct SDK client (Node.js environments only)
+2. `StoryProtocolApiClient`: API client that communicates with the server (works in any environment)
 
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **AI Agent**: Eliza framework with custom breathing pattern plugin
-- **Computer Vision**: Adaptive 3-tier system (Basic/Standard/Premium)
-- **Blockchain**: Flow, Story Protocol, Lens Protocol
-- **Database**: Supabase for cross-chain coordination
-- **AI**: Google Gemini for pattern analysis and coaching
+The system automatically chooses the appropriate client based on the environment.
 
-## 🌟 Current Status
+```typescript
+import { getStoryClient } from "./lib/story/config";
 
-### ✅ Phase 1-3 Complete: Full Multichain Ecosystem + AI Vision
+// Get client instance (automatically chooses the right implementation)
+const client = getStoryClient(true); // true for testnet
 
-- **Multichain Integration**: All three blockchains fully integrated
-- **AI Agent**: Zen breathing coach with computer vision capabilities
-- **Vision System**: Adaptive performance across all device types
-- **Creator Economy**: Complete NFT, IP, and social features
-- **Production Ready**: Live testnet deployment with real transactions
+// Initialize client
+await client.initialize();
 
-### 🚧 Phase 4 In Progress: Advanced Features
+// Use client methods
+const result = await client.registerBreathingPatternIP(pattern);
+```
 
-- Real biometric analysis with WebRTC audio capture
-- Enhanced mobile app with same multichain architecture
-- Advanced analytics dashboard and community features
+### Using the React Hook
 
-## 🛡️ Security & Privacy
+For React components, use the provided hook:
 
-- **Local Processing**: All computer vision analysis happens on-device
-- **No Video Storage**: Only aggregated metrics saved, never raw video
-- **Environment Security**: Private keys and sensitive data properly protected
-- **Progressive Enhancement**: Graceful degradation when features unavailable
+```typescript
+import { useStoryProtocol } from './lib/story/useStoryProtocol';
 
-## 🌍 Impact
+function MyComponent() {
+  const { state, actions } = useStoryProtocol();
 
-**Personal**: Stress reduction, wellness ownership, creator empowerment  
-**Industry**: Pioneer Web3 wellness, new creator economy model  
-**Global**: Accessible mental health tools, economic opportunity for wellness creators
+  // Access state
+  const { isInitialized, isConnected, error } = state;
 
-## 🤝 Contributing
+  // Use actions
+  const handleRegister = async () => {
+    const result = await actions.registerBreathingPatternIP(pattern);
+    console.log(result);
+  };
 
-See [Technical Guide](./docs/TechnicalGuide.md) for development setup, architecture details, and contribution guidelines.
+  return (
+    // Your component JSX
+  );
+}
+```
 
-## 📄 License
+## Available API Endpoints
 
-MIT License - see LICENSE file for details.
+The server provides the following endpoints:
 
----
+- `GET /api/health` - Health check endpoint
+- `GET /api/ip-assets/:id` - Get IP asset by ID
+- `POST /api/ip-assets/register` - Register a new IP asset
+- `GET /api/ip-assets/by-owner/:address` - Get all IP assets owned by an address
+- `POST /api/ip-assets/:id/transfer` - Get instructions for transferring an IP asset
+- `POST /api/ip-assets/:id/claim-revenue` - Claim revenue from derivatives
+- `POST /api/license` - Create license terms
+- `PUT /api/license/:ipId` - Set license terms for an IP asset
+- `POST /api/derivative` - Register a derivative IP asset
+- `POST /api/upload` - Upload a file (for metadata/images)
 
-**🌬️ Contract Live on Flow Testnet: `0xb8404e09b36b6623`**
+## Example Component
 
-_"In the breath, we find the bridge between body and mind, between ancient wisdom and modern technology, between individual practice and global community."_ - Zen AI Breathing Coach
+See the `IPAssetRegistration.tsx` component for a complete example of registering a breathing pattern as an IP asset using the Story Protocol integration.

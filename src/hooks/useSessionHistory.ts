@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { differenceInCalendarDays, parseISO, isToday } from 'date-fns';
-import { BREATHING_PATTERNS } from '@/lib/breathingPatterns';
-import { supabase } from '@/integrations/supabase/client';
+import { BREATHING_PATTERNS } from '../lib/breathingPatterns';
+import { supabase } from '../integrations/supabase/client';
 import { useAuth } from './useAuth';
-import type { Database } from '@/integrations/supabase/types';
+import type { Database } from '../integrations/supabase/types';
 
 type SessionRecordFromDb = Database['public']['Tables']['sessions']['Row'];
 

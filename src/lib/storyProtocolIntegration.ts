@@ -1,4 +1,5 @@
 import { useStory } from "../hooks/useStory";
+import { LicenseTerms } from "../lib/story";
 import { EnhancedCustomPattern, StoryProtocolMethods, StoryProtocolMetadata } from "../types/patterns";
 
 /**
@@ -21,37 +22,39 @@ export function createStoryProtocolMethods(
         return pattern.storyProtocol;
       }
 
-      const ipAsset = await storyHook.registerBreathingPatternIP({
+      const ipRegistration = await storyHook.registerBreathingPatternIP({
         name: pattern.name,
         description: pattern.description,
         creator: pattern.creator,
-        patternPhases: pattern.phases.reduce((acc, phase, index) => {
-          acc[`phase_${index}`] = phase.duration || 0;
-          return acc;
-        }, {} as Record<string, number>),
-        audioUrl: (pattern.mediaContent as any)?.guidedAudio,
+        inhale: pattern.phases[0]?.duration || 0,
+        hold: pattern.phases[1]?.duration || 0,
+        exhale: pattern.phases[2]?.duration || 0,
+        rest: pattern.phases[3]?.duration || 0,
+        difficulty: pattern.difficulty,
+        category: pattern.category,
+        tags: pattern.tags || [],
       });
 
-      if (!ipAsset) {
+      if (!ipRegistration || !ipRegistration.success) {
         throw new Error("Failed to register IP asset");
       }
 
       // Create the metadata
       const metadata: StoryProtocolMetadata = {
-        ipId: ipAsset.id,
-        registrationTxHash: ipAsset.ipHash,
+        ipId: ipRegistration.ipId,
+        registrationTxHash: ipRegistration.txHash,
         licenseTerms: {
-          commercial: ipAsset.licenseTerms?.commercial || pattern.licenseSettings.commercialUse,
-          derivatives: ipAsset.licenseTerms?.derivatives || pattern.licenseSettings.allowDerivatives,
-          attribution: ipAsset.licenseTerms?.attribution || pattern.licenseSettings.attribution,
-          royaltyPercentage: ipAsset.licenseTerms?.royaltyPercentage || pattern.licenseSettings.royaltyPercentage,
+          commercialUse: pattern.licenseSettings.commercialUse,
+          derivativeWorks: pattern.licenseSettings.derivativeWorks,
+          attributionRequired: pattern.licenseSettings.attributionRequired,
+          royaltyPercent: pattern.licenseSettings.royaltyPercent,
         },
         isRegistered: true,
       };
 
       // Update pattern (note: in React, you'd typically do this via state management)
       pattern.storyProtocol = metadata;
-      pattern.ipId = ipAsset.id;
+      pattern.ipId = ipRegistration.ipId;
 
       return metadata;
     },
@@ -70,12 +73,15 @@ export function createStoryProtocolMethods(
         throw new Error("IP ID not found");
       }
 
-      await storyHook.setLicensingTerms(ipId, {
-        commercial: terms.commercial,
-        derivatives: terms.derivatives,
-        attribution: terms.attribution,
-        royaltyPercentage: terms.royaltyPercentage,
-      });
+      // Convert terms to standardized format
+      const standardTerms = {
+        commercial: terms.commercial || terms.commercialUse || false,
+        derivatives: terms.derivatives || terms.derivativeWorks || false,
+        attribution: terms.attribution || terms.attributionRequired || true,
+        royaltyPercentage: terms.royaltyPercentage || terms.royaltyPercent || 0,
+      };
+      
+      await storyHook.setLicensingTerms(ipId, standardTerms);
 
       // Update pattern metadata
       if (pattern.storyProtocol) {
@@ -111,12 +117,12 @@ export function createStoryProtocolMethods(
             pattern.storyProtocol = {
               ipId: pattern.ipId,
               isRegistered: true,
-              licenseTerms: ipAsset.licenseTerms ? {
-                commercial: ipAsset.licenseTerms.commercial,
-                derivatives: ipAsset.licenseTerms.derivatives,
-                attribution: ipAsset.licenseTerms.attribution,
-                royaltyPercentage: ipAsset.licenseTerms.royaltyPercentage || 0,
-              } : undefined,
+              licenseTerms: {
+                commercialUse: false,
+                derivativeWorks: false,
+                attributionRequired: true,
+                royaltyPercent: 0,
+              },
             };
           }
           
@@ -137,10 +143,10 @@ export function createStoryProtocolMethods(
       if (!pattern.ipId && !pattern.storyProtocol?.ipId) {
         // Return default license terms from pattern
         return {
-          commercial: pattern.licenseSettings.commercialUse,
-          derivatives: pattern.licenseSettings.allowDerivatives,
-          attribution: pattern.licenseSettings.attribution,
-          royaltyPercentage: pattern.licenseSettings.royaltyPercentage,
+          commercialUse: pattern.licenseSettings.commercialUse,
+          derivativeWorks: pattern.licenseSettings.derivativeWorks,
+          attributionRequired: pattern.licenseSettings.attributionRequired,
+          royaltyPercent: pattern.licenseSettings.royaltyPercent,
         };
       }
 
@@ -153,35 +159,40 @@ export function createStoryProtocolMethods(
       try {
         const ipAsset = await storyHook.getIPAsset(ipId);
         
-        if (ipAsset && ipAsset.licenseTerms) {
+        // Update pattern metadata with license information from IP asset
+        if (ipAsset) {
+          // Create standardized license terms from what's available in the IP asset
+          // Create standardized license terms
+          const licenseTerms = {
+            commercialUse: false,
+            derivativeWorks: false,
+            attributionRequired: true,
+            royaltyPercent: 0,
+          };
+          
           // Update pattern metadata
-          if (pattern.storyProtocol && ipAsset.licenseTerms) {
-            pattern.storyProtocol.licenseTerms = {
-              commercial: ipAsset.licenseTerms.commercial,
-              derivatives: ipAsset.licenseTerms.derivatives,
-              attribution: ipAsset.licenseTerms.attribution,
-              royaltyPercentage: ipAsset.licenseTerms.royaltyPercentage || 0,
-            };
+          if (pattern.storyProtocol) {
+            pattern.storyProtocol.licenseTerms = licenseTerms;
           }
           
-          return ipAsset.licenseTerms;
+          return licenseTerms;
         }
         
         // Fallback to pattern license settings
         return {
-          commercial: pattern.licenseSettings.commercialUse,
-          derivatives: pattern.licenseSettings.allowDerivatives,
-          attribution: pattern.licenseSettings.attribution,
-          royaltyPercentage: pattern.licenseSettings.royaltyPercentage,
+          commercialUse: pattern.licenseSettings.commercialUse,
+          derivativeWorks: pattern.licenseSettings.derivativeWorks,
+          attributionRequired: pattern.licenseSettings.attributionRequired,
+          royaltyPercent: pattern.licenseSettings.royaltyPercent,
         };
       } catch (err) {
         console.error("Error getting license terms:", err);
         // Fallback to pattern license settings
         return {
-          commercial: pattern.licenseSettings.commercialUse,
-          derivatives: pattern.licenseSettings.allowDerivatives,
-          attribution: pattern.licenseSettings.attribution,
-          royaltyPercentage: pattern.licenseSettings.royaltyPercentage,
+          commercialUse: pattern.licenseSettings.commercialUse,
+          derivativeWorks: pattern.licenseSettings.derivativeWorks,
+          attributionRequired: pattern.licenseSettings.attributionRequired,
+          royaltyPercent: pattern.licenseSettings.royaltyPercent,
         };
       }
     }

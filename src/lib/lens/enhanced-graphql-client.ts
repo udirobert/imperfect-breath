@@ -4,7 +4,7 @@
  * Adds error handling, retries, and caching to the Lens GraphQL client
  */
 
-import { config } from '@/config/environment';
+import { config } from '../../config/environment';
 import { 
   LensApiError, 
   LensAuthenticationError,
@@ -20,7 +20,8 @@ import type {
 } from './types';
 
 // Lens Protocol GraphQL endpoint
-const LENS_API_URL = config.lens.apiUrl || 'https://api-v2-mumbai.lens.dev';
+// Update to official Lens v3 API endpoints
+const LENS_API_URL = config.lens.apiUrl || 'https://api-v2.lens.dev/graphql';
 
 // Default retry options for GraphQL requests
 const DEFAULT_RETRY_OPTIONS = {
@@ -163,6 +164,7 @@ export class EnhancedGraphQLClient {
         challenge(request: $request) {
           id
           text
+          expiresAt
         }
       }
     `;
@@ -758,23 +760,37 @@ export class EnhancedGraphQLClient {
     }
 
     const query = `
-      query Timeline($request: TimelineRequest!) {
-        timeline(request: $request) {
+      query Timeline($request: FeedRequest!) {
+        feed(request: $request) {
           items {
-            id
-            metadata {
-              content
-            }
-            author {
-              address
-              username {
-                value
-              }
+            ... on Post {
+              id
               metadata {
-                name
+                content
+                tags
+              }
+              profile {
+                id
+                handle {
+                  fullHandle
+                }
+                metadata {
+                  displayName
+                  picture {
+                    ... on ImageSet {
+                      optimized { url }
+                    }
+                  }
+                }
+              }
+              createdAt
+              stats {
+                reactions
+                comments
+                mirrors
+                quotes
               }
             }
-            createdAt
           }
           pageInfo {
             prev
@@ -785,7 +801,9 @@ export class EnhancedGraphQLClient {
     `;
 
     const request: any = {
-      account: accountAddress,
+      where: {
+        for: accountAddress,
+      },
     };
 
     if (options.limit) {
@@ -804,16 +822,30 @@ export class EnhancedGraphQLClient {
 
     try {
       const result = await this.makeGraphQLRequest<{
-        timeline: {
+        feed: {
           items: Array<{
             id: string;
-            metadata: { content: string };
-            author: {
-              address: string;
-              username?: { value: string };
-              metadata?: { name?: string };
+            metadata: {
+              content: string;
+              tags?: string[];
+            };
+            profile: {
+              id: string;
+              handle?: { fullHandle: string };
+              metadata?: {
+                displayName?: string;
+                picture?: {
+                  optimized?: { url: string };
+                };
+              };
             };
             createdAt: string;
+            stats: {
+              reactions: number;
+              comments: number;
+              mirrors: number;
+              quotes: number;
+            };
           }>;
           pageInfo: {
             prev?: string;
@@ -823,15 +855,17 @@ export class EnhancedGraphQLClient {
       }>(query, variables, true);
 
       // Map GraphQL response to our format
-      const timelineItems = result.timeline.items.map((item) => ({
+      const timelineItems = result.feed.items.map((item) => ({
         id: item.id,
         content: item.metadata.content,
         author: {
-          address: item.author.address,
-          username: item.author.username?.value,
-          name: item.author.metadata?.name,
+          address: item.profile.id,
+          username: item.profile.handle?.fullHandle,
+          name: item.profile.metadata?.displayName,
+          picture: item.profile.metadata?.picture?.optimized?.url,
         },
         createdAt: item.createdAt,
+        stats: item.stats
       }));
       
       // Convert to SocialPost type for caching
@@ -849,7 +883,7 @@ export class EnhancedGraphQLClient {
       
       const timeline = {
         items: timelineItems,
-        pageInfo: result.timeline.pageInfo,
+        pageInfo: result.feed.pageInfo,
       };
       
       // Cache timeline data (only if it's the first page)
