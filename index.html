@@ -37,7 +37,54 @@
 
     <body>
         <div id="root"></div>
+        <!-- Wallet compatibility script to prevent provider conflicts -->
+        <script>
+            // Save original provider if it exists
+            window.__originalEthereum = window.ethereum;
+        </script>
+        <!-- Load wallet adapter before any other scripts -->
+        <script src="/wallet-adapter.js"></script>
         <!-- Node.js polyfills are now handled by vite-plugin-node-polyfills -->
         <script type="module" src="/src/main.tsx"></script>
+        
+        <!-- Error recovery script -->
+        <script>
+            window.addEventListener('error', function(event) {
+                // Check for React initialization errors
+                if (event.message && (
+                    event.message.includes("Cannot read properties of undefined (reading 'ReactCurrentOwner')") ||
+                    event.message.includes("react-jsx-runtime")
+                )) {
+                    console.error('React initialization error detected. Attempting recovery...');
+                    
+                    // Clear the root element
+                    const rootElement = document.getElementById('root');
+                    if (rootElement) {
+                        rootElement.innerHTML = `
+                            <div style="font-family: sans-serif; padding: 20px; text-align: center;">
+                                <h2>Application Error</h2>
+                                <p>There was a problem initializing the application. Attempting to recover...</p>
+                            </div>
+                        `;
+                        
+                        // Try to reload the application after a brief delay
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    }
+                }
+                
+                // Check for wallet provider errors
+                if (event.message && event.message.includes("ethereum")) {
+                    console.error('Wallet provider error detected. Attempting recovery...');
+                    
+                    // Try to fix wallet conflicts if the function exists
+                    if (typeof window.__fixWalletConflicts === 'function') {
+                        const fixed = window.__fixWalletConflicts();
+                        console.log('Wallet conflict fix attempt result:', fixed);
+                    }
+                }
+            });
+        </script>
     </body>
 </html>

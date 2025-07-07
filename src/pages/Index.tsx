@@ -1,9 +1,9 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "../components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { useSessionHistory } from "../hooks/useSessionHistory";
 import { Waves, Target, BarChart3, Bot, LogOut } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "../hooks/useAuth";
+import { supabase } from "../integrations/supabase/client";
 import { toast } from "sonner";
 
 const Feature = ({
