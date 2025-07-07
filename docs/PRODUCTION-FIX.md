@@ -1,66 +1,78 @@
 # Production Error Fixes
 
-This document outlines the solutions implemented to fix critical production errors in the Imperfect Breath application, focusing on wallet provider compatibility and React initialization issues.
+This document outlines the solutions implemented to fix critical production errors in the Imperfect Breath application, addressing both wallet provider compatibility issues and core React initialization problems.
 
-## Issues Fixed
+## Root Causes Identified
 
-1. **Wallet Provider Conflicts**
+1. **Package Manager Conflicts**
+
+   - Project had both `bun.lockb` and `package-lock.json` files
+   - Multiple package managers created dependency resolution conflicts
+   - This contributed to React initialization errors
+
+2. **Wallet Provider Conflicts**
 
    - "Backpack couldn't override `window.ethereum`"
    - "Uncaught TypeError: Cannot redefine property: ethereum"
 
-2. **React Initialization Errors**
+3. **React Initialization Errors**
    - "Cannot read properties of undefined (reading 'ReactCurrentOwner')"
+   - Path resolution and bundling issues in Vite configuration
 
-## Solution Overview
+## Solutions Implemented
 
-### 1. Non-Intrusive Wallet Compatibility Layer
+### 1. Package Manager Standardization
 
-The key insight was that we cannot modify `window.ethereum` directly in production because browser extensions like Backpack set it as a non-configurable property. Our solution:
+- Created `scripts/clean-package-managers.sh` to standardize on npm
+- Removes `bun.lockb` and ensures clean dependency installation
+- Installs exact versions of critical dependencies
+- Resolves inconsistencies that contribute to build failures
 
-- Created a completely non-intrusive approach that **never** attempts to redefine `window.ethereum`
-- Implemented a tracking system in `public/production-patch.js` that monitors provider changes without modifying properties
-- Provided a safe API through `window.walletApi` for accessing wallet functionality
+### 2. Non-Intrusive Wallet Compatibility Layer
 
-### 2. React Runtime Fixes
+- Created a multi-layered approach that **never** attempts to redefine `window.ethereum`
+- `public/ethereum-protector.js`: Runs first, protects ethereum property
+- `public/wallet-adapter.js`: Basic wallet compatibility that doesn't modify ethereum
+- `public/production-patch.js`: Enhanced tracking with fallback mechanisms
+- Provides safe APIs through `window.walletApi` and `window.safeWallet`
 
-- Updated Vite configuration to properly handle React dependencies
-- Ensured proper JSX runtime is used with explicit imports
-- Fixed path aliases and resolved React module issues
-- Added manual chunking to optimize bundle size
+### 3. Vite Configuration Fixes
 
-### 3. Error Recovery System
+- Simplified Vite configuration to properly handle React dependencies
+- Fixed path aliases for correct module resolution
+- Removed problematic Babel configuration causing build issues
+- Enhanced build scripts for more reliable production builds
 
-- Enhanced error handling in `index.html` to catch and recover from critical errors
-- Added diagnostic logging for better error tracking
-- Implemented fallback rendering when errors occur
+## Files Modified/Created
 
-## Files Modified
+### New Files
 
-- `public/production-patch.js` (NEW): Non-intrusive wallet compatibility implementation
-- `index.html`: Added production patch and enhanced error recovery
-- `src/wallet-shim.ts`: Updated to use the new production-safe APIs
-- `src/lib/wagmi/index.ts`: Enhanced to use safer wallet access methods
-- `vite.config.ts`: Updated with proper React runtime settings and manual chunking
-
-## Scripts Added
-
+- `public/ethereum-protector.js`: Early protection for window.ethereum
+- `public/production-patch.js`: Non-intrusive wallet compatibility
 - `scripts/rebuild-production.sh`: Optimized production build script
-- `scripts/verify-wallet-compatibility.js`: Tool for testing wallet compatibility
-- `scripts/setup-dependencies.sh`: Installs required dependencies
+- `scripts/clean-package-managers.sh`: Package manager standardization
+- `scripts/verify-wallet-compatibility.js`: Browser testing utility
+
+### Modified Files
+
+- `index.html`: Added protection scripts and enhanced error recovery
+- `src/wallet-shim.ts`: Updated to use multiple provider access paths
+- `src/lib/wagmi/index.ts`: Fixed TypeScript errors and enhanced safety
+- `vite.config.ts`: Simplified for better compatibility
 
 ## How To Use
 
-### Setup and Build
+### Standardize Package Management
 
-1. Install dependencies:
-
+1. Clean up package management:
    ```bash
-   chmod +x scripts/setup-dependencies.sh
-   ./scripts/setup-dependencies.sh
+   chmod +x scripts/clean-package-managers.sh
+   ./scripts/clean-package-managers.sh
    ```
 
-2. Build for production:
+### Build for Production
+
+1. Build with the optimized script:
    ```bash
    chmod +x scripts/rebuild-production.sh
    ./scripts/rebuild-production.sh
@@ -72,41 +84,44 @@ To verify wallet compatibility in a browser, open the browser console on your pr
 
 ## Technical Details
 
+### Package Manager Standardization
+
+The project now uses npm exclusively:
+
+1. Removes `bun.lockb` to prevent conflicts with `package-lock.json`
+2. Ensures clean dependency installation
+3. Installs exact versions of critical dependencies
+
 ### Wallet Provider Tracking
 
 Instead of trying to modify `window.ethereum`, we:
 
-1. Track the provider when it changes using a non-intrusive monitoring approach
-2. Store references to providers in `window.__walletState`
-3. Provide a safe API through `window.walletApi` that never modifies `window.ethereum`
+1. Make the property non-configurable early with `ethereum-protector.js`
+2. Track the provider when it changes using a non-intrusive monitoring approach
+3. Store references to providers in `window.__walletState`
+4. Provide safe APIs through `window.walletApi` and `window.safeWallet`
 
 ### React Bundling Optimizations
 
 The Vite configuration now includes:
 
 1. Proper JSX runtime settings to prevent "ReactCurrentOwner" errors
-2. Manual chunking to reduce bundle size:
-   ```js
-   manualChunks: {
-     'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
-     'wallet': ['@walletconnect', 'viem', 'wagmi'],
-     'ui-framework': ['@radix-ui', 'lucide-react'],
-     'blockchain': ['@onflow', '@lens-protocol', '@story-protocol']
-   }
-   ```
+2. Simplified configuration without complex Babel settings
 3. Path aliases that match TypeScript configuration
 
 ## Troubleshooting
 
 If you encounter issues:
 
-1. Check browser console for errors
-2. Run the verification script to test wallet compatibility
-3. Make sure all dependencies are installed correctly
-4. Verify that `production-patch.js` is loaded before other scripts in `index.html`
+1. Run `./scripts/clean-package-managers.sh` to ensure package management is standardized
+2. Check browser console for errors
+3. Run the verification script to test wallet compatibility
+4. Make sure all dependencies are installed correctly
+5. Verify that the protection scripts are loaded in the correct order in `index.html`
 
 ## Additional Notes
 
-- The solution avoids any approach that tries to redefine `window.ethereum`, ensuring compatibility with all wallet extensions
+- The wallet solution avoids any approach that tries to redefine `window.ethereum`
 - Multiple provider access methods are tried in sequence for maximum compatibility
+- Standardizing on a single package manager (npm) helps prevent dependency conflicts
 - Error logging helps diagnose issues in production

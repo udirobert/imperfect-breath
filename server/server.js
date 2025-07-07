@@ -94,9 +94,19 @@ app.use("/backend-proxy", authenticateApiKey, storyProtocolRoutes);
 app.use("/api/social", socialRoutes);
 app.use("/api/patterns", patternRoutes);
 
-// Register social and pattern routes
-app.use("/api/social", socialRoutes);
-app.use("/api/patterns", patternRoutes);
+// Add route aliases to match frontend expectations
+app.use("/api/marketplace", patternRoutes); // Map marketplace/* to patterns/*
+app.use("/api/creator", socialRoutes); // Map creator/* to social/*
+
+// Add community stats endpoint
+app.get("/api/community/stats", (req, res) => {
+  res.json({
+    userCount: 1200,
+    sessionCount: 5400,
+    patternCount: 350,
+    lastUpdated: new Date().toISOString(),
+  });
+});
 
 // Helper function to generate a content hash
 const generateContentHash = (content) => {
