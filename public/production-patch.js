@@ -11,6 +11,15 @@
     window.location.hostname !== "localhost" &&
     !window.location.hostname.includes("127.0.0.1");
 
+  // Check if ethereum property is already protected
+  const ethereumIsProtected =
+    window.__ethereumProtection && window.__ethereumProtection.protected;
+
+  console.log(
+    "Production patch initializing, ethereum protected:",
+    ethereumIsProtected
+  );
+
   // Create a container to track providers
   window.__walletState = {
     providers: [],
@@ -23,19 +32,24 @@
 
   // Save original ethereum reference WITHOUT modifying the property
   if (window.ethereum) {
-    window.__walletState.original = window.ethereum;
-    window.__walletState.current = window.ethereum;
+    // Use getSafeEthereum if available (from ethereum-protector.js)
+    const safeReference = window.getSafeEthereum
+      ? window.getSafeEthereum()
+      : window.ethereum;
+
+    window.__walletState.original = safeReference;
+    window.__walletState.current = safeReference;
 
     // Record this provider
     window.__walletState.providers.push({
       name: "original",
-      provider: window.ethereum,
+      provider: safeReference,
       timestamp: Date.now(),
     });
 
     // Special handling for Backpack
-    if (window.ethereum._isBackpack) {
-      window.__walletState.backpack = window.ethereum;
+    if (safeReference._isBackpack) {
+      window.__walletState.backpack = safeReference;
     }
 
     console.log(
@@ -95,23 +109,28 @@
     }
 
     window.__walletState.monitor = setInterval(function () {
+      // Always use getSafeEthereum if available to avoid redefinition issues
+      const currentProvider = window.getSafeEthereum
+        ? window.getSafeEthereum()
+        : window.ethereum;
+
       // Check if ethereum has changed
-      if (window.ethereum !== window.__walletState.current) {
+      if (currentProvider !== window.__walletState.current) {
         // Update our tracked reference WITHOUT modifying the property
-        window.__walletState.current = window.ethereum;
+        window.__walletState.current = currentProvider;
 
         // Special handling for Backpack
-        if (window.ethereum && window.ethereum._isBackpack) {
-          window.__walletState.backpack = window.ethereum;
+        if (currentProvider && currentProvider._isBackpack) {
+          window.__walletState.backpack = currentProvider;
         }
 
         // Record this provider
         window.__walletState.providers.push({
           name:
-            window.ethereum && window.ethereum._isBackpack
+            currentProvider && currentProvider._isBackpack
               ? "backpack"
               : "unknown",
-          provider: window.ethereum,
+          provider: currentProvider,
           timestamp: Date.now(),
         });
 
@@ -127,10 +146,28 @@
   window.__fixWalletConflicts = function () {
     // This doesn't try to modify window.ethereum at all
     // It just ensures our tracking is up-to-date
-    if (window.ethereum !== window.__walletState.current) {
-      window.__walletState.current = window.ethereum;
+    const currentProvider = window.getSafeEthereum
+      ? window.getSafeEthereum()
+      : window.ethereum;
+
+    if (currentProvider !== window.__walletState.current) {
+      window.__walletState.current = currentProvider;
     }
-    return true;
+
+    // Report protection status for debugging
+    const status = {
+      protected: window.__ethereumProtection
+        ? window.__ethereumProtection.protected
+        : false,
+      attempts: window.__ethereumProtection
+        ? window.__ethereumProtection.attempts
+        : 0,
+      trackingUpdated: true,
+    };
+
+    console.log("[PATCH] Wallet conflict fix status:", status);
+
+    return status;
   };
 
   // Patch common error sources
