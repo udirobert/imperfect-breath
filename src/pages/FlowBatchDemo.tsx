@@ -1,14 +1,27 @@
-import React, { useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Zap, Layers, Shield, Coins } from 'lucide-react';
-import { BatchedPatternMinter } from '@/components/flow/BatchedPatternMinter';
-import { useFlow } from '@/hooks/useFlow';
-import { toast } from '@/hooks/use-toast';
+import React, { useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Zap, Layers, Shield, Coins } from "lucide-react";
+import { BatchedPatternMinter } from "@/components/flow/BatchedPatternMinter";
+import { useFlow } from "@/hooks/useFlow";
+import { useToast } from "@/hooks/use-toast";
 
 const FlowBatchDemo: React.FC = () => {
-  const { flowAddress, coaAddress, isConnected, isLoading, connect, disconnect } = useFlow();
+  const { toast } = useToast();
+  const { state, user, coaInfo, isLoading, isConnecting, connect, disconnect } =
+    useFlow();
+
+  // Derived values for easier access
+  const isConnected = state.isConnected;
+  const flowAddress = user?.addr;
+  const coaAddress = coaInfo?.address;
 
   useEffect(() => {
     // Initialize Flow connection on component mount
@@ -17,17 +30,18 @@ const FlowBatchDemo: React.FC = () => {
 
   const handleConnect = async () => {
     try {
-      const fcl = await import('@onflow/fcl');
+      const fcl = await import("@onflow/fcl");
       await fcl.authenticate();
       toast({
         title: "Connected to Flow!",
-        description: "You can now use batched transactions and other Flow features.",
+        description:
+          "You can now use batched transactions and other Flow features.",
       });
     } catch (error) {
       toast({
         title: "Connection failed",
         description: "Failed to connect to Flow wallet. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -43,7 +57,7 @@ const FlowBatchDemo: React.FC = () => {
       toast({
         title: "Disconnect failed",
         description: "Failed to disconnect. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -52,10 +66,13 @@ const FlowBatchDemo: React.FC = () => {
     <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Flow Supercharged Breathing Patterns</h1>
+        <h1 className="text-4xl font-bold">
+          Flow Supercharged Breathing Patterns
+        </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Experience the power of Flow's cross-VM capabilities with batched transactions, 
-          native randomness, and sponsored onboarding for breathing pattern NFTs.
+          Experience the power of Flow's cross-VM capabilities with batched
+          transactions, native randomness, and sponsored onboarding for
+          breathing pattern NFTs.
         </p>
       </div>
 
@@ -68,7 +85,8 @@ const FlowBatchDemo: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Mint multiple NFTs with a single signature using Flow's cross-VM functionality
+              Mint multiple NFTs with a single signature using Flow's cross-VM
+              functionality
             </p>
           </CardContent>
         </Card>
@@ -80,7 +98,8 @@ const FlowBatchDemo: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Generate truly random breathing pattern variations using Flow's built-in randomness
+              Generate truly random breathing pattern variations using Flow's
+              built-in randomness
             </p>
           </CardContent>
         </Card>
@@ -92,7 +111,8 @@ const FlowBatchDemo: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Walletless onboarding with sponsored breathing sessions for new users
+              Walletless onboarding with sponsored breathing sessions for new
+              users
             </p>
           </CardContent>
         </Card>
@@ -104,7 +124,8 @@ const FlowBatchDemo: React.FC = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Inexpensive gas fees without compromising security or decentralization
+              Inexpensive gas fees without compromising security or
+              decentralization
             </p>
           </CardContent>
         </Card>
@@ -137,7 +158,9 @@ const FlowBatchDemo: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">Not Connected</Badge>
-                  <span className="text-sm">Connect to access batched transactions</span>
+                  <span className="text-sm">
+                    Connect to access batched transactions
+                  </span>
                 </div>
               )}
             </div>
@@ -146,7 +169,11 @@ const FlowBatchDemo: React.FC = () => {
               disabled={isLoading}
               variant={isConnected ? "outline" : "default"}
             >
-              {isLoading ? "Connecting..." : isConnected ? "Disconnect" : "Connect Flow Wallet"}
+              {isLoading
+                ? "Connecting..."
+                : isConnected
+                ? "Disconnect"
+                : "Connect Flow Wallet"}
             </Button>
           </div>
         </CardContent>
@@ -174,7 +201,9 @@ const FlowBatchDemo: React.FC = () => {
             <div>
               <h3 className="font-semibold mb-2">Flow Enhanced Approach</h3>
               <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• Batch multiple operations in single Cadence transaction</li>
+                <li>
+                  • Batch multiple operations in single Cadence transaction
+                </li>
                 <li>• One signature for multiple EVM calls</li>
                 <li>• Lower overall transaction costs</li>
                 <li>• Native VRF for true randomness</li>
@@ -185,9 +214,11 @@ const FlowBatchDemo: React.FC = () => {
           <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
             <h4 className="font-semibold mb-2">FLIP 316 Implementation</h4>
             <p className="text-sm text-muted-foreground">
-              This demo uses Flow's FLIP 316 improvements to FCL, enabling seamless integration 
-              between Flow Cadence and Flow EVM. The batched transactions are executed through 
-              a Cadence transaction that manages multiple EVM calls via your Cadence Owned Account (COA).
+              This demo uses Flow's FLIP 316 improvements to FCL, enabling
+              seamless integration between Flow Cadence and Flow EVM. The
+              batched transactions are executed through a Cadence transaction
+              that manages multiple EVM calls via your Cadence Owned Account
+              (COA).
             </p>
           </div>
         </CardContent>
@@ -207,7 +238,7 @@ const FlowBatchDemo: React.FC = () => {
         <CardContent>
           <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
             <pre className="text-sm">
-{`// Cadence transaction for batched EVM calls
+              {`// Cadence transaction for batched EVM calls
 transaction(calls: [{String: AnyStruct}], mustPass: Bool) {
   let coa: auth(EVM.Call) &EVM.CadenceOwnedAccount
 

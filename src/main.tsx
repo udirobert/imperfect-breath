@@ -10,6 +10,7 @@ import { config } from "./lib/wagmi";
 import App from "./App.tsx";
 import "./index.css";
 import { runEnvironmentChecks } from "./utils/environment-check";
+import { optimizeForMobile } from "./utils/mobile-detection";
 
 // Explicitly set global references for old libraries that might expect them
 window.React = React;
@@ -18,6 +19,9 @@ window.ReactDOM = ReactDOM;
 // Run environment checks before initializing the app
 const envCheck = runEnvironmentChecks();
 console.log("Environment check results:", envCheck);
+
+// Initialize mobile optimizations
+optimizeForMobile();
 
 // Create query client with retry options optimized for production
 const queryClient = new QueryClient({

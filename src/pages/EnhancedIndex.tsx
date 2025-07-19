@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom";
+import { useFirstTimeUser } from "@/hooks/useFirstTimeUser";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ArrowRight,
   Play,
@@ -26,6 +28,15 @@ import {
 
 const EnhancedIndex = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const { shouldShowOnboarding } = useFirstTimeUser();
+
+  // Redirect mobile first-time users to onboarding
+  useEffect(() => {
+    if (shouldShowOnboarding) {
+      navigate("/onboarding");
+    }
+  }, [shouldShowOnboarding, navigate]);
 
   const benefits = [
     {

@@ -1,13 +1,15 @@
 {
   "compilerOptions": {
-    "composite": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "components/*": ["./src/components/*"],
       "hooks/*": ["./src/hooks/*"],
       "lib/*": ["./src/lib/*"],
-      "integrations/*": ["./src/integrations/*"]
+      "integrations/*": ["./src/integrations/*"],
+      "types/*": ["./src/types/*"],
+      "pages/*": ["./src/pages/*"],
+      "utils/*": ["./src/utils/*"]
     }
   }
 }

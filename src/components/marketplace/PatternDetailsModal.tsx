@@ -37,6 +37,9 @@ import { ReviewService, PatternReview } from "../../lib/reviewService";
 import { useAuth } from "../../hooks/useAuth";
 import { useEffect, useState } from "react";
 import { PurchaseFlow } from "./PurchaseFlow";
+import { MobilePaymentFlow } from "@/components/payments/MobilePaymentFlow";
+import { usePaymentProcessor } from "@/lib/payments/PaymentProcessor";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Tooltip,
   TooltipContent,

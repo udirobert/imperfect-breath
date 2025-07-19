@@ -1,56 +1,57 @@
-# Technical Guide
+# Technical & Development Guide
 
 ## Overview
 
-Imperfect Breath is a production-ready multichain wellness platform that combines ancient breathing wisdom with cutting-edge Web3 technology and AI-powered computer vision. This guide provides a detailed overview of the platform's technical architecture, development workflow, deployment process, and security considerations. It serves as a consolidated reference for developers and technical stakeholders, with links to additional specialized documentation for deeper insights.
-
-For user-focused instructions, vision system details, and project history, refer to the following companion documents in the /docs directory:
-
-- **User Guide** (`docs/UserGuide.md`): Instructions for end-users on how to use the platform.
-- **Vision & AI Guide** (`docs/VisionAIGuide.md`): In-depth documentation on the computer vision and AI coaching system.
-- **Project History & Plans** (`docs/ProjectHistoryPlans.md`): Historical context, architectural consolidation plans, and cleanup summaries.
+Imperfect Breath is a production-ready multichain wellness platform that combines ancient breathing wisdom with cutting-edge Web3 technology and AI-powered computer vision. This guide provides comprehensive technical documentation for developers, covering architecture, setup, deployment, and advanced features.
 
 ## 🏗️ System Architecture
 
-### Multichain Architecture
+### Mobile-First Multichain Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    IMPERFECT BREATH PLATFORM               │
+│                MOBILE-FIRST WELLNESS PLATFORM              │
 ├─────────────────────────────────────────────────────────────┤
-│  🤖 Zen AI Agent (Eliza Framework)                         │
-│  ├── Natural Language Processing                           │
-│  ├── Computer Vision Analysis                              │
-│  ├── Breathing Pattern Generation                          │
-│  └── Cross-Chain Decision Making                           │
+│  📱 Mobile-Optimized Frontend                              │
+│  ├── Progressive Web App (PWA)                             │
+│  ├── Touch-First Interface Design                          │
+│  ├── Offline-Capable Core Features                         │
+│  └── Responsive Breakpoint Strategy                        │
 ├─────────────────────────────────────────────────────────────┤
-│  🎯 Computer Vision System                                  │
-│  ├── Basic Tier (95% device compatibility)                 │
-│  ├── Standard Tier (80% device compatibility)              │
-│  └── Premium Tier (60% device compatibility)               │
+│  🎯 Adaptive Vision System                                  │
+│  ├── Mobile-Optimized Processing                           │
+│  ├── Battery-Aware Performance                             │
+│  ├── Touch-Screen Camera Controls                          │
+│  └── Progressive Enhancement                                │
 ├─────────────────────────────────────────────────────────────┤
-│  ⛓️ Multichain Infrastructure                              │
+│  🔄 Progressive Authentication                              │
+│  ├── Email-First Onboarding                                │
+│  ├── Optional Wallet Connection                             │
+│  ├── Unified Identity Management                            │
+│  └── Cross-Platform Sync                                   │
+├─────────────────────────────────────────────────────────────┤
+│  ⛓️ Blockchain Integration                                  │
 │  ├── Flow Blockchain (NFTs & Marketplace)                  │
 │  ├── Story Protocol (IP & Royalties)                       │
 │  └── Lens Protocol (Social & Community)                    │
 ├─────────────────────────────────────────────────────────────┤
-│  🗄️ Data Layer                                             │
-│  ├── Supabase (Cross-chain coordination)                   │
-│  ├── Local Storage (Vision processing)                     │
-│  └── IPFS (Metadata storage)                               │
+│  🗄️ Hybrid Data Strategy                                   │
+│  ├── Local Storage (Offline capability)                    │
+│  ├── Supabase (Cross-platform sync)                        │
+│  └── IPFS (Decentralized metadata)                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow
 
 ```
-User Action → Frontend → Chain Selection → Blockchain Execution
-     ↓             ↓            ↓              ↓
-Vision Input → AI Analysis → Pattern Gen → NFT Minting (Flow)
-     ↓             ↓            ↓              ↓
-Biometric Data → Zen Coach → IP Register → Story Protocol
-     ↓             ↓            ↓              ↓
-Session Metrics → Feedback → Social Share → Lens Protocol
+Touch Input → Progressive Enhancement → Feature Unlock
+     ↓                ↓                      ↓
+Quick Start → Email Signup → Wallet Connection (Optional)
+     ↓                ↓                      ↓
+Local Storage → Cloud Sync → Blockchain Integration
+     ↓                ↓                      ↓
+Offline Practice → Progress Tracking → Social Sharing
 ```
 
 ## 🔧 Development Setup
@@ -59,9 +60,14 @@ Session Metrics → Feedback → Social Share → Lens Protocol
 
 ```bash
 # Required
+Bun (package manager)
 Node.js 18+
-npm or pnpm
 Git
+
+# Mobile Testing Tools
+Chrome DevTools (Mobile simulation)
+iOS Simulator / Android Emulator
+Real device testing setup
 
 # Blockchain Tools
 Flow CLI
@@ -79,7 +85,7 @@ Docker (for local blockchain testing)
    ```bash
    git clone [your-repo-url]
    cd imperfect-breath
-   npm install
+   bun install
    ```
 
 2. **Environment Configuration**
@@ -119,21 +125,21 @@ Docker (for local blockchain testing)
 
 4. **Start Development**
    ```bash
-   npm run dev
+   bun run dev
    ```
 
 ### Development Workflow
 
 ```bash
 # Frontend development
-npm run dev              # Start dev server
-npm run build           # Production build
-npm run preview         # Preview build
+bun run dev              # Start dev server
+bun run build           # Production build
+bun run preview         # Preview build
 
 # Blockchain development
-npm run flow:setup      # Setup Flow environment
-npm run flow:deploy     # Deploy contracts
-npm run flow:test       # Test contracts
+bun run flow:setup      # Setup Flow environment
+bun run flow:deploy     # Deploy contracts
+bun run flow:test       # Test contracts
 
 # AI Agent development
 cd eliza-agent-temp
@@ -141,8 +147,8 @@ pnpm install
 pnpm start --character="../characters/breathing-coach.character.json"
 
 # Vision system testing
-npm run test:vision     # Test computer vision
-npm run test:performance # Performance benchmarks
+bun run test:vision     # Test computer vision
+bun run test:performance # Performance benchmarks
 ```
 
 ## 🤖 Zen AI Agent Architecture
@@ -213,13 +219,100 @@ class EnhancedZenCoach extends AIBreathingCoach {
 
 ## 🎯 Computer Vision System
 
-For a comprehensive guide on the computer vision system, including its three-tier adaptive architecture (Basic, Standard, Premium), device capability detection, performance optimization, and integration with AI coaching, refer to the **Vision & AI Guide** (`docs/VisionAIGuide.md`).
+### Three-Tier Architecture
 
-### Key Features
+#### 🟢 Basic Tier (95% Device Compatibility)
 
-- **Adaptive Tiers**: Automatically adjusts to device capabilities, ensuring compatibility across 95% of devices (Basic Tier), 80% (Standard Tier), and 60% (Premium Tier).
-- **Real-Time Analysis**: Provides metrics on breathing rate, posture, movement, and facial tension.
-- **Privacy Focus**: All processing is done locally on the user's device, with no video data stored or transmitted.
+- **Target**: Budget smartphones, older laptops, basic tablets
+- **Performance**: 5 FPS processing, minimal CPU usage
+- **Features**: Simple motion detection, face presence, estimated breathing rate
+
+```typescript
+interface BasicMetrics {
+  confidence: number; // 0-1, overall detection confidence
+  movementLevel: number; // 0-1, amount of movement detected
+  facePresent: boolean; // Whether face is detected
+  estimatedBreathingRate: number; // Breaths per minute estimate
+  headAlignment: number; // 0-1, basic posture check
+}
+```
+
+#### 🟡 Standard Tier (80% Device Compatibility)
+
+- **Target**: Mid-range smartphones, modern laptops, recent tablets
+- **Performance**: 10 FPS processing, moderate CPU usage
+- **Features**: Lightweight facial landmarks, upper body posture, breathing rhythm
+
+```typescript
+interface StandardMetrics extends BasicMetrics {
+  facialTension: number; // 0-1, stress indicators in face
+  postureQuality: number; // 0-1, upper body alignment
+  breathingRhythm: {
+    rate: number; // Actual breathing rate
+    consistency: number; // 0-1, rhythm regularity
+  };
+  restlessnessScore: number; // 0-1, overall movement/fidgeting
+}
+```
+
+#### 🔴 Premium Tier (60% Device Compatibility)
+
+- **Target**: High-end smartphones, gaming laptops, desktop computers
+- **Performance**: 15 FPS processing, higher CPU usage
+- **Features**: Full facial mesh (468 landmarks), complete pose detection (33 body points)
+
+```typescript
+interface PremiumMetrics extends StandardMetrics {
+  detailedFacialAnalysis: {
+    nostrilMovement: number; // Breathing detection from nostrils
+    jawTension: number; // Jaw clenching/tension
+    eyeMovement: number; // Gaze stability and focus
+    microExpressions: number; // Subtle emotional indicators
+  };
+  fullBodyPosture: {
+    spinalAlignment: number; // Complete spine analysis
+    shoulderTension: number; // Shoulder position and stress
+    chestExpansion: number; // Breathing depth indicator
+    overallPosture: number; // Composite posture score
+  };
+  preciseBreathingMetrics: {
+    actualRate: number; // Precise breathing rate
+    targetRate: number; // Pattern target rate
+    rhythmAccuracy: number; // 0-1, pattern matching accuracy
+    depthConsistency: number; // Breathing depth regularity
+  };
+}
+```
+
+### Basic Integration
+
+```typescript
+import { useVisionSystem } from "@/lib/vision";
+
+const MyBreathingComponent = () => {
+  const { initialize, start, stop, metrics, tier, error } = useVisionSystem({
+    autoInitialize: true,
+    defaultMode: "auto",
+  });
+
+  const handleStartSession = async () => {
+    try {
+      await start(); // Automatically requests camera permission
+    } catch (error) {
+      console.error("Failed to start vision:", error);
+    }
+  };
+
+  return (
+    <div>
+      <div>Current Tier: {tier}</div>
+      <div>Confidence: {metrics?.confidence}%</div>
+      <button onClick={handleStartSession}>Start Vision</button>
+      {error && <div>Error: {error}</div>}
+    </div>
+  );
+};
+```
 
 ## ⛓️ Blockchain Integration
 
@@ -394,14 +487,14 @@ cp .env.example .env
 # Configure all environment variables
 
 # 2. Install dependencies
-npm install
+bun install
 cd eliza-agent-temp && pnpm install
 
 # 3. Build vision system
 cd packages/breathing-pattern-plugin && pnpm build
 
 # 4. Start services
-npm run dev                    # Frontend
+bun run dev                    # Frontend
 cd eliza-agent-temp && ./start-zen.sh  # AI Agent
 ```
 
@@ -411,7 +504,7 @@ cd eliza-agent-temp && ./start-zen.sh  # AI Agent
 
 ```bash
 # Build for production
-npm run build
+bun run build
 
 # Deploy to Vercel
 vercel --prod
@@ -436,28 +529,6 @@ CMD ["pnpm", "start", "--character=../characters/breathing-coach.character.json"
 ```sql
 -- Run migration scripts
 psql -h your-supabase-host -U postgres -d postgres -f migrations/001_initial.sql
-```
-
-### Environment Configuration
-
-**Production Environment Variables**
-
-```bash
-# Flow Blockchain
-VITE_FLOW_NETWORK=mainnet
-VITE_IMPERFECT_BREATH_ADDRESS=your_mainnet_address
-
-# AI Services
-OPENAI_API_KEY=your_production_openai_key
-VITE_GOOGLE_GEMINI_API_KEY=your_production_gemini_key
-
-# Database
-VITE_SUPABASE_URL=your_production_supabase_url
-VITE_SUPABASE_ANON_KEY=your_production_supabase_key
-
-# Security
-VITE_ENVIRONMENT=production
-VITE_DEBUG_MODE=false
 ```
 
 ## 🔒 Security Considerations
@@ -491,25 +562,6 @@ const validateBreathingPattern = (pattern: any): BreathingPattern => {
   });
 
   return schema.parse(pattern);
-};
-```
-
-### Blockchain Security
-
-```typescript
-// Transaction validation
-const validateTransaction = async (transaction: string): Promise<boolean> => {
-  // Validate transaction structure
-  const parsed = await fcl.decode(transaction);
-
-  // Check for malicious code patterns
-  const dangerousPatterns = [
-    /destroy\s+/,
-    /AuthAccount\.save/,
-    /AuthAccount\.load/,
-  ];
-
-  return !dangerousPatterns.some((pattern) => pattern.test(transaction));
 };
 ```
 
@@ -583,13 +635,13 @@ describe("FlowIntegration", () => {
 
 ```bash
 # Vision system performance
-npm run test:performance
+bun run test:performance
 
 # Load testing
-npm run test:load
+bun run test:load
 
 # Memory leak detection
-npm run test:memory
+bun run test:memory
 ```
 
 ## 📊 Monitoring & Analytics
@@ -620,93 +672,4 @@ class PerformanceMonitor {
 }
 ```
 
-### Error Tracking
-
-```typescript
-// Comprehensive error handling
-class ErrorTracker {
-  trackVisionError(error: VisionError): void {
-    console.error("Vision error:", error);
-
-    this.analytics.track("vision_error", {
-      code: error.code,
-      tier: error.tier,
-      recoverable: error.recoverable,
-      userAgent: navigator.userAgent,
-    });
-  }
-}
-```
-
-## 🔄 Maintenance & Updates
-
-### Model Updates
-
-```typescript
-// Progressive model updates
-class ModelUpdateManager {
-  async checkForUpdates(): Promise<void> {
-    const availableModels = await this.fetchAvailableModels();
-    const currentModels = this.modelLoader.getLoadedModels();
-
-    for (const model of availableModels) {
-      if (this.shouldUpdate(model, currentModels)) {
-        await this.updateModel(model);
-      }
-    }
-  }
-}
-```
-
-### Feature Flags
-
-```typescript
-// Feature flag system
-const featureFlags = {
-  visionSystem: process.env.VITE_ENABLE_VISION === "true",
-  premiumTier: process.env.VITE_ENABLE_PREMIUM === "true",
-  aiCoaching: process.env.VITE_ENABLE_AI_COACHING === "true",
-};
-```
-
-## 📈 Performance Optimization
-
-### Bundle Optimization
-
-```typescript
-// Lazy loading for vision system
-const VisionSystem = lazy(() => import("@/lib/vision"));
-
-// Code splitting by tier
-const BasicVision = lazy(() => import("@/lib/vision/systems/basic-vision"));
-const StandardVision = lazy(
-  () => import("@/lib/vision/systems/standard-vision")
-);
-const PremiumVision = lazy(() => import("@/lib/vision/systems/premium-vision"));
-```
-
-### Caching Strategy
-
-```typescript
-// Intelligent model caching
-class ModelCache {
-  private cache = new Map<string, any>();
-  private maxSize = 100 * 1024 * 1024; // 100MB
-
-  async cacheModel(name: string, model: any): Promise<void> {
-    if (this.getCacheSize() + this.getModelSize(model) > this.maxSize) {
-      await this.evictLeastUsed();
-    }
-
-    this.cache.set(name, {
-      model,
-      lastUsed: Date.now(),
-      size: this.getModelSize(model),
-    });
-  }
-}
-```
-
-## Conclusion
-
-This Technical Guide provides a consolidated overview of the Imperfect Breath platform's architecture, development processes, and operational considerations. It is designed to be a primary resource for developers while referencing specialized documentation for deeper dives into specific areas such as the vision system and project history. The platform is built for production use with robust error handling, security measures, and performance optimizations, ensuring a scalable and maintainable Web3 wellness solution.
+This Technical Guide provides comprehensive documentation for developers working with the Imperfect Breath platform, covering all major technical aspects from setup to deployment and monitoring.

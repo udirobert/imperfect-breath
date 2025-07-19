@@ -35,6 +35,13 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': resolve(__dirname, './src'),
+        'components': resolve(__dirname, './src/components'),
+        'hooks': resolve(__dirname, './src/hooks'),
+        'lib': resolve(__dirname, './src/lib'),
+        'integrations': resolve(__dirname, './src/integrations'),
+        'types': resolve(__dirname, './src/types'),
+        'pages': resolve(__dirname, './src/pages'),
+        'utils': resolve(__dirname, './src/utils'),
         'react': resolve(__dirname, './node_modules/react'),
         'react-dom': resolve(__dirname, './node_modules/react-dom')
       }

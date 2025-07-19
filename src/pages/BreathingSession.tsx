@@ -9,9 +9,13 @@ import {
 } from "../lib/breathingPatterns";
 import { useVision } from "../hooks/useVision";
 import { useAIFeedback } from "../hooks/useAIFeedback";
+import { useMobileCameraManager } from "../lib/vision/MobileCameraManager";
 
 import { SessionSetup } from "../components/session/SessionSetup";
 import { SessionInProgress } from "../components/session/SessionInProgress";
+import { MobileBreathingInterface } from "../components/session/MobileBreathingInterface";
+import { useIsMobile } from "../hooks/use-mobile";
+import { useOfflineManager } from "../lib/offline/OfflineManager";
 
 function getInitialPattern(location: ReturnType<typeof useLocation>) {
   // 1. Try navigation state (preview)
@@ -28,12 +32,24 @@ function getInitialPattern(location: ReturnType<typeof useLocation>) {
 const BreathingSession = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const { saveSession, syncStatus } = useOfflineManager();
 
   const initialPattern = getInitialPattern(location);
   const { state, controls } = useBreathingSession(initialPattern);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraInitialized, setCameraInitialized] = useState(false);
   const [cameraRequested, setCameraRequested] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+  // Mobile camera manager for optimized mobile experience
+  const mobileCameraManager = useMobileCameraManager({
+    performance: {
+      processingInterval: 200, // Optimize for battery
+      batteryOptimized: true,
+      adaptiveQuality: true,
+    },
+  });
 
   // Keep camera tracking active once initialized until session ends
   const isTracking =
@@ -114,6 +130,19 @@ const BreathingSession = () => {
     }
     setCameraInitialized(false);
     setCameraRequested(false);
+    // Save session offline-first
+    const sessionId = saveSession({
+      patternId: state.pattern.id || 'custom',
+      patternName: state.pattern.name,
+      startTime: new Date(Date.now() - state.elapsedTime),
+      endTime: new Date(),
+      duration: sessionDuration,
+      cycleCount: state.cycleCount,
+      breathHoldTime: finalBreathHoldTime,
+      restlessnessScore: finalRestlessnessScore,
+      completed: true,
+    });
+
     controls.endSession();
 
     navigate("/results", {
@@ -122,6 +151,8 @@ const BreathingSession = () => {
         restlessnessScore: finalRestlessnessScore,
         patternName: state.pattern.name,
         sessionDuration,
+        sessionId,
+        isOffline: !syncStatus.isOnline,
       },
     });
   }, [
@@ -138,7 +169,22 @@ const BreathingSession = () => {
     return <SessionSetup state={state} controls={controls} />;
   }
 
-  // Single unified session interface - no more phase-based routing
+  // Mobile-optimized interface or desktop interface
+  if (isMobile && state.isRunning) {
+    return (
+      <MobileBreathingInterface
+        state={state}
+        controls={controls}
+        onEndSession={handleEndSession}
+        cameraEnabled={cameraInitialized}
+        onToggleCamera={handleRequestCamera}
+        voiceEnabled={voiceEnabled}
+        onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
+      />
+    );
+  }
+
+  // Desktop interface or mobile setup
   return (
     <SessionInProgress
       state={state}
