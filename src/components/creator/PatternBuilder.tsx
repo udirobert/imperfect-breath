@@ -9,7 +9,10 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { BreathingPhase } from "../../lib/breathingPatterns";
+import {
+  BreathingPhase,
+  CustomBreathingPhase,
+} from "../../lib/breathingPatterns";
 import { useBreathingSession } from "../../hooks/useBreathingSession";
 import { CustomPattern } from "../../lib/patternStorage";
 
@@ -18,7 +21,7 @@ interface PatternBuilderProps {
   existingPattern?: CustomPattern;
 }
 
-const defaultPhase: BreathingPhase = {
+const defaultPhase: CustomBreathingPhase = {
   name: "inhale",
   duration: 4,
   text: "Breathe in deeply",
@@ -63,8 +66,8 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
     setPattern((prev) => ({ ...prev, phases: newPhases }));
   };
 
-  const addPhase = (name: BreathingPhase["name"]) => {
-    const newPhase: BreathingPhase = {
+  const addPhase = (name: CustomBreathingPhase["name"]) => {
+    const newPhase: CustomBreathingPhase = {
       name,
       duration: 4,
       text:
@@ -79,7 +82,7 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
 
   const updatePhase = (
     index: number,
-    field: keyof BreathingPhase,
+    field: keyof CustomBreathingPhase,
     value: string | number,
   ) => {
     const newPhases = [...pattern.phases];

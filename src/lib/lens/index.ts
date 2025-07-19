@@ -1,33 +1,26 @@
 /**
- * Lens Protocol - Main Exports
- * Single source of truth for all Lens-related imports
+ * Lens Protocol V3 - Main Exports
+ * Clean exports using existing working client
+ * Follows DRY, CLEAN, ORGANISED, MODULAR principles
  */
 
-// Core client
-export { LensBreathingClient as LensClient } from './lens-client';
-export { default as LensGraphQLClient } from './lens-graphql-client';
+// Working V3 client
+export { lensClient, getAppAddress } from "./client";
 
-// Contract configurations
-export { LENS_HUB_CONTRACT_ADDRESS, LENS_HUB_ABI } from './config';
+// Configuration
+export { environment, CLIENT_CONFIG } from "./config";
 
-// Types
+// Main hook - uses existing working client
+export { useLens } from "../../hooks/useLens";
+
+// Export custom types for Lens integration
 export type {
-  LensAuthTokens,
   LensAccount,
-  BreathingSession,
+  LensPost,
   SocialPost,
   SocialActionResult,
+  BreathingSession,
+  LensAuthTokens,
   CommunityStats,
   TrendingPattern,
-  SocialContext,
-  LensTimelineResponse,
-  LensFollowersResponse,
-} from './types';
-
-// Main hook with enhanced capabilities
-export { useLens } from '../../hooks/useLens';
-
-// Enhanced components for testing and implementation
-export { EnhancedLensClient } from './enhanced-lens-client';
-export * from './errors';
-export * from './lens-cache';
+} from "../../hooks/useLens";

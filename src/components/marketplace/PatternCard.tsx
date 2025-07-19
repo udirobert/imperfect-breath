@@ -81,8 +81,8 @@ export const PatternCard: React.FC<PatternCardProps> = ({
 
   // Get actual data from pattern object
   // Safely access properties that might not exist in the type definition
-  const rating = (pattern as any).rating || 0;
-  const reviewCount = (pattern as any).reviews || 0;
+  const rating = (pattern as unknown as { rating?: number }).rating || 0;
+  const reviewCount = (pattern as unknown as { reviews?: number }).reviews || 0;
   const sessionCount = pattern.sessionCount || 0;
 
   return (
@@ -94,7 +94,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
               <AvatarImage src={pattern.instructorAvatar} />
               <AvatarFallback>
                 {getInstructorInitials(
-                  pattern.instructorName || pattern.creator
+                  pattern.instructorName || pattern.creator,
                 )}
               </AvatarFallback>
             </Avatar>
@@ -190,27 +190,8 @@ export const PatternCard: React.FC<PatternCardProps> = ({
 
         {/* Features */}
         <div className="flex items-center gap-2">
-          {pattern.storyProtocol?.isRegistered && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="text-xs flex items-center gap-1 bg-green-50 text-green-700 border-green-200"
-                  >
-                    <ShieldCheck className="h-3 w-3" />
-                    IP Protected
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">
-                    Registered on Story Protocol blockchain
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {(pattern.mediaContent as any)?.instructionalVideo && (
+          {(pattern.mediaContent as unknown as { instructionalVideo?: boolean })
+            ?.instructionalVideo && (
             <Badge
               variant="outline"
               className="text-xs flex items-center gap-1"
@@ -219,7 +200,8 @@ export const PatternCard: React.FC<PatternCardProps> = ({
               Video
             </Badge>
           )}
-          {(pattern.mediaContent as any)?.guidedAudio && (
+          {(pattern.mediaContent as unknown as { guidedAudio?: boolean })
+            ?.guidedAudio && (
             <Badge
               variant="outline"
               className="text-xs flex items-center gap-1"

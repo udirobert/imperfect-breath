@@ -34,8 +34,7 @@ import { useAIAnalysis } from "../hooks/useAIAnalysis";
 import { AI_PROVIDERS, AIConfigManager, SessionData } from "../lib/ai/config";
 import { toast } from "sonner";
 import { useAuth } from "../hooks/useAuth";
-import { useStory } from "../hooks/useStory";
-import { createStoryProtocolMethods } from "../lib/storyProtocolIntegration";
+
 import { EnhancedCustomPattern } from "../types/patterns";
 import { IntegratedSocialFlow } from "../components/social/IntegratedSocialFlow";
 import { SessionCompleteModal } from "../components/unified/SessionCompleteModal";
@@ -56,13 +55,10 @@ const Results = () => {
   const { analyzeSession, analyses, isAnalyzing, error } = useAIAnalysis();
   const hasSavedRef = useRef(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
-  const [ipRegistered, setIpRegistered] = useState(false);
-  const [isRegisteringIP, setIsRegisteringIP] = useState(false);
+
   const [showSessionModal, setShowSessionModal] = useState(true);
-  const [ipAssetId, setIpAssetId] = useState<string | null>(null);
 
   const sessionData = useMemo(() => location.state || {}, [location.state]);
-  const storyHook = useStory();
 
   useEffect(() => {
     if (sessionData.patternName && !hasSavedRef.current && user) {
@@ -125,85 +121,6 @@ const Results = () => {
     await analyzeSession(currentSession);
   };
 
-  const handleRegisterIP = async () => {
-    if (!sessionData.patternName) {
-      toast.error("No session data available for IP registration");
-      return;
-    }
-
-    setIsRegisteringIP(true);
-    try {
-      // Find the breathing pattern from the built-in patterns or create a temporary one
-      // BREATHING_PATTERNS is a Record<string, BreathingPattern>, not an array
-      const patternName = sessionData.patternName;
-      const patternToRegister = Object.values(BREATHING_PATTERNS).find(
-        (pattern) => pattern.name === patternName
-      );
-
-      if (!patternToRegister) {
-        toast.error("Pattern not found for registration");
-        return;
-      }
-
-      // Create a temporary enhanced pattern for registration
-      const enhancedPattern: EnhancedCustomPattern = {
-        id: patternToRegister.id || `pattern_${Date.now()}`,
-        name: patternToRegister.name,
-        description:
-          patternToRegister.description ||
-          `Session recorded on ${new Date().toLocaleDateString()}`,
-        category: "performance",
-        difficulty: "intermediate",
-        duration: sessionData.sessionDuration || 0,
-        creator: user?.profile?.username || "anonymous",
-        phases: patternToRegister.phases,
-        tags: [],
-        targetAudience: [],
-        primaryBenefits: [],
-        secondaryBenefits: [],
-        instructorName: user?.profile?.username || "anonymous",
-        instructorCredentials: [],
-        licenseSettings: {
-          isCommercial: false,
-          price: 0,
-          currency: "ETH",
-          allowDerivatives: true,
-          attribution: true,
-          commercialUse: false,
-          royaltyPercentage: 5,
-        },
-      };
-
-      // Create blockchain methods for this pattern
-      const blockchainMethods = createStoryProtocolMethods(
-        enhancedPattern,
-        storyHook
-      );
-
-      // Register the pattern as an IP asset
-      const registrationResult = await blockchainMethods.register();
-
-      if (registrationResult && registrationResult.ipId) {
-        setIpAssetId(registrationResult.ipId);
-        setIpRegistered(true);
-        toast.success(
-          `Session data registered as IP Asset: ${registrationResult.ipId}`
-        );
-      } else {
-        throw new Error("Registration did not return a valid IP ID");
-      }
-    } catch (error) {
-      console.error("Failed to register IP:", error);
-      toast.error(
-        `Failed to register session as IP asset: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
-    } finally {
-      setIsRegisteringIP(false);
-    }
-  };
-
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
@@ -221,8 +138,8 @@ const Results = () => {
     restlessnessValue < 20
       ? "bg-green-500"
       : restlessnessValue < 50
-      ? "bg-yellow-500"
-      : "bg-red-500";
+        ? "bg-yellow-500"
+        : "bg-red-500";
 
   const handleShare = async () => {
     const summary = `I just completed a mindful breathing session!
@@ -331,62 +248,6 @@ Check out Mindful Breath!`;
           ))}
         </div>
 
-        {/* Story Protocol IP Registration Section */}
-        <div className="mb-8 w-full max-w-4xl">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                IP Protection with Story Protocol
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">
-                Register your breathing session data as intellectual property on
-                Story Protocol. Protect your wellness journey and contribute to
-                the breathing exercise ecosystem.
-              </p>
-              <div className="flex gap-2">
-                {!ipRegistered ? (
-                  <Button
-                    onClick={handleRegisterIP}
-                    disabled={!sessionData.patternName || isRegisteringIP}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                  >
-                    {isRegisteringIP ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Registering IP...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="mr-2 h-4 w-4" />
-                        Register as IP Asset
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button disabled className="bg-green-600">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    IP Asset Registered
-                  </Button>
-                )}
-              </div>
-              {ipRegistered && (
-                <Alert>
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Your session data has been successfully registered as an IP
-                    asset on Story Protocol with ID: {ipAssetId}. This creates a
-                    permanent, verifiable record of your breathing session
-                    performance.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
         {/* AI Analysis Section */}
         {!showAIAnalysis ? (
           <div className="mb-8 w-full max-w-4xl">
@@ -463,7 +324,7 @@ Check out Mindful Breath!`;
                             <Brain className="w-5 h-5" />
                             {
                               AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider
+                                (p) => p.id === analysis.provider,
                               )?.name
                             }{" "}
                             Analysis
@@ -518,7 +379,7 @@ Check out Mindful Breath!`;
                             <TrendingUp className="w-5 h-5" />
                             {
                               AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider
+                                (p) => p.id === analysis.provider,
                               )?.name
                             }{" "}
                             Scores
@@ -529,7 +390,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.overall
+                                  analysis.score.overall,
                                 )}
                               >
                                 {analysis.score.overall}/100
@@ -539,7 +400,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.focus
+                                  analysis.score.focus,
                                 )}
                               >
                                 {analysis.score.focus}/100
@@ -549,7 +410,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.consistency
+                                  analysis.score.consistency,
                                 )}
                               >
                                 {analysis.score.consistency}/100
@@ -559,7 +420,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.progress
+                                  analysis.score.progress,
                                 )}
                               >
                                 {analysis.score.progress}/100

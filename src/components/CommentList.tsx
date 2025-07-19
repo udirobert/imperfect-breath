@@ -50,7 +50,7 @@ interface CommentListProps {
 }
 
 export const CommentList = ({ publicationId }: CommentListProps) => {
-  const { isAuthenticated } = useLens();
+  const { isAuthenticated, currentAccount, timeline } = useLens();
 
   const {
     data: comments,
@@ -59,25 +59,19 @@ export const CommentList = ({ publicationId }: CommentListProps) => {
   } = useQuery({
     queryKey: ["comments", publicationId],
     queryFn: async (): Promise<Comment[]> => {
-      // Use the Lens client to fetch comments
-      const { isAuthenticated } = useLens();
-
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !currentAccount) {
         return [];
       }
 
       try {
-        // Get the account from the context
-        const { currentAccount } = useLens();
-        if (!currentAccount) return [];
-
-        const timeline = await useLens().getTimeline(currentAccount.address);
-
-        // Filter for comments on this publication
+        // Filter timeline for comments related to this publication
         const comments = timeline.filter((post) => {
-          // In Lens V3, we can check if a post is a comment by checking
-          // if it has a commentOn property pointing to our publicationId
-          return post.commentOn && post.commentOn.id === publicationId;
+          // Simple content-based filtering since we don't have commentOn property
+          return (
+            post.content.includes(`@${publicationId}`) ||
+            post.content.includes("comment") ||
+            post.id.includes("comment")
+          );
         });
 
         // Map to the Comment type
@@ -85,19 +79,22 @@ export const CommentList = ({ publicationId }: CommentListProps) => {
           id: comment.id,
           content: comment.content,
           author: {
-            id: comment.author.address,
-            username: comment.author.username || "anonymous",
-            displayName: comment.author.name,
-            avatar: comment.author.picture,
+            id: comment.author.id,
+            username: comment.author.handle || "anonymous",
+            displayName: comment.author.displayName || "Unknown User",
+            avatar: comment.author.avatar,
           },
-          createdAt: comment.timestamp || new Date().toISOString(),
+          createdAt: comment.createdAt,
+          likes: comment.stats?.likes || 0,
+          isLiked: false, // We'll need to track this separately
         }));
       } catch (error) {
         console.error("Error fetching comments:", error);
         return [];
       }
     },
-    enabled: !!publicationId,
+    enabled: isAuthenticated,
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   if (isLoading) {

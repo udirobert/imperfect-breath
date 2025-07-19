@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useFlow } from "../hooks/useFlow";
 import { useLens } from "../hooks/useLens";
+import { useAuth } from "../hooks/useAuth";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -19,8 +20,12 @@ import {
   Info,
   CheckCircle,
   AlertCircle,
+  Link2,
+  ExternalLink,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ConnectWalletButton } from "./wallet/ConnectWalletButton";
 
 export const WalletManager = () => {
   const {
@@ -39,6 +44,9 @@ export const WalletManager = () => {
     currentAccount: session,
     // profile is unused and doesn't exist in the interface
   } = useLens();
+
+  const { hasWallet, wallet, isWeb3User, currentChain, blockchainEnabled } =
+    useAuth();
 
   const [isFlowSetupLoading, setIsFlowSetupLoading] = useState(false);
 
@@ -106,8 +114,22 @@ export const WalletManager = () => {
     return `${flowUser.addr.slice(0, 6)}...${flowUser.addr.slice(-4)}`;
   };
 
+  // Handle wallet address copy
+  const handleCopyAddress = async (address: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      toast.success(`${label} address copied to clipboard`);
+    } catch (error) {
+      toast.error("Failed to copy address");
+    }
+  };
+
   return (
     <div className="flex items-center space-x-2">
+      {/* ConnectKit Wallet (EVM Chains) */}
+      {blockchainEnabled && (
+        <ConnectWalletButton variant="outline" size="sm" showChainInfo={true} />
+      )}
       {/* Flow Wallet */}
       {flowUser?.loggedIn ? (
         <DropdownMenu>
@@ -129,7 +151,7 @@ export const WalletManager = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Flow Blockchain (Wallet)
+              Flow Blockchain (NFTs)
             </DropdownMenuLabel>
             <DropdownMenuItem
               disabled
@@ -141,6 +163,13 @@ export const WalletManager = () => {
               </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleCopyAddress(flowUser.addr || "", "Flow")}
+              className="flex items-center space-x-2"
+            >
+              <Copy className="w-4 h-4" />
+              <span>Copy Address</span>
+            </DropdownMenuItem>
             <DropdownMenuItem className="flex items-center space-x-2 text-blue-600">
               <Info className="w-4 h-4" />
               <span>Used for breathing NFTs</span>
@@ -163,7 +192,7 @@ export const WalletManager = () => {
           className="flex items-center space-x-2"
         >
           <Wallet className="w-4 h-4" />
-          <span>Flow (wallet)</span>
+          <span>Flow (NFTs)</span>
         </Button>
       )}
 
@@ -212,6 +241,15 @@ export const WalletManager = () => {
               </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {session?.address && (
+              <DropdownMenuItem
+                onClick={() => handleCopyAddress(session.address, "Lens")}
+                className="flex items-center space-x-2"
+              >
+                <Copy className="w-4 h-4" />
+                <span>Copy Address</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem className="flex items-center space-x-2 text-blue-600">
               <Info className="w-4 h-4" />
               <span>Used for social features</span>
@@ -241,6 +279,21 @@ export const WalletManager = () => {
             <div className="w-3 h-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           )}
         </Button>
+      )}
+
+      {/* Connection Status Indicator */}
+      {(hasWallet || flowUser?.loggedIn || isAuthenticated) && (
+        <div className="flex items-center space-x-1">
+          <Badge variant="outline" className="text-xs">
+            {[
+              hasWallet && currentChain,
+              flowUser?.loggedIn && "Flow",
+              isAuthenticated && "Lens",
+            ]
+              .filter(Boolean)
+              .join(" + ") || "Connected"}
+          </Badge>
+        </div>
       )}
 
       {/* Error Display */}

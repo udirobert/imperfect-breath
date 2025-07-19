@@ -11,9 +11,7 @@ import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
 import { Label } from "../../components/ui/label";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import type { EnhancedCustomPattern } from "../../types/patterns";
-import { useStory } from "../../hooks/useStory";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { createStoryProtocolMethods } from "../../lib/storyProtocolIntegration";
 import { useAccount } from "wagmi";
 
 interface PurchaseFlowProps {
@@ -59,30 +57,12 @@ export const PurchaseFlow: React.FC<PurchaseFlowProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { address } = useAccount();
-  const {
-    registerBreathingPatternIP,
-    setLicensingTerms,
-    isLoading: storyLoading,
-    error: storyError,
-  } = useStory();
+  // Story Protocol functionality removed
 
   // Initialize blockchain methods if not already present
   useEffect(() => {
-    if (!pattern.blockchainMethods) {
-      pattern.blockchainMethods = createStoryProtocolMethods(pattern, {
-        registerBreathingPatternIP,
-        setLicensingTerms,
-        getIPAsset: async () => null,
-        isLoading: false,
-        error: null,
-        userIPAssets: [],
-        client: null,
-        trackDerivativeWork: async () => null,
-        getUserIPAssets: async () => [],
-        calculateRoyalties: async () => ({ creator: 0, platform: 0 }),
-      });
-    }
-  }, [pattern, registerBreathingPatternIP, setLicensingTerms]);
+    // Story Protocol methods removed - using simplified flow
+  }, [pattern]);
 
   const handlePurchase = async () => {
     if (!address) {
@@ -98,7 +78,7 @@ export const PurchaseFlow: React.FC<PurchaseFlowProps> = ({
 
       // Find the selected license details
       const licenseOption = licenseOptions.find(
-        (option) => option.id === selectedLicense
+        (option) => option.id === selectedLicense,
       );
       if (!licenseOption) {
         throw new Error("Invalid license option selected");
@@ -129,7 +109,7 @@ export const PurchaseFlow: React.FC<PurchaseFlowProps> = ({
     } catch (err) {
       console.error("Purchase failed:", err);
       setError(
-        err instanceof Error ? err.message : "Failed to complete purchase"
+        err instanceof Error ? err.message : "Failed to complete purchase",
       );
       setIsLoading(false);
     }

@@ -143,7 +143,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
       : 0;
   const reviewCount = reviews.length;
   const sessionCount = pattern.sessionCount || 0;
-  const isPremium = pattern.licenseSettings.isCommercial;
+  const isPremium = pattern.licenseSettings.commercialUse;
   const needsPurchase = isPremium && !hasAccess;
 
   const handlePlay = () => {
@@ -183,7 +183,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                     <AvatarImage src={pattern.instructorAvatar} />
                     <AvatarFallback className="text-lg">
                       {getInstructorInitials(
-                        pattern.instructorName || pattern.creator
+                        pattern.instructorName || pattern.creator,
                       )}
                     </AvatarFallback>
                   </Avatar>
@@ -314,7 +314,11 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                   <div className="space-y-3">
                     <h3 className="font-semibold">Included Content</h3>
                     <div className="grid grid-cols-2 gap-3">
-                      {(pattern.mediaContent as any)?.instructionalVideo && (
+                      {(
+                        pattern.mediaContent as unknown as {
+                          instructionalVideo?: boolean;
+                        }
+                      )?.instructionalVideo && (
                         <Card>
                           <CardContent className="p-3 flex items-center gap-2">
                             <Video className="h-4 w-4" />
@@ -322,7 +326,11 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                           </CardContent>
                         </Card>
                       )}
-                      {(pattern.mediaContent as any)?.guidedAudio && (
+                      {(
+                        pattern.mediaContent as unknown as {
+                          guidedAudio?: boolean;
+                        }
+                      )?.guidedAudio && (
                         <Card>
                           <CardContent className="p-3 flex items-center gap-2">
                             <Volume2 className="h-4 w-4" />
@@ -330,7 +338,11 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                           </CardContent>
                         </Card>
                       )}
-                      {(pattern.mediaContent as any)?.backgroundMusic && (
+                      {(
+                        pattern.mediaContent as unknown as {
+                          backgroundMusic?: boolean;
+                        }
+                      )?.backgroundMusic && (
                         <Card>
                           <CardContent className="p-3 flex items-center gap-2">
                             <Volume2 className="h-4 w-4" />
@@ -338,7 +350,11 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                           </CardContent>
                         </Card>
                       )}
-                      {(pattern.mediaContent as any)?.visualGuide && (
+                      {(
+                        pattern.mediaContent as unknown as {
+                          visualGuide?: boolean;
+                        }
+                      )?.visualGuide && (
                         <Card>
                           <CardContent className="p-3 flex items-center gap-2">
                             <BookOpen className="h-4 w-4" />
@@ -377,7 +393,8 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                               <Badge variant="outline">{phase.duration}s</Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {phase.instruction || phase.text}
+                              {(phase as { text?: string }).text ||
+                                `${phase.name} for ${phase.duration} seconds`}
                             </p>
                           </CardContent>
                         </Card>
@@ -501,7 +518,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                                       <Badge key={index} variant="secondary">
                                         {credential}
                                       </Badge>
-                                    )
+                                    ),
                                   )}
                                 </div>
                               </div>
@@ -569,7 +586,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                                 </h5>
                                 <p className="text-sm text-muted-foreground">
                                   {pattern.storyProtocol?.licenseTerms
-                                    ?.commercial ||
+                                    ?.commercialUse ||
                                   pattern.licenseSettings.commercialUse
                                     ? "Allowed"
                                     : "Not Allowed"}
@@ -580,9 +597,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                                   Derivatives
                                 </h5>
                                 <p className="text-sm text-muted-foreground">
-                                  {pattern.storyProtocol?.licenseTerms
-                                    ?.derivatives ||
-                                  pattern.licenseSettings.allowDerivatives
+                                  {pattern.licenseSettings.derivativeWorks
                                     ? "Allowed"
                                     : "Not Allowed"}
                                 </p>
@@ -592,9 +607,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                                   Attribution
                                 </h5>
                                 <p className="text-sm text-muted-foreground">
-                                  {pattern.storyProtocol?.licenseTerms
-                                    ?.attribution ||
-                                  pattern.licenseSettings.attribution
+                                  {pattern.licenseSettings.attributionRequired
                                     ? "Required"
                                     : "Not Required"}
                                 </p>
@@ -602,10 +615,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                               <div className="p-3 bg-muted rounded-lg">
                                 <h5 className="text-sm font-medium">Royalty</h5>
                                 <p className="text-sm text-muted-foreground">
-                                  {pattern.storyProtocol?.licenseTerms
-                                    ?.royaltyPercentage ||
-                                    pattern.licenseSettings.royaltyPercentage}
-                                  %
+                                  {pattern.licenseSettings.royaltyPercent}%
                                 </p>
                               </div>
                             </div>
@@ -660,28 +670,6 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                   <p className="text-sm text-muted-foreground">
                     {pattern.postSessionNotes}
                   </p>
-                </div>
-              )}
-
-              {/* Story Protocol Attribution */}
-              {pattern.storyProtocol?.isRegistered && (
-                <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground mt-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1">
-                          <ShieldCheck className="h-3 w-3" />
-                          <span>Protected by Story Protocol</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          This pattern is registered on the Story Protocol
-                          blockchain for IP protection
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                 </div>
               )}
             </div>

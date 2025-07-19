@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { WalletUser, UserWallet } from "../types/blockchain";
+import { useAccount, useConnect, useDisconnect, useChainId } from "wagmi";
+import { useConnectModal } from "connectkit";
 
 // Blockchain features configuration
-const BLOCKCHAIN_FEATURES_ENABLED = false;
+const BLOCKCHAIN_FEATURES_ENABLED = true;
 
 export type UserRole = "user" | "creator" | "instructor";
 
@@ -21,6 +23,13 @@ export const useAuth = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Wagmi hooks for wallet integration
+  const { address, isConnected, chain } = useAccount();
+  const { connect, connectors, isPending: isConnecting } = useConnect();
+  const { disconnect } = useDisconnect();
+  const chainId = useChainId();
+  const { setOpen: openConnectModal } = useConnectModal();
+
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -31,10 +40,10 @@ export const useAuth = () => {
 
       if (error) {
         // If no profile exists, create one
-        if (error.code === 'PGRST116') {
+        if (error.code === "PGRST116") {
           const { data: newUser, error: insertError } = await supabase
-            .from('users')
-            .insert({ id: userId, role: 'user' })
+            .from("users")
+            .insert({ id: userId, role: "user" })
             .select()
             .single();
           if (insertError) throw insertError;
@@ -60,7 +69,9 @@ export const useAuth = () => {
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setSession(session);
       if (session?.user) {
         await fetchProfile(session.user.id);
@@ -70,7 +81,9 @@ export const useAuth = () => {
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
       async (_event: string, session: Session | null) => {
         setSession(session);
         if (session?.user) {
@@ -78,7 +91,7 @@ export const useAuth = () => {
         } else {
           setProfile(null);
         }
-      }
+      },
     );
 
     return () => {
@@ -120,23 +133,69 @@ export const useAuth = () => {
     }
   }, [session]);
 
-  // Temporarily disabled blockchain features
-  const loginWithWallet = useCallback(async () => {
-    alert("Wallet features coming soon! ConnectKit integration in progress.");
-    throw new Error("Blockchain features not yet available");
-  }, []);
-
+  // Enhanced wallet connection with ConnectKit
   const connectWallet = useCallback(async () => {
-    alert("Wallet features coming soon! ConnectKit integration in progress.");
-    throw new Error("Blockchain features not yet available");
-  }, []);
+    try {
+      if (isConnected) {
+        console.log("Wallet already connected:", address);
+        return;
+      }
+
+      // Open ConnectKit modal
+      openConnectModal(true);
+    } catch (error) {
+      console.error("Wallet connection failed:", error);
+      throw error;
+    }
+  }, [isConnected, address, openConnectModal]);
+
+  const loginWithWallet = useCallback(async () => {
+    try {
+      if (!address) {
+        await connectWallet();
+        return;
+      }
+
+      // Create or link wallet to existing profile
+      if (session?.user) {
+        // Link wallet to existing Supabase user
+        const { error } = await supabase
+          .from("users")
+          .update({
+            wallet_address: address,
+            preferred_chain: chain?.name || "ethereum",
+          })
+          .eq("id", session.user.id);
+
+        if (error) throw error;
+        await refreshProfile();
+      } else {
+        // Create new account with wallet authentication
+        // Note: This would typically require a signature verification flow
+        console.log("Wallet-only authentication not yet implemented");
+        throw new Error(
+          "Please sign up with email first, then connect your wallet",
+        );
+      }
+    } catch (error) {
+      console.error("Wallet login failed:", error);
+      throw error;
+    }
+  }, [address, session, chain, connectWallet, refreshProfile]);
 
   const user = session?.user
     ? {
         id: session.user.id,
         email: session.user.email,
         ...profile, // Spread profile details into user object
-        wallet: null,
+        wallet: isConnected
+          ? {
+              address,
+              chain: chain?.name,
+              chainId: chain?.id,
+              isConnected,
+            }
+          : null,
         profile: {
           username: session.user.user_metadata?.username,
           displayName: session.user.user_metadata?.display_name,
@@ -148,29 +207,66 @@ export const useAuth = () => {
     : null;
 
   return {
-    // Legacy Supabase auth (working)
+    // Enhanced Supabase auth with wallet support
     session,
     user,
     profile,
     loading,
     loginWithEmail,
     signUpWithEmail,
-    logout,
+    logout: useCallback(async () => {
+      try {
+        if (session) {
+          await supabase.auth.signOut();
+        }
+        if (isConnected) {
+          disconnect();
+        }
+        setSession(null);
+        setProfile(null);
+      } catch (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
+    }, [session, isConnected, disconnect]),
     refreshProfile,
 
-    // Blockchain features (disabled)
-    walletUser: null,
-    wallet: null,
-    walletConnection: { isConnected: false },
+    // Enhanced blockchain features
+    walletUser: isConnected ? { address, chainId } : null,
+    wallet: isConnected
+      ? {
+          address,
+          chain: chain?.name,
+          chainId: chain?.id,
+          isConnected,
+        }
+      : null,
+    walletConnection: {
+      isConnected,
+      isConnecting,
+      chain: chain?.name,
+      chainId: chain?.id,
+    },
     loginWithWallet,
     connectWallet,
+    disconnectWallet: disconnect,
 
     // Helper properties
     isAuthenticated: !!user,
-    hasWallet: false,
-    isWeb3User: false,
+    hasWallet: isConnected && !!address,
+    isWeb3User: isConnected && !!address && !!session,
 
-    // Feature flags
+    // Feature flags and chain info
     blockchainEnabled: BLOCKCHAIN_FEATURES_ENABLED,
+    supportedChains: [
+      "ethereum",
+      "polygon",
+      "arbitrum",
+      "base",
+      "lens",
+      "story",
+    ],
+    currentChain: chain?.name || null,
+    currentChainId: chain?.id || null,
   };
 };

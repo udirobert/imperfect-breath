@@ -212,7 +212,7 @@ export interface BlockchainConfig {
     apiKey: string;
     environment: "staging" | "production";
   };
-  storyProtocol: {
+  storyProtocol?: {
     apiKey: string;
     chainId: number;
     contractAddress: string;

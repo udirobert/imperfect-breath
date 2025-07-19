@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
+import { useAccount } from "wagmi";
 import { useLens } from "../hooks/useLens";
 
 interface CommentFormProps {
@@ -14,7 +15,9 @@ export const CommentForm = ({
   onCommentPosted,
 }: CommentFormProps) => {
   const [commentText, setCommentText] = useState("");
-  const { isAuthenticated, authenticate, isLoading } = useLens();
+  const { address } = useAccount();
+  const { isAuthenticated, authenticate, isAuthenticating, commentOnPost } =
+    useLens();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +29,7 @@ export const CommentForm = ({
     if (!isAuthenticated) {
       toast.info("Please connect your Lens profile to comment.");
       try {
-        await authenticate();
+        await authenticate(address || "");
       } catch (error) {
         toast.error("Failed to authenticate with Lens.");
         return;
@@ -37,7 +40,6 @@ export const CommentForm = ({
       toast.info("Posting comment...");
 
       // Use the Lens Client to post a comment
-      const { commentOnPost } = useLens();
       const result = await commentOnPost(publicationId, commentText);
 
       if (!result.success) {
@@ -45,7 +47,9 @@ export const CommentForm = ({
       }
 
       setCommentText("");
-      onCommentPosted?.(result.hash);
+      onCommentPosted?.(
+        result.transactionHash || result.postId || "comment-posted",
+      );
       toast.success("Comment posted successfully!");
     } catch (error) {
       console.error("Comment posting failed:", error);
@@ -60,15 +64,15 @@ export const CommentForm = ({
         onChange={(e) => setCommentText(e.target.value)}
         placeholder="Write a comment..."
         className="min-h-[80px] resize-none"
-        disabled={isLoading}
+        disabled={isAuthenticating}
       />
       <div className="flex justify-end">
         <Button
           type="submit"
-          disabled={isLoading || !commentText.trim()}
+          disabled={isAuthenticating || !commentText.trim()}
           size="sm"
         >
-          {isLoading ? "Posting..." : "Post Comment"}
+          {isAuthenticating ? "Posting..." : "Post Comment"}
         </Button>
       </div>
     </form>

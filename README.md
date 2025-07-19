@@ -50,7 +50,7 @@ bun run dev
 - **Wallet connection** → Flow, Ethereum, or Lens Chain
 - **NFT creation** → Mint exceptional sessions
 - **Social sharing** → Lens Protocol integration
-- **IP protection** → Story Protocol registration
+- **Content ownership** → Decentralized storage
 
 ## 🏗️ Architecture Overview
 
@@ -63,8 +63,7 @@ bun run dev
 ├── 🔄 Progressive Authentication (email → wallet)
 └── ⛓️ Multichain Integration
     ├── Flow Blockchain (NFTs & Marketplace)
-    ├── Story Protocol (IP & Royalties)
-    └── Lens Protocol (Social & Community)
+    └── Lens Protocol V3 (Social & Community)
 ```
 
 ### Technology Stack
@@ -88,8 +87,7 @@ bun run dev
 **Blockchain**
 
 - **Flow Blockchain** - NFT minting and marketplace
-- **Story Protocol** - IP registration and royalties
-- **Lens Protocol** - Decentralized social features
+- **Lens Protocol V3** - Decentralized social features with gasless transactions
 - **ConnectKit/Avara** - Unified wallet connection
 
 **Backend & Data**
@@ -131,8 +129,8 @@ bun run dev
 ### ⛓️ Blockchain Features
 
 - **NFT Creation** - Mint exceptional breathing sessions as unique NFTs
-- **IP Protection** - Register custom patterns with Story Protocol
-- **Social Sharing** - Share achievements on Lens Protocol
+- **Content Ownership** - Decentralized storage with Grove
+- **Social Sharing** - Share achievements on Lens Protocol V3
 - **Creator Economy** - Earn from pattern sales and licensing
 - **Marketplace** - Buy and sell breathing patterns and courses
 
@@ -213,7 +211,7 @@ Complete technical documentation for developers:
 - Development setup and workflow
 - AI agent integration (Eliza framework)
 - Computer vision system (three-tier architecture)
-- Blockchain integration (Flow, Story, Lens)
+- Blockchain integration (Flow, Lens V3)
 - Database schema and API design
 - Security considerations and testing
 
@@ -234,7 +232,7 @@ Comprehensive user experience documentation:
 Project evolution and deployment procedures:
 
 - Mobile-first strategic pivot
-- Blockchain migration status (Lens V3, Flow, Story)
+- Blockchain migration status (Lens V3, Flow)
 - Architectural consolidation summary
 - Complete deployment procedures
 - Monitoring and security considerations
@@ -263,7 +261,7 @@ Project evolution and deployment procedures:
 ### 4. **Advanced Features**
 
 - Create custom breathing patterns
-- Register IP with Story Protocol
+- Share patterns with the community
 - Become a certified instructor
 - Earn from pattern sales
 
@@ -327,7 +325,7 @@ bun run lint
 ### Q2 2024 - Social & IP ✅
 
 - ✅ Lens Protocol social features
-- ✅ Story Protocol IP protection
+- ✅ Decentralized content storage
 - ✅ NFT marketplace
 - ✅ Creator economy features
 

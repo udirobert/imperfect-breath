@@ -4,6 +4,9 @@ import {
   Droppable,
   Draggable,
   DropResult,
+  DroppableProvided,
+  DraggableProvided,
+  DraggableStateSnapshot,
 } from "react-beautiful-dnd";
 import {
   Plus,
@@ -42,7 +45,11 @@ import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { Slider } from "../ui/slider";
 import { Separator } from "../ui/separator";
-import { BreathingPhase } from "../../lib/breathingPatterns";
+import {
+  BreathingPhase,
+  BreathingPhaseName,
+  CustomBreathingPhase,
+} from "../../lib/breathingPatterns";
 import {
   EnhancedCustomPattern,
   MediaContent,
@@ -110,7 +117,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
   const calculateDuration = useCallback(() => {
     const totalDuration = pattern.phases.reduce(
       (sum, phase) => sum + (phase.duration || 0),
-      0
+      0,
     );
     setPattern((prev) => ({ ...prev, duration: totalDuration }));
   }, [pattern.phases]);
@@ -129,17 +136,17 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
     setPattern((prev) => ({ ...prev, phases: newPhases }));
   };
 
-  const addPhase = (type: BreathingPhase["name"]) => {
-    const phaseTexts = {
-      inhale: "Breathe in deeply through your nose",
+  const addPhase = (type: BreathingPhaseName) => {
+    const phaseTexts: Record<BreathingPhaseName, string> = {
+      inhale: "Breathe in slowly through your nose",
       exhale: "Breathe out slowly through your mouth",
       hold: "Hold your breath gently",
-      pause: "Natural pause - breathe normally",
+      rest: "Natural pause - breathe normally",
     };
 
-    const newPhase: BreathingPhase = {
+    const newPhase: CustomBreathingPhase = {
       name: type,
-      duration: type === "hold" ? 7000 : type === "pause" ? 2000 : 4000,
+      duration: type === "hold" ? 7000 : type === "rest" ? 2000 : 4000,
       text: phaseTexts[type] || "Follow your breath",
     };
 
@@ -148,8 +155,8 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
 
   const updatePhase = (
     index: number,
-    field: keyof BreathingPhase,
-    value: string | number
+    field: keyof CustomBreathingPhase,
+    value: string | number,
   ) => {
     const newPhases = [...pattern.phases];
     newPhases[index] = { ...newPhases[index], [field]: value };
@@ -206,15 +213,20 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
       | "guidedAudio"
       | "backgroundMusic"
       | "visualGuide",
-    url: string
+    url: string,
   ) => {
     setPattern((prev) => {
-      const newMediaContent = { ...(prev.mediaContent as object) };
-      (newMediaContent as any)[type] = {
-        ...((newMediaContent as any)[type] || {}),
+      const newMediaContent = {
+        ...(prev.mediaContent as Record<string, unknown>),
+      };
+      (newMediaContent as Record<string, unknown>)[type] = {
+        ...((newMediaContent as Record<string, unknown>)[type] || {}),
         url,
       };
-      return { ...prev, mediaContent: newMediaContent };
+      return {
+        ...prev,
+        mediaContent: newMediaContent as typeof prev.mediaContent,
+      };
     });
   };
 
@@ -309,8 +321,16 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                       <Label>Category</Label>
                       <Select
                         value={pattern.category}
-                        onValueChange={(value: any) =>
-                          setPattern((prev) => ({ ...prev, category: value }))
+                        onValueChange={(value: string) =>
+                          setPattern((prev) => ({
+                            ...prev,
+                            category: value as
+                              | "stress"
+                              | "sleep"
+                              | "energy"
+                              | "focus"
+                              | "performance",
+                          }))
                         }
                       >
                         <SelectTrigger className="mt-1">
@@ -338,8 +358,14 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                       <Label>Difficulty</Label>
                       <Select
                         value={pattern.difficulty}
-                        onValueChange={(value: any) =>
-                          setPattern((prev) => ({ ...prev, difficulty: value }))
+                        onValueChange={(value: string) =>
+                          setPattern((prev) => ({
+                            ...prev,
+                            difficulty: value as
+                              | "beginner"
+                              | "intermediate"
+                              | "advanced",
+                          }))
                         }
                       >
                         <SelectTrigger className="mt-1">
@@ -362,7 +388,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                     <Label>Expected Session Duration (minutes)</Label>
                     <div className="mt-1">
                       <Slider
-                        value={[pattern.expectedDuration]}
+                        value={[pattern.expectedDuration || 10]}
                         onValueChange={(value) =>
                           setPattern((prev) => ({
                             ...prev,
@@ -388,7 +414,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                     <Label>Recommended Sessions/Week</Label>
                     <div className="mt-1">
                       <Slider
-                        value={[pattern.sessionCount]}
+                        value={[pattern.sessionCount || 3]}
                         onValueChange={(value) =>
                           setPattern((prev) => ({
                             ...prev,
@@ -534,10 +560,10 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => addPhase("pause")}
+                    onClick={() => addPhase("rest")}
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Pause
+                    Rest
                   </Button>
                 </div>
               </CardTitle>
@@ -557,7 +583,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
               ) : (
                 <DragDropContext onDragEnd={onDragEnd}>
                   <Droppable droppableId="phases">
-                    {(provided) => (
+                    {(provided: DroppableProvided) => (
                       <div
                         {...provided.droppableProps}
                         ref={provided.innerRef}
@@ -569,7 +595,10 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                             draggableId={`phase-${index}`}
                             index={index}
                           >
-                            {(provided, snapshot) => (
+                            {(
+                              provided: DraggableProvided,
+                              snapshot: DraggableStateSnapshot,
+                            ) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
@@ -610,18 +639,19 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                                     <Input
                                       type="number"
                                       value={Math.round(
-                                        (phase.duration || 0) / 1000
+                                        (phase.duration || 0) / 1000,
                                       )}
                                       onChange={(e) =>
                                         updatePhase(
                                           index,
                                           "duration",
-                                          parseInt(e.target.value) * 1000
+                                          (parseInt(e.target.value) || 0) *
+                                            1000,
                                         )
                                       }
                                       min="1"
                                       max="60"
-                                      className="mt-1"
+                                      className="w-20"
                                     />
                                   </div>
                                   <div>
@@ -634,7 +664,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                                         updatePhase(
                                           index,
                                           "text",
-                                          e.target.value
+                                          e.target.value,
                                         )
                                       }
                                       placeholder="Instruction for this phase..."
@@ -677,7 +707,11 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                 </div>
                 <Input
                   value={
-                    (pattern.mediaContent as any)?.instructionalVideo?.url || ""
+                    (
+                      pattern.mediaContent as unknown as {
+                        instructionalVideo?: { url?: string };
+                      }
+                    )?.instructionalVideo?.url || ""
                   }
                   onChange={(e) =>
                     updateMediaContent("instructionalVideo", e.target.value)
@@ -699,7 +733,13 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   <Label className="font-medium">Guided Audio Session</Label>
                 </div>
                 <Input
-                  value={(pattern.mediaContent as any)?.guidedAudio?.url || ""}
+                  value={
+                    (
+                      pattern.mediaContent as unknown as {
+                        guidedAudio?: { url?: string };
+                      }
+                    )?.guidedAudio?.url || ""
+                  }
                   onChange={(e) =>
                     updateMediaContent("guidedAudio", e.target.value)
                   }
@@ -722,7 +762,11 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                 </div>
                 <Input
                   value={
-                    (pattern.mediaContent as any)?.backgroundMusic?.url || ""
+                    (
+                      pattern.mediaContent as unknown as {
+                        backgroundMusic?: { url?: string };
+                      }
+                    )?.backgroundMusic?.url || ""
                   }
                   onChange={(e) =>
                     updateMediaContent("backgroundMusic", e.target.value)
@@ -743,7 +787,13 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   <Label className="font-medium">Visual Guide (Optional)</Label>
                 </div>
                 <Input
-                  value={(pattern.mediaContent as any)?.visualGuide?.url || ""}
+                  value={
+                    (
+                      pattern.mediaContent as unknown as {
+                        visualGuide?: { url?: string };
+                      }
+                    )?.visualGuide?.url || ""
+                  }
                   onChange={(e) =>
                     updateMediaContent("visualGuide", e.target.value)
                   }
@@ -786,10 +836,13 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                     <Label>Evidence Level</Label>
                     <Select
                       value={newBenefit.evidenceLevel}
-                      onValueChange={(value: any) =>
+                      onValueChange={(value: string) =>
                         setNewBenefit((prev) => ({
                           ...prev,
-                          evidenceLevel: value,
+                          evidenceLevel: value as
+                            | "scientific"
+                            | "anecdotal"
+                            | "traditional",
                         }))
                       }
                     >
@@ -893,20 +946,20 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                     </p>
                   </div>
                   <Switch
-                    checked={pattern.licenseSettings.isCommercial}
+                    checked={pattern.licenseSettings.commercialUse}
                     onCheckedChange={(checked) =>
                       setPattern((prev) => ({
                         ...prev,
                         licenseSettings: {
                           ...prev.licenseSettings,
-                          isCommercial: checked,
+                          commercialUse: checked,
                         },
                       }))
                     }
                   />
                 </div>
 
-                {pattern.licenseSettings.isCommercial && (
+                {pattern.licenseSettings.commercialUse && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -954,24 +1007,25 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                         <Label>Royalty Percentage</Label>
                         <div className="mt-1">
                           <Slider
-                            value={[pattern.licenseSettings.royaltyPercentage]}
+                            value={[pattern.licenseSettings.royaltyPercent]}
                             onValueChange={(value) =>
                               setPattern((prev) => ({
                                 ...prev,
                                 licenseSettings: {
                                   ...prev.licenseSettings,
-                                  royaltyPercentage: value[0],
+                                  royaltyPercent: value[0],
                                 },
                               }))
                             }
                             max={25}
                             min={0}
                             step={1}
+                            className="w-full"
                           />
                           <div className="flex justify-between text-sm text-muted-foreground mt-1">
                             <span>0%</span>
                             <span className="font-medium">
-                              {pattern.licenseSettings.royaltyPercentage}%
+                              {pattern.licenseSettings.royaltyPercent}%
                             </span>
                             <span>25%</span>
                           </div>
@@ -993,13 +1047,13 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                             </p>
                           </div>
                           <Switch
-                            checked={pattern.licenseSettings.allowDerivatives}
+                            checked={pattern.licenseSettings.derivativeWorks}
                             onCheckedChange={(checked) =>
                               setPattern((prev) => ({
                                 ...prev,
                                 licenseSettings: {
                                   ...prev.licenseSettings,
-                                  allowDerivatives: checked,
+                                  derivativeWorks: checked,
                                 },
                               }))
                             }
@@ -1014,13 +1068,15 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                             </p>
                           </div>
                           <Switch
-                            checked={pattern.licenseSettings.attribution}
+                            checked={
+                              pattern.licenseSettings.attributionRequired
+                            }
                             onCheckedChange={(checked) =>
                               setPattern((prev) => ({
                                 ...prev,
                                 licenseSettings: {
                                   ...prev.licenseSettings,
-                                  attribution: checked,
+                                  attributionRequired: checked,
                                 },
                               }))
                             }

@@ -14,13 +14,13 @@ import DiagnosticPage from "@/pages/DiagnosticPage";
 import CreatePattern from "@/pages/CreatePattern";
 import CommunityFeed from "@/pages/CommunityFeed";
 import UserProfile from "@/pages/UserProfile";
-import StoryIPDemo from "@/pages/StoryIPDemo";
 import LensV3TestPage from "@/pages/LensV3TestPage";
 import InstructorOnboarding from "@/pages/InstructorOnboarding";
 import MainLayout from "@/components/MainLayout";
 import FlowBatchDemo from "@/pages/FlowBatchDemo";
 import FlowIntegrationExample from "@/components/examples/FlowIntegrationExample";
 import MobileOnboarding from "@/pages/MobileOnboarding";
+import WalletTestPage from "@/pages/WalletTestPage";
 
 function App() {
   return (
@@ -48,12 +48,10 @@ function App() {
         <Route path="/auth" element={<Auth />} />
         <Route path="/onboarding" element={<MobileOnboarding />} />
         <Route path="/diagnostic" element={<DiagnosticPage />} />
-        <Route path="/story-demo" element={<StoryIPDemo />} />
         <Route path="/lens-demo" element={<LensV3TestPage />} />
         <Route path="/flow-batch-demo" element={<FlowBatchDemo />} />
         <Route path="/flow-integration" element={<FlowIntegrationExample />} />
-
-        {/* Story Protocol is now integrated into the marketplace */}
+        <Route path="/wallet-test" element={<WalletTestPage />} />
 
         {/* Catch all route */}
         <Route path="*" element={<NotFound />} />

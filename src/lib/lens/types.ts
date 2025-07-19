@@ -53,6 +53,9 @@ export interface SocialPost {
     tags: string[];
     appId: string;
   };
+  commentOn?: {
+    id: string;
+  };
 }
 
 export interface CommunityStats {
@@ -66,7 +69,7 @@ export interface TrendingPattern {
   name: string;
   usageCount: number;
   avgScore: number;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
   description?: string;
 }
 
@@ -80,6 +83,7 @@ export interface SocialContext {
 export interface SocialActionResult {
   success: boolean;
   hash?: string;
+  id?: string;
   error?: string;
 }
 

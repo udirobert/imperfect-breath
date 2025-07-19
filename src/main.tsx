@@ -3,10 +3,8 @@ import "./wallet-shim"; // Wallet compatibility layer must be loaded early
 import React from "react"; // Explicitly import React to ensure it's available
 import ReactDOM from "react-dom"; // Explicitly import ReactDOM to ensure it's available
 import { createRoot } from "react-dom/client";
-import { WagmiProvider } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { EnhancedWeb3Provider } from "./providers/EnhancedWeb3Provider";
 import { LensProvider } from "./providers/LensProvider";
-import { config } from "./lib/wagmi";
 import App from "./App.tsx";
 import "./index.css";
 import { runEnvironmentChecks } from "./utils/environment-check";
@@ -23,15 +21,7 @@ console.log("Environment check results:", envCheck);
 // Initialize mobile optimizations
 optimizeForMobile();
 
-// Create query client with retry options optimized for production
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: process.env.NODE_ENV === "production" ? 3 : 1,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    },
-  },
-});
+// Query client is now handled by EnhancedWeb3Provider
 
 // Error handling for the root element
 const rootElement = document.getElementById("root");
@@ -50,14 +40,12 @@ if (!rootElement) {
   try {
     createRoot(rootElement).render(
       <React.StrictMode>
-        <WagmiProvider config={config}>
-          <QueryClientProvider client={queryClient}>
-            <LensProvider>
-              <App />
-            </LensProvider>
-          </QueryClientProvider>
-        </WagmiProvider>
-      </React.StrictMode>
+        <EnhancedWeb3Provider>
+          <LensProvider>
+            <App />
+          </LensProvider>
+        </EnhancedWeb3Provider>
+      </React.StrictMode>,
     );
   } catch (error) {
     console.error("Error rendering the application:", error);

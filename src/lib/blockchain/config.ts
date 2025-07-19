@@ -13,7 +13,9 @@ const getEnvVar = (name: string, fallback?: string): string => {
 
 // Blockchain configuration
 export const blockchainConfig: BlockchainConfig = {
-  environment: getEnvVar("VITE_BLOCKCHAIN_ENVIRONMENT", "testnet") as "mainnet" | "testnet",
+  environment: getEnvVar("VITE_BLOCKCHAIN_ENVIRONMENT", "testnet") as
+    | "mainnet"
+    | "testnet",
   crossmint: {
     projectId: getEnvVar("VITE_CROSSMINT_PROJECT_ID", "demo_project_id"),
     apiKey: getEnvVar("VITE_CROSSMINT_API_KEY", "demo_api_key"),
@@ -21,18 +23,10 @@ export const blockchainConfig: BlockchainConfig = {
       | "staging"
       | "production",
   },
-  storyProtocol: {
-    apiKey: getEnvVar("VITE_STORY_PROTOCOL_API_KEY", "demo_api_key"),
-    chainId: parseInt(getEnvVar("VITE_STORY_PROTOCOL_CHAIN_ID", "1315")),
-    contractAddress: getEnvVar(
-      "VITE_STORY_PROTOCOL_CONTRACT_ADDRESS",
-      "0x0000000000000000000000000000000000000000",
-    ),
-  },
   connectKit: {
     projectId: getEnvVar("VITE_WALLETCONNECT_PROJECT_ID", "demo_project_id"),
     appName: getEnvVar("VITE_APP_NAME", "Imperfect Breath"),
-  }
+  },
 };
 
 // Network configurations
@@ -51,7 +45,10 @@ export const networkConfig = {
   flowTestnet: {
     chainId: 16,
     name: "Flow Testnet",
-    rpcUrl: getEnvVar("VITE_FLOW_TESTNET_RPC_URL", "https://rest-testnet.onflow.org"),
+    rpcUrl: getEnvVar(
+      "VITE_FLOW_TESTNET_RPC_URL",
+      "https://rest-testnet.onflow.org",
+    ),
     blockExplorer: "https://testnet.flowscan.org",
     currency: {
       name: "Flow Token",
@@ -59,22 +56,14 @@ export const networkConfig = {
       decimals: 8,
     },
   },
-  aeneid: {
-    chainId: 1315,
-    name: "Story Protocol Aeneid Testnet",
-    rpcUrl: getEnvVar("VITE_STORY_PROTOCOL_RPC_URL", "https://aeneid.storyrpc.io"),
-    blockExplorer: "https://aeneid.storyscan.io",
-    currency: {
-      name: "IP",
-      symbol: "IP",
-      decimals: 18,
-    },
-  },
+
   lensTestnet: {
     chainId: lensChain.id,
     name: lensChain.name,
     rpcUrl: lensChain.rpcUrls.default.http[0],
-    blockExplorer: lensChain.blockExplorers?.default.url || "https://explorer.testnet.lens.xyz",
+    blockExplorer:
+      lensChain.blockExplorers?.default.url ||
+      "https://explorer.testnet.lens.xyz",
     currency: {
       name: lensChain.nativeCurrency.name,
       symbol: lensChain.nativeCurrency.symbol,
@@ -146,16 +135,11 @@ export const apiEndpoints = {
     nft: "/api/2022-06-09/collections",
     wallet: "/api/2022-06-09/wallets",
   },
-  storyProtocol: {
-    base: "https://api.storyprotocol.xyz",
-    ip: "/api/v1/ip",
-    license: "/api/v1/license",
-  },
   connectKit: {
     base: "https://connect.family",
     auth: "/api/auth",
     wallet: "/api/wallet",
-  }
+  },
 };
 
 // Validation functions
@@ -163,7 +147,6 @@ export const validateConfig = (): boolean => {
   const requiredVars = [
     "VITE_WALLETCONNECT_PROJECT_ID",
     "VITE_CROSSMINT_PROJECT_ID",
-    "VITE_STORY_PROTOCOL_API_KEY",
   ];
 
   const missingVars = requiredVars.filter((varName) => !getEnvVar(varName));

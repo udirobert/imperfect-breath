@@ -24,23 +24,23 @@ export interface LicenseSettings {
 }
 
 export interface StoryProtocolMetadata {
-  ipId?: string;          // The ID of the IP asset on Story Protocol
-  registrationTxHash?: string;  // Transaction hash of IP registration
+  ipId?: string; // The ID of the IP asset on Story Protocol
+  registrationTxHash?: string; // Transaction hash of IP registration
   licenseTerms?: {
     commercialUse: boolean;
     derivativeWorks: boolean;
     attributionRequired: boolean;
     royaltyPercent: number;
   };
-  isRegistered: boolean;  // Whether this pattern is registered on Story Protocol
+  isRegistered: boolean; // Whether this pattern is registered on Story Protocol
 }
 
 // Methods for Story Protocol integration
 export interface StoryProtocolMethods {
   register: () => Promise<StoryProtocolMetadata>;
-  setLicenseTerms: (terms: any) => Promise<boolean>;
+  setLicenseTerms: (terms: Record<string, unknown>) => Promise<boolean>;
   checkRegistrationStatus: () => Promise<boolean>;
-  getLicenseTerms: () => Promise<any>;
+  getLicenseTerms: () => Promise<Record<string, unknown>>;
 }
 
 export interface BenefitClaim {
@@ -62,7 +62,7 @@ export interface EnhancedCustomPattern extends CustomPattern {
   difficulty: "beginner" | "intermediate" | "advanced";
   duration: number;
   creator: string;
-  phases: any[];
+  phases: CustomBreathingPhase[];
   // Media content as a structured JSON object
   mediaContent?: Json;
 
@@ -84,9 +84,9 @@ export interface EnhancedCustomPattern extends CustomPattern {
 
   // Licensing
   licenseSettings: LicenseSettings;
-  
+
   // Story Protocol integration
-  ipId?: string;          // The ID of the IP asset on Story Protocol
+  ipId?: string; // The ID of the IP asset on Story Protocol
   storyProtocol?: StoryProtocolMetadata;
   blockchainMethods?: StoryProtocolMethods;
 
@@ -116,7 +116,9 @@ export const defaultLicense: LicenseSettings = {
 };
 
 // Utility function to convert CustomPattern to EnhancedCustomPattern
-export const enhancePattern = (pattern: CustomPattern): EnhancedCustomPattern => {
+export const enhancePattern = (
+  pattern: CustomPattern,
+): EnhancedCustomPattern => {
   return {
     ...pattern,
     // Initialize with empty or default values
@@ -127,14 +129,15 @@ export const enhancePattern = (pattern: CustomPattern): EnhancedCustomPattern =>
     secondaryBenefits: [],
     instructorName: pattern.creator, // This should be fetched from a user profile in a real app
     instructorCredentials: [],
-    licenseSettings: (pattern.licensingInfo as unknown as LicenseSettings) || defaultLicense,
-    
+    licenseSettings:
+      (pattern.licensingInfo as unknown as LicenseSettings) || defaultLicense,
+
     // Story Protocol defaults
     ipId: undefined,
     storyProtocol: {
-      isRegistered: false
+      isRegistered: false,
     },
-    
+
     // Default advanced features to false
     hasProgressTracking: false,
     hasAIFeedback: false,
