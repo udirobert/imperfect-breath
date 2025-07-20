@@ -182,6 +182,38 @@ bun run dev              # Frontend only (localhost:4567)
 bun run dev:server       # AI server only (localhost:3001)
 ```
 
+### AI Configuration - Dual System
+
+The app uses **two separate AI systems** for optimal user experience:
+
+#### 🆓 Trial System (Server-side keys)
+
+- **1 free AI analysis** per user
+- Uses server-side API keys (secure, never exposed)
+- No user setup required
+
+#### 🔓 Unlimited Personal Use (Client-side keys)
+
+- **Unlimited AI analysis** with your own keys
+- Add keys in AI Settings page
+- Keys stored securely in your browser
+
+```bash
+# In your .env file:
+
+# CLIENT-SIDE (VITE_ prefix) - For unlimited personal use
+VITE_GOOGLE_GEMINI_API_KEY=your_personal_key_here
+VITE_OPENAI_API_KEY=your_personal_key_here
+VITE_ANTHROPIC_API_KEY=your_personal_key_here
+
+# SERVER-SIDE (NO prefix) - For trial system
+GOOGLE_AI_API_KEY=your_server_key_here
+OPENAI_API_KEY=your_server_key_here
+ANTHROPIC_API_KEY=your_server_key_here
+```
+
+**Important**: Client-side keys (with `VITE_` prefix) are for users' personal unlimited use, while server-side keys (no prefix) power the trial system.
+
 ### Key Commands
 
 ```bash
