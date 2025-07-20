@@ -3,7 +3,7 @@ import { supabase } from "../integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { WalletUser, UserWallet } from "../types/blockchain";
 import { useAccount, useConnect, useDisconnect, useChainId } from "wagmi";
-import { useConnectModal } from "connectkit";
+// import { useConnectModal } from "connectkit"; // Not available in current version
 
 // Blockchain features configuration
 const BLOCKCHAIN_FEATURES_ENABLED = true;
@@ -28,7 +28,13 @@ export const useAuth = () => {
   const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
   const chainId = useChainId();
-  const { setOpen: openConnectModal } = useConnectModal();
+  // const { setOpen: openConnectModal } = useConnectModal(); // Not available in current version
+  const openConnectModal = useCallback(() => {
+    // Use wagmi's connect function directly
+    if (connectors.length > 0) {
+      connect({ connector: connectors[0] });
+    }
+  }, [connect, connectors]);
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -142,7 +148,7 @@ export const useAuth = () => {
       }
 
       // Open ConnectKit modal
-      openConnectModal(true);
+      openConnectModal();
     } catch (error) {
       console.error("Wallet connection failed:", error);
       throw error;

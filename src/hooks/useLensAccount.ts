@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./useAuth";
-import { toast } from "sonner";
-import { LensClient } from "../lib/lens";
+import { useLens } from "./useLens";
 
 export interface LensV3Account {
   address: string;
@@ -10,93 +9,77 @@ export interface LensV3Account {
   picture?: string;
   followersCount?: number;
   followingCount?: number;
-  permissions?: {
-    canExecuteTransactions: boolean;
-    canTransferTokens: boolean;
-    canTransferNative: boolean;
-    canSetMetadataUri: boolean;
-  };
+  isVerified?: boolean;
 }
 
-export const useLensAccount = () => {
+interface UseLensAccountReturn {
+  lensAccount: LensV3Account | null;
+  loading: boolean;
+  error: Error | null;
+  isAuthenticated: boolean;
+}
+
+export const useLensAccount = (): UseLensAccountReturn => {
   const { profile } = useAuth();
+  const { isAuthenticated, currentAccount, authError } = useLens();
   const [lensAccount, setLensAccount] = useState<LensV3Account | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Initialize Lens client
-  const lensClient = new LensClient(true); // Use testnet by default
-
   useEffect(() => {
-    const fetchLensAccount = async () => {
-      if (!profile?.wallet_address) {
-        setLensAccount(null);
-        return;
-      }
+    if (!profile?.wallet_address || !isAuthenticated || !currentAccount) {
+      setLensAccount(null);
+      setError(null);
+      return;
+    }
 
+    const convertToLensV3Account = () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Get available accounts for the wallet address
-        const accounts = await lensClient.getAvailableAccounts(profile.wallet_address);
-        
-        if (!accounts || accounts.length === 0) {
-          setLensAccount(null);
-          toast.info("No Lens accounts found", {
-            description: "The connected wallet doesn't have any Lens accounts.",
-          });
-          return;
-        }
+        // Convert our new lens account structure to the legacy format
+        const convertedAccount: LensV3Account = {
+          address: currentAccount.ownedBy.address,
+          username: currentAccount.handle?.fullHandle || currentAccount.id,
+          name: currentAccount.metadata?.displayName || "Lens User",
+          picture:
+            currentAccount.metadata?.picture?.__typename === "ImageSet"
+              ? currentAccount.metadata.picture.optimized?.uri
+              : undefined,
+          followersCount: currentAccount.stats?.followers || 0,
+          followingCount: currentAccount.stats?.following || 0,
+          isVerified: false, // We don't have verification data in our current structure
+        };
 
-        // Use the first account as the default
-        const defaultAccount = accounts[0];
-        
-        // If we're authenticated, try to get more detailed information
-        let followers = 0;
-        let following = 0;
-        
-        if (lensClient.isAuthenticated) {
-          try {
-            // Get followers count
-            const followersData = await lensClient.getFollowers(defaultAccount.address, { limit: 100 });
-            followers = followersData?.items?.length || 0;
-            
-            // Get following count
-            const followingData = await lensClient.getFollowing(defaultAccount.address, { limit: 100 });
-            following = followingData?.items?.length || 0;
-          } catch (e) {
-            console.warn("Could not fetch followers/following counts:", e);
-            // Continue anyway as this is supplementary information
-          }
-        }
-
-        // Set the account with the fetched data
-        setLensAccount({
-          ...defaultAccount,
-          followersCount: followers,
-          followingCount: following
-        });
+        setLensAccount(convertedAccount);
       } catch (err) {
-        console.error("Error fetching Lens account:", err);
-        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+        console.error("Error converting Lens account:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "An unknown error occurred";
         setError(err instanceof Error ? err : new Error(errorMessage));
-        toast.error("Could not fetch Lens account.", {
-          description: "There was an error connecting to Lens. Please try again later."
-        });
         setLensAccount(null);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchLensAccount();
-  }, [profile?.wallet_address, lensClient.isAuthenticated]);
+    convertToLensV3Account();
+  }, [profile?.wallet_address, isAuthenticated, currentAccount]);
 
-  return { 
-    lensAccount, 
+  // Convert auth error to Error object if needed
+  useEffect(() => {
+    if (authError) {
+      setError(new Error(authError));
+    } else {
+      setError(null);
+    }
+  }, [authError]);
+
+  return {
+    lensAccount,
     loading,
     error,
-    isAuthenticated: lensClient.isAuthenticated
+    isAuthenticated,
   };
 };

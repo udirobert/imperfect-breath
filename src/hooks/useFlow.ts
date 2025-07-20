@@ -6,10 +6,10 @@
  * @updated Lens V3 migration - 2025-05-07
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import BaseFlowClient from '../lib/flow/clients/base-client';
-import NFTClient from '../lib/flow/clients/nft-client';
-import TransactionClient from '../lib/flow/clients/transaction-client';
+import { useState, useEffect, useCallback, useRef } from "react";
+import BaseFlowClient from "../lib/flow/clients/base-client";
+import NFTClient from "../lib/flow/clients/nft-client";
+import TransactionClient from "../lib/flow/clients/transaction-client";
 import type {
   FlowConfig,
   FlowState,
@@ -25,11 +25,11 @@ import type {
   EVMBatchCall,
   FlowAccount,
   TransactionStatus,
-  FlowTransactionResult
-} from '../lib/flow/types';
+  FlowTransactionResult,
+} from "../lib/flow/types";
 
 interface UseFlowConfig {
-  network?: 'testnet' | 'mainnet' | 'emulator';
+  network?: "testnet" | "mainnet" | "emulator";
   autoConnect?: boolean;
   enableCOA?: boolean;
 }
@@ -39,36 +39,39 @@ interface UseFlowReturn {
   state: FlowState;
   user: FlowUser | null;
   coaInfo: COAInfo | null;
-  
+
   // Loading states
   isLoading: boolean;
   isConnecting: boolean;
   isMinting: boolean;
   isTransacting: boolean;
-  
+
   // Error handling
   error: string | null;
-  
+
   // Core actions
   initialize: () => Promise<void>;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  
+
   // Account management
   setupAccount: () => Promise<string>;
   getAccountInfo: (address?: string) => Promise<FlowAccount>;
-  
+
   // NFT operations
   mintBreathingPattern: (
     attributes: BreathingPatternAttributes,
     metadata: NFTMetadata,
     recipient?: string,
-    royalties?: RoyaltyInfo[]
+    royalties?: RoyaltyInfo[],
   ) => Promise<string>;
   transferNFT: (nftId: string, recipient: string) => Promise<string>;
   getNFTs: (address?: string) => Promise<BreathingPatternNFT[]>;
-  getNFT: (nftId: string, address?: string) => Promise<BreathingPatternNFT | null>;
-  
+  getNFT: (
+    nftId: string,
+    address?: string,
+  ) => Promise<BreathingPatternNFT | null>;
+
   // Batch operations
   batchMintPatterns: (
     patterns: Array<{
@@ -76,18 +79,21 @@ interface UseFlowReturn {
       metadata: NFTMetadata;
       recipient?: string;
       royalties?: RoyaltyInfo[];
-    }>
+    }>,
   ) => Promise<string[]>;
-  
+
   // Transaction management
-  executeTransaction: (script: string, args?: any[]) => Promise<FlowTransactionResult>;
+  executeTransaction: (
+    script: string,
+    args?: unknown[],
+  ) => Promise<FlowTransactionResult>;
   getTransactionStatus: (txId: string) => Promise<TransactionStatus>;
   waitForTransaction: (txId: string) => Promise<FlowTransactionResult>;
-  
+
   // EVM/COA operations
   executeEVMBatch: (calls: EVMBatchCall[]) => Promise<BatchTransactionResult>;
   getCOAInfo: () => Promise<COAInfo | null>;
-  
+
   // Utilities
   clearError: () => void;
   refreshData: () => Promise<void>;
@@ -96,16 +102,16 @@ interface UseFlowReturn {
 
 export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
   const {
-    network = 'testnet',
+    network = "testnet",
     autoConnect = false,
-    enableCOA = false
+    enableCOA = false,
   } = config;
-  
+
   // Client instances
   const baseClient = useRef<BaseFlowClient>(BaseFlowClient.getInstance());
   const nftClient = useRef<NFTClient>(new NFTClient());
   const transactionClient = useRef<TransactionClient>(new TransactionClient());
-  
+
   // State
   const [state, setState] = useState<FlowState>({
     isInitialized: false,
@@ -115,22 +121,22 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     user: null,
     coaInfo: null,
   });
-  
+
   const [user, setUser] = useState<FlowUser | null>(null);
   const [coaInfo, setCOAInfo] = useState<COAInfo | null>(null);
-  
+
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [isTransacting, setIsTransacting] = useState(false);
-  
+
   // Error handling
   const [error, setError] = useState<string | null>(null);
-  
+
   // User subscription
   const userUnsubscribe = useRef<(() => void) | null>(null);
-  
+
   /**
    * Initialize Flow client
    */
@@ -138,63 +144,58 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     if (state.isInitialized) {
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const flowConfig: FlowConfig = {
         network,
-        accessNode: network === 'testnet' 
-          ? 'https://rest-testnet.onflow.org'
-          : 'https://rest-mainnet.onflow.org',
-        discoveryWallet: network === 'testnet'
-          ? 'https://fcl-discovery.onflow.org/testnet/authn'
-          : 'https://fcl-discovery.onflow.org/authn',
-        contractAddress: network === 'testnet' 
-          ? '0xf8d6e0586b0a20c7'
-          : '0x1234567890abcdef', // Replace with mainnet address
-        fungibleTokenAddress: network === 'testnet'
-          ? '0x9a0766d93b6608b7'
-          : '0xf233dcee88fe0abe',
-        flowTokenAddress: network === 'testnet'
-          ? '0x7e60df042a9c0868'
-          : '0x1654653399040a61',
+        accessNode:
+          network === "testnet"
+            ? "https://rest-testnet.onflow.org"
+            : "https://rest-mainnet.onflow.org",
+        discoveryWallet:
+          network === "testnet"
+            ? "https://fcl-discovery.onflow.org/testnet/authn"
+            : "https://fcl-discovery.onflow.org/authn",
+        contractAddress:
+          network === "testnet" ? "0xf8d6e0586b0a20c7" : "0x1234567890abcdef", // Replace with mainnet address
+        fungibleTokenAddress:
+          network === "testnet" ? "0x9a0766d93b6608b7" : "0xf233dcee88fe0abe",
+        flowTokenAddress:
+          network === "testnet" ? "0x7e60df042a9c0868" : "0x1654653399040a61",
       };
-      
+
       await baseClient.current.initialize(flowConfig);
-      
+
       // Subscribe to user changes
       userUnsubscribe.current = baseClient.current.subscribeToUser((user) => {
         setUser(user);
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           user,
           isConnected: user?.loggedIn || false,
         }));
       });
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         isInitialized: true,
       }));
-      
-      // Auto-connect if requested
-      if (autoConnect) {
-        await connect();
-      }
-      
-      console.log('Flow client initialized');
+
+      console.log("Flow client initialized");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Flow initialization failed';
+      const errorMessage =
+        error instanceof Error ? error.message : "Flow initialization failed";
       setError(errorMessage);
-      setState(prev => ({ ...prev, error: errorMessage }));
+      setState((prev) => ({ ...prev, error: errorMessage }));
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [network, autoConnect]);
-  
+  }, [network, state.isInitialized]);
+
   /**
    * Connect to Flow wallet
    */
@@ -202,29 +203,23 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     if (!state.isInitialized) {
       await initialize();
     }
-    
+
     setIsConnecting(true);
     setError(null);
-    
+
     try {
       await baseClient.current.authenticate();
-      
-      // Get COA info if enabled
-      if (enableCOA) {
-        const coa = await getCOAInfo();
-        setCOAInfo(coa);
-      }
-      
-      console.log('Connected to Flow wallet');
+      console.log("Connected to Flow wallet");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Connection failed';
+      const errorMessage =
+        error instanceof Error ? error.message : "Connection failed";
       setError(errorMessage);
       throw error;
     } finally {
       setIsConnecting(false);
     }
-  }, [state.isInitialized, enableCOA, initialize]);
-  
+  }, [state.isInitialized, initialize]);
+
   /**
    * Disconnect from Flow wallet
    */
@@ -233,27 +228,27 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
       await baseClient.current.unauthenticate();
       setUser(null);
       setCOAInfo(null);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isConnected: false,
         user: null,
         coaInfo: null,
       }));
-      
-      console.log('Disconnected from Flow wallet');
+
+      console.log("Disconnected from Flow wallet");
     } catch (error) {
-      console.error('Disconnect error:', error);
+      console.error("Disconnect error:", error);
     }
   }, []);
-  
+
   /**
    * Setup account for NFT collection
    */
   const setupAccount = useCallback(async (): Promise<string> => {
     if (!state.isConnected) {
-      throw new Error('Not connected to Flow wallet');
+      throw new Error("Not connected to Flow wallet");
     }
-    
+
     setIsTransacting(true);
     try {
       return await nftClient.current.setupAccount();
@@ -261,164 +256,199 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
       setIsTransacting(false);
     }
   }, [state.isConnected]);
-  
+
   /**
    * Get account information
    */
-  const getAccountInfo = useCallback(async (address?: string): Promise<FlowAccount> => {
-    const targetAddress = address || user?.addr;
-    if (!targetAddress) {
-      throw new Error('No address provided and user not connected');
-    }
-    
-    return baseClient.current.getAccount(targetAddress);
-  }, [user?.addr]);
-  
+  const getAccountInfo = useCallback(
+    async (address?: string): Promise<FlowAccount> => {
+      const targetAddress = address || user?.addr;
+      if (!targetAddress) {
+        throw new Error("No address provided and user not connected");
+      }
+
+      return baseClient.current.getAccount(targetAddress);
+    },
+    [user?.addr],
+  );
+
   /**
    * Mint breathing pattern NFT
    */
-  const mintBreathingPattern = useCallback(async (
-    attributes: BreathingPatternAttributes,
-    metadata: NFTMetadata,
-    recipient?: string,
-    royalties: RoyaltyInfo[] = []
-  ): Promise<string> => {
-    if (!state.isConnected || !user?.addr) {
-      throw new Error('Not connected to Flow wallet');
-    }
-    
-    setIsMinting(true);
-    try {
-      const targetRecipient = recipient || user.addr;
-      return await nftClient.current.mintBreathingPattern(
-        attributes,
-        metadata,
-        targetRecipient,
-        royalties
-      );
-    } finally {
-      setIsMinting(false);
-    }
-  }, [state.isConnected, user?.addr]);
-  
+  const mintBreathingPattern = useCallback(
+    async (
+      attributes: BreathingPatternAttributes,
+      metadata: NFTMetadata,
+      recipient?: string,
+      royalties: RoyaltyInfo[] = [],
+    ): Promise<string> => {
+      if (!state.isConnected || !user?.addr) {
+        throw new Error("Not connected to Flow wallet");
+      }
+
+      setIsMinting(true);
+      try {
+        const targetRecipient = recipient || user.addr;
+        return await nftClient.current.mintBreathingPattern(
+          attributes,
+          metadata,
+          targetRecipient,
+          royalties,
+        );
+      } finally {
+        setIsMinting(false);
+      }
+    },
+    [state.isConnected, user?.addr],
+  );
+
   /**
    * Transfer NFT
    */
-  const transferNFT = useCallback(async (nftId: string, recipient: string): Promise<string> => {
-    if (!state.isConnected) {
-      throw new Error('Not connected to Flow wallet');
-    }
-    
-    setIsTransacting(true);
-    try {
-      return await nftClient.current.transferNFT(nftId, recipient);
-    } finally {
-      setIsTransacting(false);
-    }
-  }, [state.isConnected]);
-  
+  const transferNFT = useCallback(
+    async (nftId: string, recipient: string): Promise<string> => {
+      if (!state.isConnected) {
+        throw new Error("Not connected to Flow wallet");
+      }
+
+      setIsTransacting(true);
+      try {
+        return await nftClient.current.transferNFT(nftId, recipient);
+      } finally {
+        setIsTransacting(false);
+      }
+    },
+    [state.isConnected],
+  );
+
   /**
    * Get NFTs for an account
    */
-  const getNFTs = useCallback(async (address?: string): Promise<BreathingPatternNFT[]> => {
-    const targetAddress = address || user?.addr;
-    if (!targetAddress) {
-      return [];
-    }
-    
-    return nftClient.current.getAllNFTs(targetAddress);
-  }, [user?.addr]);
-  
+  const getNFTs = useCallback(
+    async (address?: string): Promise<BreathingPatternNFT[]> => {
+      const targetAddress = address || user?.addr;
+      if (!targetAddress) {
+        return [];
+      }
+
+      return nftClient.current.getAllNFTs(targetAddress);
+    },
+    [user?.addr],
+  );
+
   /**
    * Get single NFT
    */
-  const getNFT = useCallback(async (nftId: string, address?: string): Promise<BreathingPatternNFT | null> => {
-    const targetAddress = address || user?.addr;
-    if (!targetAddress) {
-      return null;
-    }
-    
-    return nftClient.current.getNFTMetadata(targetAddress, nftId);
-  }, [user?.addr]);
-  
+  const getNFT = useCallback(
+    async (
+      nftId: string,
+      address?: string,
+    ): Promise<BreathingPatternNFT | null> => {
+      const targetAddress = address || user?.addr;
+      if (!targetAddress) {
+        return null;
+      }
+
+      return nftClient.current.getNFTMetadata(targetAddress, nftId);
+    },
+    [user?.addr],
+  );
+
   /**
    * Batch mint patterns
    */
-  const batchMintPatterns = useCallback(async (
-    patterns: Array<{
-      attributes: BreathingPatternAttributes;
-      metadata: NFTMetadata;
-      recipient?: string;
-      royalties?: RoyaltyInfo[];
-    }>
-  ): Promise<string[]> => {
-    if (!state.isConnected || !user?.addr) {
-      throw new Error('Not connected to Flow wallet');
-    }
-    
-    setIsMinting(true);
-    try {
-      const patternsWithRecipients = patterns.map(pattern => ({
-        ...pattern,
-        recipient: pattern.recipient || user.addr!,
-        royalties: pattern.royalties || [],
-      }));
-      
-      return await nftClient.current.batchMintPatterns(patternsWithRecipients);
-    } finally {
-      setIsMinting(false);
-    }
-  }, [state.isConnected, user?.addr]);
-  
+  const batchMintPatterns = useCallback(
+    async (
+      patterns: Array<{
+        attributes: BreathingPatternAttributes;
+        metadata: NFTMetadata;
+        recipient?: string;
+        royalties?: RoyaltyInfo[];
+      }>,
+    ): Promise<string[]> => {
+      if (!state.isConnected || !user?.addr) {
+        throw new Error("Not connected to Flow wallet");
+      }
+
+      setIsMinting(true);
+      try {
+        const patternsWithRecipients = patterns.map((pattern) => ({
+          ...pattern,
+          recipient: pattern.recipient || user.addr!,
+          royalties: pattern.royalties || [],
+        }));
+
+        return await nftClient.current.batchMintPatterns(
+          patternsWithRecipients,
+        );
+      } finally {
+        setIsMinting(false);
+      }
+    },
+    [state.isConnected, user?.addr],
+  );
+
   /**
    * Execute transaction
    */
-  const executeTransaction = useCallback(async (
-    script: string,
-    args: any[] = []
-  ): Promise<FlowTransactionResult> => {
-    if (!state.isConnected) {
-      throw new Error('Not connected to Flow wallet');
-    }
-    
-    setIsTransacting(true);
-    try {
-      return await transactionClient.current.executeTransaction(script, args);
-    } finally {
-      setIsTransacting(false);
-    }
-  }, [state.isConnected]);
-  
+  const executeTransaction = useCallback(
+    async (
+      script: string,
+      args: unknown[] = [],
+    ): Promise<FlowTransactionResult> => {
+      if (!state.isConnected) {
+        throw new Error("Not connected to Flow wallet");
+      }
+
+      setIsTransacting(true);
+      try {
+        return await transactionClient.current.executeTransaction(script, args);
+      } finally {
+        setIsTransacting(false);
+      }
+    },
+    [state.isConnected],
+  );
+
   /**
    * Get transaction status
    */
-  const getTransactionStatus = useCallback(async (txId: string): Promise<TransactionStatus> => {
-    return transactionClient.current.getTransactionStatus(txId);
-  }, []);
-  
+  const getTransactionStatus = useCallback(
+    async (txId: string): Promise<TransactionStatus> => {
+      return transactionClient.current.getTransactionStatus(txId);
+    },
+    [],
+  );
+
   /**
    * Wait for transaction
    */
-  const waitForTransaction = useCallback(async (txId: string): Promise<FlowTransactionResult> => {
-    return baseClient.current.waitForTransaction(txId);
-  }, []);
-  
+  const waitForTransaction = useCallback(
+    async (txId: string): Promise<FlowTransactionResult> => {
+      return baseClient.current.waitForTransaction(txId);
+    },
+    [],
+  );
+
   /**
    * Execute EVM batch calls
    */
-  const executeEVMBatch = useCallback(async (calls: EVMBatchCall[]): Promise<BatchTransactionResult> => {
-    if (!state.isConnected) {
-      throw new Error('Not connected to Flow wallet');
-    }
-    
-    setIsTransacting(true);
-    try {
-      return await transactionClient.current.executeEVMBatchCalls(calls);
-    } finally {
-      setIsTransacting(false);
-    }
-  }, [state.isConnected]);
-  
+  const executeEVMBatch = useCallback(
+    async (calls: EVMBatchCall[]): Promise<BatchTransactionResult> => {
+      if (!state.isConnected) {
+        throw new Error("Not connected to Flow wallet");
+      }
+
+      setIsTransacting(true);
+      try {
+        return await transactionClient.current.executeEVMBatchCalls(calls);
+      } finally {
+        setIsTransacting(false);
+      }
+    },
+    [state.isConnected],
+  );
+
   /**
    * Get COA information
    */
@@ -426,12 +456,12 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     if (!user?.addr) {
       return null;
     }
-    
+
     try {
       // Make a real query to get COA information from Flow
       const coaScript = `
         import CoaClient from 0xCoaClient
-        
+
         pub fun main(address: Address): {String: AnyStruct} {
           let coaInfo = CoaClient.getCoaInfo(address)
           return {
@@ -441,34 +471,34 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
           }
         }
       `;
-      
+
       const result = await baseClient.current.executeScript(coaScript, [
-        { value: user.addr, type: 'Address' }
+        { value: user.addr, type: "Address" },
       ]);
-      
+
       if (!result) {
         return null;
       }
-      
+
       return {
         address: result.address,
         balance: parseFloat(result.balance),
-        isInitialized: result.isInitialized
+        isInitialized: result.isInitialized,
       };
     } catch (error) {
-      console.error('Failed to get COA info:', error);
+      console.error("Failed to get COA info:", error);
       return null;
     }
   }, [user?.addr]);
-  
+
   /**
    * Clear error
    */
   const clearError = useCallback(() => {
     setError(null);
-    setState(prev => ({ ...prev, error: null }));
+    setState((prev) => ({ ...prev, error: null }));
   }, []);
-  
+
   /**
    * Refresh data
    */
@@ -476,20 +506,20 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     if (!state.isConnected || !user?.addr) {
       return;
     }
-    
+
     try {
       // Refresh COA info if enabled
       if (enableCOA) {
         const coa = await getCOAInfo();
         setCOAInfo(coa);
       }
-      
+
       // Could refresh other data here
     } catch (error) {
-      console.error('Failed to refresh data:', error);
+      console.error("Failed to refresh data:", error);
     }
   }, [state.isConnected, user?.addr, enableCOA, getCOAInfo]);
-  
+
   /**
    * Dispose of resources
    */
@@ -498,9 +528,9 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
       userUnsubscribe.current();
       userUnsubscribe.current = null;
     }
-    
+
     baseClient.current.dispose();
-    
+
     setState({
       isInitialized: false,
       isConnected: false,
@@ -509,76 +539,93 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
       user: null,
       coaInfo: null,
     });
-    
+
     setUser(null);
     setCOAInfo(null);
     setError(null);
-    
-    console.log('Flow client disposed');
+
+    console.log("Flow client disposed");
   }, []);
-  
+
   // Initialize on mount
   useEffect(() => {
-    initialize().catch(console.error);
-    
+    initialize()
+      .then(async () => {
+        // Auto-connect if requested
+        if (autoConnect) {
+          try {
+            await connect();
+
+            // Get COA info if enabled after connection
+            if (enableCOA) {
+              const coa = await getCOAInfo();
+              setCOAInfo(coa);
+            }
+          } catch (connectError) {
+            console.warn("Auto-connect failed:", connectError);
+          }
+        }
+      })
+      .catch(console.error);
+
     return () => {
       if (userUnsubscribe.current) {
         userUnsubscribe.current();
       }
     };
-  }, [initialize]);
-  
+  }, [initialize, autoConnect, enableCOA, connect, getCOAInfo]);
+
   // Update state when user changes
   useEffect(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       user,
       isConnected: user?.loggedIn || false,
     }));
   }, [user]);
-  
+
   return {
     // State
     state,
     user,
     coaInfo,
-    
+
     // Loading states
     isLoading,
     isConnecting,
     isMinting,
     isTransacting,
-    
+
     // Error handling
     error,
-    
+
     // Core actions
     initialize,
     connect,
     disconnect,
-    
+
     // Account management
     setupAccount,
     getAccountInfo,
-    
+
     // NFT operations
     mintBreathingPattern,
     transferNFT,
     getNFTs,
     getNFT,
-    
+
     // Batch operations
     batchMintPatterns,
-    
+
     // Transaction management
     executeTransaction,
     getTransactionStatus,
     waitForTransaction,
-    
+
     // EVM/COA operations
     executeEVMBatch,
     getCOAInfo,
-    
+
     // Utilities
     clearError,
     refreshData,

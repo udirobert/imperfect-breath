@@ -1,25 +1,35 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { useEnhancedWeb3 } from '../providers/EnhancedWeb3Provider';
-import { ConnectWalletButton, SimpleConnectButton } from '../components/wallet/ConnectWalletButton';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import React, { useEffect, useState, useCallback } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { useEnhancedWeb3 } from "../providers/EnhancedWeb3Provider";
+import {
+  ConnectWalletButton,
+  SimpleConnectButton,
+} from "../components/wallet/ConnectWalletButton";
+import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import {
   CheckCircle,
   XCircle,
   Wallet,
-  Chain,
+  Link,
   User,
   Database,
   AlertTriangle,
   Info,
   RefreshCw,
   Copy,
-  ExternalLink
-} from 'lucide-react';
-import { toast } from 'sonner';
+  ExternalLink,
+  Link2,
+} from "lucide-react";
+import { toast } from "sonner";
 
 const WalletTestPage: React.FC = () => {
   const {
@@ -37,17 +47,14 @@ const WalletTestPage: React.FC = () => {
     loading,
   } = useAuth();
 
-  const {
-    isConnectKitReady,
-    supportedChainIds,
-    isTestnetMode
-  } = useEnhancedWeb3();
+  const { isConnectKitReady, supportedChainIds, isTestnetMode } =
+    useEnhancedWeb3();
 
   const [testResults, setTestResults] = useState<Record<string, boolean>>({});
   const [isRunningTests, setIsRunningTests] = useState(false);
 
   // Run basic connectivity tests
-  const runConnectivityTests = async () => {
+  const runConnectivityTests = useCallback(async () => {
     setIsRunningTests(true);
     const results: Record<string, boolean> = {};
 
@@ -68,7 +75,8 @@ const WalletTestPage: React.FC = () => {
       );
 
       // Test 5: Wallet Detection
-      results.walletDetection = typeof window !== 'undefined' &&
+      results.walletDetection =
+        typeof window !== "undefined" &&
         (!!window.ethereum || !!window.coinbaseWalletExtension);
 
       setTestResults(results);
@@ -82,20 +90,20 @@ const WalletTestPage: React.FC = () => {
         toast.warning(`${passed}/${total} tests passed`);
       }
     } catch (error) {
-      toast.error('Test execution failed');
-      console.error('Test error:', error);
+      toast.error("Test execution failed");
+      console.error("Test error:", error);
     } finally {
       setIsRunningTests(false);
     }
-  };
+  }, [isConnectKitReady, blockchainEnabled, supportedChainIds]);
 
   const handleCopyAddress = async () => {
     if (wallet?.address) {
       try {
         await navigator.clipboard.writeText(wallet.address);
-        toast.success('Address copied to clipboard');
+        toast.success("Address copied to clipboard");
       } catch (error) {
-        toast.error('Failed to copy address');
+        toast.error("Failed to copy address");
       }
     }
   };
@@ -103,17 +111,17 @@ const WalletTestPage: React.FC = () => {
   const handleViewOnExplorer = () => {
     if (wallet?.address && currentChainId) {
       const chainExplorers: Record<number, string> = {
-        1: 'https://etherscan.io',
-        11155111: 'https://sepolia.etherscan.io',
-        137: 'https://polygonscan.com',
-        42161: 'https://arbiscan.io',
-        8453: 'https://basescan.org',
-        37111: 'https://explorer.testnet.lens.xyz',
+        1: "https://etherscan.io",
+        11155111: "https://sepolia.etherscan.io",
+        137: "https://polygonscan.com",
+        42161: "https://arbiscan.io",
+        8453: "https://basescan.org",
+        37111: "https://explorer.testnet.lens.xyz",
       };
 
       const explorerUrl = chainExplorers[currentChainId];
       if (explorerUrl) {
-        window.open(`${explorerUrl}/address/${wallet.address}`, '_blank');
+        window.open(`${explorerUrl}/address/${wallet.address}`, "_blank");
       }
     }
   };
@@ -132,20 +140,20 @@ const WalletTestPage: React.FC = () => {
 
   const getChainBadgeColor = (chainName: string) => {
     const colors: Record<string, string> = {
-      ethereum: 'bg-blue-100 text-blue-800',
-      polygon: 'bg-purple-100 text-purple-800',
-      arbitrum: 'bg-cyan-100 text-cyan-800',
-      base: 'bg-blue-100 text-blue-800',
-      lens: 'bg-green-100 text-green-800',
-      sepolia: 'bg-yellow-100 text-yellow-800',
+      ethereum: "bg-blue-100 text-blue-800",
+      polygon: "bg-purple-100 text-purple-800",
+      arbitrum: "bg-cyan-100 text-cyan-800",
+      base: "bg-blue-100 text-blue-800",
+      lens: "bg-green-100 text-green-800",
+      sepolia: "bg-yellow-100 text-yellow-800",
     };
-    return colors[chainName?.toLowerCase()] || 'bg-gray-100 text-gray-800';
+    return colors[chainName?.toLowerCase()] || "bg-gray-100 text-gray-800";
   };
 
   // Run tests on component mount
   useEffect(() => {
     runConnectivityTests();
-  }, []);
+  }, [runConnectivityTests]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -239,7 +247,7 @@ const WalletTestPage: React.FC = () => {
               </Alert>
             ) : (
               <Alert>
-                <Info className="h-4 w-4" />
+                <Link className="h-4 w-4" />
                 <AlertTitle>No Wallet Connected</AlertTitle>
                 <AlertDescription>
                   Connect your wallet to test blockchain functionality.
@@ -253,7 +261,9 @@ const WalletTestPage: React.FC = () => {
                 <div className="flex items-center justify-between p-3 bg-muted rounded">
                   <span className="text-sm font-medium">Address:</span>
                   <div className="flex items-center gap-2">
-                    <code className="text-sm">{formatAddress(wallet.address)}</code>
+                    <code className="text-sm">
+                      {formatAddress(wallet.address || "")}
+                    </code>
                     <Button
                       size="sm"
                       variant="outline"
@@ -363,14 +373,14 @@ const WalletTestPage: React.FC = () => {
                     className="w-full"
                     disabled={loading}
                   >
-                    <Chain className="h-4 w-4 mr-2" />
+                    <Link2 className="h-4 w-4 mr-2" />
                     Link Wallet to Account
                   </Button>
                 )}
 
                 {hasWallet && (
                   <Button
-                    onClick={disconnectWallet}
+                    onClick={() => disconnectWallet()}
                     variant="destructive"
                     size="sm"
                     className="w-full"
@@ -388,7 +398,7 @@ const WalletTestPage: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Chain className="h-5 w-5" />
+            <Link2 className="h-5 w-5" />
             Supported Chains
           </CardTitle>
           <CardDescription>
@@ -399,12 +409,12 @@ const WalletTestPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {supportedChainIds.map((chainId) => {
               const chainNames: Record<number, string> = {
-                1: 'Ethereum',
-                11155111: 'Sepolia',
-                137: 'Polygon',
-                42161: 'Arbitrum',
-                8453: 'Base',
-                37111: 'Lens Testnet',
+                1: "Ethereum",
+                11155111: "Sepolia",
+                137: "Polygon",
+                42161: "Arbitrum",
+                8453: "Base",
+                37111: "Lens Testnet",
               };
 
               const chainName = chainNames[chainId] || `Chain ${chainId}`;
@@ -414,11 +424,13 @@ const WalletTestPage: React.FC = () => {
                 <div
                   key={chainId}
                   className={`p-3 border rounded text-center ${
-                    isCurrentChain ? 'border-primary bg-primary/5' : ''
+                    isCurrentChain ? "border-primary bg-primary/5" : ""
                   }`}
                 >
                   <div className="font-medium text-sm">{chainName}</div>
-                  <div className="text-xs text-muted-foreground">ID: {chainId}</div>
+                  <div className="text-xs text-muted-foreground">
+                    ID: {chainId}
+                  </div>
                   {isCurrentChain && (
                     <Badge variant="secondary" className="mt-1 text-xs">
                       Current
@@ -452,19 +464,23 @@ const WalletTestPage: React.FC = () => {
                   blockchainEnabled,
                   supportedChainIds,
                   isTestnetMode,
-                  wallet: wallet ? {
-                    address: wallet.address,
-                    chainId: wallet.chainId,
-                    chain: wallet.chain,
-                  } : null,
-                  user: user ? {
-                    id: user.id,
-                    email: user.email,
-                    hasWallet: user.wallet ? true : false,
-                  } : null,
+                  wallet: wallet
+                    ? {
+                        address: wallet.address,
+                        chainId: wallet.chainId,
+                        chain: wallet.chain,
+                      }
+                    : null,
+                  user: user
+                    ? {
+                        id: user.id,
+                        email: user.email,
+                        hasWallet: user.wallet ? true : false,
+                      }
+                    : null,
                 },
                 null,
-                2
+                2,
               )}
             </pre>
           </CardContent>
