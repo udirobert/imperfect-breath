@@ -8,6 +8,8 @@ import { SupabaseService } from "../lib/supabase";
 import { useBreathingSessionValidation } from "../hooks/useValidation";
 import { DataSanitizer } from "../lib/validation/sanitizer";
 import { AIConfigManager } from "../lib/ai/config";
+import { AITrialManager } from "../lib/ai/trial-manager";
+import { SecureAIClient } from "../lib/ai/secure-client";
 
 export interface SessionData {
   patternName: string;
@@ -513,36 +515,81 @@ export const useAIAnalysis = () => {
       setError(null);
 
       try {
-        const results: AIAnalysisResult[] = [];
-
-        // Get configured providers
-        const configuredProviders = AIConfigManager.getConfiguredProviders();
-
-        // Analyze with available providers
-        for (const provider of configuredProviders) {
-          try {
-            const result = await analyzeWithProvider(sessionData, provider.id);
-            if (result) {
-              results.push(result);
-            }
-          } catch (providerError) {
-            console.error(`Analysis failed for ${provider.id}:`, providerError);
-            // Continue with other providers
-          }
+        // Initialize trial manager
+        await AITrialManager.initialize();
+        
+        // Determine analysis mode
+        const analysisMode = await AITrialManager.getAnalysisMode();
+        
+        if (analysisMode === 'blocked') {
+          const trialMessage = await AITrialManager.getTrialMessage();
+          throw new Error(trialMessage);
         }
 
-        // Fallback to Gemini if no other providers are configured
-        if (results.length === 0) {
+        const results: AIAnalysisResult[] = [];
+
+        if (analysisMode === 'trial') {
+          // Use server-side AI with our keys (one-time trial)
           try {
-            const geminiResult = await analyzeWithProvider(
-              sessionData,
-              "google",
-            );
-            if (geminiResult) {
-              results.push(geminiResult);
+            const trialUsed = await AITrialManager.useTrial();
+            if (!trialUsed) {
+              throw new Error("Trial usage failed");
             }
-          } catch (geminiError) {
-            console.error("Fallback Gemini analysis failed:", geminiError);
+
+            // Use secure client for server-side analysis
+            const serverResult = await SecureAIClient.analyzeSession('google', {
+              pattern: sessionData.patternName,
+              duration: sessionData.sessionDuration,
+              averageBpm: sessionData.bpm,
+              consistencyScore: sessionData.consistencyScore,
+              restlessnessScore: sessionData.restlessnessScore,
+              breathHoldDuration: sessionData.breathHoldTime
+            });
+
+            results.push({
+              provider: 'trial-google',
+              analysis: serverResult.analysis,
+              suggestions: serverResult.suggestions,
+              nextSteps: serverResult.nextSteps,
+              score: serverResult.score
+            });
+
+          } catch (trialError) {
+            console.error("Trial analysis failed:", trialError);
+            // Fall back to basic analysis
+            const fallbackResult = createTrialFallback(sessionData);
+            results.push(fallbackResult);
+          }
+        } else {
+          // Use user's configured API keys
+          const configuredProviders = AIConfigManager.getConfiguredProviders();
+
+          // Analyze with available providers
+          for (const provider of configuredProviders) {
+            try {
+              const result = await analyzeWithProvider(sessionData, provider.id);
+              if (result) {
+                results.push(result);
+              }
+            } catch (providerError) {
+              console.error(`Analysis failed for ${provider.id}:`, providerError);
+              // Continue with other providers
+            }
+          }
+
+          // Fallback to user's Gemini if no other providers work
+          if (results.length === 0) {
+            try {
+              const geminiResult = await analyzeWithProvider(
+                sessionData,
+                "google",
+              );
+              if (geminiResult) {
+                results.push(geminiResult);
+              }
+            } catch (geminiError) {
+              console.error("Fallback Gemini analysis failed:", geminiError);
+            }
           }
         }
 
@@ -759,5 +806,32 @@ function createErrorFallback(
       progress: 80,
     },
     error: `AI analysis unavailable: ${errorMessage}`,
+  };
+}
+
+function createTrialFallback(sessionData: SessionData): AIAnalysisResult {
+  const duration = Math.round(sessionData.sessionDuration / 60);
+  const baseScore = Math.min(100, Math.max(60, 70 + duration * 3));
+
+  return {
+    provider: "trial",
+    analysis: `Great work! You completed ${duration} minutes of ${sessionData.patternName} breathing practice. This was your free AI analysis trial. For detailed personalized insights, please add your own AI provider API keys in the settings.`,
+    suggestions: [
+      "You've used your free trial - add API keys for detailed analysis",
+      "Continue practicing regularly to build consistency",
+      "Focus on maintaining steady breathing rhythm",
+      "Try extending your session duration gradually",
+    ],
+    nextSteps: [
+      "Visit AI Settings to add your API keys for unlimited analysis",
+      "Practice the same pattern for a few more sessions",
+      "Experiment with different breathing techniques",
+    ],
+    score: {
+      overall: baseScore,
+      focus: baseScore - 5,
+      consistency: sessionData.consistencyScore || baseScore,
+      progress: baseScore + 5,
+    },
   };
 }

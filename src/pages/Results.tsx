@@ -91,12 +91,6 @@ const Results = () => {
       return;
     }
 
-    const configuredProviders = AIConfigManager.getConfiguredProviders();
-    if (configuredProviders.length === 0) {
-      toast.error("Please configure AI providers in settings first");
-      return;
-    }
-
     const currentSession: SessionData = {
       breathHoldTime: sessionData.breathHoldTime || 0,
       restlessnessScore: sessionData.restlessnessScore || 0,
@@ -138,8 +132,8 @@ const Results = () => {
     restlessnessValue < 20
       ? "bg-green-500"
       : restlessnessValue < 50
-        ? "bg-yellow-500"
-        : "bg-red-500";
+      ? "bg-yellow-500"
+      : "bg-red-500";
 
   const handleShare = async () => {
     const summary = `I just completed a mindful breathing session!
@@ -281,8 +275,8 @@ Check out Mindful Breath!`;
                 {AIConfigManager.getConfiguredProviders().length === 0 && (
                   <Alert>
                     <AlertDescription>
-                      Configure AI providers in settings to get personalized
-                      insights on your sessions.
+                      You have 1 free AI analysis available! Configure your own
+                      AI providers in settings for unlimited analysis.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -324,7 +318,7 @@ Check out Mindful Breath!`;
                             <Brain className="w-5 h-5" />
                             {
                               AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider,
+                                (p) => p.id === analysis.provider
                               )?.name
                             }{" "}
                             Analysis
@@ -379,7 +373,7 @@ Check out Mindful Breath!`;
                             <TrendingUp className="w-5 h-5" />
                             {
                               AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider,
+                                (p) => p.id === analysis.provider
                               )?.name
                             }{" "}
                             Scores
@@ -390,7 +384,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.overall,
+                                  analysis.score.overall
                                 )}
                               >
                                 {analysis.score.overall}/100
@@ -400,7 +394,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.focus,
+                                  analysis.score.focus
                                 )}
                               >
                                 {analysis.score.focus}/100
@@ -410,7 +404,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.consistency,
+                                  analysis.score.consistency
                                 )}
                               >
                                 {analysis.score.consistency}/100
@@ -420,7 +414,7 @@ Check out Mindful Breath!`;
                             <div className="text-center space-y-2">
                               <Badge
                                 variant={getScoreBadgeVariant(
-                                  analysis.score.progress,
+                                  analysis.score.progress
                                 )}
                               >
                                 {analysis.score.progress}/100
@@ -468,8 +462,7 @@ Check out Mindful Breath!`;
                   : 75,
                 breathHoldTime: sessionData.breathHoldTime,
                 cycles: sessionData.cycles,
-                insights: analyses,
-                flowNFTId: undefined,
+                insights: analyses.map((a) => a.analysis),
               }}
               onPublished={(txHash) => {
                 toast.success("Session shared to Lens!", {

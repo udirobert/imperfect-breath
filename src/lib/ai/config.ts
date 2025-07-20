@@ -68,6 +68,61 @@ export interface AIAnalysisResponse {
   error?: string;
 }
 
+export interface AIPatternResponse {
+  name: string;
+  description: string;
+  phases: Array<{
+    type: 'inhale' | 'exhale' | 'hold';
+    duration: number;
+    instruction: string;
+  }>;
+  reasoning: string;
+}
+
+export interface SecureAIResponse {
+  success: boolean;
+  provider: string;
+  analysisType: string;
+  result: AIAnalysisResponse | AIPatternResponse;
+  error?: string;
+  message?: string;
+}
+
+export const AI_CONFIG = {
+  // Server-side API endpoint for secure AI requests
+  apiEndpoint: '/api/ai-analysis',
+  
+  providers: {
+    google: {
+      name: 'Google Gemini',
+      model: 'gemini-1.5-flash',
+      enabled: true
+    },
+    openai: {
+      name: 'OpenAI GPT-4',
+      model: 'gpt-4',
+      enabled: true
+    },
+    anthropic: {
+      name: 'Anthropic Claude',
+      model: 'claude-3-sonnet-20240229',
+      enabled: true
+    }
+  },
+  
+  // Fallback configuration
+  fallback: {
+    enabled: true,
+    mockResponses: true
+  },
+  
+  // Request configuration
+  timeout: 30000,
+  retries: 2
+};
+
+export type SecureAIProvider = keyof typeof AI_CONFIG.providers;
+
 import { TieredStorageManager } from '../crypto/tiered-storage';
 
 export class AIConfigManager {

@@ -99,7 +99,7 @@ export default defineConfig(({ mode }) => {
 
     // Configure server options
     server: {
-      port: 3000,
+      port: 4567,
       open: true,
       strictPort: false,
     },

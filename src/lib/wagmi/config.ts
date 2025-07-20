@@ -24,7 +24,7 @@ export const wagmiConfig = createConfig({
         url:
           typeof window !== "undefined"
             ? window.location.origin
-            : "https://localhost:8080",
+            : "http://localhost:4567",
         icons: ["https://imperfectbreath.com/icon.png"],
       },
     }),

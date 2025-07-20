@@ -29,13 +29,18 @@ We believe breathing is the foundation of wellness, and technology should enhanc
 git clone [your-repo-url]
 cd imperfect-breath
 bun install
-bun run dev
+
+# Start both frontend and AI server
+bun run dev:full    # Starts both frontend (4567) and AI server (3001)
+# OR run separately:
+bun run dev         # Frontend only (localhost:4567)
+bun run dev:server  # AI server only (localhost:3001)
 ```
 
 **No signup required** - Start breathing immediately with:
 
 - ✅ Complete breathing pattern library
-- ✅ AI coaching with Zen
+- ✅ AI coaching with Zen (requires server)
 - ✅ Computer vision feedback (camera optional)
 - ✅ Local progress tracking
 
@@ -78,9 +83,9 @@ bun run dev
 
 **AI & Vision**
 
+- **Multi-Provider AI** - Google Gemini, OpenAI GPT-4, Anthropic Claude
+- **Secure Server Architecture** - Server-side API key management
 - **Eliza Framework** - Advanced AI agent architecture
-- **OpenAI GPT-4** - Natural language processing
-- **Google Gemini** - Multimodal AI capabilities
 - **MediaPipe** - Real-time pose and face detection
 - **Three-tier processing** - Adaptive performance (Basic/Standard/Premium)
 
@@ -171,15 +176,19 @@ cp flow.json.example flow.json
 # See docs/TECHNICAL_GUIDE.md for complete setup
 
 # 4. Start development
-bun run dev              # Frontend
-cd eliza-agent-temp && ./start-zen.sh  # AI Agent
+bun run dev:full         # Both frontend (4567) and AI server (3001)
+# OR separately:
+bun run dev              # Frontend only (localhost:4567)
+bun run dev:server       # AI server only (localhost:3001)
 ```
 
 ### Key Commands
 
 ```bash
 # Development
-bun run dev              # Start dev server
+bun run dev              # Start frontend (localhost:4567)
+bun run dev:server       # Start AI server (localhost:3001)
+bun run dev:full         # Start both frontend and server
 bun run build           # Production build
 bun run preview         # Preview build
 

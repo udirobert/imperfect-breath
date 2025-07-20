@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -50,6 +50,7 @@ const formatSessionDuration = (pattern: BreathingPattern) => {
 };
 
 export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
+  const navigate = useNavigate();
   return (
     <div className="flex flex-col items-center justify-center text-center animate-fade-in w-full max-w-md mx-auto">
       <Card className="w-full">
@@ -125,9 +126,14 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
                   </div>
                   <Switch
                     id="vision-switch"
-                    checked={localStorage.getItem('preferEnhancedVision') === 'true'}
+                    checked={
+                      localStorage.getItem("preferEnhancedVision") === "true"
+                    }
                     onCheckedChange={(checked) => {
-                      localStorage.setItem('preferEnhancedVision', checked.toString());
+                      localStorage.setItem(
+                        "preferEnhancedVision",
+                        checked.toString()
+                      );
                     }}
                   />
                 </div>
@@ -143,10 +149,11 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
               <Button
                 onClick={() => {
                   // Set enhanced vision preference if enabled
-                  const useEnhanced = localStorage.getItem('preferEnhancedVision') === 'true';
+                  const useEnhanced =
+                    localStorage.getItem("preferEnhancedVision") === "true";
                   if (useEnhanced) {
-                    // Navigate to session with enhanced parameter
-                    window.location.href = '/session?enhanced=true';
+                    // Navigate to session with enhanced parameter using React Router
+                    navigate("/session?enhanced=true");
                   } else {
                     controls.prepareSession();
                   }
@@ -154,10 +161,9 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
                 size="lg"
                 className="w-full"
               >
-                {localStorage.getItem('preferEnhancedVision') === 'true' 
-                  ? 'Begin Enhanced Session' 
-                  : 'Setup Camera & Begin'
-                }
+                {localStorage.getItem("preferEnhancedVision") === "true"
+                  ? "Begin Enhanced Session"
+                  : "Setup Camera & Begin"}
               </Button>
             )}
           </div>
