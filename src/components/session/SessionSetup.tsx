@@ -103,15 +103,34 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
                   ))}
                 </RadioGroup>
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="audio-switch" className="text-lg">
-                  Audio Guidance
-                </Label>
-                <Switch
-                  id="audio-switch"
-                  checked={state.audioEnabled}
-                  onCheckedChange={controls.toggleAudio}
-                />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="audio-switch" className="text-lg">
+                    Audio Guidance
+                  </Label>
+                  <Switch
+                    id="audio-switch"
+                    checked={state.audioEnabled}
+                    onCheckedChange={controls.toggleAudio}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="vision-switch" className="text-lg">
+                      Enhanced Vision Coaching
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      AI-powered real-time feedback with camera analysis
+                    </p>
+                  </div>
+                  <Switch
+                    id="vision-switch"
+                    checked={localStorage.getItem('preferEnhancedVision') === 'true'}
+                    onCheckedChange={(checked) => {
+                      localStorage.setItem('preferEnhancedVision', checked.toString());
+                    }}
+                  />
+                </div>
               </div>
             </>
           )}
@@ -122,11 +141,23 @@ export const SessionSetup = ({ state, controls }: SessionSetupProps) => {
               </Button>
             ) : (
               <Button
-                onClick={controls.prepareSession}
+                onClick={() => {
+                  // Set enhanced vision preference if enabled
+                  const useEnhanced = localStorage.getItem('preferEnhancedVision') === 'true';
+                  if (useEnhanced) {
+                    // Navigate to session with enhanced parameter
+                    window.location.href = '/session?enhanced=true';
+                  } else {
+                    controls.prepareSession();
+                  }
+                }}
                 size="lg"
                 className="w-full"
               >
-                Setup Camera & Begin
+                {localStorage.getItem('preferEnhancedVision') === 'true' 
+                  ? 'Begin Enhanced Session' 
+                  : 'Setup Camera & Begin'
+                }
               </Button>
             )}
           </div>

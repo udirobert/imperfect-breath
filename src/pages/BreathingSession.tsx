@@ -14,8 +14,10 @@ import { useMobileCameraManager } from "../lib/vision/MobileCameraManager";
 import { SessionSetup } from "../components/session/SessionSetup";
 import { SessionInProgress } from "../components/session/SessionInProgress";
 import { MobileBreathingInterface } from "../components/session/MobileBreathingInterface";
+import { IntegratedVisionBreathingSession } from "../components/vision/IntegratedVisionBreathingSession";
 import { useIsMobile } from "../hooks/use-mobile";
 import { useOfflineManager } from "../lib/offline/OfflineManager";
+import { EnhancedDualViewBreathingSession } from "../components/vision/EnhancedDualViewBreathingSession";
 
 function getInitialPattern(location: ReturnType<typeof useLocation>) {
   // 1. Try navigation state (preview)
@@ -165,11 +167,39 @@ const BreathingSession = () => {
     navigate,
   ]);
 
+  // Check if user wants enhanced vision session (from URL params or localStorage)
+  const urlParams = new URLSearchParams(location.search);
+  const useEnhancedVision = urlParams.get('enhanced') === 'true' || 
+                           localStorage.getItem('preferEnhancedVision') === 'true';
+
   if (state.sessionPhase === "idle" || state.isFinished) {
     return <SessionSetup state={state} controls={controls} />;
   }
 
-  // Mobile-optimized interface or desktop interface
+  // Enhanced Vision Session (new default for desktop)
+  if (useEnhancedVision && !isMobile) {
+    return (
+      <EnhancedDualViewBreathingSession
+        pattern={{
+          name: state.selectedPattern?.name || 'Custom Pattern',
+          phases: {
+            inhale: state.selectedPattern?.phases[0]?.duration || 4,
+            hold: state.selectedPattern?.phases[1]?.duration || 4,
+            exhale: state.selectedPattern?.phases[2]?.duration || 4,
+            pause: state.selectedPattern?.phases[3]?.duration || 2,
+          },
+          difficulty: state.selectedPattern?.difficulty || 'intermediate',
+          benefits: state.selectedPattern?.benefits || [],
+        }}
+        onSessionComplete={(metrics) => {
+          console.log('Enhanced session completed with metrics:', metrics);
+          handleEndSession();
+        }}
+      />
+    );
+  }
+
+  // Mobile-optimized interface
   if (isMobile && state.isRunning) {
     return (
       <MobileBreathingInterface
@@ -184,7 +214,7 @@ const BreathingSession = () => {
     );
   }
 
-  // Desktop interface or mobile setup
+  // Fallback: Original desktop interface
   return (
     <SessionInProgress
       state={state}

@@ -24,7 +24,7 @@ const Feature = ({
   </div>
 );
 
-const Index = () => {
+export default function Index() {
   const { history } = useSessionHistory();
   const { session, user } = useAuth();
   const navigate = useNavigate();
@@ -65,13 +65,23 @@ const Index = () => {
         guided exercises and performance tracking.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 items-center">
-        <Link to="/session">
+        <Link to="/session?enhanced=true">
           <Button
             style={{ animationDelay: "600ms", opacity: 0 }}
             size="lg"
+            className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            AI Enhanced Session
+          </Button>
+        </Link>
+        <Link to="/session">
+          <Button
+            style={{ animationDelay: "650ms", opacity: 0 }}
+            size="lg"
+            variant="outline"
             className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto"
           >
-            Begin Session
+            Classic Session
           </Button>
         </Link>
         {session && history && history.length > 0 && (
@@ -130,14 +140,12 @@ const Index = () => {
             Track your sessions over time and watch your mental and physical
             resilience grow.
           </Feature>
-          <Feature icon={Bot} title="AI-Powered Feedback">
-            Get real-time insights on your posture and focus during breath
-            holds.
+          <Feature icon={Bot} title="Enhanced AI Vision Coaching">
+            Real-time facial analysis provides personalized feedback on stillness, 
+            posture, and breathing rhythm with dual camera + animation view.
           </Feature>
         </div>
       </div>
     </div>
   );
-};
-
-export default Index;
+}

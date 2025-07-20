@@ -46,6 +46,16 @@ export interface VisionMetrics {
    * Estimated focus level (0-1, higher is better) (premium tier)
    */
   focusLevel?: number;
+  
+  /**
+   * Raw face detection data for enhanced analysis
+   */
+  faces?: any[];
+  
+  /**
+   * Raw pose detection data for enhanced analysis
+   */
+  poses?: any[];
 }
 
 /**

@@ -4,8 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import VisionEngine from '../lib/vision/core/vision-engine';
-import CameraManager from '../lib/vision/camera/camera-manager';
+import { VisionEngine, CameraManager } from '../lib/vision';
 import type {
   VisionTier,
   VisionMetrics,

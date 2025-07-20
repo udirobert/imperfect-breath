@@ -21,6 +21,7 @@ import FlowBatchDemo from "@/pages/FlowBatchDemo";
 import FlowIntegrationExample from "@/components/examples/FlowIntegrationExample";
 import MobileOnboarding from "@/pages/MobileOnboarding";
 import WalletTestPage from "@/pages/WalletTestPage";
+import EnhancedVisionDemo from "@/pages/EnhancedVisionDemo";
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
         <Route path="/flow-batch-demo" element={<FlowBatchDemo />} />
         <Route path="/flow-integration" element={<FlowIntegrationExample />} />
         <Route path="/wallet-test" element={<WalletTestPage />} />
+        <Route path="/vision-demo" element={<EnhancedVisionDemo />} />
 
         {/* Catch all route */}
         <Route path="*" element={<NotFound />} />

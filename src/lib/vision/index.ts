@@ -213,11 +213,20 @@ export class VisionManager {
   }
 }
 
-// Export auxiliary classes that were referenced
-export class VisionEngine {
-  // Implementation details would go here
-}
+// Export main vision engine and camera manager
+export { default as VisionEngine } from './core/vision-engine';
+export { default as CameraManager } from './camera/camera-manager';
 
-export class CameraManager {
-  // Implementation details would go here
-}
+// Export enhanced components
+export { EnhancedRestlessnessAnalyzer } from './enhanced-restlessness-analyzer';
+
+// Export types
+export type { 
+  VisionTier, 
+  VisionMetrics, 
+  PerformanceMode, 
+  PerformanceMetrics,
+  BasicMetrics,
+  StandardMetrics,
+  PremiumMetrics
+} from './types';

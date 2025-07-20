@@ -70,20 +70,14 @@ export default defineConfig(({ mode }) => {
       assetsInlineLimit: 4096,
       chunkSizeWarningLimit: 1000,
 
-      // Rollup options to handle external dependencies
+      // Rollup options for build optimization
       rollupOptions: {
-        external: [
-          "@mediapipe/face_mesh",
-          "@mediapipe/hands",
-          "@mediapipe/pose",
-          "@mediapipe/holistic",
-        ],
+        // Remove MediaPipe externals as they're part of TensorFlow models
         output: {
-          globals: {
-            "@mediapipe/face_mesh": "FaceMesh",
-            "@mediapipe/hands": "Hands",
-            "@mediapipe/pose": "Pose",
-            "@mediapipe/holistic": "Holistic",
+          manualChunks: {
+            // Group TensorFlow dependencies together
+            tensorflow: ['@tensorflow/tfjs', '@tensorflow/tfjs-core', '@tensorflow/tfjs-backend-webgl'],
+            'tensorflow-models': ['@tensorflow-models/face-landmarks-detection', '@tensorflow-models/pose-detection'],
           },
         },
       },
@@ -124,13 +118,8 @@ export default defineConfig(({ mode }) => {
         "react/jsx-runtime",
         "@tensorflow/tfjs",
         "@tensorflow/tfjs-core",
-      ],
-      // Force exclude problematic packages
-      exclude: [
-        "@mediapipe/face_mesh",
-        "@mediapipe/hands",
-        "@mediapipe/pose",
-        "@mediapipe/holistic",
+        "@tensorflow-models/face-landmarks-detection",
+        "@tensorflow-models/pose-detection",
       ],
     },
 

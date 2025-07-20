@@ -17,6 +17,7 @@ import type {
   PremiumMetrics,
   PerformanceMetrics 
 } from '../types';
+import { EnhancedRestlessnessAnalyzer } from '../enhanced-restlessness-analyzer';
 
 export interface VisionEngineConfig {
   tier: VisionTier;
@@ -50,6 +51,9 @@ export class VisionEngine {
   // Processing state
   private isProcessing = false;
   private processingQueue: HTMLVideoElement[] = [];
+  
+  // Enhanced analysis
+  private restlessnessAnalyzer = new EnhancedRestlessnessAnalyzer();
   
   private constructor() {}
   
@@ -347,7 +351,9 @@ export class VisionEngine {
       postureQuality = this.calculatePostureQuality(poses[0]);
     }
     
-    restlessnessScore = this.calculateRestlessnessScore(basicMetrics.movementLevel, facialTension);
+    // Use enhanced restlessness analysis
+    const restlessnessAnalysis = this.restlessnessAnalyzer.analyzeFromLandmarks(faces, poses);
+    restlessnessScore = restlessnessAnalysis.overall;
     
     return {
       ...basicMetrics,
@@ -407,11 +413,17 @@ export class VisionEngine {
       fullBodyPosture = this.calculateFullBodyPosture(poses[0]);
     }
     
-    advancedRestlessnessScore = this.calculateAdvancedRestlessnessScore(
-      detailedFacialAnalysis,
-      fullBodyPosture,
-      preciseBreathingMetrics
-    );
+    // Use enhanced restlessness analysis for premium tier
+    const restlessnessAnalysis = this.restlessnessAnalyzer.analyzeFromLandmarks(faces, poses);
+    advancedRestlessnessScore = {
+      overall: restlessnessAnalysis.overall,
+      components: {
+        faceMovement: restlessnessAnalysis.components.faceMovement,
+        eyeMovement: restlessnessAnalysis.components.eyeMovement,
+        postureShifts: restlessnessAnalysis.components.postureShifts,
+        breathingIrregularity: restlessnessAnalysis.components.breathingIrregularity,
+      },
+    };
     
     return {
       ...standardMetrics,
@@ -481,6 +493,7 @@ export class VisionEngine {
   }
   
   private calculateRestlessnessScore(movement: number, tension: number): number {
+    // Use enhanced analyzer if available, otherwise fallback to simple calculation
     return (movement + tension) / 2;
   }
   
