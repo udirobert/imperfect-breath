@@ -3,8 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useSessionHistory } from "../hooks/useSessionHistory";
 import { Waves, Target, BarChart3, Bot, LogOut } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useIsMobile } from "../hooks/use-mobile";
 import { supabase } from "../integrations/supabase/client";
 import { toast } from "sonner";
+import { SessionEntryPoints } from "../components/navigation/SessionEntryPoints";
 
 const Feature = ({
   icon: Icon,
@@ -27,6 +29,7 @@ const Feature = ({
 export default function Index() {
   const { history } = useSessionHistory();
   const { session, user } = useAuth();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -64,26 +67,13 @@ export default function Index() {
         A space to reconnect with your breath and find calm in the chaos through
         guided exercises and performance tracking.
       </p>
-      <div className="flex flex-col sm:flex-row gap-4 items-center">
-        <Link to="/session?enhanced=true">
-          <Button
-            style={{ animationDelay: "600ms", opacity: 0 }}
-            size="lg"
-            className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            AI Enhanced Session
-          </Button>
-        </Link>
-        <Link to="/session">
-          <Button
-            style={{ animationDelay: "650ms", opacity: 0 }}
-            size="lg"
-            variant="outline"
-            className="animate-fade-in px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow w-full sm:w-auto"
-          >
-            Classic Session
-          </Button>
-        </Link>
+      {/* DRY Session Entry Points - no duplication */}
+      <SessionEntryPoints 
+        variant={isMobile ? 'mobile' : 'desktop'}
+        className="w-full"
+      />
+      
+      <div className="flex flex-col sm:flex-row gap-4 items-center mt-4">
         {session && history && history.length > 0 && (
           <Link to="/progress">
             <Button

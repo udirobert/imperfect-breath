@@ -108,14 +108,14 @@ export const EnhancedDualViewBreathingSession: React.FC<EnhancedDualViewBreathin
       console.log('Enhanced dual view session started');
     } catch (error) {
       console.error('Failed to start session:', error);
-      // Fallback without camera
+      // Graceful fallback: Continue with AI audio coaching only
       startSession(pattern.name);
       setSessionStarted(true);
       setCameraEnabled(false);
       
       if (audioEnabled) {
         provideFeedback(
-          "Camera unavailable, but let's begin your breathing practice.",
+          "Camera unavailable, but I'll still provide AI coaching through audio guidance.",
           'guidance'
         );
       }
@@ -385,8 +385,8 @@ export const EnhancedDualViewBreathingSession: React.FC<EnhancedDualViewBreathin
         </CardContent>
       </Card>
 
-      {/* Main dual view */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Main dual view - responsive for mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Left: Breathing Animation */}
         <Card>
           <CardHeader className="pb-2">

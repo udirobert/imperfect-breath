@@ -18,6 +18,7 @@ import { IntegratedVisionBreathingSession } from "../components/vision/Integrate
 import { useIsMobile } from "../hooks/use-mobile";
 import { useOfflineManager } from "../lib/offline/OfflineManager";
 import { EnhancedDualViewBreathingSession } from "../components/vision/EnhancedDualViewBreathingSession";
+import { useSessionFlow, cleanupSessionFlags } from "../hooks/useSessionFlow";
 
 function getInitialPattern(location: ReturnType<typeof useLocation>) {
   // 1. Try navigation state (preview)
@@ -167,17 +168,24 @@ const BreathingSession = () => {
     navigate,
   ]);
 
-  // Check if user wants enhanced vision session (from URL params or localStorage)
-  const urlParams = new URLSearchParams(location.search);
-  const useEnhancedVision = urlParams.get('enhanced') === 'true' || 
-                           localStorage.getItem('preferEnhancedVision') === 'true';
+  // Centralized session flow logic - DRY principle
+  const sessionFlow = useSessionFlow();
+
+  // Handle quick start auto-initialization
+  React.useEffect(() => {
+    if (sessionFlow.shouldBypassSetup && state.sessionPhase === "idle" && sessionFlow.defaultPattern) {
+      controls.selectPattern(sessionFlow.defaultPattern);
+      controls.prepareSession();
+      cleanupSessionFlags();
+    }
+  }, [sessionFlow.shouldBypassSetup, state.sessionPhase, sessionFlow.defaultPattern, controls]);
 
   if (state.sessionPhase === "idle" || state.isFinished) {
     return <SessionSetup state={state} controls={controls} />;
   }
 
-  // Enhanced Vision Session (new default for desktop)
-  if (useEnhancedVision && !isMobile) {
+  // Enhanced Vision Session (available on all devices)
+  if (sessionFlow.useEnhancedVision) {
     return (
       <EnhancedDualViewBreathingSession
         pattern={{
@@ -200,7 +208,7 @@ const BreathingSession = () => {
   }
 
   // Mobile-optimized interface
-  if (isMobile && state.isRunning) {
+  if (sessionFlow.useMobileInterface && state.isRunning) {
     return (
       <MobileBreathingInterface
         state={state}
