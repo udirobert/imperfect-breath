@@ -41,37 +41,53 @@ const AISettings = () => {
   // Load existing API keys and trial status on mount
   useEffect(() => {
     const loadData = async () => {
-      // Load API keys
-      const loadedKeys: Record<string, string> = {};
-      for (const provider of AI_PROVIDERS) {
-        try {
-          const key = await AIConfigManager.getApiKey(provider.id);
-          if (key) {
-            loadedKeys[provider.id] = key;
+      try {
+        // Load API keys
+        const loadedKeys: Record<string, string> = {};
+        for (const provider of AI_PROVIDERS) {
+          try {
+            const key = await AIConfigManager.getApiKey(provider.id);
+            if (key && typeof key === "string") {
+              loadedKeys[provider.id] = key;
+            }
+          } catch (error) {
+            console.warn(`Failed to load API key for ${provider.id}:`, error);
           }
-        } catch (error) {
-          console.warn(`Failed to load API key for ${provider.id}:`, error);
         }
-      }
-      setApiKeys(loadedKeys);
+        setApiKeys(loadedKeys);
 
-      // Load trial status
-      const trialStatus = await AITrialManager.getTrialStatus();
-      setTrialStatus({
-        usageCount: trialStatus.trialUsageCount,
-        isExhausted: !trialStatus.canUseTrial,
-      });
+        // Load trial status
+        try {
+          const trialStatus = await AITrialManager.getTrialStatus();
+          setTrialStatus({
+            usageCount: trialStatus.trialUsageCount || 0,
+            isExhausted: !trialStatus.canUseTrial,
+          });
+        } catch (error) {
+          console.warn("Failed to load trial status:", error);
+          setTrialStatus({ usageCount: 0, isExhausted: false });
+        }
+      } catch (error) {
+        console.error("Failed to load AI settings data:", error);
+        toast.error("Failed to load AI settings. Please refresh the page.");
+      }
     };
 
     loadData();
   }, []);
 
   const refreshTrialStatus = async () => {
-    const trialStatus = await AITrialManager.getTrialStatus();
-    setTrialStatus({
-      usageCount: trialStatus.trialUsageCount,
-      isExhausted: !trialStatus.canUseTrial,
-    });
+    try {
+      const trialStatus = await AITrialManager.getTrialStatus();
+      setTrialStatus({
+        usageCount: trialStatus.trialUsageCount || 0,
+        isExhausted: !trialStatus.canUseTrial,
+      });
+      toast.success("Trial status refreshed");
+    } catch (error) {
+      console.error("Failed to refresh trial status:", error);
+      toast.error("Failed to refresh trial status");
+    }
   };
 
   const handleApiKeyChange = (providerId: string, value: string) => {
@@ -158,8 +174,8 @@ const AISettings = () => {
     toast.success("All API keys cleared");
   };
 
-  const maskApiKey = (key: string) => {
-    if (!key) return "";
+  const maskApiKey = (key: string | null | undefined) => {
+    if (!key || typeof key !== "string") return "";
     if (key.length <= 8) return "•".repeat(key.length);
     return (
       key.substring(0, 4) +

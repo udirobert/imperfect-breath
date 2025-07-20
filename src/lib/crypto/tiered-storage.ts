@@ -475,8 +475,9 @@ export class TieredStorageManager {
     if (!this.provider) return [];
     
     return this.provider.getAllKeys()
-      .filter(key => key.startsWith(this.API_KEY_PREFIX))
-      .map(key => key.replace(this.API_KEY_PREFIX, ''));
+      .filter(key => typeof key === 'string' && key.startsWith(this.API_KEY_PREFIX))
+      .map(key => key.replace(this.API_KEY_PREFIX, ''))
+      .filter(provider => typeof provider === 'string' && provider.length > 0);
   }
   
   /**
