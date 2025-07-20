@@ -103,29 +103,21 @@ const CommunityFeed: React.FC = () => {
     }
   };
 
-  const filteredPosts = posts.filter(
-    (post: {
-      content: string;
-      author: { displayName?: string; handle: string };
-      stats?: { likes?: number };
-      isFollowing?: boolean;
-    }) => {
-      const matchesSearch =
-        searchQuery === "" ||
-        post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (post.author.displayName || post.author.handle)
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase());
+  const filteredPosts = posts.filter((post) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (post.author.name || post.author.handle)
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
-      const matchesFilter =
-        selectedFilter === "all" ||
-        (selectedFilter === "following" && post.isFollowing) ||
-        (selectedFilter === "trending" && (post.stats?.likes || 0) > 10) ||
-        (selectedFilter === "challenges" && post.content.includes("#"));
+    const matchesFilter =
+      selectedFilter === "all" ||
+      (selectedFilter === "trending" && (post.stats.reactions || 0) > 10) ||
+      (selectedFilter === "challenges" && post.content.includes("#"));
 
-      return matchesSearch && matchesFilter;
-    },
-  );
+    return matchesSearch && matchesFilter;
+  });
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -235,7 +227,6 @@ const CommunityFeed: React.FC = () => {
         <Tabs value={selectedFilter} onValueChange={setSelectedFilter}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="following">Following</TabsTrigger>
             <TabsTrigger value="trending">Trending</TabsTrigger>
             <TabsTrigger value="challenges">Challenges</TabsTrigger>
           </TabsList>
@@ -268,70 +259,48 @@ const CommunityFeed: React.FC = () => {
               </div>
             </div>
           ) : (
-            filteredPosts.map(
-              (post: {
-                id: string;
-                content: string;
-                author: { displayName?: string; handle: string };
-                createdAt: string;
-                stats?: { likes?: number; comments?: number; shares?: number };
-              }) => (
-                <Card key={post.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {post.author.displayName?.[0] || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-medium">
-                            {post.author.displayName || "Anonymous"}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            @{post.author.handle}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            •
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDistanceToNow(new Date(post.createdAt))} ago
-                          </span>
-                        </div>
-                        <p className="text-sm mb-3">{post.content}</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2"
-                          >
-                            <Heart className="w-4 h-4 mr-1" />
-                            {post.stats?.likes || 0}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2"
-                          >
-                            <MessageCircle className="w-4 h-4 mr-1" />
-                            {post.stats?.comments || 0}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2"
-                          >
-                            <Share className="w-4 h-4 mr-1" />
-                            {post.stats?.shares || 0}
-                          </Button>
-                        </div>
+            filteredPosts.map((post) => (
+              <Card key={post.id}>
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <Avatar>
+                      <AvatarFallback>
+                        {post.author.name?.[0] || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">
+                          {post.author.name || "Anonymous"}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          @{post.author.handle}
+                        </span>
+                        <span className="text-sm text-muted-foreground">•</span>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(post.timestamp))} ago
+                        </span>
+                      </div>
+                      <p className="text-sm mb-3">{post.content}</p>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <Button variant="ghost" size="sm" className="h-8 px-2">
+                          <Heart className="w-4 h-4 mr-1" />
+                          {post.stats.reactions || 0}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2">
+                          <MessageCircle className="w-4 h-4 mr-1" />
+                          {post.stats.comments || 0}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 px-2">
+                          <Share className="w-4 h-4 mr-1" />
+                          {post.stats.reposts || 0}
+                        </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ),
-            )
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
 
@@ -350,15 +319,15 @@ const CommunityFeed: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback>
-                      {currentAccount.metadata?.displayName?.[0] || "U"}
+                      {currentAccount.metadata?.name?.[0] || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      {currentAccount.metadata?.displayName || "Anonymous"}
+                      {currentAccount.metadata?.name || "Anonymous"}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      @{currentAccount.handle?.fullHandle || "user.lens"}
+                      @{currentAccount.username?.fullHandle || "user.lens"}
                     </div>
                   </div>
                 </div>

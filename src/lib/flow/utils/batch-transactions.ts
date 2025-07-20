@@ -1,24 +1,24 @@
 /**
  * Batch Transaction Utilities
- * 
+ *
  * Helper functions for executing batched transactions on Flow blockchain
  */
 
-import * as fcl from '@onflow/fcl';
+import * as fcl from "@onflow/fcl";
 
 // Types for batched transactions
 export interface EVMBatchCall {
   address: string;
-  abi: any[];
+  abi: unknown[];
   functionName: string;
-  args?: any[];
+  args?: unknown[];
   value?: bigint;
   gas?: number;
 }
 
 export interface CallOutcome {
   hash: string;
-  status: 'passed' | 'failed';
+  status: "passed" | "failed";
   errorMessage: string;
 }
 
@@ -50,12 +50,12 @@ export function encodeFunctionCall(call: EVMBatchCall): string {
 export function getFunctionSelector(functionName: string): string {
   // Simplified - in production use proper keccak256
   const signatures: Record<string, string> = {
-    'mintBreathingPattern': '0xa0712d68',
-    'logSession': '0xb1234567',
-    'approve': '0x095ea7b3',
-    'transfer': '0xa9059cbb'
+    mintBreathingPattern: "0xa0712d68",
+    logSession: "0xb1234567",
+    approve: "0x095ea7b3",
+    transfer: "0xa9059cbb",
   };
-  return signatures[functionName] || '0x00000000';
+  return signatures[functionName] || "0x00000000";
 }
 
 /**
@@ -63,16 +63,18 @@ export function getFunctionSelector(functionName: string): string {
  * @param args Arguments to encode
  * @returns Encoded arguments as string
  */
-export function encodeArguments(args: any[]): string {
+export function encodeArguments(args: unknown[]): string {
   // Simplified encoding - in production use proper ABI encoding
-  return args.map(arg => {
-    if (typeof arg === 'string') {
-      return arg.padStart(64, '0');
-    } else if (typeof arg === 'number') {
-      return arg.toString(16).padStart(64, '0');
-    }
-    return '0'.repeat(64);
-  }).join('');
+  return args
+    .map((arg) => {
+      if (typeof arg === "string") {
+        return arg.padStart(64, "0");
+      } else if (typeof arg === "number") {
+        return arg.toString(16).padStart(64, "0");
+      }
+      return "0".repeat(64);
+    })
+    .join("");
 }
 
 /**
@@ -80,13 +82,30 @@ export function encodeArguments(args: any[]): string {
  * @param events Events from Cadence transaction
  * @returns Array of call outcomes
  */
-export function parseEVMResults(events: any[]): CallOutcome[] {
+export function parseEVMResults(events: unknown[]): CallOutcome[] {
   // Parse EVM transaction results from Flow events
   return events
-    .filter(event => event.type.includes('EVM'))
-    .map(event => ({
-      hash: event.data?.hash || '0x' + Math.random().toString(16).substr(2, 64),
-      status: event.data?.status === 'successful' ? 'passed' : 'failed',
-      errorMessage: event.data?.errorMessage || ''
-    }));
+    .filter((event: unknown) => {
+      const typedEvent = event as { type?: string };
+      return typedEvent.type?.includes("EVM") || false;
+    })
+    .map((event: unknown) => {
+      const typedEvent = event as {
+        data?: {
+          hash?: string;
+          status?: string;
+          errorMessage?: string;
+        };
+      };
+      return {
+        hash:
+          typedEvent.data?.hash ||
+          "0x" + Math.random().toString(16).substr(2, 64),
+        status:
+          typedEvent.data?.status === "successful"
+            ? ("passed" as const)
+            : ("failed" as const),
+        errorMessage: typedEvent.data?.errorMessage || "",
+      };
+    });
 }

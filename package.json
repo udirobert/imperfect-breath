@@ -85,6 +85,7 @@
     "cmdk": "^1.0.0",
     "connectkit": "^1.9.1",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.0",
     "embla-carousel-react": "^8.3.0",
     "face-api.js": "^0.22.2",
     "input-otp": "^1.2.4",

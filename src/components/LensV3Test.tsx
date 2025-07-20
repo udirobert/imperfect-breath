@@ -18,15 +18,15 @@ export const LensV3Test: React.FC = () => {
   const { disconnect } = useDisconnect();
 
   // Lens V3 client hooks
+  const lens = useLens();
   const {
-    session,
-    loading: lensLoading,
-    error: lensError,
-    login: lensLogin,
-    logout: lensLogout,
-    resumeSession,
-    getCurrentSession,
-  } = useLens();
+    isAuthenticated,
+    currentAccount,
+    isAuthenticating,
+    authError,
+    authenticate,
+    logout,
+  } = lens;
 
   const addTestResult = (message: string) => {
     setTestResults((prev) => [
@@ -148,15 +148,15 @@ export const LensV3Test: React.FC = () => {
   const testSDKExports = () => {
     addTestResult("Testing V3 Client SDK exports...");
 
-    // Test what's actually available
+    // Test what's actually available from our useLens hook
     try {
       addTestResult(
-        `useLensAuth available: ${typeof useLensAuth === "function"}`,
+        `useLens hook available: ${typeof lens === "object"}`,
       );
-      addTestResult(`lensLogin type: ${typeof lensLogin}`);
-      addTestResult(`lensLogout type: ${typeof lensLogout}`);
-      addTestResult(`resumeSession type: ${typeof resumeSession}`);
-      addTestResult(`getCurrentSession type: ${typeof getCurrentSession}`);
+      addTestResult(`authenticate type: ${typeof lens.authenticate}`);
+      addTestResult(`logout type: ${typeof lens.logout}`);
+      addTestResult(`isAuthenticated: ${lens.isAuthenticated}`);
+      addTestResult(`currentAccount: ${lens.currentAccount ? 'set' : 'null'}`);
 
       addTestResult(`Current loading state: ${lensLoading}`);
       addTestResult(`Current error: ${lensError || "none"}`);

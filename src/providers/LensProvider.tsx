@@ -41,6 +41,7 @@ interface LensContextType {
     contentFocus?: string[];
     tags?: string[];
   }) => Promise<void>;
+  fetchBreathingContent: () => Promise<void>;
 
   // Community data
   communityStats: {
@@ -103,6 +104,12 @@ export const LensProvider: React.FC<{ children: ReactNode }> = ({
     // Timeline
     timeline: [], // This will be populated when fetchTimeline is called
     fetchTimeline: async (filters) => {
+      if (lens.currentAccount?.address) {
+        await lens.getTimeline(lens.currentAccount.address);
+      }
+    },
+    fetchBreathingContent: async () => {
+      // Fetch breathing-specific content - implement as needed
       if (lens.currentAccount?.address) {
         await lens.getTimeline(lens.currentAccount.address);
       }

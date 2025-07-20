@@ -6,7 +6,7 @@ import {
 } from "../lib/breathingPatterns";
 import { useVoiceGuidance } from "./useVoiceGuidance";
 import { useAuth } from "./useAuth";
-import { useLensContext } from "./lens-context-adapter";
+import { useLensContext } from "../providers/LensProvider";
 import { supabase } from "../integrations/supabase/client";
 
 type SessionPhase =

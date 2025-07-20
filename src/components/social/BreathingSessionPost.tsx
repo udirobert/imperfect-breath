@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import { useLens } from "../../hooks/useLens";
+import type { BreathingSession } from "../../lib/lens";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -16,10 +17,8 @@ import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
 import { Share2, Clock, Target, Repeat, Wind, Award, Hash } from "lucide-react";
 import { toast } from "sonner";
-import type { BreathingSessionData } from "../../types/lens";
-
 interface BreathingSessionPostProps {
-  sessionData: BreathingSessionData;
+  sessionData: BreathingSession;
   onPublished?: (txHash: string) => void;
   participatingChallenges?: string[];
 }
@@ -54,25 +53,14 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
     try {
       setIsPublishing(true);
 
-      // Convert sessionData to BreathingSession format
-      const sessionWithRequiredFields = {
-        id: `session-${Date.now()}`,
-        patternName: sessionData.patternName,
-        duration: sessionData.duration,
-        score: sessionData.score,
-        restlessnessScore: 100 - sessionData.score,
-        sessionDuration: sessionData.duration,
-        timestamp: new Date().toISOString(),
-        breathHoldTime: sessionData.breathHoldTime || 0,
-      };
-
-      const result = await shareBreathingSession(sessionWithRequiredFields);
+      // Use sessionData directly as it's already in BreathingSession format
+      const result = await shareBreathingSession(sessionData);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to share session");
       }
 
-      const txHash = result.transactionHash || "";
+      const txHash = result.hash || "";
       toast.success("Session shared to Lens!", {
         description: txHash
           ? `Transaction: ${txHash.slice(0, 10)}...`

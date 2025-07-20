@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from "react";
-import { WagmiProvider, createConfig, http } from "wagmi";
+import { WagmiProvider, createConfig, http, createStorage } from "wagmi";
 import { mainnet, sepolia, polygon, arbitrum, base } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
@@ -12,14 +12,13 @@ import {
 import { lensTestnet, lensMainnet } from "../lib/wagmi/chains";
 import { config as envConfig } from "../config/environment";
 
-// Flow is not EVM compatible, so we handle it separately
+// Flow is not EVM compatible, so we handle it separately via FCL
+// Primary chains for our app functionality
 const supportedChains = [
-  mainnet,
-  sepolia,
-  polygon,
-  arbitrum,
-  base,
-  lensTestnet,
+  lensTestnet, // Primary chain for social features
+  mainnet, // Ethereum mainnet for broad compatibility
+  arbitrum, // L2 for lower fees
+  base, // Coinbase L2
 ] as const;
 
 // Get API keys from environment
@@ -32,26 +31,23 @@ const wagmiConfig = createConfig(
   getDefaultConfig({
     chains: supportedChains,
     transports: {
+      [lensTestnet.id]: http(envConfig.lens.rpcUrl),
       [mainnet.id]: http(
         alchemyApiKey
           ? `https://eth-mainnet.g.alchemy.com/v2/${alchemyApiKey}`
           : undefined,
       ),
-      [sepolia.id]: http(
-        alchemyApiKey
-          ? `https://eth-sepolia.g.alchemy.com/v2/${alchemyApiKey}`
-          : undefined,
-      ),
-      [polygon.id]: http("https://polygon-rpc.com"),
       [arbitrum.id]: http("https://arb1.arbitrum.io/rpc"),
       [base.id]: http("https://mainnet.base.org"),
-      [lensTestnet.id]: http(envConfig.lens.rpcUrl),
     },
     walletConnectProjectId,
     appName: envConfig.app.name,
     appDescription: envConfig.app.description,
     appUrl: envConfig.app.url,
     appIcon: envConfig.app.icon,
+    storage: createStorage({
+      storage: typeof window !== "undefined" ? window.localStorage : undefined,
+    }),
   }),
 );
 
@@ -86,13 +82,8 @@ interface EnhancedWeb3ContextType {
 
 const EnhancedWeb3Context = createContext<EnhancedWeb3ContextType | null>(null);
 
-export const useEnhancedWeb3 = () => {
-  const context = useContext(EnhancedWeb3Context);
-  if (!context) {
-    throw new Error("useEnhancedWeb3 must be used within EnhancedWeb3Provider");
-  }
-  return context;
-};
+// Export context for use in separate hook file
+export { EnhancedWeb3Context };
 
 interface EnhancedWeb3ProviderProps {
   children: React.ReactNode;
@@ -128,9 +119,11 @@ export const EnhancedWeb3Provider: React.FC<EnhancedWeb3ProviderProps> = ({
               hideQuestionMarkCTA: true,
               hideNoWalletCTA: false,
               hideRecentBadge: true,
-              enforceSupportedChains: !isTestnetMode, // Allow any chain in testnet mode
+              enforceSupportedChains: !isTestnetMode,
               embedGoogleFonts: true,
               reducedMotion: false,
+              walletConnectName: "Imperfect Breath",
+              initialChainId: lensTestnet.id, // Default to Lens testnet
               disclaimer: (
                 <>
                   By connecting your wallet, you agree to our{" "}
@@ -164,57 +157,5 @@ export const EnhancedWeb3Provider: React.FC<EnhancedWeb3ProviderProps> = ({
   );
 };
 
-// Export the config for external use
+// Export only the config - utilities and hook are in separate files
 export { wagmiConfig };
-
-// Helper functions for working with different chains
-export const getChainInfo = (chainId: number) => {
-  return supportedChains.find((chain) => chain.id === chainId);
-};
-
-export const isLensChain = (chainId: number) => {
-  return chainId === lensTestnet.id || chainId === lensMainnet.id;
-};
-
-export const isFlowCompatible = (chainId: number) => {
-  // Flow is handled separately as it's not EVM compatible
-  return false;
-};
-
-// Chain-specific utilities
-export const getExplorerUrl = (chainId: number, txHash: string) => {
-  const chain = getChainInfo(chainId);
-  if (!chain || !chain.blockExplorers?.default?.url) return null;
-  return `${chain.blockExplorers.default.url}/tx/${txHash}`;
-};
-
-export const getChainCurrency = (chainId: number) => {
-  const chain = getChainInfo(chainId);
-  return chain?.nativeCurrency;
-};
-
-// Error handling utilities
-export const handleWalletError = (error: Error) => {
-  if (error.message.includes("User rejected")) {
-    return "Transaction was rejected by user";
-  }
-  if (error.message.includes("insufficient funds")) {
-    return "Insufficient funds for transaction";
-  }
-  if (error.message.includes("network")) {
-    return "Network error. Please check your connection and try again";
-  }
-  return error.message || "An unexpected error occurred";
-};
-
-// Debugging helpers
-export const logWalletState = () => {
-  if (envConfig.development.debugMode) {
-    console.log("Enhanced Web3 Provider State:", {
-      supportedChains: supportedChains.map((c) => ({ id: c.id, name: c.name })),
-      walletConnectProjectId: walletConnectProjectId ? "configured" : "missing",
-      alchemyApiKey: alchemyApiKey ? "configured" : "missing",
-      isTestnetMode: envConfig.development.debugMode || import.meta.env.DEV,
-    });
-  }
-};

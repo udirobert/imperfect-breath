@@ -1,8 +1,8 @@
-import React from 'react';
-import { ConnectKitButton } from 'connectkit';
-import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../ui/button';
-import { Wallet, ChevronDown, ExternalLink, Copy, LogOut } from 'lucide-react';
+import React from "react";
+import { ConnectKitButton } from "connectkit";
+import { useAuth } from "../../hooks/useAuth";
+import { Button } from "../ui/button";
+import { Wallet, ChevronDown, ExternalLink, Copy, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,24 +10,28 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem,
-} from '../ui/dropdown-menu';
-import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback } from '../ui/avatar';
-import { useToast } from '../ui/use-toast';
-import { getChainInfo, getExplorerUrl, handleWalletError } from '../../providers/EnhancedWeb3Provider';
+} from "../ui/dropdown-menu";
+import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { useToast } from "../ui/use-toast";
+import {
+  getChainInfo,
+  getExplorerUrl,
+  handleWalletError,
+} from "../../lib/wagmi";
 
 interface ConnectWalletButtonProps {
-  variant?: 'default' | 'outline' | 'ghost' | 'link';
-  size?: 'sm' | 'default' | 'lg';
+  variant?: "default" | "outline" | "ghost" | "link";
+  size?: "sm" | "default" | "lg";
   className?: string;
   showBalance?: boolean;
   showChainInfo?: boolean;
 }
 
 export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
-  variant = 'default',
-  size = 'default',
-  className = '',
+  variant = "default",
+  size = "default",
+  className = "",
   showBalance = false,
   showChainInfo = true,
 }) => {
@@ -37,7 +41,7 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
     disconnectWallet,
     currentChain,
     currentChainId,
-    isWeb3User
+    isWeb3User,
   } = useAuth();
   const { toast } = useToast();
 
@@ -46,14 +50,14 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
       try {
         await navigator.clipboard.writeText(wallet.address);
         toast({
-          title: 'Address copied',
-          description: 'Wallet address copied to clipboard',
+          title: "Address copied",
+          description: "Wallet address copied to clipboard",
         });
       } catch (error) {
         toast({
-          title: 'Copy failed',
-          description: 'Could not copy address to clipboard',
-          variant: 'destructive',
+          title: "Copy failed",
+          description: "Could not copy address to clipboard",
+          variant: "destructive",
         });
       }
     }
@@ -64,7 +68,7 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
       const chainInfo = getChainInfo(currentChainId);
       if (chainInfo?.blockExplorers?.default?.url) {
         const explorerUrl = `${chainInfo.blockExplorers.default.url}/address/${wallet.address}`;
-        window.open(explorerUrl, '_blank');
+        window.open(explorerUrl, "_blank");
       }
     }
   };
@@ -73,14 +77,14 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
     try {
       await disconnectWallet();
       toast({
-        title: 'Wallet disconnected',
-        description: 'Your wallet has been disconnected successfully',
+        title: "Wallet disconnected",
+        description: "Your wallet has been disconnected successfully",
       });
     } catch (error) {
       toast({
-        title: 'Disconnect failed',
+        title: "Disconnect failed",
         description: handleWalletError(error as Error),
-        variant: 'destructive',
+        variant: "destructive",
       });
     }
   };
@@ -91,21 +95,21 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
 
   const getChainBadgeColor = (chainName: string) => {
     switch (chainName?.toLowerCase()) {
-      case 'ethereum':
-      case 'mainnet':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'polygon':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-      case 'arbitrum':
-        return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200';
-      case 'base':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-      case 'lens':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-      case 'story':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      case "ethereum":
+      case "mainnet":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "polygon":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "arbitrum":
+        return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
+      case "base":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "lens":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "story":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
 
@@ -158,7 +162,7 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
                     </AvatarFallback>
                   </Avatar>
                   <span className="font-mono text-sm">
-                    {ensName || formatAddress(address || '')}
+                    {ensName || formatAddress(address || "")}
                   </span>
                   {showChainInfo && currentChain && (
                     <Badge
@@ -182,7 +186,7 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
                 </Avatar>
                 <div className="flex flex-col">
                   <span className="font-mono text-sm">
-                    {ensName || formatAddress(address || '')}
+                    {ensName || formatAddress(address || "")}
                   </span>
                   {currentChain && (
                     <Badge
@@ -231,7 +235,7 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
 
 // Export a simplified version for quick use
 export const SimpleConnectButton: React.FC<{ className?: string }> = ({
-  className = ''
+  className = "",
 }) => {
   return (
     <ConnectKitButton.Custom>

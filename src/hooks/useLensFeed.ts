@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useLensContext } from "./lens-context-adapter";
+import { useLensContext } from "../providers/LensProvider";
 import { TimelineItem } from "./lens-types";
 import { toast } from "sonner";
 

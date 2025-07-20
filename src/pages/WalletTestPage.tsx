@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useEnhancedWeb3 } from "../providers/EnhancedWeb3Provider";
+import { useEnhancedWeb3 } from "../hooks/useEnhancedWeb3";
 import {
   ConnectWalletButton,
   SimpleConnectButton,

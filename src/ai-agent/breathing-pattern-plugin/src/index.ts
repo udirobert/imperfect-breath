@@ -207,8 +207,7 @@ ${pattern.phases.pause ? `- **Pause:** ${pattern.phases.pause} counts` : ''}
 This pattern is perfect for ${category.replace('-', ' ')}. Would you like to:
 1. Practice this pattern with guided breathing
 2. Mint this as your personal NFT
-3. Register it as intellectual property
-4. Share it with the community
+3. Share it with the community
 
 Just let me know what you'd prefer! ✨`;
 
@@ -457,9 +456,7 @@ Your breathing pattern is now a unique digital asset that you truly own! 🌬️
 
 **What you can do next:**
 1. **List on Marketplace** - Set a price and sell to other practitioners
-2. **Register IP Rights** - Protect your pattern with Story Protocol
-3. **Share Socially** - Post your achievement on Lens Protocol
-4. **Create Derivatives** - Build variations and earn royalties
+2. **Share Socially** - Post your achievement on Lens Protocol
 
 Would you like me to help you with any of these next steps? Your wellness journey is now part of the blockchain! 🚀`;
 
@@ -490,137 +487,6 @@ Would you like me to help you with any of these next steps? Your wellness journe
   }
 };
 
-// Action: Register IP Rights
-const registerIPAction: Action = {
-  name: "REGISTER_IP_RIGHTS",
-  similes: [
-    "register IP",
-    "protect my pattern",
-    "intellectual property",
-    "register rights",
-    "IP protection"
-  ],
-  description: "Registers breathing pattern as intellectual property on Story Protocol",
-  examples: [
-    [
-      {
-        user: "{{user1}}",
-        content: {
-          text: "I want to protect my breathing pattern with IP rights"
-        }
-      },
-      {
-        user: "Zen",
-        content: {
-          text: "Smart move! I'll register your breathing pattern as intellectual property on Story Protocol, ensuring you get credited and compensated for your creation."
-        }
-      }
-    ]
-  ],
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
-    const text = message.content.text.toLowerCase();
-    return text.includes("ip") || text.includes("intellectual") || 
-           (text.includes("register") && text.includes("rights")) ||
-           text.includes("protect");
-  },
-  handler: async (
-    runtime: IAgentRuntime,
-    message: Memory,
-    state?: State,
-    options?: any,
-    callback?: HandlerCallback
-  ) => {
-    if (!callback) return;
-    
-    try {
-      elizaLogger.info("Registering IP rights");
-      
-      const pattern = (state as any)?.customPattern || (state as any)?.mintedNFT?.pattern || BREATHING_PATTERNS["4-7-8"];
-      
-      // Call real Story Protocol API for IP registration
-      let ipId, licenseId;
-      
-      try {
-        // Prepare registration request
-        const registrationRequest = {
-          pattern: pattern,
-          creator: message.userId || 'anonymous',
-          licenseTerms: {
-            commercialUse: true,
-            derivativeWorks: true,
-            attributionRequired: true,
-            royaltyPercent: 10
-          }
-        };
-        
-        // Make actual API call to Story Protocol service
-        const response = await fetch('/api/story-protocol/register-ip', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(registrationRequest),
-        });
-        
-        if (!response.ok) {
-          throw new Error(`IP registration failed: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        ipId = result.ipId;
-        licenseId = result.licenseTermsId;
-      } catch (err) {
-        throw new Error(`Story Protocol error: ${err instanceof Error ? err.message : String(err)}`);
-      }
-      
-      const response = `🛡️ Successfully registered your breathing pattern as intellectual property!
-
-**IP Registration Details:**
-- **Pattern:** ${pattern.name}
-- **IP Asset ID:** ${ipId}
-- **License ID:** ${licenseId}
-- **Network:** Story Protocol Testnet
-
-**Your Rights Include:**
-✅ **Attribution Rights** - You're credited as the original creator
-✅ **Commercial Rights** - Earn royalties from derivatives and usage
-✅ **Derivative Rights** - Control how others can modify your pattern
-✅ **Distribution Rights** - Manage how your pattern is shared
-
-**Royalty Settings:**
-- **Creator Royalty:** 10% on all sales
-- **Derivative Royalty:** 5% on remixes and variations
-- **Commercial License:** Available for instructors and apps
-
-Your breathing technique is now legally protected on-chain! Anyone who uses or builds upon your pattern will automatically compensate you. This is the future of the creator economy! 🌟
-
-Would you like me to help you set up licensing terms or create a marketplace listing? 💰`;
-
-      if (state) {
-        (state as any).registeredIP = {
-          ipId,
-          licenseId,
-          pattern: pattern
-        };
-      }
-
-      callback({
-        text: response,
-        content: {
-          ipId,
-          licenseId,
-          pattern
-        }
-      });
-      
-    } catch (error) {
-      elizaLogger.error("Error registering IP:", error);
-      callback({
-        text: "I'd love to help protect your breathing pattern! First, let me understand what technique you'd like to register as intellectual property. 🛡️"
-      });
-    }
-  }
-};
 
 // Action: Recommend Breathing Pattern
 const recommendPatternAction: Action = {
@@ -745,7 +611,6 @@ export const breathingPatternPlugin: Plugin = {
     createBreathingPatternAction,
     analyzeSessionAction,
     mintPatternNFTAction,
-    registerIPAction,
     recommendPatternAction
   ],
   evaluators: [],

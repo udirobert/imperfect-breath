@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import IPAssetRegistration from "@/components/IPAssetRegistration";
+
 import AISettings from "@/pages/AISettings";
 import Index from "@/pages/Index";
 import EnhancedIndex from "@/pages/EnhancedIndex";
@@ -10,15 +10,12 @@ import Progress from "@/pages/Progress";
 import Results from "@/pages/Results";
 import EnhancedMarketplace from "@/pages/EnhancedMarketplace";
 import NotFound from "@/pages/NotFound";
-import DiagnosticPage from "@/pages/DiagnosticPage";
 import CreatePattern from "@/pages/CreatePattern";
 import CommunityFeed from "@/pages/CommunityFeed";
 import UserProfile from "@/pages/UserProfile";
 import LensV3TestPage from "@/pages/LensV3TestPage";
 import InstructorOnboarding from "@/pages/InstructorOnboarding";
 import MainLayout from "@/components/MainLayout";
-import FlowBatchDemo from "@/pages/FlowBatchDemo";
-import FlowIntegrationExample from "@/components/examples/FlowIntegrationExample";
 import MobileOnboarding from "@/pages/MobileOnboarding";
 import WalletTestPage from "@/pages/WalletTestPage";
 import EnhancedVisionDemo from "@/pages/EnhancedVisionDemo";
@@ -48,10 +45,8 @@ function App() {
         {/* Routes without Header */}
         <Route path="/auth" element={<Auth />} />
         <Route path="/onboarding" element={<MobileOnboarding />} />
-        <Route path="/diagnostic" element={<DiagnosticPage />} />
+
         <Route path="/lens-demo" element={<LensV3TestPage />} />
-        <Route path="/flow-batch-demo" element={<FlowBatchDemo />} />
-        <Route path="/flow-integration" element={<FlowIntegrationExample />} />
         <Route path="/wallet-test" element={<WalletTestPage />} />
         <Route path="/vision-demo" element={<EnhancedVisionDemo />} />
 

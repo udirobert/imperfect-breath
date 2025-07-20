@@ -5,7 +5,7 @@ import ReactDOM from "react-dom"; // Explicitly import ReactDOM to ensure it's a
 import { createRoot } from "react-dom/client";
 import { EnhancedWeb3Provider } from "./providers/EnhancedWeb3Provider";
 import { LensProvider } from "./providers/LensProvider";
-import App from "./App.tsx";
+import App from "./App";
 import "./index.css";
 import { runEnvironmentChecks } from "./utils/environment-check";
 import { optimizeForMobile } from "./utils/mobile-detection";

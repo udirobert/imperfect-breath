@@ -42,7 +42,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
-import IPAssetRegistration from "../components/IPAssetRegistration";
 import {
   Select,
   SelectContent,
@@ -59,7 +58,15 @@ import {
   EnhancedCustomPattern,
   defaultLicense,
   LicenseSettings,
+  MediaContent,
 } from "../types/patterns";
+
+// Define media content structure for marketplace patterns
+interface PatternMediaContent {
+  video?: MediaContent;
+  audio?: MediaContent;
+  images?: MediaContent[];
+}
 
 const patternStorageService = new PatternStorageService();
 const reviewService = new ReviewService();
@@ -134,10 +141,15 @@ const EnhancedMarketplace = () => {
           reviewService.getAllReviews(),
         ]);
 
-        const reviewsByPattern = allReviews.reduce((acc, review) => {
-          (acc[review.pattern_id] = acc[review.pattern_id] || []).push(review);
-          return acc;
-        }, {} as Record<string, PatternReview[]>);
+        const reviewsByPattern = allReviews.reduce(
+          (acc, review) => {
+            (acc[review.pattern_id] = acc[review.pattern_id] || []).push(
+              review,
+            );
+            return acc;
+          },
+          {} as Record<string, PatternReview[]>,
+        );
 
         const instructorMap = new Map<string, InstructorProfile>();
         fetchedPatterns.forEach((p) => {
@@ -199,7 +211,7 @@ const EnhancedMarketplace = () => {
               trending: false,
               new: false,
             };
-          }
+          },
         );
 
         setPatterns(marketplacePatterns);
@@ -236,7 +248,7 @@ const EnhancedMarketplace = () => {
           };
 
           const mappedRecommendations: MarketplacePattern[] =
-            recommendations.map((p: any) => ({
+            recommendations.map((p) => ({
               ...p,
               mediaContent: p.mediaContent || {},
               tags: ["recommended"],
@@ -294,8 +306,10 @@ const EnhancedMarketplace = () => {
     const matchesDifficulty =
       selectedDifficulty === "all" || pattern.difficulty === selectedDifficulty;
     const matchesFree = !showFree || pattern.isFree;
-    const matchesVideo = !hasVideo || (pattern.mediaContent as any)?.video;
-    const matchesAudio = !hasAudio || (pattern.mediaContent as any)?.audio;
+    const matchesVideo =
+      !hasVideo || (pattern.mediaContent as PatternMediaContent)?.video;
+    const matchesAudio =
+      !hasAudio || (pattern.mediaContent as PatternMediaContent)?.audio;
 
     return (
       matchesSearch &&
@@ -367,7 +381,7 @@ const EnhancedMarketplace = () => {
             </div>
 
             <div className="absolute bottom-3 left-3 flex gap-2">
-              {(pattern.mediaContent as any)?.video && (
+              {(pattern.mediaContent as PatternMediaContent)?.video && (
                 <Badge
                   variant="outline"
                   className="bg-background/80 backdrop-blur-sm"
@@ -376,7 +390,7 @@ const EnhancedMarketplace = () => {
                   Video
                 </Badge>
               )}
-              {(pattern.mediaContent as any)?.audio && (
+              {(pattern.mediaContent as PatternMediaContent)?.audio && (
                 <Badge
                   variant="outline"
                   className="bg-background/80 backdrop-blur-sm"
@@ -856,12 +870,14 @@ const EnhancedMarketplace = () => {
           <div className="mt-4">
             <div className="mb-4">
               <p className="text-muted-foreground">
-                Protect your unique breathing technique by registering it on the
-                blockchain. This gives you verifiable ownership and lets you set
-                licensing terms.
+                Create and share your unique breathing techniques with the
+                community. Upload your patterns to help others discover new
+                wellness practices.
               </p>
             </div>
-            <IPAssetRegistration />
+            <p className="text-sm text-muted-foreground">
+              Pattern registration feature coming soon.
+            </p>
           </div>
         </DialogContent>
       </Dialog>

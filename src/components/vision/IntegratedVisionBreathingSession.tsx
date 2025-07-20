@@ -4,13 +4,13 @@
  * Follows DRY, CLEAN, ORGANISED, MODULAR principles
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import React, { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Progress } from "../ui/progress";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   Camera,
   CameraOff,
@@ -26,16 +26,16 @@ import {
   MessageCircle,
   Coins,
   Shield,
-} from 'lucide-react';
+} from "lucide-react";
 
 // Import our integrated hooks
-import { useIntegratedVisionFeedback } from '../../hooks/useIntegratedVisionFeedback';
-import { useBreathingSession } from '../../hooks/useBreathingSession';
-import { useAuth } from '../../hooks/useAuth';
+import { useIntegratedVisionFeedback } from "../../hooks/useIntegratedVisionFeedback";
+import { useBreathingSession } from "../../hooks/useBreathingSession";
+import { useAuth } from "../../hooks/useAuth";
 
 // Import existing components
-import { BreathingVisualizer } from '../breathing/BreathingVisualizer';
-import { IntegratedSocialFlow } from '../social/IntegratedSocialFlow';
+import { BreathingVisualizer } from "../breathing/BreathingVisualizer";
+import { BreathingSessionPost } from "../social/BreathingSessionPost";
 
 interface IntegratedVisionBreathingSessionProps {
   pattern: {
@@ -52,14 +52,18 @@ interface IntegratedVisionBreathingSessionProps {
   onSessionComplete?: (metrics: any) => void;
 }
 
-export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathingSessionProps> = ({
-  pattern,
-  onSessionComplete,
-}) => {
+export const IntegratedVisionBreathingSession: React.FC<
+  IntegratedVisionBreathingSessionProps
+> = ({ pattern, onSessionComplete }) => {
   // Auth and session state
   const { user, isAuthenticated } = useAuth();
-  const { state: sessionState, startSession, pauseSession, stopSession } = useBreathingSession();
-  
+  const {
+    state: sessionState,
+    startSession,
+    pauseSession,
+    stopSession,
+  } = useBreathingSession();
+
   // Integrated vision feedback
   const {
     isVisionActive,
@@ -81,7 +85,7 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
   });
 
   // Local state
-  const [activeTab, setActiveTab] = useState('session');
+  const [activeTab, setActiveTab] = useState("session");
   const [showSettings, setShowSettings] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
 
@@ -92,18 +96,18 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
     try {
       // Start vision feedback first
       await startVisionFeedback();
-      
+
       // Start breathing session
       startSession(pattern.name);
-      
+
       setSessionStarted(true);
-      console.log('Integrated vision breathing session started');
+      console.log("Integrated vision breathing session started");
     } catch (error) {
-      console.error('Failed to start integrated session:', error);
+      console.error("Failed to start integrated session:", error);
       // Provide fallback feedback
       provideFeedback(
         "Vision system unavailable, but you can still enjoy your breathing practice.",
-        'guidance'
+        "guidance",
       );
     }
   }, [startVisionFeedback, startSession, pattern.name, provideFeedback]);
@@ -115,7 +119,7 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
     stopVisionFeedback();
     stopSession();
     setSessionStarted(false);
-    
+
     // Trigger completion callback with integrated metrics
     if (onSessionComplete && sessionMetrics.visionMetrics) {
       onSessionComplete({
@@ -126,7 +130,13 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
         aiRecommendations: sessionMetrics.aiRecommendations,
       });
     }
-  }, [stopVisionFeedback, stopSession, sessionMetrics, sessionState, onSessionComplete]);
+  }, [
+    stopVisionFeedback,
+    stopSession,
+    sessionMetrics,
+    sessionState,
+    onSessionComplete,
+  ]);
 
   /**
    * Handle social sharing with vision data
@@ -134,10 +144,16 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
   const handleShare = useCallback(async () => {
     try {
       await shareSessionWithVision();
-      provideFeedback("Your session has been shared with the community!", 'encouragement');
+      provideFeedback(
+        "Your session has been shared with the community!",
+        "encouragement",
+      );
     } catch (error) {
-      console.error('Failed to share session:', error);
-      provideFeedback("Sharing failed, but your practice was still valuable.", 'guidance');
+      console.error("Failed to share session:", error);
+      provideFeedback(
+        "Sharing failed, but your practice was still valuable.",
+        "guidance",
+      );
     }
   }, [shareSessionWithVision, provideFeedback]);
 
@@ -147,10 +163,16 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
   const handleMintNFT = useCallback(async () => {
     try {
       await mintPatternWithVisionData();
-      provideFeedback("Your breathing pattern has been minted as an NFT!", 'encouragement');
+      provideFeedback(
+        "Your breathing pattern has been minted as an NFT!",
+        "encouragement",
+      );
     } catch (error) {
-      console.error('Failed to mint NFT:', error);
-      provideFeedback("Minting failed, but your pattern is still saved locally.", 'guidance');
+      console.error("Failed to mint NFT:", error);
+      provideFeedback(
+        "Minting failed, but your pattern is still saved locally.",
+        "guidance",
+      );
     }
   }, [mintPatternWithVisionData, provideFeedback]);
 
@@ -169,7 +191,8 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
       );
     }
 
-    const { visionMetrics, restlessnessAnalysis, sessionQuality } = sessionMetrics;
+    const { visionMetrics, restlessnessAnalysis, sessionQuality } =
+      sessionMetrics;
 
     return (
       <div className="space-y-4">
@@ -203,31 +226,51 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Overall:</span>
-                <Badge variant={restlessnessAnalysis.overall < 0.3 ? 'default' : 'secondary'} className="ml-2">
+                <Badge
+                  variant={
+                    restlessnessAnalysis.overall < 0.3 ? "default" : "secondary"
+                  }
+                  className="ml-2"
+                >
                   {Math.round((1 - restlessnessAnalysis.overall) * 100)}%
                 </Badge>
               </div>
               <div>
                 <span className="text-muted-foreground">Trend:</span>
-                <Badge 
-                  variant={restlessnessAnalysis.trend === 'improving' ? 'default' : 'outline'} 
+                <Badge
+                  variant={
+                    restlessnessAnalysis.trend === "improving"
+                      ? "default"
+                      : "outline"
+                  }
                   className="ml-2"
                 >
                   {restlessnessAnalysis.trend}
                 </Badge>
               </div>
             </div>
-            
+
             {/* Component Breakdown */}
             <div className="space-y-2">
-              <div className="text-xs text-muted-foreground">Component Analysis:</div>
-              {Object.entries(restlessnessAnalysis.components).map(([key, value]) => (
-                <div key={key} className="flex items-center gap-2 text-xs">
-                  <span className="w-20 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                  <Progress value={(1 - value) * 100} className="flex-1 h-2" />
-                  <span className="w-8 text-right">{Math.round((1 - value) * 100)}%</span>
-                </div>
-              ))}
+              <div className="text-xs text-muted-foreground">
+                Component Analysis:
+              </div>
+              {Object.entries(restlessnessAnalysis.components).map(
+                ([key, value]) => (
+                  <div key={key} className="flex items-center gap-2 text-xs">
+                    <span className="w-20 capitalize">
+                      {key.replace(/([A-Z])/g, " $1").trim()}:
+                    </span>
+                    <Progress
+                      value={(1 - value) * 100}
+                      className="flex-1 h-2"
+                    />
+                    <span className="w-8 text-right">
+                      {Math.round((1 - value) * 100)}%
+                    </span>
+                  </div>
+                ),
+              )}
             </div>
           </CardContent>
         </Card>
@@ -269,8 +312,12 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
         </Button>
       ) : (
         <>
-          <Button 
-            onClick={() => sessionState.isRunning ? pauseSession() : startSession(pattern.name)}
+          <Button
+            onClick={() =>
+              sessionState.isRunning
+                ? pauseSession()
+                : startSession(pattern.name)
+            }
             variant="outline"
           >
             {sessionState.isRunning ? (
@@ -278,7 +325,7 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
             ) : (
               <Play className="mr-2 h-4 w-4" />
             )}
-            {sessionState.isRunning ? 'Pause' : 'Resume'}
+            {sessionState.isRunning ? "Pause" : "Resume"}
           </Button>
           <Button onClick={handleStopSession} variant="destructive">
             <Square className="mr-2 h-4 w-4" />
@@ -286,10 +333,10 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
           </Button>
         </>
       )}
-      
-      <Button 
-        onClick={() => setShowSettings(!showSettings)} 
-        variant="outline" 
+
+      <Button
+        onClick={() => setShowSettings(!showSettings)}
+        variant="outline"
         size="icon"
       >
         <Settings className="h-4 w-4" />
@@ -302,21 +349,23 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
    */
   const renderSocialIntegration = () => (
     <div className="space-y-4">
-      {/* Integrated Social Flow */}
-      <IntegratedSocialFlow
-        phase={sessionStarted ? 'active' : 'completion'}
+      {/* Lens V3 Social Integration */}
+      <BreathingSessionPost
         sessionData={{
           patternName: pattern.name,
           duration: sessionState.sessionDuration,
           score: sessionMetrics.sessionQuality,
-          insights: sessionMetrics.aiRecommendations.slice(0, 2),
-          visionMetrics: sessionMetrics.visionMetrics,
+          breathHoldTime: sessionMetrics.visionMetrics?.breathHoldTime,
+          cycles: sessionState.cycleCount,
+          insights: sessionMetrics.aiRecommendations,
+          flowNFTId: undefined, // Will be set when NFT is minted
         }}
-        onSocialAction={(action, data) => {
-          console.log('Social action:', action, data);
-          if (action === 'shared') {
-            provideFeedback("Great! Your session has been shared.", 'encouragement');
-          }
+        onPublished={(txHash) => {
+          provideFeedback(
+            "Session shared successfully on Lens!",
+            "encouragement",
+          );
+          console.log("Published to Lens:", txHash);
         }}
       />
 
@@ -347,14 +396,12 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="outline">{pattern.name}</Badge>
-            <Badge variant={isVisionActive ? 'default' : 'secondary'}>
-              {isVisionActive ? 'Vision Active' : 'Vision Inactive'}
+            <Badge variant={isVisionActive ? "default" : "secondary"}>
+              {isVisionActive ? "Vision Active" : "Vision Inactive"}
             </Badge>
           </div>
         </CardHeader>
-        <CardContent>
-          {renderSessionControls()}
-        </CardContent>
+        <CardContent>{renderSessionControls()}</CardContent>
       </Card>
 
       {/* Main Content */}
@@ -373,10 +420,24 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
                 pattern={{
                   name: pattern.name,
                   phases: [
-                    { name: 'inhale', duration: pattern.phases.inhale },
-                    ...(pattern.phases.hold ? [{ name: 'hold' as const, duration: pattern.phases.hold }] : []),
-                    { name: 'exhale', duration: pattern.phases.exhale },
-                    ...(pattern.phases.pause ? [{ name: 'pause' as const, duration: pattern.phases.pause }] : []),
+                    { name: "inhale", duration: pattern.phases.inhale },
+                    ...(pattern.phases.hold
+                      ? [
+                          {
+                            name: "hold" as const,
+                            duration: pattern.phases.hold,
+                          },
+                        ]
+                      : []),
+                    { name: "exhale", duration: pattern.phases.exhale },
+                    ...(pattern.phases.pause
+                      ? [
+                          {
+                            name: "pause" as const,
+                            duration: pattern.phases.pause,
+                          },
+                        ]
+                      : []),
                   ],
                   cycles: 10,
                 }}
@@ -385,11 +446,17 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
                   // Provide phase-specific guidance
                   if (sessionMetrics.restlessnessAnalysis?.overall > 0.6) {
                     switch (phase) {
-                      case 'inhale':
-                        provideFeedback("Breathe in slowly and settle into stillness.", 'guidance');
+                      case "inhale":
+                        provideFeedback(
+                          "Breathe in slowly and settle into stillness.",
+                          "guidance",
+                        );
                         break;
-                      case 'exhale':
-                        provideFeedback("Release tension as you exhale.", 'guidance');
+                      case "exhale":
+                        provideFeedback(
+                          "Release tension as you exhale.",
+                          "guidance",
+                        );
                         break;
                     }
                   }
@@ -403,19 +470,25 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
             <div className="grid grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold">{Math.floor(sessionState.sessionDuration / 60)}m</div>
+                  <div className="text-2xl font-bold">
+                    {Math.floor(sessionState.sessionDuration / 60)}m
+                  </div>
                   <div className="text-sm text-muted-foreground">Duration</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold">{sessionState.cycleCount}</div>
+                  <div className="text-2xl font-bold">
+                    {sessionState.cycleCount}
+                  </div>
                   <div className="text-sm text-muted-foreground">Cycles</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold">{sessionMetrics.sessionQuality}%</div>
+                  <div className="text-2xl font-bold">
+                    {sessionMetrics.sessionQuality}%
+                  </div>
                   <div className="text-sm text-muted-foreground">Quality</div>
                 </CardContent>
               </Card>
@@ -423,13 +496,9 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
           )}
         </TabsContent>
 
-        <TabsContent value="metrics">
-          {renderVisionMetrics()}
-        </TabsContent>
+        <TabsContent value="metrics">{renderVisionMetrics()}</TabsContent>
 
-        <TabsContent value="social">
-          {renderSocialIntegration()}
-        </TabsContent>
+        <TabsContent value="social">{renderSocialIntegration()}</TabsContent>
       </Tabs>
 
       {/* Settings Panel */}
@@ -441,18 +510,24 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium">Feedback Interval (seconds)</label>
+                <label className="text-sm font-medium">
+                  Feedback Interval (seconds)
+                </label>
                 <input
                   type="number"
                   min="10"
                   max="120"
                   defaultValue="30"
                   className="w-full mt-1 px-3 py-2 border rounded-md"
-                  onChange={(e) => updateConfig({ feedbackInterval: parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    updateConfig({ feedbackInterval: parseInt(e.target.value) })
+                  }
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Restlessness Threshold</label>
+                <label className="text-sm font-medium">
+                  Restlessness Threshold
+                </label>
                 <input
                   type="range"
                   min="0.1"
@@ -460,13 +535,15 @@ export const IntegratedVisionBreathingSession: React.FC<IntegratedVisionBreathin
                   step="0.1"
                   defaultValue="0.7"
                   className="w-full mt-1"
-                  onChange={(e) => updateConfig({ 
-                    feedbackThresholds: { 
-                      restlessness: parseFloat(e.target.value),
-                      movement: 0.6,
-                      posture: 0.5,
-                    }
-                  })}
+                  onChange={(e) =>
+                    updateConfig({
+                      feedbackThresholds: {
+                        restlessness: parseFloat(e.target.value),
+                        movement: 0.6,
+                        posture: 0.5,
+                      },
+                    })
+                  }
                 />
               </div>
             </div>

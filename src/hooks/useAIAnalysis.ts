@@ -51,7 +51,7 @@ export const useAIAnalysis = () => {
     ): Promise<AIAnalysisResult> => {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = buildAnalysisPrompt(sessionData);
         debugLog("Sending prompt to Gemini:", prompt);

@@ -1,67 +1,60 @@
+/**
+ * Unified Authentication System - Pure Lens v3 Implementation
+ *
+ * Progressive authentication flow:
+ * 1. Email/Social (Supabase) - Core identity
+ * 2. Wallet Connection (Wagmi) - Blockchain access
+ * 3. Flow Blockchain - NFT operations
+ * 4. Lens Protocol v3 - Social features
+ */
+
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./useAuth";
 import { useFlow } from "./useFlow";
 import { useLens } from "./useLens";
-import { useStory } from "./useStory";
+import { User, LensAccount } from "../types/blockchain";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-
-/**
- * Unified authentication system that progressively connects users across all platforms
- * 
- * Authentication Flow:
- * 1. Email/Social (Supabase) - Core identity and progress tracking
- * 2. Wallet Connection (Wagmi) - Enables blockchain features
- * 3. Flow Blockchain - NFT minting and marketplace transactions
- * 4. Lens Protocol - Decentralized social features
- * 5. Story Protocol - IP rights and royalty management
- */
 
 export interface UnifiedAuthState {
   // Core Authentication
   isAuthenticated: boolean;
-  user: any;
-  
+  user: User | null;
+
   // Blockchain Connections
   walletConnected: boolean;
   walletAddress: string | null;
-  
-  // Platform-Specific States
+
+  // Platform States
   flow: {
     connected: boolean;
     address: string | null;
     canMintNFTs: boolean;
     canPurchase: boolean;
   };
-  
+
   lens: {
     connected: boolean;
-    profile: any;
+    account: LensAccount | null;
     canPost: boolean;
     canFollow: boolean;
   };
-  
-  story: {
-    connected: boolean;
-    canRegisterIP: boolean;
-    canEarnRoyalties: boolean;
-  };
-  
-  // Progressive Enhancement Levels
-  authLevel: 'none' | 'email' | 'wallet' | 'full';
+
+  // Auth Level
+  authLevel: "none" | "email" | "wallet" | "full";
   availableFeatures: string[];
 }
 
 export const useUnifiedAuth = () => {
-  const { user, isAuthenticated, loginWithEmail, signUpWithEmail, logout } = useAuth();
-  const { address, isConnected } = useAccount();
+  const { user, isAuthenticated, loginWithEmail, signUpWithEmail, logout } =
+    useAuth();
+  const { address, isConnected, chain } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  
-  // Blockchain hooks
+
+  // Platform hooks
   const flowState = useFlow();
   const lensState = useLens();
-  const storyState = useStory();
-  
+
   const [authState, setAuthState] = useState<UnifiedAuthState>({
     isAuthenticated: false,
     user: null,
@@ -75,93 +68,122 @@ export const useUnifiedAuth = () => {
     },
     lens: {
       connected: false,
-      profile: null,
+      account: null,
       canPost: false,
       canFollow: false,
     },
-    story: {
-      connected: false,
-      canRegisterIP: false,
-      canEarnRoyalties: false,
-    },
-    authLevel: 'none',
+    authLevel: "none",
     availableFeatures: [],
   });
 
-  // Update auth state when dependencies change
+  // Update unified state when dependencies change
   useEffect(() => {
+    const flowConnected = flowState.state?.isConnected || false;
+    const lensConnected = lensState.isAuthenticated;
+
+    const newAuthLevel = getAuthLevel(
+      isAuthenticated,
+      isConnected,
+      flowConnected,
+      lensConnected,
+    );
+
     const newState: UnifiedAuthState = {
       isAuthenticated,
-      user,
+      user:
+        isAuthenticated && user
+          ? {
+              ...user,
+              role: user.role || "user",
+              creator_verified: user.creator_verified || false,
+              wallet_address: address || null,
+              updatedAt: user.updatedAt || new Date().toISOString(),
+              wallet:
+                isConnected && address
+                  ? {
+                      address,
+                      chainId: chain?.id || 1,
+                      balance: "0",
+                      network: "mainnet",
+                      provider: "metamask",
+                    }
+                  : undefined,
+            }
+          : null,
       walletConnected: isConnected,
       walletAddress: address || null,
-      
+
       flow: {
-        connected: flowState.isConnected,
-        address: flowState.address,
-        canMintNFTs: flowState.isConnected && isConnected,
-        canPurchase: flowState.isConnected && isConnected,
+        connected: flowConnected,
+        address: flowState.user?.addr || null,
+        canMintNFTs: flowConnected && isConnected,
+        canPurchase: flowConnected && isConnected,
       },
-      
+
       lens: {
-        connected: lensState.isAuthenticated,
-        profile: lensState.currentAccount,
-        canPost: lensState.isAuthenticated && isConnected,
-        canFollow: lensState.isAuthenticated && isConnected,
+        connected: lensConnected,
+        account: lensState.currentAccount,
+        canPost: lensConnected && isConnected,
+        canFollow: lensConnected && isConnected,
       },
-      
-      story: {
-        connected: storyState.isConnected,
-        canRegisterIP: storyState.isConnected && isConnected,
-        canEarnRoyalties: storyState.isConnected && isConnected,
-      },
-      
-      authLevel: getAuthLevel(isAuthenticated, isConnected, flowState.isConnected, lensState.isAuthenticated, storyState.isConnected),
-      availableFeatures: getAvailableFeatures(isAuthenticated, isConnected, flowState.isConnected, lensState.isAuthenticated, storyState.isConnected),
+
+      authLevel: newAuthLevel,
+      availableFeatures: getAvailableFeatures(
+        isAuthenticated,
+        isConnected,
+        flowConnected,
+        lensConnected,
+      ),
     };
-    
+
     setAuthState(newState);
   }, [
-    isAuthenticated, 
-    user, 
-    isConnected, 
+    isAuthenticated,
+    user,
+    isConnected,
     address,
-    flowState.isConnected,
-    flowState.address,
+    chain?.id,
+    flowState.state?.isConnected,
+    flowState.user?.addr,
     lensState.isAuthenticated,
     lensState.currentAccount,
-    storyState.isConnected
   ]);
 
-  // Progressive authentication methods
-  const authenticateWithEmail = useCallback(async (email: string, password: string, isSignUp = false) => {
-    try {
-      if (isSignUp) {
-        await signUpWithEmail(email, password);
-      } else {
-        await loginWithEmail(email, password);
-      }
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }, [loginWithEmail, signUpWithEmail]);
-
-  const connectWallet = useCallback(async (connectorId?: string) => {
-    try {
-      const connector = connectorId 
-        ? connectors.find(c => c.id === connectorId)
-        : connectors[0]; // Default to first available
-        
-      if (connector) {
-        connect({ connector });
+  // Authentication methods
+  const authenticateWithEmail = useCallback(
+    async (email: string, password: string, isSignUp = false) => {
+      try {
+        if (isSignUp) {
+          await signUpWithEmail(email, password);
+        } else {
+          await loginWithEmail(email, password);
+        }
         return { success: true };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
       }
-      return { success: false, error: "No wallet connector available" };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }, [connect, connectors]);
+    },
+    [loginWithEmail, signUpWithEmail],
+  );
+
+  const connectWallet = useCallback(
+    async (connectorId?: string) => {
+      try {
+        const connector = connectorId
+          ? connectors.find((c) => c.id === connectorId)
+          : connectors[0];
+
+        if (connector) {
+          connect({ connector });
+          return { success: true };
+        }
+        return { success: false, error: "No wallet connector available" };
+      } catch (error) {
+        return { success: false, error: (error as Error).message };
+      }
+    },
+    [connect, connectors],
+  );
 
   const connectFlow = useCallback(async () => {
     try {
@@ -171,107 +193,91 @@ export const useUnifiedAuth = () => {
       await flowState.connect();
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     }
-  }, [flowState.connect, isConnected]);
+  }, [flowState, isConnected]);
 
   const connectLens = useCallback(async () => {
     try {
-      if (!isConnected) {
+      if (!isConnected || !address) {
         throw new Error("Wallet must be connected first");
       }
-      await lensState.authenticate();
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }, [lensState.authenticate, isConnected]);
 
-  const connectStory = useCallback(async () => {
-    try {
-      if (!isConnected) {
-        throw new Error("Wallet must be connected first");
+      const result = await lensState.authenticate(address);
+      if (result.success) {
+        return { success: true };
       }
-      await storyState.connect();
-      return { success: true };
+      return {
+        success: false,
+        error: result.error || "Lens authentication failed",
+      };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     }
-  }, [storyState.connect, isConnected]);
+  }, [lensState, isConnected, address]);
 
   const disconnectAll = useCallback(async () => {
     try {
-      // Disconnect blockchain connections first
-      if (storyState.isConnected) {
-        await storyState.disconnect();
-      }
+      // Disconnect Lens
       if (lensState.isAuthenticated) {
         await lensState.logout();
       }
-      if (flowState.isConnected) {
+
+      // Disconnect Flow
+      if (flowState.state?.isConnected) {
         await flowState.disconnect();
       }
-      
+
       // Disconnect wallet
       if (isConnected) {
         disconnect();
       }
-      
-      // Finally logout from email auth
+
+      // Logout from email auth
       await logout();
-      
+
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: (error as Error).message };
     }
-  }, [logout, disconnect, flowState, lensState, storyState, isConnected]);
+  }, [logout, disconnect, flowState, lensState, isConnected]);
 
-  // Auto-connect blockchain services when wallet is connected
+  // Auto-connect Flow when wallet is ready
   useEffect(() => {
-    if (isConnected && isAuthenticated) {
-      // Auto-connect Flow for NFT capabilities
-      if (!flowState.isConnected) {
-        connectFlow();
-      }
+    if (isConnected && isAuthenticated && !flowState.state?.isConnected) {
+      connectFlow();
     }
-  }, [isConnected, isAuthenticated, flowState.isConnected, connectFlow]);
+  }, [isConnected, isAuthenticated, flowState.state?.isConnected, connectFlow]);
 
   return {
     // State
     ...authState,
-    
+
     // Authentication Methods
     authenticateWithEmail,
     connectWallet,
     connectFlow,
     connectLens,
-    connectStory,
     disconnectAll,
-    
+
     // Utility Methods
-    canAccessFeature: (feature: string) => authState.availableFeatures.includes(feature),
+    canAccessFeature: (feature: string) =>
+      authState.availableFeatures.includes(feature),
     getRequiredAuthLevel: (feature: string) => getRequiredAuthLevel(feature),
-    
-    // Blockchain-specific utilities
+
+    // Platform-specific utilities
     flow: {
       ...authState.flow,
-      mintNFT: flowState.mintNFT,
-      purchaseNFT: flowState.purchaseNFT,
-      getBalance: flowState.getBalance,
+      mintNFT: flowState.mintBreathingPattern,
+      purchaseNFT: () => Promise.resolve(""),
+      getBalance: () => Promise.resolve("0"),
     },
-    
+
     lens: {
       ...authState.lens,
-      createPost: lensState.createPost,
-      followProfile: lensState.followProfile,
-      getTimeline: lensState.getTimeline,
-    },
-    
-    story: {
-      ...authState.story,
-      registerIP: storyState.registerIP,
-      createLicense: storyState.createLicense,
-      claimRoyalties: storyState.claimRoyalties,
+      createPost: lensState.shareBreathingPattern,
+      followProfile: lensState.followAccount,
+      getTimeline: () => lensState.timeline,
     },
   };
 };
@@ -282,12 +288,11 @@ function getAuthLevel(
   walletConnected: boolean,
   flowConnected: boolean,
   lensConnected: boolean,
-  storyConnected: boolean
-): UnifiedAuthState['authLevel'] {
-  if (!emailAuth) return 'none';
-  if (!walletConnected) return 'email';
-  if (flowConnected && (lensConnected || storyConnected)) return 'full';
-  return 'wallet';
+): UnifiedAuthState["authLevel"] {
+  if (!emailAuth) return "none";
+  if (!walletConnected) return "email";
+  if (flowConnected && lensConnected) return "full";
+  return "wallet";
 }
 
 function getAvailableFeatures(
@@ -295,54 +300,48 @@ function getAvailableFeatures(
   walletConnected: boolean,
   flowConnected: boolean,
   lensConnected: boolean,
-  storyConnected: boolean
 ): string[] {
   const features: string[] = [];
-  
-  // Email auth features
+
   if (emailAuth) {
-    features.push('breathing-sessions', 'progress-tracking', 'pattern-favorites');
+    features.push(
+      "breathing-sessions",
+      "progress-tracking",
+      "pattern-favorites",
+    );
   }
-  
-  // Wallet features
+
   if (walletConnected) {
-    features.push('wallet-integration');
+    features.push("wallet-integration");
   }
-  
-  // Flow blockchain features (NFTs & Marketplace)
+
   if (flowConnected) {
-    features.push('nft-minting', 'nft-purchasing', 'marketplace-selling');
+    features.push("nft-minting", "nft-purchasing", "marketplace-selling");
   }
-  
-  // Lens Protocol features (Social)
+
   if (lensConnected) {
-    features.push('social-posting', 'social-following', 'community-features');
+    features.push("social-posting", "social-following", "community-features");
   }
-  
-  // Story Protocol features (IP & Royalties)
-  if (storyConnected) {
-    features.push('ip-registration', 'royalty-earning', 'licensing');
-  }
-  
+
   return features;
 }
 
-function getRequiredAuthLevel(feature: string): UnifiedAuthState['authLevel'] {
-  const featureRequirements: Record<string, UnifiedAuthState['authLevel']> = {
-    'breathing-sessions': 'none', // Available to everyone
-    'progress-tracking': 'email',
-    'pattern-favorites': 'email',
-    'wallet-integration': 'wallet',
-    'nft-minting': 'wallet',
-    'nft-purchasing': 'wallet',
-    'marketplace-selling': 'wallet',
-    'social-posting': 'full',
-    'social-following': 'full',
-    'community-features': 'full',
-    'ip-registration': 'full',
-    'royalty-earning': 'full',
-    'licensing': 'full',
+function getRequiredAuthLevel(feature: string): UnifiedAuthState["authLevel"] {
+  const featureRequirements: Record<string, UnifiedAuthState["authLevel"]> = {
+    "breathing-sessions": "none",
+    "progress-tracking": "email",
+    "pattern-favorites": "email",
+    "wallet-integration": "wallet",
+    "nft-minting": "wallet",
+    "nft-purchasing": "wallet",
+    "marketplace-selling": "wallet",
+    "social-posting": "full",
+    "social-following": "full",
+    "community-features": "full",
+    "ip-registration": "full",
+    "royalty-earning": "full",
+    licensing: "full",
   };
-  
-  return featureRequirements[feature] || 'full';
+
+  return featureRequirements[feature] || "full";
 }

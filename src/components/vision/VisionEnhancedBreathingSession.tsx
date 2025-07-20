@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { useLensContext } from "../../hooks/lens-context-adapter";
+import { useLensContext } from "../../providers/LensProvider";
 import { useBreathingSession } from "../../hooks/useBreathingSession";
 import {
   Card,

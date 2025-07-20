@@ -23,7 +23,7 @@ export interface FlowAccountKey {
 export interface FlowTransaction {
   id: string;
   script: string;
-  arguments: any[];
+  arguments: unknown[];
   referenceBlockId: string;
   gasLimit: number;
   proposalKey: FlowProposalKey;
@@ -58,7 +58,7 @@ export interface FlowEvent {
   transactionId: string;
   transactionIndex: number;
   eventIndex: number;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 // Breathing Pattern NFT types
@@ -79,7 +79,7 @@ export interface BreathingPatternAttributes {
   hold: number;
   exhale: number;
   rest: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: "beginner" | "intermediate" | "advanced";
   category: string;
   tags: string[];
   totalCycles: number;
@@ -112,7 +112,7 @@ export interface MarketplaceListing {
   seller: string;
   price: number;
   currency: string;
-  status: 'active' | 'sold' | 'cancelled' | 'expired';
+  status: "active" | "sold" | "cancelled" | "expired";
   createdAt: string;
   updatedAt: string;
   expiresAt?: string;
@@ -186,7 +186,7 @@ export interface COAInfo {
 
 // Configuration types
 export interface FlowConfig {
-  network: 'testnet' | 'mainnet' | 'emulator';
+  network: "testnet" | "mainnet" | "emulator";
   accessNode: string;
   discoveryWallet: string;
   contractAddress: string;
@@ -201,19 +201,19 @@ export interface NetworkConfig {
 }
 
 // Transaction status types
-export type TransactionStatus = 
-  | 'UNKNOWN'
-  | 'PENDING'
-  | 'FINALIZED'
-  | 'EXECUTED'
-  | 'SEALED'
-  | 'EXPIRED';
+export type TransactionStatus =
+  | "UNKNOWN"
+  | "PENDING"
+  | "FINALIZED"
+  | "EXECUTED"
+  | "SEALED"
+  | "EXPIRED";
 
 // Error types
 export interface FlowError {
   code: string;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 // Hook return types
@@ -230,20 +230,27 @@ export interface FlowActions {
   initialize: () => Promise<void>;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  
+
   // NFT operations
-  mintBreathingPattern: (pattern: BreathingPatternAttributes, metadata: NFTMetadata) => Promise<string>;
+  mintBreathingPattern: (
+    pattern: BreathingPatternAttributes,
+    metadata: NFTMetadata,
+  ) => Promise<string>;
   transferNFT: (nftId: string, recipient: string) => Promise<string>;
-  
+
   // Marketplace operations
   listForSale: (nftId: string, price: number) => Promise<string>;
   purchaseNFT: (listingId: string) => Promise<PurchaseResult>;
   cancelListing: (listingId: string) => Promise<string>;
-  
+
   // Batch operations
-  batchMintPatterns: (patterns: BreathingPatternAttributes[]) => Promise<BatchTransactionResult>;
-  executeBatchTransaction: (calls: EVMBatchCall[]) => Promise<BatchTransactionResult>;
-  
+  batchMintPatterns: (
+    patterns: BreathingPatternAttributes[],
+  ) => Promise<BatchTransactionResult>;
+  executeBatchTransaction: (
+    calls: EVMBatchCall[],
+  ) => Promise<BatchTransactionResult>;
+
   // Utility operations
   getAccountInfo: (address: string) => Promise<FlowAccount>;
   getTransactionStatus: (txId: string) => Promise<TransactionStatus>;
@@ -271,13 +278,13 @@ export interface SessionMetrics {
 // Smart contract interaction types
 export interface ContractMethod {
   name: string;
-  args: any[];
+  args: unknown[];
   gasLimit?: number;
 }
 
 export interface ContractEvent {
   name: string;
-  data: any;
+  data: Record<string, unknown>;
   blockHeight: number;
   transactionId: string;
 }

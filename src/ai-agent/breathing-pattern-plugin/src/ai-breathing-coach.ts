@@ -7,11 +7,6 @@ interface FlowNFTResult {
   collectionAddress: string;
 }
 
-interface StoryIPResult {
-  ipAssetId: string;
-  licenseId: string;
-  royaltyPolicy: string;
-}
 
 interface LensSocialResult {
   publicationId: string;
@@ -36,7 +31,6 @@ interface BreathingPattern {
 interface UserContext {
   address?: string;
   lensProfile?: string;
-  storyAccount?: string;
   preferences: {
     difficulty: 'beginner' | 'intermediate' | 'advanced';
     goals: string[];
@@ -46,11 +40,10 @@ interface UserContext {
 
 /**
  * AIBreathingCoach - The brain that connects Zen's conversational abilities
- * to the on-chain actions across Flow, Story, and Lens protocols
+ * to the on-chain actions across Flow and Lens protocols
  */
 export class AIBreathingCoach {
   private flowClient: any; // Will be replaced with actual EnhancedFlowClient
-  private storyClient: any; // Will be replaced with actual StoryBreathingClient
   private lensClient: any; // Will be replaced with actual LensBreathingClient
   
   constructor() {
@@ -67,12 +60,6 @@ export class AIBreathingCoach {
       mintBreathingNFT: this.simulateMintNFT.bind(this),
       listOnMarketplace: this.simulateMarketplaceListing.bind(this),
       batchTransactions: this.simulateBatchTransaction.bind(this)
-    };
-    
-    this.storyClient = {
-      registerIP: this.simulateIPRegistration.bind(this),
-      setLicenseTerms: this.simulateLicenseSetup.bind(this),
-      claimRoyalties: this.simulateRoyaltyClaim.bind(this)
     };
     
     this.lensClient = {
@@ -123,10 +110,6 @@ export class AIBreathingCoach {
       primary = 'mint_nft';
       blockchainActions.push('flow_mint');
       confidence = 0.95;
-    } else if (text.includes('ip') || text.includes('protect') || text.includes('rights')) {
-      primary = 'register_ip';
-      blockchainActions.push('story_register');
-      confidence = 0.9;
     } else if (text.includes('share') || text.includes('social') || text.includes('community')) {
       primary = 'social_share';
       blockchainActions.push('lens_post');
@@ -148,7 +131,6 @@ export class AIBreathingCoach {
     // Secondary intents
     const secondary: string[] = [];
     if (text.includes('marketplace') || text.includes('sell')) secondary.push('marketplace');
-    if (text.includes('royalty') || text.includes('earn')) secondary.push('monetization');
     if (text.includes('community') || text.includes('follow')) secondary.push('social');
     
     return { primary, secondary, confidence, blockchainActions };
@@ -169,9 +151,6 @@ export class AIBreathingCoach {
       
       case 'mint_nft':
         return await this.handleNFTMinting(message, userContext);
-      
-      case 'register_ip':
-        return await this.handleIPRegistration(message, userContext);
       
       case 'social_share':
         return await this.handleSocialSharing(message, userContext);
@@ -216,7 +195,6 @@ export class AIBreathingCoach {
     if (this.shouldSuggestMinting(pattern, userContext)) {
       response += `This pattern is unique and valuable! Would you like to:\n`;
       response += `🎨 **Mint as NFT** - Own your pattern as a digital asset\n`;
-      response += `🛡️ **Register IP** - Protect your creation and earn royalties\n`;
       response += `🌐 **Share Socially** - Build your wellness community\n\n`;
       response += `Just let me know what interests you most! ✨`;
     } else {
@@ -249,7 +227,6 @@ export class AIBreathingCoach {
       response += `Your breathing pattern is now a unique digital asset! 🌟\n\n`;
       response += `**Next Steps:**\n`;
       response += `💰 **List on Marketplace** - Set a price and earn from sales\n`;
-      response += `🛡️ **Register IP Rights** - Protect and earn royalties\n`;
       response += `📱 **Share Achievement** - Show off your creation\n\n`;
       response += `What would you like to do next? 🚀`;
       
@@ -261,48 +238,6 @@ export class AIBreathingCoach {
     }
   }
   
-  /**
-   * Handles IP registration on Story Protocol
-   */
-  private async handleIPRegistration(message: string, userContext: UserContext): Promise<string> {
-    elizaLogger.info("Handling IP registration");
-    
-    try {
-      const pattern = this.extractOrCreatePattern(message, userContext);
-      
-      // Register IP on Story Protocol
-      const ipResult = await this.storyClient.registerIP(pattern, userContext.storyAccount);
-      
-      // Set up licensing terms
-      await this.storyClient.setLicenseTerms(ipResult.ipAssetId, {
-        commercialUse: true,
-        derivativesAllowed: true,
-        royaltyRate: 10, // 10% royalty
-        attribution: true
-      });
-      
-      let response = `🛡️ Successfully registered your breathing pattern as intellectual property!\n\n`;
-      response += `**IP Registration:**\n`;
-      response += `- **IP Asset ID:** ${ipResult.ipAssetId}\n`;
-      response += `- **License ID:** ${ipResult.licenseId}\n`;
-      response += `- **Royalty Policy:** ${ipResult.royaltyPolicy}\n\n`;
-      
-      response += `**Your Rights:**\n`;
-      response += `✅ Attribution - You're credited as creator\n`;
-      response += `✅ Commercial Use - Earn from licensing\n`;
-      response += `✅ Derivative Control - Manage remixes\n`;
-      response += `✅ Royalty Stream - 10% on all usage\n\n`;
-      
-      response += `Your breathing technique is now legally protected on-chain! Anyone who uses or builds upon your pattern will automatically compensate you. 💰\n\n`;
-      response += `Ready to start earning? I can help you set up marketplace listings or create derivative patterns! 🌟`;
-      
-      return response;
-      
-    } catch (error) {
-      elizaLogger.error("Error registering IP:", error);
-      return "I'd love to help protect your breathing pattern! First, let me understand what technique you'd like to register as intellectual property. 🛡️";
-    }
-  }
   
   /**
    * Handles social sharing on Lens Protocol
@@ -397,7 +332,7 @@ export class AIBreathingCoach {
   }
   
   private async handleGeneralGuidance(message: string, userContext: UserContext): Promise<string> {
-    return `Hello! I'm Zen, your AI Breathing Coach. I'm here to help you discover, practice, and even monetize breathing patterns through Web3 technology! 🌬️\n\nI can help you with:\n🧘‍♀️ **Personalized Breathing Patterns** - Custom techniques for your goals\n🎨 **NFT Creation** - Turn your patterns into digital assets\n🛡️ **IP Protection** - Register and monetize your techniques\n🌐 **Community Building** - Connect with other practitioners\n\nWhat would you like to explore today? Just tell me how you're feeling or what you'd like to achieve! ✨`;
+    return `Hello! I'm Zen, your AI Breathing Coach. I'm here to help you discover, practice, and monetize breathing patterns through Web3 technology! 🌬️\n\nI can help you with:\n🧘‍♀️ **Personalized Breathing Patterns** - Custom techniques for your goals\n🎨 **NFT Creation** - Turn your patterns into digital assets\n🌐 **Community Building** - Connect with other practitioners\n\nWhat would you like to explore today? Just tell me how you're feeling or what you'd like to achieve! ✨`;
   }
   
   // Helper methods
@@ -481,14 +416,6 @@ export class AIBreathingCoach {
     };
   }
   
-  private async simulateIPRegistration(pattern: BreathingPattern, account?: string): Promise<StoryIPResult> {
-    elizaLogger.info("Simulating IP registration");
-    return {
-      ipAssetId: `IP-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-      licenseId: `LIC-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-      royaltyPolicy: `ROY-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-    };
-  }
   
   private async simulateSocialPost(data: any): Promise<LensSocialResult> {
     elizaLogger.info("Simulating social post");
@@ -509,15 +436,6 @@ export class AIBreathingCoach {
     return `batch-${Math.random().toString(36).substr(2, 8)}`;
   }
   
-  private async simulateLicenseSetup(ipId: string, terms: any): Promise<string> {
-    elizaLogger.info("Simulating license setup");
-    return `license-${Math.random().toString(36).substr(2, 8)}`;
-  }
-  
-  private async simulateRoyaltyClaim(ipId: string): Promise<number> {
-    elizaLogger.info("Simulating royalty claim");
-    return Math.random() * 100; // Random amount
-  }
   
   private async simulateAchievementShare(achievement: any): Promise<LensSocialResult> {
     elizaLogger.info("Simulating achievement share");

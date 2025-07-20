@@ -63,8 +63,13 @@ import {
 } from "../components/ui/dropdown-menu";
 import { PatternStorageService } from "../lib/patternStorage";
 import { useAuth } from "../hooks/useAuth";
-import { useStory } from "../hooks/useStory";
 import { useToast } from "../hooks/use-toast";
+import { useUnifiedAuth } from "../hooks/useUnifiedAuth";
+import { usePatternCreation } from "../hooks/usePatternCreation";
+import {
+  BlockchainSelector,
+  type BlockchainType,
+} from "../components/blockchain/BlockchainSelector";
 
 const patternStorageService = new PatternStorageService();
 
@@ -114,10 +119,6 @@ interface PatternStats {
   licenseSales: number;
 
   // IP & Blockchain
-  ipRegistered: boolean;
-  ipAssetId?: string;
-  storyProtocolHash?: string;
-
   // Success metrics
   completionRate: number;
   retentionRate: number;
@@ -147,15 +148,20 @@ const EnhancedCreatorDashboard = () => {
   const [patterns, setPatterns] = useState<PatternStats[]>([]);
   const [stats, setStats] = useState<CreatorStats | null>(null);
   const [selectedPattern, setSelectedPattern] = useState<PatternStats | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(true);
   const [royaltyPercentage, setRoyaltyPercentage] = useState(10);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [selectedBlockchain, setSelectedBlockchain] =
+    useState<BlockchainType>("lens");
+  const [showBlockchainSelector, setShowBlockchainSelector] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const { registerBreathingPatternIP, setLicensingTerms } = useStory();
+  const unifiedAuth = useUnifiedAuth();
+  const { getAvailableBlockchains, getRecommendedBlockchain } =
+    usePatternCreation();
 
   // Fetch real creator data on component mount
   useEffect(() => {
@@ -187,94 +193,42 @@ const EnhancedCreatorDashboard = () => {
   }, [toast]);
 
   const handleCreatePattern = () => {
-    navigate("/create-pattern");
+    // Check if multiple blockchains are available
+    const availableChains = getAvailableBlockchains();
+
+    if (availableChains.length > 1) {
+      setShowBlockchainSelector(true);
+    } else if (availableChains.length === 1) {
+      // Auto-select the only available blockchain
+      setSelectedBlockchain(availableChains[0]);
+      navigate("/create-pattern", {
+        state: {
+          blockchain: availableChains[0],
+          enableRoyalties: true,
+        },
+      });
+    } else {
+      // No blockchain connected
+      toast({
+        title: "Connect a Wallet",
+        description: "Please connect a wallet to create patterns.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBlockchainSelected = () => {
+    setShowBlockchainSelector(false);
+    navigate("/create-pattern", {
+      state: {
+        blockchain: selectedBlockchain,
+        enableRoyalties: false,
+      },
+    });
   };
 
   const handleEditPattern = (pattern: PatternStats) => {
     navigate("/create-pattern", { state: { editPattern: pattern } });
-  };
-
-  const handleRegisterIP = async (pattern: PatternStats) => {
-    setLoading(true);
-    try {
-      // Directly use the Lens Chain blockchain integration
-      // No more mock data or fallbacks
-      if (!user?.id) {
-        throw new Error("User must be authenticated to register IP");
-      }
-
-      // Extract phases from pattern data
-      const fullPattern = await patternStorageService.getPattern(pattern.id);
-      if (!fullPattern) {
-        throw new Error("Failed to load pattern details");
-      }
-
-      // Convert pattern phases to the format expected by the SDK
-      const patternPhases: Record<string, number> = {};
-
-      if (fullPattern.phases) {
-        fullPattern.phases.forEach((phase) => {
-          patternPhases[phase.name] = phase.duration;
-        });
-      }
-
-      // Use real blockchain registration
-      const ipAsset = await registerBreathingPatternIP({
-        name: pattern.name,
-        description: pattern.description,
-        creator: user.id,
-        patternPhases: patternPhases,
-      });
-
-      if (!ipAsset || !ipAsset.id) {
-        throw new Error("Transaction failed: No IP asset ID returned");
-      }
-
-      // Set real licensing terms on the blockchain
-      const licensingResult = await setLicensingTerms(ipAsset.id, {
-        commercial: true,
-        derivatives: true,
-        attribution: true,
-        royaltyPercentage: royaltyPercentage,
-      });
-
-      if (!licensingResult.success) {
-        throw new Error(
-          "Failed to set licensing terms: " + licensingResult.error
-        );
-      }
-
-      // Update pattern in our local state
-      setPatterns((prev) =>
-        prev.map((p) =>
-          p.id === pattern.id
-            ? { ...p, ipRegistered: true, ipAssetId: ipAsset.id }
-            : p
-        )
-      );
-
-      // Update the pattern in persistent storage
-      await patternStorageService.savePattern({
-        ...fullPattern,
-        ipAssetId: ipAsset.id,
-        storyProtocolRegistered: true,
-      });
-
-      toast({
-        title: "IP Registered Successfully",
-        description: `Pattern "${pattern.name}" has been registered as IP on Lens Chain using Story Protocol.`,
-      });
-    } catch (error) {
-      console.error("IP registration failed:", error);
-      toast({
-        title: "Registration Failed",
-        description:
-          "Could not register the pattern on Story Protocol. Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   // If loading, show a loading state
@@ -331,12 +285,6 @@ const EnhancedCreatorDashboard = () => {
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </DropdownMenuItem>
-                {!pattern.ipRegistered && (
-                  <DropdownMenuItem onClick={() => handleRegisterIP(pattern)}>
-                    <Award className="h-4 w-4 mr-2" />
-                    Register IP
-                  </DropdownMenuItem>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -346,12 +294,6 @@ const EnhancedCreatorDashboard = () => {
               {pattern.status}
             </Badge>
             <Badge variant="outline">{pattern.difficulty}</Badge>
-            {pattern.ipRegistered && (
-              <Badge className="bg-blue-100 text-blue-800">
-                <Award className="h-3 w-3 mr-1" />
-                IP Protected
-              </Badge>
-            )}
           </div>
         </CardHeader>
 
@@ -583,17 +525,6 @@ const EnhancedCreatorDashboard = () => {
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View in Marketplace
-                  </Button>
-
-                  <Button
-                    onClick={() =>
-                      window.open("https://story.foundation", "_blank")
-                    }
-                    className="w-full justify-start"
-                    variant="outline"
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Story Protocol Explorer
                   </Button>
                 </CardContent>
               </Card>
@@ -839,6 +770,60 @@ const EnhancedCreatorDashboard = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Blockchain Selection Dialog */}
+      <Dialog
+        open={showBlockchainSelector}
+        onOpenChange={setShowBlockchainSelector}
+      >
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Choose Blockchain for Your Pattern</DialogTitle>
+            <div className="text-sm text-muted-foreground">
+              Select the blockchain where you'd like to create your breathing
+              pattern. Each blockchain offers different features and benefits.
+            </div>
+          </DialogHeader>
+
+          <div className="py-4">
+            <BlockchainSelector
+              value={selectedBlockchain}
+              onChange={setSelectedBlockchain}
+              filter={(option) =>
+                getAvailableBlockchains().includes(option.value)
+              }
+              showFeatures={true}
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              {unifiedAuth.flow.connected &&
+                selectedBlockchain === "flow" &&
+                "✨ Flow is optimized for NFT creation with low fees"}
+              {unifiedAuth.lens.connected &&
+                selectedBlockchain === "lens" &&
+                "🌟 Lens enables social sharing and community features"}
+              {unifiedAuth.walletConnected &&
+                ["ethereum", "arbitrum", "base"].includes(selectedBlockchain) &&
+                "⚡ EVM chains offer broad ecosystem compatibility"}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowBlockchainSelector(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleBlockchainSelected}>
+                Create on{" "}
+                {selectedBlockchain.charAt(0).toUpperCase() +
+                  selectedBlockchain.slice(1)}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,26 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
-import { WalletUser, UserWallet } from "../types/blockchain";
+import { User, UserRole } from "../types/blockchain";
 import { useAccount, useConnect, useDisconnect, useChainId } from "wagmi";
 // import { useConnectModal } from "connectkit"; // Not available in current version
 
 // Blockchain features configuration
 const BLOCKCHAIN_FEATURES_ENABLED = true;
 
-export type UserRole = "user" | "creator" | "instructor";
-
-export interface UserProfile {
-  id: string;
-  role: UserRole;
-  creator_verified: boolean;
-  wallet_address: string | null;
-  // Add other profile fields as needed
-}
-
 export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Wagmi hooks for wallet integration
@@ -53,12 +43,12 @@ export const useAuth = () => {
             .select()
             .single();
           if (insertError) throw insertError;
-          setProfile(newUser as UserProfile);
+          setProfile(newUser as User);
         } else {
           throw error;
         }
       } else {
-        setProfile(data as UserProfile);
+        setProfile(data as User);
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -204,7 +194,7 @@ export const useAuth = () => {
           : null,
         profile: {
           username: session.user.user_metadata?.username,
-          displayName: session.user.user_metadata?.display_name,
+          name: session.user.user_metadata?.display_name,
           avatar: session.user.user_metadata?.avatar_url,
         },
         createdAt: session.user.created_at,

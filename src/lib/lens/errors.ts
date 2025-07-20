@@ -8,11 +8,15 @@
  */
 export class LensError extends Error {
   code: string;
-  context?: Record<string, any>;
-  
-  constructor(code: string, message: string, context?: Record<string, any>) {
+  context?: Record<string, unknown>;
+
+  constructor(
+    code: string,
+    message: string,
+    context?: Record<string, unknown>,
+  ) {
     super(message);
-    this.name = 'LensError';
+    this.name = "LensError";
     this.code = code;
     this.context = context;
   }
@@ -22,9 +26,9 @@ export class LensError extends Error {
  * Authentication-related errors
  */
 export class LensAuthenticationError extends LensError {
-  constructor(message: string, context?: Record<string, any>) {
-    super('AUTHENTICATION_ERROR', message, context);
-    this.name = 'LensAuthenticationError';
+  constructor(message: string, context?: Record<string, unknown>) {
+    super("AUTHENTICATION_ERROR", message, context);
+    this.name = "LensAuthenticationError";
   }
 }
 
@@ -33,10 +37,14 @@ export class LensAuthenticationError extends LensError {
  */
 export class LensApiError extends LensError {
   status?: number;
-  
-  constructor(message: string, status?: number, context?: Record<string, any>) {
-    super('API_ERROR', message, context);
-    this.name = 'LensApiError';
+
+  constructor(
+    message: string,
+    status?: number,
+    context?: Record<string, unknown>,
+  ) {
+    super("API_ERROR", message, context);
+    this.name = "LensApiError";
     this.status = status;
   }
 }
@@ -46,10 +54,14 @@ export class LensApiError extends LensError {
  */
 export class LensSocialActionError extends LensError {
   actionType: string;
-  
-  constructor(actionType: string, message: string, context?: Record<string, any>) {
-    super('SOCIAL_ACTION_ERROR', message, context);
-    this.name = 'LensSocialActionError';
+
+  constructor(
+    actionType: string,
+    message: string,
+    context?: Record<string, unknown>,
+  ) {
+    super("SOCIAL_ACTION_ERROR", message, context);
+    this.name = "LensSocialActionError";
     this.actionType = actionType;
   }
 }
@@ -58,9 +70,9 @@ export class LensSocialActionError extends LensError {
  * Storage-related errors (Grove)
  */
 export class LensStorageError extends LensError {
-  constructor(message: string, context?: Record<string, any>) {
-    super('STORAGE_ERROR', message, context);
-    this.name = 'LensStorageError';
+  constructor(message: string, context?: Record<string, unknown>) {
+    super("STORAGE_ERROR", message, context);
+    this.name = "LensStorageError";
   }
 }
 
@@ -69,10 +81,14 @@ export class LensStorageError extends LensError {
  */
 export class LensRateLimitError extends LensError {
   retryAfter?: number;
-  
-  constructor(message: string, retryAfter?: number, context?: Record<string, any>) {
-    super('RATE_LIMIT_ERROR', message, context);
-    this.name = 'LensRateLimitError';
+
+  constructor(
+    message: string,
+    retryAfter?: number,
+    context?: Record<string, unknown>,
+  ) {
+    super("RATE_LIMIT_ERROR", message, context);
+    this.name = "LensRateLimitError";
     this.retryAfter = retryAfter;
   }
 }
@@ -82,10 +98,14 @@ export class LensRateLimitError extends LensError {
  */
 export class LensContentValidationError extends LensError {
   field: string;
-  
-  constructor(field: string, message: string, context?: Record<string, any>) {
-    super('CONTENT_VALIDATION_ERROR', message, context);
-    this.name = 'LensContentValidationError';
+
+  constructor(
+    field: string,
+    message: string,
+    context?: Record<string, unknown>,
+  ) {
+    super("CONTENT_VALIDATION_ERROR", message, context);
+    this.name = "LensContentValidationError";
     this.field = field;
   }
 }
@@ -93,28 +113,28 @@ export class LensContentValidationError extends LensError {
 /**
  * Check if an error is a specific Lens error type
  */
-export function isLensError(error: any): error is LensError {
+export function isLensError(error: unknown): error is LensError {
   return error instanceof LensError;
 }
 
 /**
  * Format error for logging and reporting
  */
-export function formatLensError(error: any): {
+export function formatLensError(error: unknown): {
   code: string;
   message: string;
-  details?: any;
+  details?: unknown;
 } {
   if (isLensError(error)) {
     return {
       code: error.code,
       message: error.message,
-      details: error.context
+      details: error.context,
     };
   }
-  
+
   return {
-    code: 'UNKNOWN_ERROR',
-    message: error instanceof Error ? error.message : String(error)
+    code: "UNKNOWN_ERROR",
+    message: error instanceof Error ? error.message : String(error),
   };
 }

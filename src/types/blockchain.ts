@@ -1,9 +1,15 @@
-// Wallet Types - using ConnectKit/Avara
-export interface WalletUser {
+// Lens v3 2025 Types - Pure Implementation (No Legacy)
+export type UserRole = "user" | "creator" | "instructor";
+
+export interface User {
   id: string;
   email?: string;
-  wallet: UserWallet;
+  role: UserRole;
+  creator_verified: boolean;
+  wallet_address: string | null;
   profile: UserProfile;
+  wallet?: UserWallet;
+  lensAccount?: LensAccount;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,7 +24,7 @@ export interface UserWallet {
 
 export interface UserProfile {
   username?: string;
-  displayName?: string;
+  name?: string;
   avatar?: string;
   bio?: string;
   socialLinks?: {
@@ -28,11 +34,133 @@ export interface UserProfile {
   };
 }
 
-// Authentication Types
+// Lens v3 2025 Types - Latest Spec Compliant
+export interface LensAccount {
+  id: string;
+  address: string;
+  username?: {
+    localName: string;
+    fullHandle: string;
+    ownedBy: string;
+  };
+  ownedBy: {
+    address: string;
+  };
+  metadata?: {
+    name?: string;
+    bio?: string;
+    picture?:
+      | string
+      | {
+          __typename: string;
+          optimized?: {
+            uri: string;
+          };
+        };
+    coverPicture?: string;
+    attributes?: Array<{
+      key: string;
+      value: string;
+      type: "string" | "number" | "boolean" | "json";
+    }>;
+  };
+  stats: {
+    followers: number;
+    following: number;
+    posts: number;
+    comments: number;
+    reposts: number;
+    quotes: number;
+    reactions: number;
+  };
+  operations?: {
+    canFollow: boolean;
+    canUnfollow: boolean;
+    isFollowedByMe: boolean;
+    canSendDM: boolean;
+    canBlock: boolean;
+    canReport: boolean;
+  };
+  timestamp: string;
+  isVerified?: boolean;
+  sponsors?: string[];
+}
+
+export interface LensPost {
+  id: string;
+  author: LensAccount;
+  contentUri: string;
+  metadata: {
+    content?: string;
+    title?: string;
+    tags?: string[];
+    locale?: string;
+    contentWarning?: "NSFW" | "SENSITIVE" | "SPOILER";
+    mainContentFocus:
+      | "TEXT_ONLY"
+      | "IMAGE"
+      | "VIDEO"
+      | "AUDIO"
+      | "ARTICLE"
+      | "LINK"
+      | "EMBED";
+    attributes?: Array<{
+      key: string;
+      value: string;
+      type: "string" | "number" | "boolean" | "json";
+    }>;
+  };
+  timestamp: string;
+  stats: {
+    comments: number;
+    reposts: number;
+    quotes: number;
+    reactions: number;
+    collects: number;
+    bookmarks: number;
+  };
+  operations?: {
+    canComment: boolean;
+    canRepost: boolean;
+    canQuote: boolean;
+    canCollect: boolean;
+    canReport: boolean;
+    hasReacted: boolean;
+    hasReposted: boolean;
+    hasBookmarked: boolean;
+    hasCollected: boolean;
+  };
+  root?: LensPost;
+  commentOn?: LensPost;
+  quoteOf?: LensPost;
+}
+
+export interface BreathingSessionData {
+  patternName: string;
+  duration: number;
+  score: number;
+  cycles?: number;
+  breathHoldTime?: number;
+  flowNFTId?: string;
+  insights?: string[];
+  content?: string;
+  lensPostId?: string;
+  timestamp: string;
+}
+
+export interface SocialActionResult {
+  success: boolean;
+  hash?: string;
+  postId?: string;
+  error?: string;
+  transactionHash?: string; // Backward compatibility alias for hash
+}
+
+// Lens v3 Authentication Types
 export type AuthProvider = "google" | "apple" | "email" | "wallet";
 
 export interface AuthResult {
-  user: WalletUser;
+  user: User;
   token: string;
   refreshToken: string;
 }
@@ -77,13 +205,13 @@ export interface IPMetadata {
 export interface LicenseTerms {
   id: string;
   type: "personal" | "commercial" | "exclusive";
-  price: number; // in wei
-  currency: "ETH" | "USDC";
-  duration?: number; // days, null for perpetual
+  price: number;
+  currency: "ETH" | "USDC" | "GHO";
+  duration?: number;
   attributionRequired: boolean;
-  derivativeWorks: boolean; // renamed from modifications
-  commercialUse: boolean; // renamed from resale for consistency
-  royaltyPercent: number; // added for consistency
+  derivativeWorks: boolean;
+  commercialUse: boolean;
+  royaltyPercent: number;
   maxUsers?: number;
   uri?: string;
   defaultMintingFee?: bigint;

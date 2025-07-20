@@ -6,7 +6,7 @@ A production-ready multichain wellness platform that transforms breathing practi
 
 ## 🎯 What is Imperfect Breath?
 
-Imperfect Breath is the world's first comprehensive Web3 wellness platform that combines:
+Imperfect Breath is a wellness platform that combines:
 
 - **🫁 Ancient Breathing Wisdom** - Traditional techniques from around the world
 - **🤖 AI-Powered Coaching** - Real-time personalized guidance with Zen AI agent

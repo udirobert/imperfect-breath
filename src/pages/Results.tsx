@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import { useAuth } from "../hooks/useAuth";
 
 import { EnhancedCustomPattern } from "../types/patterns";
-import { IntegratedSocialFlow } from "../components/social/IntegratedSocialFlow";
+import { BreathingSessionPost } from "../components/social/BreathingSessionPost";
 import { SessionCompleteModal } from "../components/unified/SessionCompleteModal";
 
 const formatTime = (seconds: number) => {
@@ -454,21 +454,31 @@ Check out Mindful Breath!`;
             <Share className="mr-2 h-5 w-5" />
             Share Results
           </Button>
-          {analyses.length > 0 && (
-            <IntegratedSocialFlow
-              phase="completion"
+        </div>
+
+        {/* Lens V3 Social Sharing */}
+        {analyses.length > 0 && (
+          <div className="mt-8">
+            <BreathingSessionPost
               sessionData={{
-                ...sessionData,
+                patternName: sessionData.patternName || "Breathing Session",
+                duration: sessionData.sessionDuration || 300,
                 score: sessionData.restlessnessScore
                   ? Math.max(0, 100 - sessionData.restlessnessScore)
-                  : 75, // Convert restlessness to a score
+                  : 75,
+                breathHoldTime: sessionData.breathHoldTime,
+                cycles: sessionData.cycles,
+                insights: analyses,
+                flowNFTId: undefined,
               }}
-              onSocialAction={(action, data) => {
-                console.log("Social action:", action, data);
+              onPublished={(txHash) => {
+                toast.success("Session shared to Lens!", {
+                  description: `Transaction: ${txHash.slice(0, 10)}...`,
+                });
               }}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </>
   );

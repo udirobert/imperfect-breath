@@ -52,7 +52,9 @@ Analyze the following breathing session data and provide structured feedback in 
 
 Session Data:
 - Pattern Name: ${sessionData.patternName}
-- Session Duration: ${sessionData.sessionDuration} seconds (${Math.round(sessionData.sessionDuration / 60)} minutes)
+- Session Duration: ${sessionData.sessionDuration} seconds (${Math.round(
+    sessionData.sessionDuration / 60
+  )} minutes)
 - Breath Hold Time: ${sessionData.breathHoldTime || "N/A"} seconds
 - Restlessness Score: ${sessionData.restlessnessScore || "N/A"}/100
 - BPM: ${sessionData.bpm || "N/A"}
@@ -88,7 +90,7 @@ async function testGeminiAnalysis(apiKey) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = buildAnalysisPrompt(TEST_SESSION_DATA);
     const startTime = Date.now();
@@ -111,7 +113,7 @@ async function testGeminiAnalysis(apiKey) {
     } catch (parseError) {
       console.log(
         "❌ JSON parsing failed, raw response:",
-        text.substring(0, 200),
+        text.substring(0, 200)
       );
       return {
         success: false,
@@ -190,7 +192,7 @@ async function testOpenAIAnalysis(apiKey) {
     } catch (parseError) {
       console.log(
         "❌ JSON parsing failed, raw response:",
-        responseText.substring(0, 200),
+        responseText.substring(0, 200)
       );
       return {
         success: false,
@@ -264,7 +266,7 @@ async function testAnthropicAnalysis(apiKey) {
     } catch (parseError) {
       console.log(
         "❌ JSON parsing failed, raw response:",
-        responseText.substring(0, 200),
+        responseText.substring(0, 200)
       );
       return {
         success: false,
@@ -316,7 +318,9 @@ async function runPatternGenerationTest(provider, apiKey) {
     let responseText = "";
     const startTime = Date.now();
 
-    const prompt = `Create a custom breathing pattern based on: "${testRequest.prompt}"
+    const prompt = `Create a custom breathing pattern based on: "${
+      testRequest.prompt
+    }"
 
 Preferences:
 - Category: ${testRequest.preferences?.preferredCategory || "any"}
@@ -340,7 +344,7 @@ Respond with JSON format:
     switch (provider.id) {
       case "google":
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
         responseText = await result.response.text();
         break;
@@ -423,7 +427,7 @@ async function runAllTests() {
 
   if (mockMode) {
     console.log(
-      "🎭 Running in MOCK MODE - demonstrating functionality without API calls\n",
+      "🎭 Running in MOCK MODE - demonstrating functionality without API calls\n"
     );
     return runMockTests();
   }
@@ -435,13 +439,13 @@ async function runAllTests() {
   console.log(
     "   Restlessness Score:",
     TEST_SESSION_DATA.restlessnessScore,
-    "/100",
+    "/100"
   );
   console.log("   BPM:", TEST_SESSION_DATA.bpm);
   console.log(
     "   Consistency Score:",
     TEST_SESSION_DATA.consistencyScore,
-    "/100\n",
+    "/100\n"
   );
 
   const results = {
@@ -469,7 +473,7 @@ async function runAllTests() {
     const apiKey = process.env[provider.envKey];
     if (!apiKey) {
       console.log(
-        `❌ No API key found for ${provider.name} (${provider.envKey})`,
+        `❌ No API key found for ${provider.name} (${provider.envKey})`
       );
       results.analysis.push({
         provider: provider.id,
@@ -488,14 +492,14 @@ async function runAllTests() {
 
       if (result.success) {
         console.log(
-          `✅ ${provider.name} analysis successful (${result.duration}ms)`,
+          `✅ ${provider.name} analysis successful (${result.duration}ms)`
         );
         console.log(`   Overall Score: ${result.result.score.overall}/100`);
         console.log(
-          `   Suggestions: ${result.result.suggestions.length} provided`,
+          `   Suggestions: ${result.result.suggestions.length} provided`
         );
         console.log(
-          `   Next Steps: ${result.result.nextSteps.length} provided`,
+          `   Next Steps: ${result.result.nextSteps.length} provided`
         );
 
         results.summary.successfulAnalysis++;
@@ -523,7 +527,7 @@ async function runAllTests() {
     const apiKey = process.env[provider.envKey];
     if (!apiKey) {
       console.log(
-        `❌ Skipping ${provider.name} pattern generation - no API key`,
+        `❌ Skipping ${provider.name} pattern generation - no API key`
       );
       continue;
     }
@@ -542,7 +546,7 @@ async function runAllTests() {
   // Calculate average response time
   if (successCount > 0) {
     results.summary.averageResponseTime = Math.round(
-      totalResponseTime / successCount,
+      totalResponseTime / successCount
     );
   }
 
@@ -552,13 +556,13 @@ async function runAllTests() {
   console.log("=".repeat(50));
   console.log(`Total Providers Tested: ${results.summary.totalProviders}`);
   console.log(
-    `Successful Analysis Tests: ${results.summary.successfulAnalysis}/${results.summary.totalProviders}`,
+    `Successful Analysis Tests: ${results.summary.successfulAnalysis}/${results.summary.totalProviders}`
   );
   console.log(
-    `Successful Pattern Tests: ${results.summary.successfulPatterns}/${results.summary.totalProviders}`,
+    `Successful Pattern Tests: ${results.summary.successfulPatterns}/${results.summary.totalProviders}`
   );
   console.log(
-    `Average Response Time: ${results.summary.averageResponseTime}ms`,
+    `Average Response Time: ${results.summary.averageResponseTime}ms`
   );
 
   console.log("\n📋 Detailed Results:");
@@ -575,7 +579,7 @@ async function runAllTests() {
     const status = result.success ? "✅" : "❌";
     const duration = result.duration ? ` (${result.duration}ms)` : "";
     console.log(
-      `   ${status} ${result.provider} Pattern Generation${duration}`,
+      `   ${status} ${result.provider} Pattern Generation${duration}`
     );
     if (!result.success && result.error) {
       console.log(`      Error: ${result.error}`);
@@ -591,11 +595,11 @@ async function runAllTests() {
     failedProviders.forEach((provider) => {
       if (provider.error === "No API key configured") {
         console.log(
-          `   🔑 Add ${provider.provider.toUpperCase()}_API_KEY to your environment variables`,
+          `   🔑 Add ${provider.provider.toUpperCase()}_API_KEY to your environment variables`
         );
       } else {
         console.log(
-          `   ⚠️  Check ${provider.provider} configuration: ${provider.error}`,
+          `   ⚠️  Check ${provider.provider} configuration: ${provider.error}`
         );
       }
     });
@@ -641,13 +645,13 @@ async function runMockTests() {
   console.log(
     "   Restlessness Score:",
     TEST_SESSION_DATA.restlessnessScore,
-    "/100",
+    "/100"
   );
   console.log("   BPM:", TEST_SESSION_DATA.bpm);
   console.log(
     "   Consistency Score:",
     TEST_SESSION_DATA.consistencyScore,
-    "/100\n",
+    "/100\n"
   );
 
   const mockResults = {
@@ -700,14 +704,16 @@ async function runMockTests() {
     mockResults.analysis.push(mockAnalysis);
 
     console.log(
-      `✅ ${provider.name} analysis successful (${Math.round(mockAnalysis.duration)}ms)`,
+      `✅ ${provider.name} analysis successful (${Math.round(
+        mockAnalysis.duration
+      )}ms)`
     );
     console.log(`   Overall Score: ${mockAnalysis.result.score.overall}/100`);
     console.log(
-      `   Suggestions: ${mockAnalysis.result.suggestions.length} provided`,
+      `   Suggestions: ${mockAnalysis.result.suggestions.length} provided`
     );
     console.log(
-      `   Next Steps: ${mockAnalysis.result.nextSteps.length} provided`,
+      `   Next Steps: ${mockAnalysis.result.nextSteps.length} provided`
     );
   }
 
@@ -727,15 +733,15 @@ async function runMockTests() {
     mockResults.patterns.push(mockPattern);
 
     console.log(
-      `✅ Pattern generation successful (${Math.round(mockPattern.duration)}ms)`,
+      `✅ Pattern generation successful (${Math.round(mockPattern.duration)}ms)`
     );
     console.log(`   Name: Stress Relief Flow`);
     console.log(
-      `   Description: A calming breathing pattern designed to reduce stress and promote relaxation`,
+      `   Description: A calming breathing pattern designed to reduce stress and promote relaxation`
     );
     console.log(`   Phases: 4 phases`);
     console.log(
-      `   Reasoning: This pattern uses extended exhales to activate the parasympathetic nervous system...`,
+      `   Reasoning: This pattern uses extended exhales to activate the parasympathetic nervous system...`
     );
   }
 
@@ -745,25 +751,27 @@ async function runMockTests() {
   console.log("=".repeat(50));
   console.log(`Total Providers Tested: ${mockResults.summary.totalProviders}`);
   console.log(
-    `Successful Analysis Tests: ${mockResults.summary.successfulAnalysis}/${mockResults.summary.totalProviders}`,
+    `Successful Analysis Tests: ${mockResults.summary.successfulAnalysis}/${mockResults.summary.totalProviders}`
   );
   console.log(
-    `Successful Pattern Tests: ${mockResults.summary.successfulPatterns}/${mockResults.summary.totalProviders}`,
+    `Successful Pattern Tests: ${mockResults.summary.successfulPatterns}/${mockResults.summary.totalProviders}`
   );
   console.log(
-    `Average Response Time: ${mockResults.summary.averageResponseTime}ms`,
+    `Average Response Time: ${mockResults.summary.averageResponseTime}ms`
   );
 
   console.log("\n📋 Detailed Results:");
   mockResults.analysis.forEach((result) => {
     console.log(
-      `   ✅ ${result.provider} Analysis (${Math.round(result.duration)}ms)`,
+      `   ✅ ${result.provider} Analysis (${Math.round(result.duration)}ms)`
     );
   });
 
   mockResults.patterns.forEach((result) => {
     console.log(
-      `   ✅ ${result.provider} Pattern Generation (${Math.round(result.duration)}ms)`,
+      `   ✅ ${result.provider} Pattern Generation (${Math.round(
+        result.duration
+      )}ms)`
     );
   });
 

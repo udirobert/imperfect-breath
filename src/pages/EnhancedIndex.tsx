@@ -127,7 +127,7 @@ const EnhancedIndex = () => {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <Badge variant="secondary" className="mb-4 px-4 py-1">
-            🚀 World's First Blockchain-Powered Breathing Platform
+            🚀 Your breathwork & mindfulness social experiences platform
           </Badge>
           <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-6">
             Breathe. Earn. Inspire.
@@ -351,7 +351,10 @@ const EnhancedIndex = () => {
                 <CardContent className="p-6">
                   {testimonial.isDemo && (
                     <div className="mb-3">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-50 text-blue-700 border-blue-200"
+                      >
                         Early Feedback
                       </Badge>
                     </div>
@@ -398,7 +401,9 @@ const EnhancedIndex = () => {
               <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
                 3
               </div>
-              <div className="text-sm text-muted-foreground">Blockchains Integrated</div>
+              <div className="text-sm text-muted-foreground">
+                Blockchains Integrated
+              </div>
             </div>
             <div>
               <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
@@ -417,9 +422,12 @@ const EnhancedIndex = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="mt-8 text-center">
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Badge
+              variant="outline"
+              className="bg-blue-50 text-blue-700 border-blue-200"
+            >
               Platform in active development - Join our growing community
             </Badge>
           </div>

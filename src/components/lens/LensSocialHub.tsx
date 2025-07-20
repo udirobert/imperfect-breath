@@ -38,7 +38,8 @@ import {
   Send,
   Hash,
 } from "lucide-react";
-import { useLens, type SocialPost } from "@/hooks/useLens";
+import { useLens } from "@/hooks/useLens";
+import type { Post } from "@/lib/lens";
 
 export function LensSocialHub() {
   const {
@@ -49,13 +50,18 @@ export function LensSocialHub() {
     timeline,
     isLoadingTimeline,
     timelineError,
+    hasMorePosts,
+    highlights,
+    trendingPatterns,
     authenticate,
     logout,
-    refreshTimeline,
-    followAccount,
-    unfollowAccount,
+    loadTimeline,
+    loadMorePosts,
+    followUser,
+    unfollowUser,
     isFollowing,
     shareBreathingSession,
+    createPost,
     isPosting,
     actionError,
   } = useLens();
@@ -74,14 +80,34 @@ export function LensSocialHub() {
   // Handle quick breathing session share
   const handleQuickShare = async () => {
     await shareBreathingSession({
-      id: "quick-share",
       patternName: "Box Breathing",
-      duration: 5,
+      duration: 300, // 5 minutes in seconds
+      score: 85,
       breathHoldTime: 4,
       restlessnessScore: 15,
-      sessionDuration: 300,
+      cycles: 10,
       timestamp: new Date().toISOString(),
     });
+  };
+
+  // Handle post creation
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim()) return;
+    await createPost(newPostContent, selectedTags);
+    setNewPostContent("");
+    setSelectedTags([]);
+  };
+
+  // Handle load more posts
+  const handleLoadMore = async () => {
+    if (hasMorePosts && !isLoadingTimeline) {
+      await loadMorePosts();
+    }
+  };
+
+  // Handle refresh timeline
+  const handleRefreshTimeline = async () => {
+    await loadTimeline(true);
   };
 
   // Render authentication section
@@ -93,7 +119,7 @@ export function LensSocialHub() {
           Connect to Lens V3
         </CardTitle>
         <CardDescription>
-          Connect your wallet to access Lens Protocol
+          Connect your wallet to access Lens Protocol v3
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -140,17 +166,11 @@ export function LensSocialHub() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarImage
-                  src={
-                    currentAccount.metadata?.picture?.__typename === "ImageSet"
-                      ? currentAccount.metadata.picture.optimized?.uri
-                      : undefined
-                  }
-                />
+                <AvatarImage src={currentAccount.metadata?.picture} />
                 <AvatarFallback>
                   {(
-                    currentAccount.metadata?.displayName ||
-                    currentAccount.handle?.localName ||
+                    currentAccount.metadata?.name ||
+                    currentAccount.username?.localName ||
                     "U"
                   )
                     .charAt(0)
@@ -159,10 +179,12 @@ export function LensSocialHub() {
               </Avatar>
               <div>
                 <CardTitle className="text-lg">
-                  @{currentAccount.handle?.fullHandle || currentAccount.id}
+                  @
+                  {currentAccount.username?.fullHandle ||
+                    currentAccount.address}
                 </CardTitle>
                 <CardDescription>
-                  {currentAccount.metadata?.displayName || "Lens User"}
+                  {currentAccount.metadata?.name || "Lens User"}
                 </CardDescription>
               </div>
             </div>
@@ -225,33 +247,37 @@ export function LensSocialHub() {
   );
 
   // Render post item
-  const renderPost = (post: SocialPost) => (
+  const renderPost = (post: Post) => (
     <Card key={post.id} className="mb-4">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={post.author.avatar} />
+            <AvatarImage src={post.author.metadata?.picture} />
             <AvatarFallback>
-              {post.author.handle.charAt(0).toUpperCase()}
+              {(post.author.username?.localName || post.author.id)
+                .charAt(0)
+                .toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">@{post.author.handle}</span>
-              {post.author.displayName && (
+              <span className="font-medium text-sm">
+                @{post.author.username?.fullHandle || post.author.id}
+              </span>
+              {post.author.metadata?.name && (
                 <span className="text-xs text-muted-foreground">
-                  {post.author.displayName}
+                  {post.author.metadata.name}
                 </span>
               )}
             </div>
             <span className="text-xs text-muted-foreground">
-              {new Date(post.createdAt).toLocaleDateString()}
+              {new Date(post.timestamp).toLocaleDateString()}
             </span>
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => followAccount(post.author.id)}
+            onClick={() => followUser(post.author.id)}
             disabled={isFollowing}
           >
             {isFollowing ? (
@@ -266,14 +292,18 @@ export function LensSocialHub() {
         <div className="space-y-3">
           <p className="text-sm whitespace-pre-wrap">{post.content}</p>
 
-          {post.content.includes("#") && (
+          {(post.metadata?.tags || post.content.match(/#\w+/g)) && (
             <div className="flex flex-wrap gap-1">
-              {post.content.match(/#\w+/g)?.map((tag, index) => (
+              {(
+                post.metadata?.tags ||
+                post.content.match(/#\w+/g)?.map((tag) => tag.slice(1)) ||
+                []
+              ).map((tag, index) => (
                 <Badge key={index} variant="secondary" className="text-xs">
                   <Hash className="h-3 w-3 mr-1" />
-                  {tag.slice(1)}
+                  {typeof tag === "string" ? tag.replace("#", "") : tag}
                 </Badge>
-              )) || []}
+              ))}
             </div>
           )}
 
@@ -283,15 +313,15 @@ export function LensSocialHub() {
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1">
                 <Heart className="h-4 w-4" />
-                {post.stats.likes}
+                {post.stats?.reactions || 0}
               </span>
               <span className="flex items-center gap-1">
                 <MessageCircle className="h-4 w-4" />
-                {post.stats.comments}
+                {post.stats?.comments || 0}
               </span>
               <span className="flex items-center gap-1">
                 <Repeat2 className="h-4 w-4" />
-                {post.stats.shares}
+                {post.stats?.reposts || 0}
               </span>
             </div>
             <Badge variant="outline" className="text-xs">
@@ -317,7 +347,7 @@ export function LensSocialHub() {
           <Button
             variant="outline"
             size="sm"
-            onClick={refreshTimeline}
+            onClick={handleRefreshTimeline}
             disabled={isLoadingTimeline}
           >
             <RefreshCw
@@ -353,7 +383,23 @@ export function LensSocialHub() {
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-96">{timeline.map(renderPost)}</ScrollArea>
+          <div className="space-y-4">
+            <ScrollArea className="h-96">{timeline.map(renderPost)}</ScrollArea>
+            {hasMorePosts && (
+              <div className="text-center">
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingTimeline}
+                >
+                  {isLoadingTimeline ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : null}
+                  Load More Posts
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -397,6 +443,82 @@ export function LensSocialHub() {
 
         <TabsContent value="share" className="space-y-4">
           {renderQuickActions()}
+
+          {/* New Post Creation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Create Post</CardTitle>
+              <CardDescription>
+                Share your thoughts with the Lens community
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="What's on your mind about breathing and wellness?"
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                className="min-h-[100px]"
+              />
+
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={
+                    selectedTags.includes("breathing") ? "default" : "outline"
+                  }
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedTags((prev) =>
+                      prev.includes("breathing")
+                        ? prev.filter((tag) => tag !== "breathing")
+                        : [...prev, "breathing"],
+                    );
+                  }}
+                >
+                  #breathing
+                </Badge>
+                <Badge
+                  variant={
+                    selectedTags.includes("wellness") ? "default" : "outline"
+                  }
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedTags((prev) =>
+                      prev.includes("wellness")
+                        ? prev.filter((tag) => tag !== "wellness")
+                        : [...prev, "wellness"],
+                    );
+                  }}
+                >
+                  #wellness
+                </Badge>
+                <Badge
+                  variant={
+                    selectedTags.includes("mindfulness") ? "default" : "outline"
+                  }
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedTags((prev) =>
+                      prev.includes("mindfulness")
+                        ? prev.filter((tag) => tag !== "mindfulness")
+                        : [...prev, "mindfulness"],
+                    );
+                  }}
+                >
+                  #mindfulness
+                </Badge>
+              </div>
+
+              <Button
+                onClick={handleCreatePost}
+                disabled={isPosting || !newPostContent.trim()}
+                className="w-full"
+              >
+                {isPosting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <Send className="h-4 w-4 mr-2" />
+                Post to Lens
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
