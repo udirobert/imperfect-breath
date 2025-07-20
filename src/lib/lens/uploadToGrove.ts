@@ -1,6 +1,5 @@
 import { StorageClient, immutable } from "@lens-chain/storage-client";
 import { lensChain, lensChainMainnet } from "../publicClient";
-import { config } from "../../config/environment";
 
 const storageClient = StorageClient.create();
 
@@ -11,11 +10,8 @@ const storageClient = StorageClient.create();
  */
 export async function uploadToGrove(data: Record<string, unknown>) {
   try {
-    // Use the appropriate chain ID based on environment
-    const chainId =
-      config.lens.environment === "testnet"
-        ? lensChain.id
-        : lensChainMainnet.id;
+    // Use testnet chain ID by default for reliability
+    const chainId = lensChain.id;
 
     const acl = immutable(chainId);
     const response = await storageClient.uploadAsJson(data, { acl });

@@ -1,36 +1,35 @@
 import { createPublicClient, http, defineChain } from "viem";
-import { config } from "../config/environment";
 
-// Define Lens Chain
+// Define Lens Chain with hardcoded reliable defaults
 export const lensChain = defineChain({
-  id: Number(config.lens.chainId) || 37111,
+  id: 37111,
   name: "Lens Chain Testnet",
   network: "lens-testnet",
   nativeCurrency: {
     name: "GRASS",
-    symbol: config.lens.currencySymbol || "GRASS",
+    symbol: "GRASS",
     decimals: 18,
   },
   rpcUrls: {
     default: {
-      http: [config.lens.rpcUrl || "https://rpc.testnet.lens.xyz"],
+      http: ["https://rpc.testnet.lens.xyz"],
     },
     public: {
-      http: [config.lens.rpcUrl || "https://rpc.testnet.lens.xyz"],
+      http: ["https://rpc.testnet.lens.xyz"],
     },
   },
   blockExplorers: {
     default: {
       name: "Lens Explorer",
-      url: config.lens.explorerUrl || "https://explorer.testnet.lens.xyz",
+      url: "https://explorer.testnet.lens.xyz",
     },
   },
-  testnet: config.lens.environment === "testnet",
+  testnet: true,
 });
 
 // Define mainnet Lens Chain for completeness
 export const lensChainMainnet = defineChain({
-  id: 1389,
+  id: 232,
   name: "Lens Chain Mainnet",
   network: "lens-mainnet",
   nativeCurrency: {
@@ -57,7 +56,7 @@ export const lensChainMainnet = defineChain({
 
 // Create public client for Lens Protocol interactions
 export const publicClient = createPublicClient({
-  chain: config.lens.environment === "testnet" ? lensChain : lensChainMainnet,
+  chain: lensChain,
   transport: http(),
 });
 

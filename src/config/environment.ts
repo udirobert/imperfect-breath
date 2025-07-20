@@ -36,24 +36,41 @@ interface EnvironmentConfig {
   };
 }
 
-// Validate required environment variables
-const requiredEnvVars = [
+// Validate critical environment variables (only throw for truly required ones)
+const criticalEnvVars = [
   "VITE_SUPABASE_URL",
   "VITE_SUPABASE_ANON_KEY",
+] as const;
+
+// Check for missing critical environment variables
+const missingCriticalVars = criticalEnvVars.filter(
+  (varName) => !import.meta.env[varName],
+);
+
+if (missingCriticalVars.length > 0) {
+  console.error("Missing critical environment variables:", missingCriticalVars);
+  throw new Error(
+    `Missing critical environment variables: ${missingCriticalVars.join(", ")}`,
+  );
+}
+
+// Warn about missing optional variables
+const optionalEnvVars = [
   "VITE_FLOW_ACCESS_NODE",
   "VITE_FLOW_CONTRACT_ADDRESS",
   "VITE_LENS_API_URL",
   "VITE_GEMINI_API_KEY",
 ] as const;
 
-// Check for missing environment variables
-const missingVars = requiredEnvVars.filter(
+const missingOptionalVars = optionalEnvVars.filter(
   (varName) => !import.meta.env[varName],
 );
 
-if (missingVars.length > 0) {
-  console.error("Missing required environment variables:", missingVars);
-  throw new Error(`Missing environment variables: ${missingVars.join(", ")}`);
+if (missingOptionalVars.length > 0) {
+  console.warn(
+    "Missing optional environment variables (using defaults):",
+    missingOptionalVars,
+  );
 }
 
 export const config: EnvironmentConfig = {
@@ -62,11 +79,14 @@ export const config: EnvironmentConfig = {
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY!,
   },
   flow: {
-    accessNode: import.meta.env.VITE_FLOW_ACCESS_NODE!,
+    accessNode:
+      import.meta.env.VITE_FLOW_ACCESS_NODE ||
+      "https://rest-testnet.onflow.org",
     discoveryWallet:
       import.meta.env.VITE_FLOW_DISCOVERY_WALLET ||
       "https://fcl-discovery.onflow.org/testnet/authn",
-    contractAddress: import.meta.env.VITE_FLOW_CONTRACT_ADDRESS!,
+    contractAddress:
+      import.meta.env.VITE_FLOW_CONTRACT_ADDRESS || "0xf8d6e0586b0a20c7",
     fungibleToken:
       import.meta.env.VITE_FLOW_FUNGIBLE_TOKEN || "0x9a0766d93b6608b7",
     flowToken: import.meta.env.VITE_FLOW_FLOW_TOKEN || "0x7e60df042a9c0868",
@@ -75,20 +95,19 @@ export const config: EnvironmentConfig = {
     environment:
       (import.meta.env.VITE_LENS_ENVIRONMENT as "testnet" | "mainnet") ||
       "testnet",
-    apiUrl: import.meta.env.VITE_LENS_API_URL!,
+    apiUrl: import.meta.env.VITE_LENS_API_URL || "https://api.testnet.lens.xyz",
     appAddress:
       import.meta.env.VITE_LENS_APP_ADDRESS ||
       "0xC75A89145d765c396fd75CbD16380Eb184Bd2ca7", // Lens Chain Testnet default
-    rpcUrl:
-      import.meta.env.VITE_LENS_RPC_URL || "https://rpc.testnet.lens-chain.xyz",
+    rpcUrl: import.meta.env.VITE_LENS_RPC_URL || "https://rpc.testnet.lens.xyz",
     chainId: import.meta.env.VITE_LENS_CHAIN_ID || "37111",
     explorerUrl:
       import.meta.env.VITE_LENS_EXPLORER_URL ||
-      "https://explorer.testnet.lens-chain.xyz",
+      "https://explorer.testnet.lens.xyz",
     currencySymbol: import.meta.env.VITE_LENS_CURRENCY_SYMBOL || "GRASS",
   },
   ai: {
-    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY!,
+    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
   },
   app: {
     name: import.meta.env.VITE_APP_NAME || "Imperfect Breath",
