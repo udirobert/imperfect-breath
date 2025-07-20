@@ -9,13 +9,14 @@ const storageClient = StorageClient.create();
  * @param data Any JSON-serializable data to be stored
  * @returns The URI of the uploaded content
  */
-export async function uploadToGrove(data: any) {
+export async function uploadToGrove(data: Record<string, unknown>) {
   try {
     // Use the appropriate chain ID based on environment
-    const chainId = config.lens.environment === "testnet" 
-      ? lensChain.id 
-      : lensChainMainnet.id;
-      
+    const chainId =
+      config.lens.environment === "testnet"
+        ? lensChain.id
+        : lensChainMainnet.id;
+
     const acl = immutable(chainId);
     const response = await storageClient.uploadAsJson(data, { acl });
     console.log("Uploaded to Grove:", response);
