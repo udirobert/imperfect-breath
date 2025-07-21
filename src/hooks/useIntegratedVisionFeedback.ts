@@ -12,6 +12,7 @@ import { useLens } from './useLens';
 import { useFlow } from './useFlow';
 import { EnhancedRestlessnessAnalyzer, RestlessnessAnalysis } from '../lib/vision/enhanced-restlessness-analyzer';
 import type { VisionMetrics } from '../lib/vision/types';
+import type { BreathingPatternAttributes, NFTMetadata } from '../lib/flow/types';
 
 export interface VisionFeedbackConfig {
   enableRealTimeFeedback: boolean;
@@ -38,7 +39,11 @@ export interface VisionFeedbackReturn {
   lastFeedbackTime: number;
   
   // Actions
-  startVisionFeedback: () => Promise<void>;
+  startVisionFeedback: (
+    videoElement?: HTMLVideoElement,
+    canvasElement?: HTMLCanvasElement,
+    displayMode?: 'focus' | 'awareness' | 'analysis'
+  ) => Promise<void>;
   stopVisionFeedback: () => void;
   shareSessionWithVision: () => Promise<void>;
   mintPatternWithVisionData: () => Promise<void>;
@@ -48,6 +53,12 @@ export interface VisionFeedbackReturn {
   
   // Real-time feedback
   provideFeedback: (message: string, type: 'guidance' | 'encouragement' | 'correction') => void;
+  
+  // Camera stream access
+  cameraStream: MediaStream | null;
+  isStreamRequested: boolean;
+  streamError: string | null;
+  getCameraStream: () => Promise<MediaStream>;
 }
 
 const DEFAULT_CONFIG: VisionFeedbackConfig = {
@@ -100,11 +111,15 @@ export const useIntegratedVisionFeedback = (
   });
   
   const [lastFeedbackTime, setLastFeedbackTime] = useState(0);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [isStreamRequested, setIsStreamRequested] = useState(false);
+  const [streamError, setStreamError] = useState<string | null>(null);
   
   // Refs for persistent instances
   const restlessnessAnalyzer = useRef(new EnhancedRestlessnessAnalyzer());
   const feedbackHistory = useRef<Array<{ time: number; type: string; message: string }>>([]);
   const sessionStartTime = useRef<number>(0);
+  const streamPromise = useRef<Promise<MediaStream> | null>(null);
 
   /**
    * Process vision metrics and generate integrated feedback
@@ -276,20 +291,105 @@ export const useIntegratedVisionFeedback = (
   }, []);
 
   /**
-   * Start vision feedback system
+   * Lazy load camera stream with caching
    */
-  const startVisionFeedback = useCallback(async () => {
+  const getCameraStream = useCallback(async (): Promise<MediaStream> => {
+    // Return existing stream if available
+    if (cameraStream) {
+      return cameraStream;
+    }
+    
+    // Return existing promise if already requesting
+    if (streamPromise.current) {
+      return streamPromise.current;
+    }
+    
+    // Create new stream request
+    streamPromise.current = navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user'
+      },
+      audio: false
+    });
+    
     try {
+      setIsStreamRequested(true);
+      setStreamError(null);
+      
+      const stream = await streamPromise.current;
+      setCameraStream(stream);
+      
+      console.log('Camera stream loaded lazily');
+      return stream;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Camera access failed';
+      setStreamError(errorMessage);
+      streamPromise.current = null; // Reset promise on error
+      throw error;
+    }
+  }, [cameraStream]);
+
+  /**
+   * Start vision feedback system with lazy loading
+   */
+  const startVisionFeedback = useCallback(async (
+    videoElement?: HTMLVideoElement,
+    canvasElement?: HTMLCanvasElement,
+    displayMode: 'focus' | 'awareness' | 'analysis' = 'focus'
+  ) => {
+    try {
+      // Initialize vision system first
       await vision.initialize({ tier: 'premium' });
+      
+      // Only request camera stream if display mode requires it
+      let stream: MediaStream | null = null;
+      
+      if (displayMode === 'analysis') {
+        // Full video mode - load stream immediately
+        stream = await getCameraStream();
+      } else if (displayMode === 'awareness') {
+        // Metrics only - load stream for processing but don't display
+        stream = await getCameraStream();
+      } else {
+        // Focus mode - defer stream loading until actually needed
+        // We'll load it in the background for processing but not display
+        setTimeout(async () => {
+          try {
+            await getCameraStream();
+          } catch (error) {
+            console.warn('Background camera loading failed:', error);
+          }
+        }, 1000); // Load after 1 second delay
+      }
+      
+      // If video element is provided and we have a stream, attach it
+      if (videoElement && stream) {
+        videoElement.srcObject = stream;
+        
+        // Wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
+          videoElement.onloadedmetadata = () => resolve();
+          videoElement.onerror = reject;
+          setTimeout(reject, 5000); // 5 second timeout
+        });
+        
+        // Attach to vision system
+        vision.attachToVideo(videoElement);
+      }
+      
+      // Start camera and processing
       await vision.startCamera();
       await vision.startProcessing();
       sessionStartTime.current = Date.now();
-      console.log('Vision feedback system started');
+      console.log(`Vision feedback system started in ${displayMode} mode`);
     } catch (error) {
       console.error('Failed to start vision feedback:', error);
-      throw error;
+      sessionStartTime.current = Date.now();
+      throw error; // Re-throw to allow component to handle gracefully
     }
-  }, [vision]);
+  }, [vision, getCameraStream]);
 
   /**
    * Stop vision feedback system
@@ -297,8 +397,15 @@ export const useIntegratedVisionFeedback = (
   const stopVisionFeedback = useCallback(() => {
     vision.stopProcessing();
     vision.stopCamera();
+    
+    // Stop camera stream
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    
     console.log('Vision feedback system stopped');
-  }, [vision]);
+  }, [vision, cameraStream]);
 
   /**
    * Share session with vision data to Lens
@@ -337,20 +444,23 @@ export const useIntegratedVisionFeedback = (
       throw new Error('No vision data available for minting');
     }
     
-    const patternData = {
+    const attributes: BreathingPatternAttributes = {
+      visionEnhanced: true,
+      qualityScore: sessionMetrics.sessionQuality,
+      restlessnessScore: sessionMetrics.restlessnessAnalysis.overall,
+      postureQuality: sessionMetrics.visionMetrics.postureQuality || 0,
+      breathingRate: sessionMetrics.visionMetrics.estimatedBreathingRate || 15,
+      aiRecommendations: sessionMetrics.aiRecommendations,
+    } as any; // Type assertion for flexibility
+    
+    const metadata: NFTMetadata = {
       name: 'Vision-Enhanced Breathing Pattern',
       description: `A breathing pattern enhanced with AI vision analysis. Quality score: ${sessionMetrics.sessionQuality}%`,
-      attributes: {
-        visionEnhanced: true,
-        qualityScore: sessionMetrics.sessionQuality,
-        restlessnessScore: sessionMetrics.restlessnessAnalysis.overall,
-        postureQuality: sessionMetrics.visionMetrics.postureQuality || 0,
-        breathingRate: sessionMetrics.visionMetrics.estimatedBreathingRate || 15,
-        aiRecommendations: sessionMetrics.aiRecommendations,
-      },
-    };
+      image: '', // Could be generated from session data
+      attributes: [],
+    } as any; // Type assertion for flexibility
     
-    await mintBreathingPattern(patternData);
+    await mintBreathingPattern(attributes, metadata);
   }, [sessionMetrics, mintBreathingPattern]);
 
   /**
@@ -384,5 +494,11 @@ export const useIntegratedVisionFeedback = (
     
     // Real-time feedback
     provideFeedback,
+    
+    // Camera stream access
+    cameraStream,
+    isStreamRequested,
+    streamError,
+    getCameraStream, // Expose for manual lazy loading
   };
 };

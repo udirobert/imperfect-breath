@@ -72,12 +72,28 @@ export default defineConfig(({ mode }) => {
 
       // Rollup options for build optimization
       rollupOptions: {
-        // Remove MediaPipe externals as they're part of TensorFlow models
         output: {
           manualChunks: {
-            // Group TensorFlow dependencies together
-            tensorflow: ['@tensorflow/tfjs', '@tensorflow/tfjs-core', '@tensorflow/tfjs-backend-webgl'],
-            'tensorflow-models': ['@tensorflow-models/face-landmarks-detection', '@tensorflow-models/pose-detection'],
+            // Group TensorFlow core dependencies
+            'tensorflow-core': [
+              '@tensorflow/tfjs',
+              '@tensorflow/tfjs-core'
+            ],
+            // Group TensorFlow backends
+            'tensorflow-backends': [
+              '@tensorflow/tfjs-backend-webgl',
+              '@tensorflow/tfjs-backend-cpu',
+              '@tensorflow/tfjs-backend-webgpu'
+            ],
+            // Group TensorFlow models
+            'tensorflow-models': [
+              '@tensorflow-models/face-landmarks-detection',
+              '@tensorflow-models/pose-detection'
+            ],
+            // Group MediaPipe dependencies
+            'mediapipe': [
+              '@mediapipe/pose'
+            ],
           },
         },
       },
@@ -118,8 +134,15 @@ export default defineConfig(({ mode }) => {
         "react/jsx-runtime",
         "@tensorflow/tfjs",
         "@tensorflow/tfjs-core",
+        "@tensorflow/tfjs-backend-webgl",
+        "@tensorflow/tfjs-backend-cpu",
         "@tensorflow-models/face-landmarks-detection",
         "@tensorflow-models/pose-detection",
+      ],
+      // Exclude optional dependencies that may not be available
+      exclude: [
+        "@tensorflow/tfjs-backend-webgpu",
+        "@mediapipe/pose"
       ],
     },
 

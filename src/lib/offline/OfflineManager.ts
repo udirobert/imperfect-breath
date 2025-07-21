@@ -1,10 +1,11 @@
 /**
  * Offline Manager for Core Features
- * 
+ *
  * Enables core breathing functionality to work without internet connection
  * while maintaining data sync when connection is restored.
  */
 
+import React from 'react';
 import { BreathingPattern, BREATHING_PATTERNS } from "@/lib/breathingPatterns";
 
 export interface OfflineSession {
@@ -93,13 +94,25 @@ export class OfflineManager {
       const stored = localStorage.getItem(this.storageKey);
       if (stored) {
         const data = JSON.parse(stored);
-        // Convert date strings back to Date objects
+        
+        // Safely convert date strings back to Date objects
+        const safeParseDate = (dateValue: any): Date => {
+          if (!dateValue) return new Date();
+          try {
+            const parsed = new Date(dateValue);
+            return isNaN(parsed.getTime()) ? new Date() : parsed;
+          } catch {
+            return new Date();
+          }
+        };
+
         data.sessions = data.sessions.map((session: any) => ({
           ...session,
-          startTime: new Date(session.startTime),
-          endTime: session.endTime ? new Date(session.endTime) : undefined,
+          startTime: safeParseDate(session.startTime),
+          endTime: session.endTime ? safeParseDate(session.endTime) : undefined,
         }));
-        data.userPreferences.lastSyncTime = new Date(data.userPreferences.lastSyncTime);
+        
+        data.userPreferences.lastSyncTime = safeParseDate(data.userPreferences.lastSyncTime);
         return data;
       }
     } catch (error) {
@@ -245,6 +258,35 @@ export class OfflineManager {
    */
   private async syncSessionToServer(session: OfflineSession): Promise<void> {
     // This would integrate with your actual API
+    
+    // Safely convert dates to ISO strings with validation
+    const safeToISOString = (date: Date | undefined | null): string | undefined => {
+      if (!date) return undefined;
+      try {
+        // Check if date is valid
+        if (date instanceof Date && !isNaN(date.getTime())) {
+          return date.toISOString();
+        }
+        // Try to create a valid date if it's a string or number
+        const validDate = new Date(date);
+        if (!isNaN(validDate.getTime())) {
+          return validDate.toISOString();
+        }
+      } catch (error) {
+        console.warn('Invalid date encountered during sync:', date, error);
+      }
+      return undefined;
+    };
+
+    const startTimeISO = safeToISOString(session.startTime);
+    const endTimeISO = safeToISOString(session.endTime);
+
+    // Skip sync if we don't have a valid start time
+    if (!startTimeISO) {
+      console.warn('Skipping session sync due to invalid start time:', session);
+      return;
+    }
+
     const response = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -254,8 +296,8 @@ export class OfflineManager {
         cycleCount: session.cycleCount,
         breathHoldTime: session.breathHoldTime,
         restlessnessScore: session.restlessnessScore,
-        startTime: session.startTime.toISOString(),
-        endTime: session.endTime?.toISOString(),
+        startTime: startTimeISO,
+        endTime: endTimeISO,
         completed: session.completed,
       }),
     });

@@ -109,20 +109,41 @@ export class CameraManager {
         this.stopStream();
       }
       
-      // Request camera access
-      const constraints: MediaStreamConstraints = {
+      // Check for camera support first
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported in this browser');
+      }
+      
+      // Request camera access with fallback constraints
+      let constraints: MediaStreamConstraints = {
         video: {
           width: { ideal: defaultConfig.width },
           height: { ideal: defaultConfig.height },
           frameRate: { ideal: defaultConfig.frameRate },
           facingMode: defaultConfig.facingMode,
-          deviceId: defaultConfig.preferredDeviceId ? 
+          deviceId: defaultConfig.preferredDeviceId ?
             { exact: defaultConfig.preferredDeviceId } : undefined,
         },
         audio: defaultConfig.enableAudio,
       };
       
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      let stream: MediaStream;
+      
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (error) {
+        console.warn('Failed with ideal constraints, trying basic constraints:', error);
+        
+        // Fallback to basic constraints
+        constraints = {
+          video: {
+            facingMode: defaultConfig.facingMode,
+          },
+          audio: false,
+        };
+        
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      }
       
       this.updateState({
         isStreaming: true,
@@ -134,15 +155,30 @@ export class CameraManager {
       // Notify listeners
       this.notifyStreamListeners(stream);
       
-      console.log('Camera stream started');
+      console.log('Camera stream started successfully');
       return stream;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start camera stream';
+      let errorMessage = 'Failed to start camera stream';
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No camera found. Please connect a camera and try again.';
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = 'Camera is already in use by another application.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       this.updateState({
         error: errorMessage,
         isStreaming: false,
       });
-      throw error;
+      
+      console.error('Camera stream error:', errorMessage);
+      throw new Error(errorMessage);
     }
   }
   

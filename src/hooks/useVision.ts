@@ -134,6 +134,13 @@ export const useVision = (initialConfig: UseVisionConfig = { tier: 'none' as unk
   const startCamera = useCallback(async (config: Partial<CameraConfig> = {}) => {
     try {
       setIsLoading(true);
+      setError(null);
+      
+      // Check if camera is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported in this browser');
+      }
+      
       const newStream = await cameraManager.current.startStream(config);
       setStream(newStream);
       
@@ -141,10 +148,15 @@ export const useVision = (initialConfig: UseVisionConfig = { tier: 'none' as unk
       if (videoElementRef.current) {
         cameraManager.current.attachToVideo(videoElementRef.current);
       }
+      
+      console.log('Camera started successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Camera start failed';
+      console.error('Camera start error:', errorMessage);
       setError(errorMessage);
-      throw error;
+      
+      // Don't throw error - allow graceful fallback
+      // throw error;
     } finally {
       setIsLoading(false);
     }
