@@ -37,9 +37,6 @@ import { ReviewService, PatternReview } from "../../lib/reviewService";
 import { useAuth } from "../../hooks/useAuth";
 import { useEffect, useState } from "react";
 import { PurchaseFlow } from "./PurchaseFlow";
-import { MobilePaymentFlow } from "@/components/payments/MobilePaymentFlow";
-import { usePaymentProcessor } from "@/lib/payments/PaymentProcessor";
-import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Tooltip,
   TooltipContent,
@@ -183,7 +180,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                     <AvatarImage src={pattern.instructorAvatar} />
                     <AvatarFallback className="text-lg">
                       {getInstructorInitials(
-                        pattern.instructorName || pattern.creator,
+                        pattern.instructorName || pattern.creator
                       )}
                     </AvatarFallback>
                   </Avatar>
@@ -464,7 +461,10 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                                 {review.review_text}
                               </p>
                               <p className="text-xs text-muted-foreground mt-2">
-                                By user {review.user_id.substring(0, 6)}
+                                By user{" "}
+                                {typeof review.user_id === "string"
+                                  ? review.user_id.substring(0, 6)
+                                  : "Anonymous"}
                               </p>
                             </CardContent>
                           </Card>
@@ -518,7 +518,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                                       <Badge key={index} variant="secondary">
                                         {credential}
                                       </Badge>
-                                    ),
+                                    )
                                   )}
                                 </div>
                               </div>

@@ -141,22 +141,21 @@ const EnhancedMarketplace = () => {
           reviewService.getAllReviews(),
         ]);
 
-        const reviewsByPattern = allReviews.reduce(
-          (acc, review) => {
-            (acc[review.pattern_id] = acc[review.pattern_id] || []).push(
-              review,
-            );
-            return acc;
-          },
-          {} as Record<string, PatternReview[]>,
-        );
+        const reviewsByPattern = allReviews.reduce((acc, review) => {
+          (acc[review.pattern_id] = acc[review.pattern_id] || []).push(review);
+          return acc;
+        }, {} as Record<string, PatternReview[]>);
 
         const instructorMap = new Map<string, InstructorProfile>();
         fetchedPatterns.forEach((p) => {
           if (!instructorMap.has(p.creator)) {
             instructorMap.set(p.creator, {
               id: p.creator,
-              name: `Creator ${p.creator.substring(0, 6)}`,
+              name: `Creator ${
+                typeof p.creator === "string"
+                  ? p.creator.substring(0, 6)
+                  : "Unknown"
+              }`,
               avatar: `https://i.pravatar.cc/150?u=${p.creator}`,
               bio: "A passionate breathwork creator.",
               verified: false,
@@ -211,7 +210,7 @@ const EnhancedMarketplace = () => {
               trending: false,
               new: false,
             };
-          },
+          }
         );
 
         setPatterns(marketplacePatterns);
