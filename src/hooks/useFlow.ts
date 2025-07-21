@@ -107,7 +107,7 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     enableCOA = false,
   } = config;
 
-  // Client instances
+  // Client instances - use singleton pattern properly
   const baseClient = useRef<BaseFlowClient>(BaseFlowClient.getInstance());
   const nftClient = useRef<NFTClient>(new NFTClient());
   const transactionClient = useRef<TransactionClient>(new TransactionClient());
@@ -134,14 +134,34 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
   // Error handling
   const [error, setError] = useState<string | null>(null);
 
-  // User subscription
+  // User subscription - track if this instance has subscribed
   const userUnsubscribe = useRef<(() => void) | null>(null);
+  const hasSubscribed = useRef<boolean>(false);
 
   /**
    * Initialize Flow client
    */
   const initialize = useCallback(async () => {
-    if (state.isInitialized) {
+    // Check if base client is already initialized for this network
+    if (baseClient.current.isReady() && baseClient.current.getConfig()?.network === network) {
+      setState((prev) => ({
+        ...prev,
+        isInitialized: true,
+      }));
+      
+      // Only subscribe if this instance hasn't subscribed yet
+      if (!hasSubscribed.current) {
+        userUnsubscribe.current = baseClient.current.subscribeToUser((user) => {
+          setUser(user);
+          setState((prev) => ({
+            ...prev,
+            user,
+            isConnected: user?.loggedIn || false,
+          }));
+        });
+        hasSubscribed.current = true;
+        console.log("Subscribing to user changes");
+      }
       return;
     }
 
@@ -169,15 +189,19 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
 
       await baseClient.current.initialize(flowConfig);
 
-      // Subscribe to user changes
-      userUnsubscribe.current = baseClient.current.subscribeToUser((user) => {
-        setUser(user);
-        setState((prev) => ({
-          ...prev,
-          user,
-          isConnected: user?.loggedIn || false,
-        }));
-      });
+      // Only subscribe if this instance hasn't subscribed yet
+      if (!hasSubscribed.current) {
+        userUnsubscribe.current = baseClient.current.subscribeToUser((user) => {
+          setUser(user);
+          setState((prev) => ({
+            ...prev,
+            user,
+            isConnected: user?.loggedIn || false,
+          }));
+        });
+        hasSubscribed.current = true;
+        console.log("Subscribing to user changes");
+      }
 
       setState((prev) => ({
         ...prev,
@@ -194,7 +218,7 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [network, state.isInitialized]);
+  }, [network]);
 
   /**
    * Connect to Flow wallet
@@ -527,10 +551,10 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     if (userUnsubscribe.current) {
       userUnsubscribe.current();
       userUnsubscribe.current = null;
+      hasSubscribed.current = false;
     }
 
-    baseClient.current.dispose();
-
+    // Don't dispose the singleton base client, just reset local state
     setState({
       isInitialized: false,
       isConnected: false,
@@ -544,36 +568,53 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     setCOAInfo(null);
     setError(null);
 
-    console.log("Flow client disposed");
+    console.log("Flow hook instance disposed");
   }, []);
 
-  // Initialize on mount
+  // Initialize on mount - fixed dependency array
   useEffect(() => {
-    initialize()
-      .then(async () => {
+    let mounted = true;
+    
+    const initializeFlow = async () => {
+      try {
+        await initialize();
+        
+        if (!mounted) return;
+        
         // Auto-connect if requested
         if (autoConnect) {
           try {
             await connect();
 
+            if (!mounted) return;
+
             // Get COA info if enabled after connection
             if (enableCOA) {
               const coa = await getCOAInfo();
-              setCOAInfo(coa);
+              if (mounted) {
+                setCOAInfo(coa);
+              }
             }
           } catch (connectError) {
             console.warn("Auto-connect failed:", connectError);
           }
         }
-      })
-      .catch(console.error);
-
-    return () => {
-      if (userUnsubscribe.current) {
-        userUnsubscribe.current();
+      } catch (error) {
+        console.error("Flow initialization failed:", error);
       }
     };
-  }, [initialize, autoConnect, enableCOA, connect, getCOAInfo]);
+
+    initializeFlow();
+
+    return () => {
+      mounted = false;
+      if (userUnsubscribe.current) {
+        userUnsubscribe.current();
+        userUnsubscribe.current = null;
+        hasSubscribed.current = false;
+      }
+    };
+  }, [network, autoConnect, enableCOA]); // Only depend on config values, not functions
 
   // Update state when user changes
   useEffect(() => {

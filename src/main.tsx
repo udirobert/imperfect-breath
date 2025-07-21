@@ -4,7 +4,6 @@ import React from "react"; // Explicitly import React to ensure it's available
 import ReactDOM from "react-dom"; // Explicitly import ReactDOM to ensure it's available
 import { createRoot } from "react-dom/client";
 import { EnhancedWeb3Provider } from "./providers/EnhancedWeb3Provider";
-import { LensProvider } from "./providers/LensProvider";
 import App from "./App";
 import "./index.css";
 import { runEnvironmentChecks } from "./utils/environment-check";
@@ -41,11 +40,9 @@ if (!rootElement) {
     createRoot(rootElement).render(
       <React.StrictMode>
         <EnhancedWeb3Provider>
-          <LensProvider>
-            <App />
-          </LensProvider>
+          <App />
         </EnhancedWeb3Provider>
-      </React.StrictMode>,
+      </React.StrictMode>
     );
   } catch (error) {
     console.error("Error rendering the application:", error);

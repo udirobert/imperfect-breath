@@ -5,8 +5,7 @@ import {
   BreathingPhaseName,
 } from "../lib/breathingPatterns";
 import { useVoiceGuidance } from "./useVoiceGuidance";
-import { useAuth } from "./useAuth";
-import { useLensContext } from "../providers/LensProvider";
+import { useBasicAuth, useLensAuth } from "../auth";
 import { supabase } from "../integrations/supabase/client";
 
 type SessionPhase =
@@ -82,14 +81,14 @@ export const useBreathingSession = (
   includeAuth = true,
 ) => {
   // Auth integration - hooks must be called unconditionally
-  const { user, isAuthenticated } = useAuth();
-  const lensContext = useLensContext();
+  const { user, isAuthenticated } = useBasicAuth();
+  const lensAuth = useLensAuth();
 
   // Use the auth data conditionally instead
   const effectiveUser = includeAuth ? user : null;
   const effectiveAuth = includeAuth ? isAuthenticated : false;
   const effectiveLensContext = includeAuth
-    ? lensContext
+    ? { currentAccount: lensAuth.lensProfile, isAuthenticated: lensAuth.hasLensProfile }
     : { currentAccount: null, isAuthenticated: false };
 
   // Transform the pattern to include phases
@@ -287,7 +286,7 @@ export const useBreathingSession = (
 
   // Share session to Lens Protocol
   const shareToLens = async (sessionData: Partial<BreathingSessionData>) => {
-    if (!lensContext.isAuthenticated || !lensContext.currentAccount) {
+    if (!lensAuth.hasLensProfile || !lensAuth.lensProfile) {
       console.error("Cannot share: not connected to Lens");
       return null;
     }
@@ -395,7 +394,7 @@ export const useBreathingSession = (
       lastSessionData,
       isAuthenticated,
       userId: user?.id,
-      lensId: lensContext.currentAccount?.id,
+      lensId: lensAuth.lensProfile?.id,
     },
     controls: {
       prepareSession,

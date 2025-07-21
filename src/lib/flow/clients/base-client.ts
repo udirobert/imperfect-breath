@@ -22,6 +22,9 @@ export class BaseFlowClient {
   private isInitialized = false;
   private config: FlowConfig | null = null;
   private cache = getCache();
+  private userSubscriptions = new Set<(user: any) => void>();
+  private userUnsubscribe: (() => void) | null = null;
+  private initializationPromise: Promise<void> | null = null;
   
   private constructor() {}
   
@@ -36,15 +39,32 @@ export class BaseFlowClient {
   }
   
   /**
-   * Initialize Flow client with configuration
+   * Initialize Flow client with configuration - with singleton promise to prevent concurrent initializations
    */
   async initialize(config: FlowConfig): Promise<void> {
-    const endTimer = startTimer('initialize');
-    
+    // If already initialized for the same network, return immediately
     if (this.isInitialized && this.config?.network === config.network) {
-      endTimer();
       return;
     }
+    
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      return;
+    }
+    
+    // Start new initialization
+    this.initializationPromise = this.performInitialization(config);
+    
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+  
+  private async performInitialization(config: FlowConfig): Promise<void> {
+    const endTimer = startTimer('initialize');
     
     try {
       // Configure FCL
@@ -263,13 +283,40 @@ export class BaseFlowClient {
   }
   
   /**
-   * Subscribe to user changes
+   * Subscribe to user changes - singleton pattern to prevent multiple FCL subscriptions
    */
   subscribeToUser(callback: (user: any) => void): () => void {
     this.ensureInitialized();
-    console.log('Subscribing to user changes');
-    // Cast the return value to the correct type
-    return fcl.currentUser().subscribe(callback) as unknown as () => void;
+    
+    // Add callback to our set
+    this.userSubscriptions.add(callback);
+    
+    // If this is the first subscription, create the FCL subscription
+    if (this.userSubscriptions.size === 1 && !this.userUnsubscribe) {
+      console.log('Creating FCL user subscription');
+      this.userUnsubscribe = fcl.currentUser().subscribe((user: any) => {
+        // Notify all registered callbacks
+        this.userSubscriptions.forEach(cb => {
+          try {
+            cb(user);
+          } catch (error) {
+            console.error('Error in user subscription callback:', error);
+          }
+        });
+      }) as unknown as () => void;
+    }
+    
+    // Return unsubscribe function for this specific callback
+    return () => {
+      this.userSubscriptions.delete(callback);
+      
+      // If no more subscriptions, clean up FCL subscription
+      if (this.userSubscriptions.size === 0 && this.userUnsubscribe) {
+        this.userUnsubscribe();
+        this.userUnsubscribe = null;
+        console.log('Cleaned up FCL user subscription');
+      }
+    };
   }
   
   /**
@@ -290,6 +337,13 @@ export class BaseFlowClient {
    * Dispose of resources
    */
   dispose(): void {
+    // Clean up user subscriptions
+    if (this.userUnsubscribe) {
+      this.userUnsubscribe();
+      this.userUnsubscribe = null;
+    }
+    this.userSubscriptions.clear();
+    
     this.isInitialized = false;
     this.config = null;
     console.log('Flow client disposed');
