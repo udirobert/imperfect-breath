@@ -74,23 +74,22 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            // Group TensorFlow core dependencies
-            'tensorflow-core': [
+            // Keep TensorFlow core and backends together to avoid initialization issues
+            'tensorflow': [
               '@tensorflow/tfjs',
-              '@tensorflow/tfjs-core'
-            ],
-            // Group TensorFlow backends
-            'tensorflow-backends': [
+              '@tensorflow/tfjs-core',
               '@tensorflow/tfjs-backend-webgl',
-              '@tensorflow/tfjs-backend-cpu',
-              '@tensorflow/tfjs-backend-webgpu'
+              '@tensorflow/tfjs-backend-cpu'
             ],
-            // Group TensorFlow models
+            // Group TensorFlow models separately
             'tensorflow-models': [
               '@tensorflow-models/face-landmarks-detection',
               '@tensorflow-models/pose-detection'
             ],
-            // Group MediaPipe dependencies
+            // Keep optional dependencies separate
+            'tensorflow-optional': [
+              '@tensorflow/tfjs-backend-webgpu'
+            ],
             'mediapipe': [
               '@mediapipe/pose'
             ],
