@@ -1,5 +1,5 @@
 import { useAuth } from "../hooks/useAuth";
-import { useLensAccount } from "../hooks/useLensAccount";
+import { useLens } from "../hooks/useLens";
 import {
   Card,
   CardContent,
@@ -12,9 +12,9 @@ import { FollowButton } from "../components/FollowButton";
 
 const UserProfilePage = () => {
   const { user, profile, loading: authLoading } = useAuth();
-  const { lensAccount, loading: lensLoading } = useLensAccount();
+  const { currentAccount, isAuthenticating } = useLens();
 
-  const isLoading = authLoading || lensLoading;
+  const isLoading = authLoading || isAuthenticating;
 
   if (isLoading) {
     return (
@@ -47,19 +47,23 @@ const UserProfilePage = () => {
       <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
         <Avatar className="w-24 h-24 border-4 border-primary">
           <AvatarImage
-            src={lensAccount?.picture || user.profile.avatar}
-            alt={user.profile.displayName}
+            src={currentAccount?.metadata?.picture || user.profile.avatar}
+            alt={user.profile.name || user.profile.username}
           />
-          <AvatarFallback>{user.profile.displayName?.charAt(0)}</AvatarFallback>
+          <AvatarFallback>
+            {(user.profile.name || user.profile.username)?.charAt(0)}
+          </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-4xl font-bold">{user.profile.displayName}</h1>
-          {lensAccount && (
+          <h1 className="text-4xl font-bold">
+            {user.profile.name || user.profile.username}
+          </h1>
+          {currentAccount && (
             <div className="flex items-center gap-4">
               <p className="text-xl text-muted-foreground">
-                @{lensAccount.username}
+                @{currentAccount.username?.fullHandle || currentAccount.id}
               </p>
-              <FollowButton address={lensAccount.address} />
+              <FollowButton address={currentAccount.address} />
             </div>
           )}
           <p className="mt-2">{user.email}</p>
@@ -85,7 +89,7 @@ const UserProfilePage = () => {
           </CardContent>
         </Card>
 
-        {lensAccount ? (
+        {currentAccount ? (
           <Card>
             <CardHeader>
               <CardTitle>Lens Protocol Stats</CardTitle>
@@ -94,21 +98,28 @@ const UserProfilePage = () => {
               <ul className="space-y-2">
                 <li>
                   <span className="font-semibold">Profile ID:</span>{" "}
-                  {lensAccount.address}
+                  {currentAccount.address}
                 </li>
                 <li>
                   <span className="font-semibold">Username:</span>{" "}
-                  {lensAccount.username || "No username set"}
+                  {currentAccount.username?.fullHandle || "No username set"}
                 </li>
                 <li>
                   <span className="font-semibold">Followers:</span>{" "}
-                  {lensAccount.followersCount || 0}
+                  {currentAccount.stats?.followers || 0}
                 </li>
                 <li>
                   <span className="font-semibold">Following:</span>{" "}
-                  {lensAccount.followingCount || 0}
+                  {currentAccount.stats?.following || 0}
                 </li>
-                {/* Add more Lens stats here */}
+                <li>
+                  <span className="font-semibold">Posts:</span>{" "}
+                  {currentAccount.stats?.posts || 0}
+                </li>
+                <li>
+                  <span className="font-semibold">Comments:</span>{" "}
+                  {currentAccount.stats?.comments || 0}
+                </li>
               </ul>
             </CardContent>
           </Card>

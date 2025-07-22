@@ -60,8 +60,5 @@ export const publicClient = createPublicClient({
   transport: http(),
 });
 
-// Legacy client name for backward compatibility
-export const lensPublicClient = publicClient;
-
-// Export for legacy compatibility
+// Modern default export
 export default publicClient;

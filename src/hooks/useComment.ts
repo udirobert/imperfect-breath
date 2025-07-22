@@ -1,16 +1,11 @@
-import { useState } from 'react';
-import { LensClient } from '../lib/lens';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { useCallback } from 'react';
-import { useLensAccount } from './useLensAccount';
+import { useLens } from './useLens';
 
 export const useComment = () => {
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentError, setCommentError] = useState<Error | null>(null);
-  const { lensAccount } = useLensAccount();
-  
-  // Get Lens client instance
-  const lensClient = new LensClient(true); // Use testnet by default
+  const { currentAccount, isAuthenticated, createComment } = useLens();
 
   const comment = useCallback(async (postId: string, commentText: string) => {
     if (!postId) {
@@ -23,12 +18,12 @@ export const useComment = () => {
       return;
     }
     
-    if (!lensAccount) {
+    if (!currentAccount) {
       toast.error("You must have a Lens account to comment.");
       return;
     }
 
-    if (!lensClient.isAuthenticated) {
+    if (!isAuthenticated) {
       toast.error("Please authenticate with Lens first.");
       return;
     }
@@ -39,15 +34,17 @@ export const useComment = () => {
     try {
       toast.info("Processing comment...");
       
-      // In Lens V3, we directly use the commentOnPost method from the LensClient
-      // The client handles metadata creation, storage, and posting
-      const result = await lensClient.commentOnPost(postId, commentText);
+      // Use the modern useLens hook's createComment method
+      const result = await createComment(postId, commentText);
       
-      toast.success("Comment transaction sent!", {
-        description: `Transaction hash: ${result}`,
-      });
-      
-      return result;
+      if (result.success) {
+        toast.success("Comment transaction sent!", {
+          description: `Transaction hash: ${result.hash || "Success"}`,
+        });
+        return result;
+      } else {
+        throw new Error(result.error || "Comment failed");
+      }
     } catch (err) {
       console.error("Comment transaction failed:", err);
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
@@ -58,7 +55,7 @@ export const useComment = () => {
     } finally {
       setIsCommenting(false);
     }
-  }, [lensClient, lensAccount]);
+  }, [currentAccount, isAuthenticated, createComment]);
 
   return {
     comment,

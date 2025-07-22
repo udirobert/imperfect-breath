@@ -8,4 +8,3 @@ export const publicClient = createPublicClient({
 });
 
 // Add any additional configuration or clients as needed
-// This is a minimal implementation to fix the import error in useComments.ts

@@ -1,14 +1,11 @@
-import { useState } from "react";
-import { useLensAccount } from "./useLensAccount";
+import { useState, useCallback } from "react";
 import { useLens } from "./useLens";
 import { toast } from "sonner";
-import { useCallback } from "react";
 
 export const useFollow = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followError, setFollowError] = useState<Error | null>(null);
-  const { lensAccount } = useLensAccount();
-  const { isAuthenticated, followAccount, unfollowAccount } = useLens();
+  const { currentAccount, isAuthenticated, followUser, unfollowUser } = useLens();
 
   const follow = useCallback(
     async (address: string) => {
@@ -17,7 +14,7 @@ export const useFollow = () => {
         return;
       }
 
-      if (!lensAccount) {
+      if (!currentAccount) {
         toast.error("You must have a Lens account to follow.");
         return;
       }
@@ -33,12 +30,12 @@ export const useFollow = () => {
       try {
         toast.info("Processing follow...");
 
-        // Use the Lens hook to follow the account
-        const result = await followAccount(address);
+        // Use the modern useLens hook to follow the account
+        const result = await followUser(address);
 
         if (result.success) {
           toast.success("Follow transaction sent!", {
-            description: `Transaction hash: ${result.transactionHash || "Success"}`,
+            description: `Transaction hash: ${result.hash || "Success"}`,
           });
         } else {
           throw new Error(result.error || "Follow failed");
@@ -57,7 +54,7 @@ export const useFollow = () => {
         setIsFollowing(false);
       }
     },
-    [followAccount, lensAccount, isAuthenticated],
+    [followUser, currentAccount, isAuthenticated],
   );
 
   const unfollow = useCallback(
@@ -67,7 +64,7 @@ export const useFollow = () => {
         return;
       }
 
-      if (!lensAccount) {
+      if (!currentAccount) {
         toast.error("You must have a Lens account to unfollow.");
         return;
       }
@@ -83,12 +80,12 @@ export const useFollow = () => {
       try {
         toast.info("Processing unfollow...");
 
-        // Use the Lens hook to unfollow the account
-        const result = await unfollowAccount(address);
+        // Use the modern useLens hook to unfollow the account
+        const result = await unfollowUser(address);
 
         if (result.success) {
           toast.success("Unfollow transaction sent!", {
-            description: `Transaction hash: ${result.transactionHash || "Success"}`,
+            description: `Transaction hash: ${result.hash || "Success"}`,
           });
         } else {
           throw new Error(result.error || "Unfollow failed");
@@ -107,7 +104,7 @@ export const useFollow = () => {
         setIsFollowing(false);
       }
     },
-    [unfollowAccount, lensAccount, isAuthenticated],
+    [unfollowUser, currentAccount, isAuthenticated],
   );
 
   return {
