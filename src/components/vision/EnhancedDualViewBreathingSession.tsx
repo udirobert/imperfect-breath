@@ -30,7 +30,7 @@ import {
 
 // Import our integrated hooks
 import { useIntegratedVisionFeedback } from "../../hooks/useIntegratedVisionFeedback";
-import { useBreathingSession } from "../../hooks/useBreathingSession";
+import { useEnhancedSession } from "../../hooks/useEnhancedSession";
 import { useAuth } from "../../hooks/useAuth";
 
 // Import existing components
@@ -66,8 +66,15 @@ export const EnhancedDualViewBreathingSession: React.FC<
 > = ({ pattern, onSessionComplete }) => {
   // Auth and session state
   const { user, isAuthenticated } = useAuth();
-  const { state: sessionState, controls } = useBreathingSession();
-  const { startSession, pauseSession, resumeSession, stopSession } = controls;
+  const {
+    state: sessionState,
+    isActive: isSessionActive,
+    start: startSession,
+    pause: pauseSession,
+    resume: resumeSession,
+    stop: stopSession,
+    getSessionDuration,
+  } = useEnhancedSession();
 
   // Integrated vision feedback with lazy loading
   const {
@@ -310,12 +317,12 @@ export const EnhancedDualViewBreathingSession: React.FC<
    * Toggle pause/resume
    */
   const togglePause = useCallback(() => {
-    if (sessionState.isPaused) {
-      resumeSession();
-    } else {
+    if (isSessionActive) {
       pauseSession();
+    } else {
+      resumeSession();
     }
-  }, [sessionState.isPaused, resumeSession, pauseSession]);
+  }, [isSessionActive, resumeSession, pauseSession]);
 
   /**
    * Handle phase changes for contextual feedback
@@ -686,7 +693,7 @@ export const EnhancedDualViewBreathingSession: React.FC<
           difficulty: pattern.difficulty,
           benefits: pattern.benefits,
         }}
-        isActive={sessionState.isRunning}
+        isActive={isSessionActive}
       />
     </div>
   );
@@ -719,12 +726,12 @@ export const EnhancedDualViewBreathingSession: React.FC<
         ) : (
           <>
             <Button onClick={togglePause} variant="outline">
-              {sessionState.isRunning ? (
+              {isSessionActive ? (
                 <Pause className="mr-2 h-4 w-4" />
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
-              {sessionState.isRunning ? "Pause" : "Resume"}
+              {isSessionActive ? "Pause" : "Resume"}
             </Button>
             <Button onClick={handleStopSession} variant="destructive">
               <Square className="mr-2 h-4 w-4" />
@@ -871,7 +878,7 @@ export const EnhancedDualViewBreathingSession: React.FC<
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">
-                {Math.floor(sessionState.breathHoldTime / 60)}m
+                {Math.floor(sessionState.sessionData.duration / 60)}m
               </div>
               <div className="text-sm text-muted-foreground">Duration</div>
             </CardContent>
@@ -880,7 +887,7 @@ export const EnhancedDualViewBreathingSession: React.FC<
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">
-                {sessionState.cycleCount}
+                {sessionState.sessionData?.cycleCount || 0}
               </div>
               <div className="text-sm text-muted-foreground">Cycles</div>
             </CardContent>

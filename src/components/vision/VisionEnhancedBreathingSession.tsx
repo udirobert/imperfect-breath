@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../hooks/useAuth";
-import { useLensContext } from "../../providers/LensProvider";
-import { useBreathingSession } from "../../hooks/useBreathingSession";
+import { useLens } from "../../hooks/useLens";
+import { useEnhancedSession } from "../../hooks/useEnhancedSession";
 import {
   Card,
   CardContent,
@@ -55,43 +55,18 @@ export const VisionEnhancedBreathingSession: React.FC<
 > = ({ pattern, onSessionComplete, onShare }) => {
   // Auth state
   const { user, isAuthenticated, loginWithEmail } = useAuth();
-  const lensContext = useLensContext();
-  const isLensConnected =
-    lensContext.isAuthenticated && !!lensContext.currentAccount;
+  const { currentAccount: lensAccount, isAuthenticated: isLensAuthenticated } =
+    useLens();
+  const isLensConnected = isLensAuthenticated && !!lensAccount;
 
-  // Convert pattern to the expected BreathingPattern format
-  const adaptedPattern = {
-    name: pattern.name,
-    phases: [
-      {
-        name: "inhale",
-        duration: pattern.phases.inhale * 1000,
-        text: "Breathe In...",
-      },
-      ...(pattern.phases.hold
-        ? [{ name: "hold", duration: pattern.phases.hold * 1000, text: "Hold" }]
-        : []),
-      {
-        name: "exhale",
-        duration: pattern.phases.exhale * 1000,
-        text: "Breathe Out...",
-      },
-      ...(pattern.phases.pause
-        ? [
-            {
-              name: "pause",
-              duration: pattern.phases.pause * 1000,
-              text: "Pause",
-            },
-          ]
-        : []),
-    ],
-    hasBreathHold: false,
-    cycles: 10,
-  };
-
-  // Initialize the breathing session hook with the adapted pattern
-  const breathingSession = useBreathingSession(adaptedPattern, true);
+  // Initialize the enhanced session hook
+  const {
+    state: sessionState,
+    isActive: isSessionActive,
+    start: startSession,
+    stop: stopSession,
+    getSessionDuration,
+  } = useEnhancedSession();
   // Vision system state
   const [visionEnabled, setVisionEnabled] = useState(false);
   const [visionTier, setVisionTier] = useState<VisionTier>("loading");
@@ -109,9 +84,10 @@ export const VisionEnhancedBreathingSession: React.FC<
   >("prompt");
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  // Session state
-  const [isSessionActive, setIsSessionActive] = useState(false);
-  const [sessionDuration, setSessionDuration] = useState(0);
+  // Local session state (complementing the enhanced session)
+  const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [currentCycle, setCurrentCycle] = useState(0);
+  const [totalCycles] = useState(10); // Default to 10 cycles for vision sessions
 
   // Refs
   const visionManagerRef = useRef<VisionManager | null>(null);
@@ -229,92 +205,82 @@ export const VisionEnhancedBreathingSession: React.FC<
   );
 
   // Start breathing session
-  const startSession = useCallback(() => {
-    setIsSessionActive(true);
-    setSessionDuration(0);
-
-    // Start session timer
-    const startTime = Date.now();
-    const timer = setInterval(() => {
-      setSessionDuration(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
+  const handleStartSession = useCallback(() => {
+    // Start the enhanced session
+    startSession();
+    setCurrentCycle(0);
 
     // Auto-stop after 10 minutes
     setTimeout(() => {
-      clearInterval(timer);
-      setIsSessionActive(false);
-
-      // Get the final duration directly from startTime to avoid closure issues
-      const finalDuration = Math.floor((Date.now() - startTime) / 1000);
+      stopSession();
+      setSessionCompleted(true);
 
       if (visionMetrics) {
         // Prepare session data with proper field names for the database
         const sessionData = {
           pattern_name: pattern.name,
-          session_duration: finalDuration,
-          breath_hold_time: breathingSession.state.breathHoldTime || 0,
+          session_duration: sessionState.sessionData.duration,
+          breath_hold_time: 0, // Vision sessions don't track breath holds
           restlessness_score: visionMetrics.restlessnessScore || 0,
           visionMetrics: visionMetrics,
         };
 
-        // Save session data via the breathing session hook
-        breathingSession.controls.saveSessionData(sessionData);
-
-        // Also call the onSessionComplete callback if provided
+        // Call the onSessionComplete callback if provided
         if (onSessionComplete) {
           onSessionComplete({
             ...sessionData,
             userId: user?.id || null,
             walletAddress: user?.wallet_address || null,
-            lensId: lensContext.currentAccount?.id || null,
+            lensId: lensAccount?.id || null,
           });
         }
       }
     }, 10 * 60 * 1000);
   }, [
+    startSession,
+    stopSession,
+    getSessionDuration,
     visionMetrics,
     pattern,
-    breathingSession,
     onSessionComplete,
     user,
-    lensContext,
+    lensAccount,
   ]);
 
   // Stop breathing session
-  const stopSession = useCallback(() => {
-    setIsSessionActive(false);
+  const handleStopSession = useCallback(() => {
+    // Stop the enhanced session
+    stopSession();
+    setSessionCompleted(true);
 
     if (visionMetrics) {
       // Prepare session data with proper field names for the database
       const sessionData = {
         pattern_name: pattern.name,
-        session_duration: sessionDuration,
-        breath_hold_time: breathingSession.state.breathHoldTime || 0,
+        session_duration: sessionState.sessionData.duration,
+        breath_hold_time: 0, // Vision sessions don't track breath holds
         restlessness_score: visionMetrics.restlessnessScore || 0,
         visionMetrics: visionMetrics,
       };
 
-      // Save session data via the breathing session hook
-      breathingSession.controls.saveSessionData(sessionData);
-
-      // Also call the onSessionComplete callback if provided
+      // Call the onSessionComplete callback if provided
       if (onSessionComplete) {
         onSessionComplete({
           ...sessionData,
           userId: user?.id || null,
           walletAddress: user?.wallet_address || null,
-          lensId: lensContext.currentAccount?.id || null,
+          lensId: lensAccount?.id || null,
         });
       }
     }
   }, [
-    sessionDuration,
+    stopSession,
+    getSessionDuration,
     visionMetrics,
     pattern,
-    breathingSession,
     onSessionComplete,
     user,
-    lensContext,
+    lensAccount,
   ]);
 
   // Handle sharing session results to social platforms
@@ -325,21 +291,18 @@ export const VisionEnhancedBreathingSession: React.FC<
       // Prepare session data for sharing
       const sessionData = {
         pattern_name: pattern.name,
-        session_duration: sessionDuration,
-        breath_hold_time: breathingSession.state.breathHoldTime || 0,
+        session_duration: sessionState.sessionData.duration,
+        breath_hold_time: 0, // Vision sessions don't track breath holds
         restlessness_score: visionMetrics.restlessnessScore || 0,
         visionMetrics: visionMetrics,
       };
 
-      // Share using the breathing session hook
-      breathingSession.controls.shareToLens(sessionData);
-
-      // Also call the onShare callback if provided
+      // Call the onShare callback if provided
       if (onShare) {
         onShare({
           ...sessionData,
           userId: user?.id || null,
-          lensId: lensContext.currentAccount?.id || null,
+          lensId: lensAccount?.id || null,
         });
       }
     } else {
@@ -347,14 +310,13 @@ export const VisionEnhancedBreathingSession: React.FC<
       alert("Please connect to Lens Protocol to share your results");
     }
   }, [
-    sessionDuration,
+    getSessionDuration,
     visionMetrics,
     pattern,
-    breathingSession,
     onShare,
     isLensConnected,
     user,
-    lensContext,
+    lensAccount,
   ]);
 
   // Render vision metrics display
@@ -599,8 +561,10 @@ export const VisionEnhancedBreathingSession: React.FC<
 
             <div className="mt-6 text-center space-y-4">
               <div className="text-2xl font-bold">
-                {Math.floor(sessionDuration / 60)}:
-                {(sessionDuration % 60).toString().padStart(2, "0")}
+                {Math.floor(sessionState.sessionData.duration / 60)}:
+                {(sessionState.sessionData.duration % 60)
+                  .toString()
+                  .padStart(2, "0")}
               </div>
 
               {!isAuthenticated ? (
@@ -615,7 +579,7 @@ export const VisionEnhancedBreathingSession: React.FC<
                     Login to Save Progress
                   </Button>
                   <Button
-                    onClick={startSession}
+                    onClick={handleStartSession}
                     size="lg"
                     variant="default"
                     className="w-full"
@@ -626,7 +590,9 @@ export const VisionEnhancedBreathingSession: React.FC<
               ) : (
                 <div className="space-y-4">
                   <Button
-                    onClick={isSessionActive ? stopSession : startSession}
+                    onClick={
+                      isSessionActive ? handleStopSession : handleStartSession
+                    }
                     size="lg"
                     variant={isSessionActive ? "destructive" : "default"}
                     className="w-full"
@@ -634,18 +600,19 @@ export const VisionEnhancedBreathingSession: React.FC<
                     {isSessionActive ? "Stop Session" : "Start Session"}
                   </Button>
 
-                  {!isSessionActive && sessionDuration > 0 && (
-                    <Button
-                      onClick={handleShare}
-                      size="sm"
-                      variant="outline"
-                      className="w-full flex items-center gap-2"
-                      disabled={!isLensConnected}
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Share Results
-                    </Button>
-                  )}
+                  {!isSessionActive &&
+                    sessionState.sessionData.duration > 0 && (
+                      <Button
+                        onClick={handleShare}
+                        size="sm"
+                        variant="outline"
+                        className="w-full flex items-center gap-2"
+                        disabled={!isLensConnected}
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share Results
+                      </Button>
+                    )}
                 </div>
               )}
             </div>

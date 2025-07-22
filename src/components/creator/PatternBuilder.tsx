@@ -13,7 +13,7 @@ import {
   BreathingPhase,
   CustomBreathingPhase,
 } from "../../lib/breathingPatterns";
-import { useBreathingSession } from "../../hooks/useBreathingSession";
+import { useEnhancedSession } from "../../hooks/useEnhancedSession";
 import { CustomPattern } from "../../lib/patternStorage";
 
 interface PatternBuilderProps {
@@ -42,12 +42,12 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
     creator: existingPattern?.creator || "user-id-placeholder",
   });
 
-  const { state, controls } = useBreathingSession();
+  const { isActive, start, stop } = useEnhancedSession();
 
   const calculateDuration = useCallback(() => {
     const totalDuration = pattern.phases.reduce(
       (sum, phase) => sum + phase.duration,
-      0,
+      0
     );
     setPattern((prev) => ({ ...prev, duration: totalDuration }));
   }, [pattern.phases]);
@@ -74,8 +74,8 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
         name === "inhale"
           ? "Breathe in deeply"
           : name === "exhale"
-            ? "Breathe out slowly"
-            : "Hold your breath",
+          ? "Breathe out slowly"
+          : "Hold your breath",
     };
     setPattern((prev) => ({ ...prev, phases: [...prev.phases, newPhase] }));
   };
@@ -83,7 +83,7 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
   const updatePhase = (
     index: number,
     field: keyof CustomBreathingPhase,
-    value: string | number,
+    value: string | number
   ) => {
     const newPhases = [...pattern.phases];
     newPhases[index] = { ...newPhases[index], [field]: value };
@@ -98,10 +98,10 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
   };
 
   const handlePreview = () => {
-    if (state.isRunning) {
-      controls.endSession();
+    if (isActive) {
+      stop();
     } else {
-      controls.startSession();
+      start();
     }
   };
 
@@ -249,7 +249,7 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
                                   updatePhase(
                                     index,
                                     "duration",
-                                    parseInt(e.target.value),
+                                    parseInt(e.target.value)
                                   )
                                 }
                                 min="1"
@@ -291,9 +291,9 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
       <div className="flex justify-between">
         <Button
           onClick={handlePreview}
-          variant={state.isRunning ? "destructive" : "secondary"}
+          variant={isActive ? "destructive" : "secondary"}
         >
-          {state.isRunning ? "Stop Preview" : "Preview Pattern"}
+          {isActive ? "Stop Preview" : "Preview Pattern"}
         </Button>
         <Button
           onClick={handleSave}

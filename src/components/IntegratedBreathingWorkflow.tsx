@@ -31,7 +31,6 @@ import {
 import { useAIAnalysis } from "../hooks/useAIAnalysis";
 import { useFlow } from "../hooks/useFlow";
 import { useLens } from "../hooks/useLens";
-import { useBreathingSession } from "../hooks/useBreathingSession";
 
 // Import types
 import type { CustomPattern } from "../lib/patternStorage";
@@ -39,7 +38,7 @@ import type {
   BreathingPatternAttributes,
   NFTMetadata,
 } from "../lib/flow/types";
-import type { BreathingSession } from "../hooks/useLens";
+import type { BreathingSession } from "../lib/lens";
 
 interface WorkflowStep {
   id: string;
@@ -94,12 +93,9 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
   const {
     isAuthenticated: lensAuthenticated,
     shareBreathingSession,
-    shareBreathingPattern,
     isPosting: lensPosting,
     authenticate: lensAuth,
   } = useLens();
-
-  const { state: sessionState } = useBreathingSession();
 
   // Component state
   const [currentStep, setCurrentStep] = useState(0);
@@ -117,7 +113,7 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
 
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisData | null>(null);
   const [sessionResults, setSessionResults] = useState<SessionResults | null>(
-    null,
+    null
   );
   const [mintedNFTId, setMintedNFTId] = useState<string | null>(null);
   const [sharedToLens, setSharedToLens] = useState(false);
@@ -168,7 +164,7 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
     (field: keyof PatternFormData, value: string | number) => {
       setPatternData((prev) => ({ ...prev, [field]: value }));
     },
-    [],
+    []
   );
 
   const validatePattern = useCallback(() => {
@@ -382,7 +378,6 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
         duration: sessionResults.duration,
         breathHoldTime: sessionResults.averageHoldTime,
         restlessnessScore: sessionResults.restlessnessScore,
-        sessionDuration: sessionResults.duration,
         timestamp: new Date().toISOString(),
       };
 
@@ -415,8 +410,8 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
                 step.completed
                   ? "bg-green-500 border-green-500 text-white"
                   : step.current
-                    ? "bg-blue-500 border-blue-500 text-white"
-                    : "bg-gray-200 border-gray-300 text-gray-500"
+                  ? "bg-blue-500 border-blue-500 text-white"
+                  : "bg-gray-200 border-gray-300 text-gray-500"
               }`}
             >
               {step.completed ? (
@@ -1014,19 +1009,25 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm">Flow Wallet</span>
                 <div
-                  className={`h-3 w-3 rounded-full ${flowState.isConnected ? "bg-green-500" : "bg-gray-300"}`}
+                  className={`h-3 w-3 rounded-full ${
+                    flowState.isConnected ? "bg-green-500" : "bg-gray-300"
+                  }`}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Lens Account</span>
                 <div
-                  className={`h-3 w-3 rounded-full ${lensAuthenticated ? "bg-green-500" : "bg-gray-300"}`}
+                  className={`h-3 w-3 rounded-full ${
+                    lensAuthenticated ? "bg-green-500" : "bg-gray-300"
+                  }`}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">AI Analysis</span>
                 <div
-                  className={`h-3 w-3 rounded-full ${!isAnalyzing ? "bg-green-500" : "bg-yellow-500"}`}
+                  className={`h-3 w-3 rounded-full ${
+                    !isAnalyzing ? "bg-green-500" : "bg-yellow-500"
+                  }`}
                 />
               </div>
               <div className="flex items-center justify-between">

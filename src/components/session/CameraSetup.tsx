@@ -1,13 +1,12 @@
 import React, { Suspense, lazy, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useBreathingSession } from "@/hooks/useBreathingSession";
-import { TrackingStatus, Keypoint } from "@/hooks/useVision";
+import { useEnhancedSession } from "@/hooks/useEnhancedSession";
+import { TrackingStatus, Keypoint } from "@/hooks/visionTypes";
 import { Loader2, Camera } from "lucide-react";
 
 const VideoFeed = lazy(() => import("@/components/VideoFeed"));
 
 type CameraSetupProps = {
-  controls: ReturnType<typeof useBreathingSession>["controls"];
   videoRef: React.RefObject<HTMLVideoElement>;
   landmarks: Keypoint[];
   trackingStatus: TrackingStatus;
@@ -15,12 +14,12 @@ type CameraSetupProps = {
 };
 
 export const CameraSetup = ({
-  controls,
   videoRef,
   landmarks,
   trackingStatus,
   initializeCamera,
 }: CameraSetupProps) => {
+  const { start } = useEnhancedSession();
   const [cameraRequested, setCameraRequested] = useState(false);
   const isReady = trackingStatus === "TRACKING";
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
@@ -28,6 +27,10 @@ export const CameraSetup = ({
   const handleRequestCamera = async () => {
     setCameraRequested(true);
     await initializeCamera();
+  };
+
+  const handleStartSession = async () => {
+    await start();
   };
 
   return (
@@ -64,7 +67,7 @@ export const CameraSetup = ({
           </Button>
         ) : (
           <Button
-            onClick={controls.startSession}
+            onClick={handleStartSession}
             size="lg"
             disabled={!isReady}
             className="w-48"
@@ -79,7 +82,7 @@ export const CameraSetup = ({
             <Button
               variant="link"
               className="p-0 h-auto"
-              onClick={controls.startSession}
+              onClick={handleStartSession}
             >
               skip the camera setup
             </Button>

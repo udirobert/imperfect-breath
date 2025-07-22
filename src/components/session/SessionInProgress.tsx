@@ -1,7 +1,7 @@
 import React from "react";
 import BreathingAnimation from "../../components/BreathingAnimation";
 import { BreathingPhaseName } from "../../lib/breathingPatterns";
-import { useBreathingSession } from "../../hooks/useBreathingSession";
+import { useEnhancedSession } from "../../hooks/useEnhancedSession";
 import { SessionHeader } from "./SessionHeader";
 import { SessionControls } from "./SessionControls";
 import { Button } from "../../components/ui/button";
@@ -10,9 +10,7 @@ import { Loader2, Camera } from "lucide-react";
 import VideoFeed from "../../components/VideoFeed";
 
 type SessionInProgressProps = {
-  state: ReturnType<typeof useBreathingSession>["state"];
-  controls: ReturnType<typeof useBreathingSession>["controls"];
-  handleEndSession: () => void;
+  handleEndSession?: () => void;
   videoRef: React.RefObject<HTMLVideoElement>;
   showVideoFeed: boolean;
   isTracking: boolean;
@@ -22,11 +20,10 @@ type SessionInProgressProps = {
   cameraInitialized: boolean;
   cameraRequested: boolean;
   onRequestCamera: () => Promise<void>;
+  patternName?: string;
 };
 
 export const SessionInProgress = ({
-  state,
-  controls,
   handleEndSession,
   videoRef,
   showVideoFeed,
@@ -37,10 +34,13 @@ export const SessionInProgress = ({
   cameraInitialized,
   cameraRequested,
   onRequestCamera,
+  patternName = "Breathing Session",
 }: SessionInProgressProps) => {
+  const { state, isActive, start } = useEnhancedSession();
+
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
   const cameraReady = trackingStatus === "TRACKING" || cameraInitialized;
-  const showBreathingInterface = state.isRunning;
+  const showBreathingInterface = isActive;
 
   // VideoFeed positioning: setup phase vs breathing phase
   const videoFeedContainerClass = showBreathingInterface
@@ -51,6 +51,10 @@ export const SessionInProgress = ({
     ? ""
     : "!relative !inset-0 !w-full !h-full";
 
+  const handleStartSession = async () => {
+    await start();
+  };
+
   // Unified interface - no more phase-based screens
   return (
     <div className="flex-grow flex flex-col items-center justify-center w-full relative animate-fade-in">
@@ -58,12 +62,8 @@ export const SessionInProgress = ({
       {showBreathingInterface && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <BreathingAnimation
-            phase={
-              state.sessionPhase === "breath-hold"
-                ? "hold"
-                : (state.sessionPhase as BreathingPhaseName)
-            }
-            text={state.phaseText}
+            phase={state.sessionData.currentPhase as BreathingPhaseName}
+            text={state.sessionData.currentPhase}
           />
         </div>
       )}
@@ -88,8 +88,6 @@ export const SessionInProgress = ({
             </p>
           </div>
 
-          {/* Camera Feed placeholder during setup - actual feed renders at bottom */}
-
           {/* Control Buttons */}
           <div className="space-y-4">
             {needsCameraSetup ? (
@@ -101,7 +99,7 @@ export const SessionInProgress = ({
                 <div>
                   <Button
                     variant="outline"
-                    onClick={() => controls.startSession()}
+                    onClick={handleStartSession}
                     className="w-48"
                   >
                     Start Without Camera
@@ -114,11 +112,7 @@ export const SessionInProgress = ({
                 Initializing...
               </Button>
             ) : (
-              <Button
-                onClick={() => controls.startSession()}
-                size="lg"
-                className="w-48"
-              >
+              <Button onClick={handleStartSession} size="lg" className="w-48">
                 Start Breathing Session
               </Button>
             )}
@@ -129,12 +123,8 @@ export const SessionInProgress = ({
       {/* Session Header and Controls - only show when running */}
       {showBreathingInterface && (
         <>
-          <SessionHeader state={state} />
-          <SessionControls
-            state={state}
-            controls={controls}
-            onEndSession={handleEndSession}
-          />
+          <SessionHeader patternName={patternName} />
+          <SessionControls onEndSession={handleEndSession} />
         </>
       )}
 

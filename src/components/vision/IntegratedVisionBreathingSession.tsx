@@ -30,7 +30,7 @@ import {
 
 // Import our integrated hooks
 import { useIntegratedVisionFeedback } from "../../hooks/useIntegratedVisionFeedback";
-import { useBreathingSession } from "../../hooks/useBreathingSession";
+import { useEnhancedSession } from "../../hooks/useEnhancedSession";
 import { useAuth } from "../../hooks/useAuth";
 
 // Import existing components
@@ -59,10 +59,12 @@ export const IntegratedVisionBreathingSession: React.FC<
   const { user, isAuthenticated } = useAuth();
   const {
     state: sessionState,
-    startSession,
-    pauseSession,
-    stopSession,
-  } = useBreathingSession();
+    isActive: isSessionActive,
+    start: startSession,
+    pause: pauseSession,
+    stop: stopSession,
+    getSessionDuration,
+  } = useEnhancedSession();
 
   // Integrated vision feedback
   const {
@@ -98,7 +100,7 @@ export const IntegratedVisionBreathingSession: React.FC<
       await startVisionFeedback();
 
       // Start breathing session
-      startSession(pattern.name);
+      startSession();
 
       setSessionStarted(true);
       console.log("Integrated vision breathing session started");
@@ -107,7 +109,7 @@ export const IntegratedVisionBreathingSession: React.FC<
       // Provide fallback feedback
       provideFeedback(
         "Vision system unavailable, but you can still enjoy your breathing practice.",
-        "guidance",
+        "guidance"
       );
     }
   }, [startVisionFeedback, startSession, pattern.name, provideFeedback]);
@@ -146,13 +148,13 @@ export const IntegratedVisionBreathingSession: React.FC<
       await shareSessionWithVision();
       provideFeedback(
         "Your session has been shared with the community!",
-        "encouragement",
+        "encouragement"
       );
     } catch (error) {
       console.error("Failed to share session:", error);
       provideFeedback(
         "Sharing failed, but your practice was still valuable.",
-        "guidance",
+        "guidance"
       );
     }
   }, [shareSessionWithVision, provideFeedback]);
@@ -165,13 +167,13 @@ export const IntegratedVisionBreathingSession: React.FC<
       await mintPatternWithVisionData();
       provideFeedback(
         "Your breathing pattern has been minted as an NFT!",
-        "encouragement",
+        "encouragement"
       );
     } catch (error) {
       console.error("Failed to mint NFT:", error);
       provideFeedback(
         "Minting failed, but your pattern is still saved locally.",
-        "guidance",
+        "guidance"
       );
     }
   }, [mintPatternWithVisionData, provideFeedback]);
@@ -269,7 +271,7 @@ export const IntegratedVisionBreathingSession: React.FC<
                       {Math.round((1 - value) * 100)}%
                     </span>
                   </div>
-                ),
+                )
               )}
             </div>
           </CardContent>
@@ -313,19 +315,15 @@ export const IntegratedVisionBreathingSession: React.FC<
       ) : (
         <>
           <Button
-            onClick={() =>
-              sessionState.isRunning
-                ? pauseSession()
-                : startSession(pattern.name)
-            }
+            onClick={() => (isSessionActive ? pauseSession() : startSession())}
             variant="outline"
           >
-            {sessionState.isRunning ? (
+            {isSessionActive ? (
               <Pause className="mr-2 h-4 w-4" />
             ) : (
               <Play className="mr-2 h-4 w-4" />
             )}
-            {sessionState.isRunning ? "Pause" : "Resume"}
+            {isSessionActive ? "Pause" : "Resume"}
           </Button>
           <Button onClick={handleStopSession} variant="destructive">
             <Square className="mr-2 h-4 w-4" />
@@ -353,17 +351,16 @@ export const IntegratedVisionBreathingSession: React.FC<
       <BreathingSessionPost
         sessionData={{
           patternName: pattern.name,
-          duration: sessionState.sessionDuration,
+          duration: sessionState.sessionData.duration,
           score: sessionMetrics.sessionQuality,
-          breathHoldTime: sessionMetrics.visionMetrics?.breathHoldTime,
-          cycles: sessionState.cycleCount,
+          breathHoldTime: 0, // Vision sessions don't track breath holds
+          cycles: 0, // Will be tracked separately
           insights: sessionMetrics.aiRecommendations,
-          flowNFTId: undefined, // Will be set when NFT is minted
         }}
         onPublished={(txHash) => {
           provideFeedback(
             "Session shared successfully on Lens!",
-            "encouragement",
+            "encouragement"
           );
           console.log("Published to Lens:", txHash);
         }}
@@ -417,50 +414,8 @@ export const IntegratedVisionBreathingSession: React.FC<
           <Card>
             <CardContent className="p-6">
               <BreathingVisualizer
-                pattern={{
-                  name: pattern.name,
-                  phases: [
-                    { name: "inhale", duration: pattern.phases.inhale },
-                    ...(pattern.phases.hold
-                      ? [
-                          {
-                            name: "hold" as const,
-                            duration: pattern.phases.hold,
-                          },
-                        ]
-                      : []),
-                    { name: "exhale", duration: pattern.phases.exhale },
-                    ...(pattern.phases.pause
-                      ? [
-                          {
-                            name: "pause" as const,
-                            duration: pattern.phases.pause,
-                          },
-                        ]
-                      : []),
-                  ],
-                  cycles: 10,
-                }}
-                isActive={sessionState.isRunning}
-                onPhaseChange={(phase) => {
-                  // Provide phase-specific guidance
-                  if (sessionMetrics.restlessnessAnalysis?.overall > 0.6) {
-                    switch (phase) {
-                      case "inhale":
-                        provideFeedback(
-                          "Breathe in slowly and settle into stillness.",
-                          "guidance",
-                        );
-                        break;
-                      case "exhale":
-                        provideFeedback(
-                          "Release tension as you exhale.",
-                          "guidance",
-                        );
-                        break;
-                    }
-                  }
-                }}
+                pattern={pattern}
+                isActive={isSessionActive}
               />
             </CardContent>
           </Card>
@@ -471,7 +426,7 @@ export const IntegratedVisionBreathingSession: React.FC<
               <Card>
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold">
-                    {Math.floor(sessionState.sessionDuration / 60)}m
+                    {Math.floor(sessionState.sessionData.duration / 60)}m
                   </div>
                   <div className="text-sm text-muted-foreground">Duration</div>
                 </CardContent>
@@ -479,7 +434,7 @@ export const IntegratedVisionBreathingSession: React.FC<
               <Card>
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold">
-                    {sessionState.cycleCount}
+                    {sessionState.sessionData.cycleCount}
                   </div>
                   <div className="text-sm text-muted-foreground">Cycles</div>
                 </CardContent>

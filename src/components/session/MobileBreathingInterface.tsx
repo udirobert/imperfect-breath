@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useBreathingSession } from "@/hooks/useBreathingSession";
+import { useEnhancedSession } from "@/hooks/useEnhancedSession";
 import BreathingAnimation from "@/components/BreathingAnimation";
 import { BreathingPhaseName } from "@/lib/breathingPatterns";
 import {
@@ -17,43 +17,63 @@ import {
 import { cn } from "@/lib/utils";
 
 interface MobileBreathingInterfaceProps {
-  state: ReturnType<typeof useBreathingSession>["state"];
-  controls: ReturnType<typeof useBreathingSession>["controls"];
-  onEndSession: () => void;
-  cameraEnabled?: boolean;
-  onToggleCamera?: () => void;
-  voiceEnabled?: boolean;
-  onToggleVoice?: () => void;
+  onEndSession?: () => void;
+  patternName?: string;
 }
 
-export const MobileBreathingInterface: React.FC<MobileBreathingInterfaceProps> = ({
-  state,
-  controls,
-  onEndSession,
-  cameraEnabled = false,
-  onToggleCamera,
-  voiceEnabled = true,
-  onToggleVoice,
-}) => {
+export const MobileBreathingInterface: React.FC<
+  MobileBreathingInterfaceProps
+> = ({ onEndSession, patternName = "Breathing Session" }) => {
   const isMobile = useIsMobile();
+  const {
+    state,
+    isActive,
+    isPaused,
+    isAudioEnabled,
+    canUseCamera,
+    cameraStream,
+    start,
+    pause,
+    resume,
+    stop,
+    toggleAudio,
+    getSessionDuration,
+  } = useEnhancedSession();
 
   // Only render on mobile
   if (!isMobile) {
     return null;
   }
 
-  const progress = state.pattern.phases
-    ? ((state.currentPhaseIndex + 1) / state.pattern.phases.length) * 100
-    : 0;
+  // Calculate progress based on session duration (simplified)
+  const progress =
+    state.sessionData.duration > 0
+      ? Math.min((state.sessionData.duration / 300) * 100, 100)
+      : 0; // 5 min max
+
+  const handlePlayPause = async () => {
+    if (isActive) {
+      pause();
+    } else if (isPaused) {
+      resume();
+    } else {
+      await start();
+    }
+  };
+
+  const handleStop = () => {
+    stop();
+    onEndSession?.();
+  };
 
   return (
     <div className="h-screen w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden">
       {/* Status Bar */}
       <div className="flex-shrink-0 px-4 py-3 bg-background/80 backdrop-blur">
         <div className="flex items-center justify-between text-sm">
-          <span className="font-medium">{state.pattern.name}</span>
+          <span className="font-medium">{patternName}</span>
           <span className="text-muted-foreground">
-            Cycle {state.cycleCount + 1}
+            Cycle {state.sessionData.cycleCount + 1}
           </span>
         </div>
         <Progress value={progress} className="mt-2 h-1" />
@@ -64,26 +84,16 @@ export const MobileBreathingInterface: React.FC<MobileBreathingInterfaceProps> =
         {/* Background Animation */}
         <div className="absolute inset-0 flex items-center justify-center">
           <BreathingAnimation
-            phase={
-              state.sessionPhase === "breath-hold"
-                ? "hold"
-                : (state.sessionPhase as BreathingPhaseName)
-            }
-            text={state.phaseText}
-            className="scale-110" // Larger for mobile
+            phase={state.sessionData.currentPhase as BreathingPhaseName}
+            text={state.sessionData.currentPhase}
           />
         </div>
 
         {/* Phase Text Overlay */}
         <div className="absolute top-1/4 left-0 right-0 text-center z-10">
           <h2 className="text-2xl font-light text-foreground/90 mb-2">
-            {state.phaseText}
+            {state.sessionData.currentPhase}
           </h2>
-          {state.sessionPhase === "breath-hold" && (
-            <p className="text-lg text-muted-foreground">
-              {Math.floor(state.breathHoldTime / 1000)}s
-            </p>
-          )}
         </div>
 
         {/* Session Stats */}
@@ -91,15 +101,12 @@ export const MobileBreathingInterface: React.FC<MobileBreathingInterfaceProps> =
           <div className="grid grid-cols-2 gap-4 text-center">
             <div className="bg-background/60 backdrop-blur rounded-lg p-3">
               <p className="text-xs text-muted-foreground">Duration</p>
-              <p className="text-lg font-semibold">
-                {Math.floor(state.elapsedTime / 60000)}:
-                {String(Math.floor((state.elapsedTime % 60000) / 1000)).padStart(2, "0")}
-              </p>
+              <p className="text-lg font-semibold">{getSessionDuration()}</p>
             </div>
             <div className="bg-background/60 backdrop-blur rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Best Hold</p>
+              <p className="text-xs text-muted-foreground">Cycles</p>
               <p className="text-lg font-semibold">
-                {Math.floor(state.breathHoldTime / 1000)}s
+                {state.sessionData.cycleCount}
               </p>
             </div>
           </div>
@@ -113,16 +120,16 @@ export const MobileBreathingInterface: React.FC<MobileBreathingInterfaceProps> =
           <Button
             variant="outline"
             size="lg"
-            onClick={state.isRunning ? controls.pauseSession : controls.startSession}
+            onClick={handlePlayPause}
             className={cn(
               "h-16 w-16 rounded-full",
               "touch-manipulation", // Optimize for touch
-              state.isRunning
+              isActive
                 ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
                 : "bg-primary hover:bg-primary/90 text-primary-foreground"
             )}
           >
-            {state.isRunning ? (
+            {isActive ? (
               <Pause className="h-6 w-6" />
             ) : (
               <Play className="h-6 w-6" />
@@ -132,7 +139,7 @@ export const MobileBreathingInterface: React.FC<MobileBreathingInterfaceProps> =
           <Button
             variant="destructive"
             size="lg"
-            onClick={onEndSession}
+            onClick={handleStop}
             className="h-16 w-16 rounded-full touch-manipulation"
           >
             <Square className="h-6 w-6" />
@@ -141,45 +148,41 @@ export const MobileBreathingInterface: React.FC<MobileBreathingInterfaceProps> =
 
         {/* Secondary Controls */}
         <div className="flex items-center justify-center gap-6">
-          {onToggleCamera && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleCamera}
-              className={cn(
-                "flex flex-col items-center gap-1 h-auto py-2 px-3",
-                "touch-manipulation",
-                cameraEnabled ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              {cameraEnabled ? (
-                <Camera className="h-5 w-5" />
-              ) : (
-                <CameraOff className="h-5 w-5" />
-              )}
-              <span className="text-xs">Camera</span>
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {}} // Camera toggle would be handled by parent
+            className={cn(
+              "flex flex-col items-center gap-1 h-auto py-2 px-3",
+              "touch-manipulation",
+              canUseCamera ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            {canUseCamera ? (
+              <Camera className="h-5 w-5" />
+            ) : (
+              <CameraOff className="h-5 w-5" />
+            )}
+            <span className="text-xs">Camera</span>
+          </Button>
 
-          {onToggleVoice && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleVoice}
-              className={cn(
-                "flex flex-col items-center gap-1 h-auto py-2 px-3",
-                "touch-manipulation",
-                voiceEnabled ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              {voiceEnabled ? (
-                <Volume2 className="h-5 w-5" />
-              ) : (
-                <VolumeX className="h-5 w-5" />
-              )}
-              <span className="text-xs">Voice</span>
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleAudio}
+            className={cn(
+              "flex flex-col items-center gap-1 h-auto py-2 px-3",
+              "touch-manipulation",
+              isAudioEnabled ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            {isAudioEnabled ? (
+              <Volume2 className="h-5 w-5" />
+            ) : (
+              <VolumeX className="h-5 w-5" />
+            )}
+            <span className="text-xs">Voice</span>
+          </Button>
         </div>
       </div>
     </div>
