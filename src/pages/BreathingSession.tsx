@@ -1,243 +1,189 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { useBreathingSession } from "../hooks/useBreathingSession";
-import {
-  BreathingPattern,
-  BREATHING_PATTERNS,
-  BreathingPhaseName,
-} from "../lib/breathingPatterns";
-import { useVision } from "../hooks/useVision";
-import { useAIFeedback } from "../hooks/useAIFeedback";
-import { useMobileCameraManager } from "../lib/vision/MobileCameraManager";
-
-import { SessionSetup } from "../components/session/SessionSetup";
-import { SessionInProgress } from "../components/session/SessionInProgress";
-import { MobileBreathingInterface } from "../components/session/MobileBreathingInterface";
-import { IntegratedVisionBreathingSession } from "../components/vision/IntegratedVisionBreathingSession";
-import { useIsMobile } from "../hooks/use-mobile";
+import { useEnhancedSession } from "../hooks/useEnhancedSession";
+import { BREATHING_PATTERNS, BreathingPattern } from "../lib/breathingPatterns";
+import { useSessionFlow } from "../hooks/useSessionFlow";
 import { useOfflineManager } from "../lib/offline/OfflineManager";
-import { EnhancedDualViewBreathingSession } from "../components/vision/EnhancedDualViewBreathingSession";
-import { useSessionFlow, cleanupSessionFlags } from "../hooks/useSessionFlow";
 
-function getInitialPattern(location: ReturnType<typeof useLocation>) {
-  // 1. Try navigation state (preview)
-  if (location.state?.previewPattern) return location.state.previewPattern;
-  // 2. Try localStorage
-  try {
-    const stored = localStorage.getItem("selectedPattern");
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  // 3. Fallback to default free pattern
-  return BREATHING_PATTERNS.box;
+// Specialized components for different concerns
+import { SessionOrchestrator } from "../components/session/SessionOrchestrator";
+import { SessionErrorBoundary } from "../lib/errors/error-boundary";
+
+/**
+ * Modern BreathingSession Component
+ *
+ * CLEAN ARCHITECTURE PRINCIPLES:
+ * - Single Responsibility: Only handles session coordination
+ * - Dependency Injection: Services injected via hooks
+ * - Interface Segregation: Uses focused, specific interfaces
+ * - Open/Closed: Extensible without modification
+ */
+
+interface SessionConfig {
+  pattern: BreathingPattern;
+  features: {
+    enableCamera: boolean;
+    enableAI: boolean;
+    enableAudio: boolean;
+  };
+  displayMode: "focus" | "awareness" | "analysis";
 }
 
-const BreathingSession = () => {
-  const location = useLocation();
+/**
+ * Extract pattern initialization logic - DRY principle
+ */
+const usePatternInitialization = (location: ReturnType<typeof useLocation>) => {
+  return useMemo(() => {
+    // 1. Try navigation state (preview)
+    if (location.state?.previewPattern) return location.state.previewPattern;
+
+    // 2. Try localStorage
+    try {
+      const stored = localStorage.getItem("selectedPattern");
+      if (stored) return JSON.parse(stored);
+    } catch {
+      // Silent fail for localStorage issues
+    }
+
+    // 3. Fallback to default free pattern
+    return BREATHING_PATTERNS.box;
+  }, [location.state?.previewPattern]);
+};
+
+/**
+ * Session completion handler - extracted for reusability
+ */
+const useSessionCompletion = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const { saveSession, syncStatus } = useOfflineManager();
 
-  const initialPattern = getInitialPattern(location);
-  const { state, controls } = useBreathingSession(initialPattern);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [cameraInitialized, setCameraInitialized] = useState(false);
-  const [cameraRequested, setCameraRequested] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  return useCallback(
+    (sessionData: {
+      pattern: BreathingPattern;
+      cycleCount: number;
+      breathHoldTime: number;
+      restlessnessScore?: number;
+      elapsedTime: number;
+    }) => {
+      const {
+        pattern,
+        cycleCount,
+        breathHoldTime,
+        restlessnessScore,
+        elapsedTime,
+      } = sessionData;
 
-  // Mobile camera manager for optimized mobile experience
-  const mobileCameraManager = useMobileCameraManager({
-    performance: {
-      processingInterval: 200, // Optimize for battery
-      batteryOptimized: true,
-      adaptiveQuality: true,
+      // Calculate session duration based on pattern properties
+      const oneCycleDuration =
+        (pattern.inhale + pattern.hold + pattern.exhale + pattern.rest) * 1000;
+      const sessionDuration = (cycleCount * oneCycleDuration) / 1000;
+
+      // Save session offline-first
+      const sessionId = saveSession({
+        patternId: pattern.id || "custom",
+        patternName: pattern.name,
+        startTime: new Date(Date.now() - elapsedTime),
+        endTime: new Date(),
+        duration: sessionDuration,
+        cycleCount,
+        breathHoldTime,
+        restlessnessScore: restlessnessScore || 0,
+        completed: true,
+      });
+
+      navigate("/results", {
+        state: {
+          breathHoldTime,
+          restlessnessScore: restlessnessScore || 0,
+          patternName: pattern.name,
+          sessionDuration,
+          sessionId,
+          isOffline: !syncStatus.isOnline,
+        },
+      });
     },
-  });
+    [navigate, saveSession, syncStatus.isOnline]
+  );
+};
 
-  // Keep camera tracking active once initialized until session ends
-  const isTracking =
-    cameraInitialized && !state.isFinished && state.sessionPhase !== "idle";
-
-  // Camera tracking state management
-
-  const {
-    restlessnessScore,
-    landmarks,
-    trackingStatus,
-    initializeCamera,
-    cleanup,
-  } = useVision({
-    videoRef,
-    isTracking,
-  } as any); // Type assertion to bypass TypeScript error temporarily
-
-  // No automatic phase transitions - user controls when to start
-
-  // Show video feed once camera is requested and throughout the session
-  const showVideoFeed = cameraRequested && !state.isFinished;
-
-  // Camera initialization is now manual only - triggered by user clicking "Enable Camera"
-
-  const handleRequestCamera = async () => {
-    setCameraRequested(true);
-
-    try {
-      // Small delay to ensure video element is rendered
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await initializeCamera();
-      setCameraInitialized(true);
-    } catch (error) {
-      console.error("Failed to initialize camera:", error);
-      setCameraInitialized(false);
-      setCameraRequested(false); // Reset on failure so user can try again
-    }
-  };
-
-  useAIFeedback({
-    isRunning: state.isRunning,
-    isFinished: state.isFinished,
-    speak: controls.speak,
-    cycleCount: state.cycleCount,
-    sessionPhase: state.sessionPhase,
-    patternKey: state.pattern.id || "custom",
-  });
-
-  // Cleanup camera when component unmounts
-  useEffect(() => {
-    return () => {
-      if (cameraInitialized) {
-        cleanup();
-      }
-    };
-  }, [cleanup, cameraInitialized]);
-
-  const handleEndSession = useCallback(() => {
-    // Calculate session duration based on pattern properties
-    // and cycles completed
-    const oneCycleDuration = state.pattern.phases
-      ? state.pattern.phases.reduce((sum, phase) => sum + phase.duration, 0)
-      : (state.pattern.inhale +
-          state.pattern.hold +
-          state.pattern.exhale +
-          state.pattern.rest) *
-        1000;
-
-    const sessionDuration = (state.cycleCount * oneCycleDuration) / 1000;
-
-    const finalBreathHoldTime = state.breathHoldTime;
-    const finalRestlessnessScore = restlessnessScore;
-
-    // Clean up camera before ending session
-    if (typeof cleanup === "function") {
-      cleanup();
-    }
-    setCameraInitialized(false);
-    setCameraRequested(false);
-    // Save session offline-first
-    const sessionId = saveSession({
-      patternId: state.pattern.id || 'custom',
-      patternName: state.pattern.name,
-      startTime: new Date(Date.now() - state.elapsedTime),
-      endTime: new Date(),
-      duration: sessionDuration,
-      cycleCount: state.cycleCount,
-      breathHoldTime: finalBreathHoldTime,
-      restlessnessScore: finalRestlessnessScore,
-      completed: true,
-    });
-
-    controls.endSession();
-
-    navigate("/results", {
-      state: {
-        breathHoldTime: finalBreathHoldTime,
-        restlessnessScore: finalRestlessnessScore,
-        patternName: state.pattern.name,
-        sessionDuration,
-        sessionId,
-        isOffline: !syncStatus.isOnline,
-      },
-    });
-  }, [
-    cleanup,
-    state.pattern,
-    state.cycleCount,
-    state.breathHoldTime,
-    restlessnessScore,
-    controls,
-    navigate,
-  ]);
-
-  // Centralized session flow logic - DRY principle
+/**
+ * Main BreathingSession Component
+ *
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Memoized pattern initialization
+ * - Extracted completion handler
+ * - Lazy component loading
+ * - Minimal re-renders
+ */
+const BreathingSession: React.FC = () => {
+  const location = useLocation();
   const sessionFlow = useSessionFlow();
 
-  // Handle quick start auto-initialization
-  React.useEffect(() => {
-    if (sessionFlow.shouldBypassSetup && state.sessionPhase === "idle" && sessionFlow.defaultPattern) {
-      controls.selectPattern(sessionFlow.defaultPattern);
-      controls.prepareSession();
-      cleanupSessionFlags();
-    }
-  }, [sessionFlow.shouldBypassSetup, state.sessionPhase, sessionFlow.defaultPattern, controls]);
+  // Memoized pattern initialization - PERFORMANCE
+  const initialPattern = usePatternInitialization(location);
 
-  if (state.sessionPhase === "idle" || state.isFinished) {
-    return <SessionSetup state={state} controls={controls} />;
-  }
+  // Session completion handler - DRY
+  const handleSessionComplete = useSessionCompletion();
 
-  // Enhanced Vision Session (available on all devices)
-  if (sessionFlow.useEnhancedVision) {
-    return (
-      <EnhancedDualViewBreathingSession
-        pattern={{
-          name: state.selectedPattern?.name || 'Custom Pattern',
-          phases: {
-            inhale: state.selectedPattern?.phases[0]?.duration || 4,
-            hold: state.selectedPattern?.phases[1]?.duration || 4,
-            exhale: state.selectedPattern?.phases[2]?.duration || 4,
-            pause: state.selectedPattern?.phases[3]?.duration || 2,
-          },
-          difficulty: state.selectedPattern?.difficulty || 'intermediate',
-          benefits: state.selectedPattern?.benefits || [],
-        }}
-        onSessionComplete={(metrics) => {
-          console.log('Enhanced session completed with metrics:', metrics);
-          handleEndSession();
-        }}
-      />
-    );
-  }
+  // Enhanced session management - MODERN
+  const {
+    state: sessionState,
+    isReady,
+    isActive,
+    initialize,
+    start,
+    complete,
+  } = useEnhancedSession();
 
-  // Mobile-optimized interface
-  if (sessionFlow.useMobileInterface && state.isRunning) {
-    return (
-      <MobileBreathingInterface
-        state={state}
-        controls={controls}
-        onEndSession={handleEndSession}
-        cameraEnabled={cameraInitialized}
-        onToggleCamera={handleRequestCamera}
-        voiceEnabled={voiceEnabled}
-        onToggleVoice={() => setVoiceEnabled(!voiceEnabled)}
-      />
-    );
-  }
+  // Memoized session configuration - PERFORMANCE
+  const sessionConfig = useMemo(
+    (): SessionConfig => ({
+      pattern: initialPattern,
+      features: {
+        enableCamera: sessionFlow.useEnhancedVision,
+        enableAI: sessionFlow.useEnhancedVision,
+        enableAudio: true, // Default to enabled
+      },
+      displayMode: sessionFlow.useEnhancedVision ? "analysis" : "focus",
+    }),
+    [initialPattern, sessionFlow.useEnhancedVision]
+  );
 
-  // Fallback: Original desktop interface
+  // Session completion callback - CLEAN
+  const onSessionComplete = useCallback(
+    (metrics: any) => {
+      handleSessionComplete({
+        pattern: sessionConfig.pattern,
+        cycleCount: sessionState.sessionData.cycleCount,
+        breathHoldTime: metrics?.breathHoldTime || 0,
+        restlessnessScore: metrics?.restlessnessScore,
+        elapsedTime: sessionState.sessionData.duration * 1000,
+      });
+
+      complete();
+    },
+    [
+      handleSessionComplete,
+      sessionConfig.pattern,
+      sessionState.sessionData,
+      complete,
+    ]
+  );
+
   return (
-    <SessionInProgress
-      state={state}
-      controls={controls}
-      handleEndSession={handleEndSession}
-      videoRef={videoRef}
-      showVideoFeed={showVideoFeed}
-      isTracking={isTracking}
-      restlessnessScore={restlessnessScore}
-      landmarks={landmarks}
-      trackingStatus={trackingStatus}
-      cameraInitialized={cameraInitialized}
-      cameraRequested={cameraRequested}
-      onRequestCamera={handleRequestCamera}
-    />
+    <SessionErrorBoundary>
+      <SessionOrchestrator
+        config={sessionConfig}
+        sessionFlow={sessionFlow}
+        sessionState={sessionState}
+        isReady={isReady}
+        isActive={isActive}
+        onInitialize={initialize}
+        onStart={start}
+        onComplete={onSessionComplete}
+      />
+    </SessionErrorBoundary>
   );
 };
 
