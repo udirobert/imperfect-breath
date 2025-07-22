@@ -144,20 +144,7 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
 
   // Determine which UI to render based on session state and flow
   const renderSessionUI = () => {
-    // Setup phase - show configuration
-    if (sessionState.phase === "setup" || (!isReady && !isActive)) {
-      return (
-        <SessionSetup
-          onSessionStart={sessionControls.startSession}
-          defaultPattern={
-            config.pattern
-              .id as keyof typeof import("../../lib/breathingPatterns").BREATHING_PATTERNS
-          }
-        />
-      );
-    }
-
-    // Enhanced Vision Session (takes precedence)
+    // Enhanced Vision Session (takes precedence when explicitly requested)
     if (sessionFlow.useEnhancedVision) {
       return (
         <EnhancedDualViewBreathingSession
@@ -168,54 +155,35 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
     }
 
     // Mobile-optimized interface
-    if (sessionFlow.useMobileInterface && isMobile && isActive) {
+    if (sessionFlow.useMobileInterface && isMobile) {
       return (
         <MobileBreathingInterface
-          // Note: This would need to be adapted to work with enhanced session state
-          // For now, we'll use a compatibility layer
-          state={
-            {
-              pattern: config.pattern,
-              isRunning: isActive,
-              cycleCount: sessionState.sessionData.cycleCount,
-              sessionPhase: sessionState.sessionData.currentPhase as any,
-              phaseText: sessionState.sessionData.currentPhase,
-              elapsedTime: sessionState.sessionData.duration * 1000,
-              breathHoldTime: 0, // Would need to be tracked
-            } as any
-          }
-          controls={
-            {
-              startSession: onStart,
-              pauseSession: () => {}, // Would need pause functionality
-            } as any
-          }
           onEndSession={() => onComplete({})}
-          cameraEnabled={config.features.enableCamera}
-          voiceEnabled={config.features.enableAudio}
+          patternName={config.pattern.name}
         />
       );
     }
 
-    // Fallback: Original desktop interface (would need similar adaptation)
+    // Default desktop breathing interface - simplified for now
+    // This provides the core breathing experience without complex camera setup
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Session Active</h2>
-          <p className="text-muted-foreground mb-4">
-            Pattern: {config.pattern.name}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Cycles: {sessionState.sessionData.cycleCount}
-          </p>
-          <button
-            onClick={() => onComplete({})}
-            className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          >
-            End Session
-          </button>
-        </div>
-      </div>
+      <SessionInProgress
+        handleEndSession={() => onComplete({})}
+        videoRef={{ current: null }}
+        showVideoFeed={false} // Disable video feed for now to avoid complexity
+        isTracking={false}
+        restlessnessScore={0}
+        landmarks={[]}
+        trackingStatus="IDLE"
+        cameraInitialized={false}
+        cameraRequested={false}
+        onRequestCamera={async () => {
+          console.log(
+            "Camera functionality will be implemented in future iteration"
+          );
+        }}
+        patternName={config.pattern.name}
+      />
     );
   };
 
