@@ -3,7 +3,7 @@
  * Connects Eliza AI agent with our multichain breathing app ecosystem
  */
 
-import { EnhancedFlowClient } from "../flow/enhanced-flow-client";
+import BaseFlowClient from "../flow/clients/base-client";
 import { SecureAPIKeyManager } from "../crypto/secure-storage";
 import { BreathingPattern } from "../breathingPatterns";
 
@@ -110,13 +110,13 @@ export interface MessageIntent {
  * AI Breathing Coach that integrates with our multichain ecosystem
  */
 export class AIBreathingCoach {
-  private flowClient: EnhancedFlowClient;
+  private flowClient: BaseFlowClient;
   private config: AICoachConfig;
   private isInitialized = false;
 
   constructor(config: AICoachConfig) {
     this.config = config;
-    this.flowClient = EnhancedFlowClient.getInstance();
+    this.flowClient = BaseFlowClient.getInstance();
   }
 
   /**

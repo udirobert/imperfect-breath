@@ -31,5 +31,4 @@ export type {
 // Main hook
 export { useFlow } from '../../hooks/useFlow';
 
-// Legacy exports (for backward compatibility)
-export { EnhancedFlowClient } from './enhanced-flow-client';
+

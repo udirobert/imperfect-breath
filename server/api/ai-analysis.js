@@ -241,15 +241,6 @@ Create breathing pattern JSON:
 }`;
 }
 
-// Keep original functions for backward compatibility
-function createSessionAnalysisPrompt(sessionData) {
-  return createOptimizedSessionPrompt(sessionData);
-}
-
-function createPatternGenerationPrompt(sessionData) {
-  return createOptimizedPatternPrompt(sessionData);
-}
-
 function parseAIResponse(text, analysisType) {
   try {
     // Try to extract JSON from the response

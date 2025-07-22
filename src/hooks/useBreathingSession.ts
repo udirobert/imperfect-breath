@@ -1,19 +1,14 @@
 /**
  * Modern Breathing Session Hook
- * 
+ *
  * Direct export of the enhanced session system.
- * This maintains backward compatibility while using the modern implementation.
  */
 
-export { 
+export {
   useEnhancedSession as useBreathingSession,
   useSessionStatus,
   useSessionControls,
-  useReadySession
-} from './useEnhancedSession';
-
-// Re-export types for backward compatibility
-export type { 
-  UseEnhancedSessionConfig as UseBreathingSessionConfig,
-  UseEnhancedSessionReturn as UseBreathingSessionReturn
+  useReadySession,
+  type UseEnhancedSessionConfig as UseBreathingSessionConfig,
+  type UseEnhancedSessionReturn as UseBreathingSessionReturn
 } from './useEnhancedSession';

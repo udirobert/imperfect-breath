@@ -1,5 +1,4 @@
 import "./polyfills"; // Must be first import
-import "./wallet-shim"; // Wallet compatibility layer must be loaded early
 import React from "react"; // Explicitly import React to ensure it's available
 import ReactDOM from "react-dom"; // Explicitly import ReactDOM to ensure it's available
 import { createRoot } from "react-dom/client";

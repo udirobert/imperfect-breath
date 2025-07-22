@@ -150,5 +150,3 @@ export class SecureAIClient {
   }
 }
 
-// Export for backward compatibility
-export { SecureAIClient as AIClient };

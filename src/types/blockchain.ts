@@ -153,7 +153,7 @@ export interface SocialActionResult {
   hash?: string;
   postId?: string;
   error?: string;
-  transactionHash?: string; // Backward compatibility alias for hash
+  transactionHash?: string; // Transaction hash for blockchain operations
 }
 
 // Lens v3 Authentication Types
