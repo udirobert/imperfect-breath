@@ -67,7 +67,7 @@ export const EnhancedDualViewBreathingSession: React.FC<
   // Auth and session state
   const { user, isAuthenticated } = useAuth();
   const { state: sessionState, controls } = useBreathingSession();
-  const { startSession, togglePause, endSession } = controls;
+  const { startSession, pauseSession, resumeSession, stopSession } = controls;
 
   // Integrated vision feedback with lazy loading
   const {
@@ -93,6 +93,8 @@ export const EnhancedDualViewBreathingSession: React.FC<
   // Local state for UI
   const [sessionStarted, setSessionStarted] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
+  const [cameraUserDisabled, setCameraUserDisabled] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<string>("inhale");
@@ -139,17 +141,96 @@ export const EnhancedDualViewBreathingSession: React.FC<
   const displayConfig = getCameraDisplayConfig(cameraDisplayMode);
 
   /**
+   * Request camera permission
+   */
+  const handleRequestCameraPermission = useCallback(async () => {
+    try {
+      // Request camera permission
+      await getCameraStream();
+      setCameraPermissionGranted(true);
+
+      if (audioEnabled) {
+        provideFeedback(
+          "Camera access granted! You're ready to start your enhanced session.",
+          "encouragement"
+        );
+      }
+    } catch (error) {
+      console.error("Camera permission denied:", error);
+      setCameraPermissionGranted(false);
+
+      if (audioEnabled) {
+        provideFeedback(
+          "Camera access denied. You can still enjoy an audio-guided session.",
+          "guidance"
+        );
+      }
+    }
+  }, [getCameraStream, audioEnabled, provideFeedback]);
+
+  /**
+   * Disable camera access (user choice)
+   */
+  const handleDisableCamera = useCallback(() => {
+    setCameraUserDisabled(true);
+    setCameraEnabled(false);
+    stopVisionFeedback();
+
+    if (audioEnabled) {
+      provideFeedback(
+        "Camera disabled. Continuing with audio-only guidance.",
+        "guidance"
+      );
+    }
+  }, [stopVisionFeedback, audioEnabled, provideFeedback]);
+
+  /**
+   * Re-enable camera access
+   */
+  const handleEnableCamera = useCallback(async () => {
+    setCameraUserDisabled(false);
+
+    if (sessionStarted) {
+      try {
+        await startVisionFeedback(
+          videoRef.current || undefined,
+          canvasRef.current || undefined,
+          cameraDisplayMode
+        );
+        setCameraEnabled(true);
+
+        if (audioEnabled) {
+          provideFeedback(
+            "Camera re-enabled. Vision analysis is now active.",
+            "encouragement"
+          );
+        }
+      } catch (error) {
+        console.error("Failed to re-enable camera:", error);
+      }
+    }
+  }, [
+    sessionStarted,
+    startVisionFeedback,
+    cameraDisplayMode,
+    audioEnabled,
+    provideFeedback,
+  ]);
+
+  /**
    * Start integrated session with camera
    */
   const handleStartSession = useCallback(async () => {
     try {
-      // Start vision feedback with lazy loading based on display mode
-      await startVisionFeedback(
-        videoRef.current || undefined,
-        canvasRef.current || undefined,
-        cameraDisplayMode
-      );
-      setCameraEnabled(true);
+      if (cameraPermissionGranted && !cameraUserDisabled) {
+        // Start vision feedback with lazy loading based on display mode
+        await startVisionFeedback(
+          videoRef.current || undefined,
+          canvasRef.current || undefined,
+          cameraDisplayMode
+        );
+        setCameraEnabled(true);
+      }
 
       // Start breathing session
       startSession();
@@ -157,10 +238,11 @@ export const EnhancedDualViewBreathingSession: React.FC<
 
       // Welcome message
       if (audioEnabled) {
-        provideFeedback(
-          `Welcome to your ${pattern.name} session. I'll be watching your breathing and providing guidance.`,
-          "encouragement"
-        );
+        const message =
+          cameraPermissionGranted && !cameraUserDisabled
+            ? `Welcome to your ${pattern.name} session. I'll be watching your breathing and providing guidance.`
+            : `Welcome to your ${pattern.name} session. I'll provide audio guidance to help you breathe.`;
+        provideFeedback(message, "encouragement");
       }
 
       console.log(
@@ -181,6 +263,8 @@ export const EnhancedDualViewBreathingSession: React.FC<
       }
     }
   }, [
+    cameraPermissionGranted,
+    cameraUserDisabled,
     startVisionFeedback,
     startSession,
     pattern.name,
@@ -194,7 +278,7 @@ export const EnhancedDualViewBreathingSession: React.FC<
    */
   const handleStopSession = useCallback(() => {
     stopVisionFeedback();
-    endSession();
+    stopSession();
     setSessionStarted(false);
     setCameraEnabled(false);
 
@@ -214,13 +298,24 @@ export const EnhancedDualViewBreathingSession: React.FC<
     }
   }, [
     stopVisionFeedback,
-    endSession,
+    stopSession,
     sessionMetrics,
     sessionState,
     onSessionComplete,
     audioEnabled,
     provideFeedback,
   ]);
+
+  /**
+   * Toggle pause/resume
+   */
+  const togglePause = useCallback(() => {
+    if (sessionState.isPaused) {
+      resumeSession();
+    } else {
+      pauseSession();
+    }
+  }, [sessionState.isPaused, resumeSession, pauseSession]);
 
   /**
    * Handle phase changes for contextual feedback
@@ -376,7 +471,8 @@ export const EnhancedDualViewBreathingSession: React.FC<
       );
     }
 
-    if (!cameraEnabled) {
+    // Show camera unavailable only if permission was denied or stream failed
+    if (!cameraEnabled && !cameraPermissionGranted) {
       return (
         <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
           <div className="text-center text-gray-500">
@@ -385,6 +481,47 @@ export const EnhancedDualViewBreathingSession: React.FC<
             <p className="text-xs">
               Session will continue without vision analysis
             </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Show user-disabled state
+    if (!cameraEnabled && cameraPermissionGranted && cameraUserDisabled) {
+      return (
+        <div className="aspect-video bg-gradient-to-br from-orange-50 to-amber-100 rounded-lg flex items-center justify-center">
+          <div className="text-center text-gray-600">
+            <CameraOff className="h-12 w-12 mx-auto mb-3 text-orange-500" />
+            <p className="text-sm font-medium">Camera Disabled</p>
+            <p className="text-xs">You've chosen to disable camera access</p>
+            <Button
+              onClick={handleEnableCamera}
+              variant="outline"
+              size="sm"
+              className="mt-3"
+            >
+              <Camera className="mr-2 h-3 w-3" />
+              Re-enable Camera
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Show ready state when permission granted but session not started
+    if (!cameraEnabled && cameraPermissionGranted && !cameraUserDisabled) {
+      return (
+        <div className="aspect-video bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg flex items-center justify-center">
+          <div className="text-center text-gray-600">
+            <Camera className="h-12 w-12 mx-auto mb-3 text-green-500" />
+            <p className="text-sm font-medium">Camera Ready</p>
+            <p className="text-xs">
+              Vision analysis will activate when session starts
+            </p>
+            <div className="mt-3 flex items-center justify-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-xs">Permission granted</span>
+            </div>
           </div>
         </div>
       );
@@ -561,10 +698,24 @@ export const EnhancedDualViewBreathingSession: React.FC<
     <div className="flex items-center justify-between">
       <div className="flex gap-2">
         {!sessionStarted ? (
-          <Button onClick={handleStartSession} size="lg">
-            <Play className="mr-2 h-4 w-4" />
-            Start Enhanced Session
-          </Button>
+          <>
+            {!cameraPermissionGranted ? (
+              <Button
+                onClick={handleRequestCameraPermission}
+                size="lg"
+                variant="outline"
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                Enable Camera for AI Vision
+              </Button>
+            ) : null}
+            <Button onClick={handleStartSession} size="lg">
+              <Play className="mr-2 h-4 w-4" />
+              {cameraPermissionGranted
+                ? "Start Enhanced Session"
+                : "Start Audio Session"}
+            </Button>
+          </>
         ) : (
           <>
             <Button onClick={togglePause} variant="outline">
@@ -588,6 +739,7 @@ export const EnhancedDualViewBreathingSession: React.FC<
           onClick={() => setAudioEnabled(!audioEnabled)}
           variant="outline"
           size="icon"
+          title={audioEnabled ? "Disable AI Audio" : "Enable AI Audio"}
         >
           {audioEnabled ? (
             <Volume2 className="h-4 w-4" />
@@ -596,10 +748,29 @@ export const EnhancedDualViewBreathingSession: React.FC<
           )}
         </Button>
 
+        {/* Camera toggle - only show if permission was granted */}
+        {cameraPermissionGranted && (
+          <Button
+            onClick={
+              cameraUserDisabled ? handleEnableCamera : handleDisableCamera
+            }
+            variant="outline"
+            size="icon"
+            title={cameraUserDisabled ? "Enable Camera" : "Disable Camera"}
+          >
+            {cameraUserDisabled ? (
+              <CameraOff className="h-4 w-4" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+
         <Button
           onClick={() => setIsFullscreen(!isFullscreen)}
           variant="outline"
           size="icon"
+          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         >
           {isFullscreen ? (
             <Minimize2 className="h-4 w-4" />

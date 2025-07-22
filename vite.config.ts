@@ -90,9 +90,6 @@ export default defineConfig(({ mode }) => {
             'tensorflow-optional': [
               '@tensorflow/tfjs-backend-webgpu'
             ],
-            'mediapipe': [
-              '@mediapipe/pose'
-            ],
           },
         },
       },

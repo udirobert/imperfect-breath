@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useEnhancedWeb3 } from "../hooks/useEnhancedWeb3";
+import { useWalletStatus, useWalletActions } from "../hooks/useWallet";
 import {
   ConnectWalletButton,
   SimpleConnectButton,
@@ -47,8 +47,13 @@ const WalletTestPage: React.FC = () => {
     loading,
   } = useAuth();
 
-  const { isConnectKitReady, supportedChainIds, isTestnetMode } =
-    useEnhancedWeb3();
+  const { isConnected, isConnecting, address, chainId, error } = useWalletStatus();
+  const { connect, disconnect, clearError } = useWalletActions();
+  
+  // Mock values for test page compatibility
+  const isConnectKitReady = true; // Always ready with new system
+  const supportedChainIds = ['0x1', '0x89', '0xa4b1']; // Ethereum, Polygon, Arbitrum
+  const isTestnetMode = false;
 
   const [testResults, setTestResults] = useState<Record<string, boolean>>({});
   const [isRunningTests, setIsRunningTests] = useState(false);

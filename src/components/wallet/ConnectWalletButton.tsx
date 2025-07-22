@@ -1,8 +1,6 @@
 import React from "react";
-import { ConnectKitButton } from "connectkit";
-import { useAuth } from "../../hooks/useAuth";
 import { Button } from "../ui/button";
-import { Wallet, ChevronDown, ExternalLink, Copy, LogOut } from "lucide-react";
+import { Wallet, ChevronDown, ExternalLink, Copy, LogOut, Users, Coins, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,11 +12,9 @@ import {
 import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useToast } from "../ui/use-toast";
-import {
-  getChainInfo,
-  getExplorerUrl,
-  handleWalletError,
-} from "../../lib/wagmi";
+import { useWallet, useWalletStatus, useWalletActions } from "../../hooks/useWallet";
+import { WalletErrorBoundary } from "../../lib/errors/error-boundary";
+import { AuthContext, AuthType, getAuthMessage } from "../../config/messaging";
 
 interface ConnectWalletButtonProps {
   variant?: "default" | "outline" | "ghost" | "link";
@@ -26,29 +22,83 @@ interface ConnectWalletButtonProps {
   className?: string;
   showBalance?: boolean;
   showChainInfo?: boolean;
+  // Context-aware props
+  context?: AuthContext;
+  requiredFor?: string; // "share this session" | "mint NFT" | "create course"
+  hideUntilNeeded?: boolean;
+  showBenefits?: boolean;
+  authRequired?: AuthType;
 }
 
-export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
+const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
   variant = "default",
   size = "default",
   className = "",
   showBalance = false,
   showChainInfo = true,
+  context,
+  requiredFor,
+  hideUntilNeeded = false,
+  showBenefits = false,
+  authRequired = 'evm',
 }) => {
-  const {
-    hasWallet,
-    wallet,
-    disconnectWallet,
-    currentChain,
-    currentChainId,
-    isWeb3User,
-  } = useAuth();
+  const { isAvailable, isConnected, isConnecting, shortAddress, chainId, error } = useWalletStatus();
+  const { connect, disconnect, clearError } = useWalletActions();
   const { toast } = useToast();
 
+  const authMessage = context ? getAuthMessage(authRequired, context) : null;
+
+  const handleConnect = async () => {
+    try {
+      clearError();
+      await connect();
+      
+      // Context-aware success messaging
+      const successMessage = requiredFor 
+        ? `Wallet connected! You can now ${requiredFor.toLowerCase()}`
+        : "Your wallet has been connected successfully";
+        
+      toast({
+        title: "Wallet connected",
+        description: successMessage,
+      });
+    } catch (error) {
+      toast({
+        title: "Connection failed",
+        description: (error as Error).message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Get contextual icon based on use case
+  const getContextIcon = () => {
+    switch (context) {
+      case 'social': return <Users className="mr-2 h-4 w-4" />;
+      case 'nft': return <Coins className="mr-2 h-4 w-4" />;
+      case 'progress': return <BarChart3 className="mr-2 h-4 w-4" />;
+      default: return <Wallet className="mr-2 h-4 w-4" />;
+    }
+  };
+
+  // Get contextual button text
+  const getButtonText = () => {
+    if (requiredFor) {
+      return `Connect to ${requiredFor}`;
+    }
+    
+    if (authMessage?.cta) {
+      return authMessage.cta;
+    }
+    
+    return "Connect Wallet";
+  };
+
   const handleCopyAddress = async () => {
-    if (wallet?.address) {
+    const { address } = useWalletStatus();
+    if (address) {
       try {
-        await navigator.clipboard.writeText(wallet.address);
+        await navigator.clipboard.writeText(address);
         toast({
           title: "Address copied",
           description: "Wallet address copied to clipboard",
@@ -64,18 +114,24 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
   };
 
   const handleViewOnExplorer = () => {
-    if (wallet?.address && currentChainId) {
-      const chainInfo = getChainInfo(currentChainId);
-      if (chainInfo?.blockExplorers?.default?.url) {
-        const explorerUrl = `${chainInfo.blockExplorers.default.url}/address/${wallet.address}`;
-        window.open(explorerUrl, "_blank");
+    const { address } = useWalletStatus();
+    if (address && chainId) {
+      const explorerUrls: Record<string, string> = {
+        '0x1': 'https://etherscan.io',
+        '0x89': 'https://polygonscan.com',
+        '0xa4b1': 'https://arbiscan.io',
+      };
+      
+      const explorerUrl = explorerUrls[chainId];
+      if (explorerUrl) {
+        window.open(`${explorerUrl}/address/${address}`, "_blank");
       }
     }
   };
 
   const handleDisconnect = async () => {
     try {
-      await disconnectWallet();
+      await disconnect();
       toast({
         title: "Wallet disconnected",
         description: "Your wallet has been disconnected successfully",
@@ -83,153 +139,199 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
     } catch (error) {
       toast({
         title: "Disconnect failed",
-        description: handleWalletError(error as Error),
+        description: (error as Error).message,
         variant: "destructive",
       });
     }
   };
 
-  const formatAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const getChainName = (chainId: string) => {
+    const chainNames: Record<string, string> = {
+      '0x1': 'Ethereum',
+      '0x89': 'Polygon',
+      '0xa4b1': 'Arbitrum',
+    };
+    return chainNames[chainId] || 'Unknown';
   };
 
   const getChainBadgeColor = (chainName: string) => {
     switch (chainName?.toLowerCase()) {
       case "ethereum":
-      case "mainnet":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "polygon":
         return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
       case "arbitrum":
         return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
-      case "base":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "lens":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "story":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
   };
 
+  // Show error state
+  if (error) {
+    return (
+      <Button
+        variant="outline"
+        size={size}
+        className={`${className} border-red-200 text-red-700`}
+        onClick={clearError}
+      >
+        <Wallet className="mr-2 h-4 w-4" />
+        Wallet Error - Retry
+      </Button>
+    );
+  }
+
+  // Show connecting state
+  if (isConnecting) {
+    return (
+      <Button
+        variant={variant}
+        size={size}
+        className={className}
+        disabled
+      >
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          Connecting...
+        </div>
+      </Button>
+    );
+  }
+
+  // Show not available state
+  if (!isAvailable) {
+    return (
+      <Button
+        variant="outline"
+        size={size}
+        className={className}
+        disabled
+      >
+        <Wallet className="mr-2 h-4 w-4" />
+        No Wallet Found
+      </Button>
+    );
+  }
+
+  // Hide button if hideUntilNeeded is true and we're not connected
+  if (hideUntilNeeded && !isConnected) {
+    return null;
+  }
+
+  // Show connect button
+  if (!isConnected) {
+    return (
+      <div className="space-y-2">
+        <Button
+          onClick={handleConnect}
+          variant={variant}
+          size={size}
+          className={className}
+        >
+          {getContextIcon()}
+          {getButtonText()}
+        </Button>
+        {showBenefits && authMessage && (
+          <div className="text-xs text-muted-foreground max-w-xs">
+            {authMessage.context}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Connected state - show dropdown with wallet info
+  const chainName = chainId ? getChainName(chainId) : 'Unknown';
+
   return (
-    <ConnectKitButton.Custom>
-      {({ isConnected, isConnecting, show, hide, address, ensName, chain }) => {
-        if (isConnecting) {
-          return (
-            <Button
-              variant={variant}
-              size={size}
-              className={className}
-              disabled
-            >
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Connecting...
-              </div>
-            </Button>
-          );
-        }
-
-        if (!isConnected || !hasWallet) {
-          return (
-            <Button
-              onClick={show}
-              variant={variant}
-              size={size}
-              className={className}
-            >
-              <Wallet className="mr-2 h-4 w-4" />
-              Connect Wallet
-            </Button>
-          );
-        }
-
-        // Connected state - show dropdown with wallet info
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={variant}
-                size={size}
-                className={`${className} min-w-[140px] justify-between`}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={variant}
+          size={size}
+          className={`${className} min-w-[140px] justify-between`}
+        >
+          <div className="flex items-center gap-2">
+            <Avatar className="h-5 w-5">
+              <AvatarFallback className="text-xs">
+                {shortAddress?.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="font-mono text-sm">
+              {shortAddress}
+            </span>
+            {showChainInfo && chainId && (
+              <Badge
+                variant="secondary"
+                className={`text-xs ${getChainBadgeColor(chainName)}`}
               >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    <AvatarFallback className="text-xs">
-                      {(ensName || address)?.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-mono text-sm">
-                    {ensName || formatAddress(address || "")}
-                  </span>
-                  {showChainInfo && currentChain && (
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs ${getChainBadgeColor(currentChain)}`}
-                    >
-                      {currentChain}
-                    </Badge>
-                  )}
-                </div>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
+                {chainName}
+              </Badge>
+            )}
+          </div>
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-xs">
-                    {(ensName || address)?.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="font-mono text-sm">
-                    {ensName || formatAddress(address || "")}
-                  </span>
-                  {currentChain && (
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs w-fit ${getChainBadgeColor(currentChain)}`}
-                    >
-                      {currentChain}
-                    </Badge>
-                  )}
-                </div>
-              </DropdownMenuLabel>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem onClick={handleCopyAddress}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Address
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={handleViewOnExplorer}>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View on Explorer
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={show}>
-                <Wallet className="mr-2 h-4 w-4" />
-                Change Wallet
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                onClick={handleDisconnect}
-                className="text-red-600 dark:text-red-400"
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel className="flex items-center gap-2">
+          <Avatar className="h-6 w-6">
+            <AvatarFallback className="text-xs">
+              {shortAddress?.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="font-mono text-sm">
+              {shortAddress}
+            </span>
+            {chainId && (
+              <Badge
+                variant="secondary"
+                className={`text-xs w-fit ${getChainBadgeColor(chainName)}`}
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                Disconnect
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      }}
-    </ConnectKitButton.Custom>
+                {chainName}
+              </Badge>
+            )}
+          </div>
+        </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={handleCopyAddress}>
+          <Copy className="mr-2 h-4 w-4" />
+          Copy Address
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={handleViewOnExplorer}>
+          <ExternalLink className="mr-2 h-4 w-4" />
+          View on Explorer
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={handleConnect}>
+          <Wallet className="mr-2 h-4 w-4" />
+          Change Wallet
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onClick={handleDisconnect}
+          className="text-red-600 dark:text-red-400"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Disconnect
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = (props) => {
+  return (
+    <WalletErrorBoundary>
+      <ConnectWalletButtonInner {...props} />
+    </WalletErrorBoundary>
   );
 };
 
@@ -237,41 +339,38 @@ export const ConnectWalletButton: React.FC<ConnectWalletButtonProps> = ({
 export const SimpleConnectButton: React.FC<{ className?: string }> = ({
   className = "",
 }) => {
+  const { isConnected, isConnecting, shortAddress } = useWalletStatus();
+  const { connect } = useWalletActions();
+
+  if (isConnecting) {
+    return (
+      <Button className={className} disabled>
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          Connecting...
+        </div>
+      </Button>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <Button onClick={() => connect()} className={className}>
+        <Wallet className="mr-2 h-4 w-4" />
+        Connect Wallet
+      </Button>
+    );
+  }
+
   return (
-    <ConnectKitButton.Custom>
-      {({ isConnected, isConnecting, show, address, ensName }) => {
-        if (isConnecting) {
-          return (
-            <Button className={className} disabled>
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                Connecting...
-              </div>
-            </Button>
-          );
-        }
-
-        if (!isConnected) {
-          return (
-            <Button onClick={show} className={className}>
-              <Wallet className="mr-2 h-4 w-4" />
-              Connect Wallet
-            </Button>
-          );
-        }
-
-        return (
-          <Button onClick={show} variant="outline" className={className}>
-            <Avatar className="mr-2 h-4 w-4">
-              <AvatarFallback className="text-xs">
-                {(ensName || address)?.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {ensName || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-          </Button>
-        );
-      }}
-    </ConnectKitButton.Custom>
+    <Button onClick={() => connect()} variant="outline" className={className}>
+      <Avatar className="mr-2 h-4 w-4">
+        <AvatarFallback className="text-xs">
+          {shortAddress?.slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+      {shortAddress}
+    </Button>
   );
 };
 

@@ -3,7 +3,13 @@ import "./wallet-shim"; // Wallet compatibility layer must be loaded early
 import React from "react"; // Explicitly import React to ensure it's available
 import ReactDOM from "react-dom"; // Explicitly import ReactDOM to ensure it's available
 import { createRoot } from "react-dom/client";
-import { EnhancedWeb3Provider } from "./providers/EnhancedWeb3Provider";
+import { WagmiProvider } from "wagmi";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ConnectKitProvider } from "connectkit";
+import { WalletProvider } from "./lib/wallet/wallet-context";
+import { GlobalErrorBoundary } from "./lib/errors/error-boundary";
+import { config } from "./lib/wagmi/config";
+import { queryClient } from "./lib/query/config";
 import App from "./App";
 import "./index.css";
 import { runEnvironmentChecks } from "./utils/environment-check";
@@ -39,9 +45,17 @@ if (!rootElement) {
   try {
     createRoot(rootElement).render(
       <React.StrictMode>
-        <EnhancedWeb3Provider>
-          <App />
-        </EnhancedWeb3Provider>
+        <GlobalErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <WagmiProvider config={config}>
+              <ConnectKitProvider>
+                <WalletProvider autoConnect={false}>
+                  <App />
+                </WalletProvider>
+              </ConnectKitProvider>
+            </WagmiProvider>
+          </QueryClientProvider>
+        </GlobalErrorBoundary>
       </React.StrictMode>
     );
   } catch (error) {

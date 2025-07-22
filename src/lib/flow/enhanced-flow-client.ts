@@ -1,57 +1,176 @@
 /**
- * Enhanced Flow Client with Cross-VM Functionality
- * Implements batched transactions, sponsored transactions, and advanced Cadence features
- * Based on FLIP 316 FCL improvements for Flow EVM + Cadence integration
+ * Enhanced Flow Client with Resilient Connection Management
+ * 
+ * Extends the base Flow client with automatic reconnection, circuit breaker,
+ * and connection pooling for production reliability.
  */
 
-import * as fcl from "@onflow/fcl";
-import * as t from "@onflow/types";
-import { config } from "../../config/environment";
-import {
-  EVMBatchCall,
-  CallOutcome,
-  BatchTransactionResult,
-  encodeFunctionCall,
-  parseEVMResults,
-} from "./utils/batch-transactions";
-import { handleError } from "../../lib/utils/error-utils";
-import { startTimer } from "../../lib/utils/performance-utils";
-import { getCache } from "../../lib/utils/cache-utils";
+import * as fcl from '@onflow/fcl';
+import * as t from '@onflow/types';
+import { config } from '../../config/environment';
+import { BaseFlowClient } from './clients/base-client';
+import { connectionManager, ManagedConnection } from '../network/connection-manager';
+import { websocketRetry, RetryPredicates } from '../network/retry-policy';
+import { ErrorFactory, NetworkError } from '../errors/error-types';
+import { handleError } from '../../lib/utils/error-utils';
+import { startTimer } from '../../lib/utils/performance-utils';
+import { getCache } from '../../lib/utils/cache-utils';
+
+export interface EnhancedFlowConfig {
+  // Base Flow configuration
+  network: string;
+  accessNode: string;
+  discoveryWallet: string;
+  contractAddress: string;
+  flowTokenAddress: string;
+  fungibleTokenAddress: string;
+  
+  // Connection resilience settings
+  enableConnectionPooling?: boolean;
+  maxRetries?: number;
+  retryDelay?: number;
+  heartbeatInterval?: number;
+  connectionTimeout?: number;
+}
 
 /**
- * Enhanced Flow Client for breathing pattern operations
+ * Enhanced Flow Client with resilient connections
  */
-export class EnhancedFlowClient {
-  private static instance: EnhancedFlowClient;
-  private isInitialized = false;
+export class EnhancedFlowClient extends BaseFlowClient {
+  private static enhancedInstance: EnhancedFlowClient | null = null;
+  private wsConnection: ManagedConnection | null = null;
+  private enhancedConfig: EnhancedFlowConfig | null = null;
+  private eventSubscriptions = new Map<string, Set<(event: any) => void>>();
 
-  private constructor() {}
-
-  static getInstance(): EnhancedFlowClient {
-    if (!EnhancedFlowClient.instance) {
-      EnhancedFlowClient.instance = new EnhancedFlowClient();
-    }
-    return EnhancedFlowClient.instance;
+  private constructor() {
+    super();
   }
 
   /**
-   * Initialize FCL with enhanced configuration
+   * Get singleton instance of enhanced client
    */
-  async initialize(): Promise<void> {
-    if (this.isInitialized) return;
+  static getEnhancedInstance(): EnhancedFlowClient {
+    if (!EnhancedFlowClient.enhancedInstance) {
+      EnhancedFlowClient.enhancedInstance = new EnhancedFlowClient();
+    }
+    return EnhancedFlowClient.enhancedInstance;
+  }
 
-    fcl.config({
-      "accessNode.api": config.flow.accessNode,
-      "discovery.wallet": config.flow.discoveryWallet,
-      "app.detail.title": "Imperfect Breath",
-      "app.detail.icon": "https://imperfect-breath.app/icon.png",
-      "0xImperfectBreath": config.flow.contractAddress,
-      // Enable cross-VM functionality
-      "fcl.limit": 9999,
-      "fcl.eventsPollRate": 2500,
-    });
+  /**
+   * For backward compatibility
+   */
+  static getInstance(): EnhancedFlowClient {
+    return EnhancedFlowClient.getEnhancedInstance();
+  }
 
-    this.isInitialized = true;
+  /**
+   * Initialize with enhanced configuration
+   */
+  async initialize(flowConfig?: Partial<EnhancedFlowConfig>): Promise<void> {
+    // Build config from environment defaults and overrides
+    const baseConfig = {
+      network: config.flow?.network || 'testnet',
+      accessNode: config.flow?.accessNode || 'https://access-testnet.onflow.org',
+      discoveryWallet: config.flow?.discoveryWallet || 'https://fcl-discovery.onflow.org/testnet/authn',
+      contractAddress: config.flow?.contractAddress || '0xImperfectBreath',
+      flowTokenAddress: config.flow?.flowTokenAddress || '0x1654653399040a61',
+      fungibleTokenAddress: config.flow?.fungibleTokenAddress || '0x9a0766d93b6608b7',
+    };
+
+    this.enhancedConfig = {
+      ...baseConfig,
+      enableConnectionPooling: true,
+      maxRetries: 5,
+      retryDelay: 1000,
+      heartbeatInterval: 30000,
+      connectionTimeout: 10000,
+      ...flowConfig,
+    };
+
+    // Initialize base client
+    await super.initialize(this.enhancedConfig);
+
+    // Setup WebSocket connection if enabled
+    if (this.enhancedConfig.enableConnectionPooling) {
+      await this.setupWebSocketConnection();
+    }
+  }
+
+  /**
+   * Setup WebSocket connection with resilience
+   */
+  private async setupWebSocketConnection(): Promise<void> {
+    if (!this.enhancedConfig) return;
+
+    try {
+      // Create WebSocket URL from access node
+      const wsUrl = this.enhancedConfig.accessNode.replace(/^http/, 'ws');
+      
+      this.wsConnection = connectionManager.getConnection(wsUrl, {
+        protocols: ['fcl'],
+        maxRetries: this.enhancedConfig.maxRetries,
+        retryDelay: this.enhancedConfig.retryDelay,
+        heartbeatInterval: this.enhancedConfig.heartbeatInterval,
+        timeout: this.enhancedConfig.connectionTimeout,
+        reconnectOnClose: true,
+      });
+
+      // Setup event handlers
+      this.wsConnection.addEventListener((event) => {
+        switch (event.type) {
+          case 'connected':
+            console.log('Flow WebSocket connected');
+            break;
+          case 'disconnected':
+            console.warn('Flow WebSocket disconnected');
+            break;
+          case 'error':
+            console.error('Flow WebSocket error:', event.error);
+            break;
+          case 'message':
+            this.handleWebSocketMessage(event.data);
+            break;
+        }
+      });
+
+    } catch (error) {
+      console.warn('Failed to setup WebSocket connection:', error);
+      // Continue without WebSocket - fallback to HTTP
+    }
+  }
+
+  /**
+   * Handle incoming WebSocket messages
+   */
+  private handleWebSocketMessage(data: any): void {
+    try {
+      if (typeof data === 'string') {
+        data = JSON.parse(data);
+      }
+
+      // Handle different message types
+      if (data.type === 'event' && data.eventType) {
+        this.notifyEventSubscribers(data.eventType, data);
+      }
+    } catch (error) {
+      console.warn('Error processing WebSocket message:', error);
+    }
+  }
+
+  /**
+   * Notify event subscribers
+   */
+  private notifyEventSubscribers(eventType: string, event: any): void {
+    const subscribers = this.eventSubscriptions.get(eventType);
+    if (subscribers) {
+      subscribers.forEach(callback => {
+        try {
+          callback(event);
+        } catch (error) {
+          console.error(`Error in event subscriber for ${eventType}:`, error);
+        }
+      });
+    }
   }
 
   /**

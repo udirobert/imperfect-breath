@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import AISettings from "@/pages/AISettings";
 import Index from "@/pages/Index";
-import EnhancedIndex from "@/pages/EnhancedIndex";
 import Auth from "@/pages/Auth";
 import BreathingSession from "@/pages/BreathingSession";
 import Progress from "@/pages/Progress";
@@ -26,8 +25,8 @@ function App() {
       <Routes>
         {/* Main Application Routes with Header */}
         <Route element={<MainLayout />}>
-          <Route path="/" element={<EnhancedIndex />} />
-          <Route path="/classic" element={<Index />} />
+          <Route path="/" element={<Index enhanced={false} />} />
+          <Route path="/enhanced" element={<Index enhanced={true} />} />
           <Route path="/session" element={<BreathingSession />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/results" element={<Results />} />

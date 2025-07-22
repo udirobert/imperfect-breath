@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { useFlow } from "../hooks/useFlow";
 import { config, debugLog } from "../config/environment";
-import { SupabaseService } from "../lib/supabase";
+import { supabase } from "../integrations/supabase/client";
 import { useBreathingSessionValidation } from "../hooks/useValidation";
 import { DataSanitizer } from "../lib/validation/sanitizer";
 import { AIConfigManager } from "../lib/ai/config";
@@ -597,17 +597,27 @@ export const useAIAnalysis = () => {
         if (userId && results.length > 0) {
           try {
             // Find the user's latest session to update with AI analysis
-            const userSessions = await SupabaseService.getUserSessions(
-              userId,
-              1,
-            );
+            const { data: userSessions, error } = await supabase
+              .from('breathing_sessions')
+              .select('*')
+              .eq('user_id', userId)
+              .order('started_at', { ascending: false })
+              .limit(1);
+
+            if (error) throw error;
+
             if (userSessions && userSessions.length > 0) {
               const latestSession = userSessions[0];
-              await SupabaseService.updateSession(latestSession.id, {
-                ai_score: results[0].score.overall,
-                ai_feedback: results[0],
-                ai_suggestions: results[0].suggestions,
-              });
+              const { error: updateError } = await supabase
+                .from('breathing_sessions')
+                .update({
+                  ai_score: results[0].score.overall,
+                  ai_feedback: results[0],
+                  ai_suggestions: results[0].suggestions,
+                })
+                .eq('id', latestSession.id);
+                
+              if (updateError) throw updateError;
             }
           } catch (dbError) {
             console.error("Failed to store AI analysis in database:", dbError);

@@ -3,6 +3,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileHeader } from "./MobileHeader";
 import { BottomTabBar } from "./BottomTabBar";
 import Header from "@/components/Header";
+import { Footer } from "@/components/layout/Footer";
 
 interface ResponsiveNavigationProps {
   children: React.ReactNode;
@@ -26,11 +27,14 @@ export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
       {/* Main Content */}
       <main
         className={`flex-grow flex flex-col items-center justify-center p-4 ${
-          isMobile ? "pb-20" : "" // Add bottom padding for mobile tab bar
+          isMobile ? "pb-4" : "" // Reduced padding since footer provides spacing
         }`}
       >
         {children}
       </main>
+
+      {/* Footer - Always visible */}
+      <Footer />
 
       {/* Bottom Navigation - Mobile Only */}
       {isMobile && <BottomTabBar />}

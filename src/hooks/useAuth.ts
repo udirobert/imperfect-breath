@@ -2,29 +2,38 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { User, UserRole } from "../types/blockchain";
-import { useAccount, useConnect, useDisconnect, useChainId } from "wagmi";
-// import { useConnectModal } from "connectkit"; // Not available in current version
+import { useWalletStatus, useWalletActions } from "./useWallet";
 
 // Blockchain features configuration
 const BLOCKCHAIN_FEATURES_ENABLED = true;
+
+// Helper function to get chain name from chainId
+const getChainName = (chainId: string | null): string | null => {
+  if (!chainId) return null;
+  const chainNames: Record<string, string> = {
+    '0x1': 'Ethereum',
+    '0x89': 'Polygon', 
+    '0xa4b1': 'Arbitrum',
+  };
+  return chainNames[chainId] || 'Unknown';
+};
 
 export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Wagmi hooks for wallet integration
-  const { address, isConnected, chain } = useAccount();
-  const { connect, connectors, isPending: isConnecting } = useConnect();
-  const { disconnect } = useDisconnect();
-  const chainId = useChainId();
-  // const { setOpen: openConnectModal } = useConnectModal(); // Not available in current version
-  const openConnectModal = useCallback(() => {
-    // Use wagmi's connect function directly
-    if (connectors.length > 0) {
-      connect({ connector: connectors[0] });
+  // New wallet hooks for wallet integration
+  const { isConnected, isConnecting, address, chainId } = useWalletStatus();
+  const { connect, disconnect } = useWalletActions();
+  
+  const openConnectModal = useCallback(async () => {
+    try {
+      await connect();
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
     }
-  }, [connect, connectors]);
+  }, [connect]);
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -159,7 +168,7 @@ export const useAuth = () => {
           .from("users")
           .update({
             wallet_address: address,
-            preferred_chain: chain?.name || "ethereum",
+            preferred_chain: getChainName(chainId) || "ethereum",
           })
           .eq("id", session.user.id);
 
@@ -177,7 +186,7 @@ export const useAuth = () => {
       console.error("Wallet login failed:", error);
       throw error;
     }
-  }, [address, session, chain, connectWallet, refreshProfile]);
+  }, [address, session, chainId, openConnectModal, refreshProfile]);
 
   const user = session?.user
     ? {
@@ -187,8 +196,8 @@ export const useAuth = () => {
         wallet: isConnected
           ? {
               address,
-              chain: chain?.name,
-              chainId: chain?.id,
+              chain: getChainName(chainId),
+              chainId: chainId,
               isConnected,
             }
           : null,
@@ -232,19 +241,19 @@ export const useAuth = () => {
     wallet: isConnected
       ? {
           address,
-          chain: chain?.name,
-          chainId: chain?.id,
+          chain: getChainName(chainId),
+          chainId: chainId,
           isConnected,
         }
       : null,
     walletConnection: {
       isConnected,
       isConnecting,
-      chain: chain?.name,
-      chainId: chain?.id,
+      chain: getChainName(chainId),
+      chainId: chainId,
     },
     loginWithWallet,
-    connectWallet,
+    connectWallet: openConnectModal,
     disconnectWallet: disconnect,
 
     // Helper properties
@@ -262,7 +271,7 @@ export const useAuth = () => {
       "lens",
       "story",
     ],
-    currentChain: chain?.name || null,
-    currentChainId: chain?.id || null,
+    currentChain: getChainName(chainId),
+    currentChainId: chainId,
   };
 };

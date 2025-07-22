@@ -1,36 +1,37 @@
-import { createConfig, http } from "wagmi";
-import { flowTestnet } from "wagmi/chains";
-import { injected, walletConnect, metaMask } from "wagmi/connectors";
-import { lensTestnet } from "./chains";
+import { createConfig, http } from 'wagmi'
+import { mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
+import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors'
 
-// Get project ID from environment (for WalletConnect)
-const projectId =
-  import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "demo-project-id";
+// Get environment variables
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'your-project-id'
 
-// Wagmi configuration with multiple chains
-export const wagmiConfig = createConfig({
-  chains: [
-    lensTestnet, // Lens Chain Testnet
-    flowTestnet, // Flow Testnet
-  ],
+// Define supported chains
+const chains = [mainnet, polygon, arbitrum, sepolia] as const
+
+// Create Wagmi config
+export const config = createConfig({
+  chains,
   connectors: [
     injected(),
-    metaMask(),
+    coinbaseWallet({
+      appName: 'Imperfect Breath',
+      appLogoUrl: 'https://imperfect-breath.com/icon.png',
+    }),
     walletConnect({
       projectId,
-      metadata: {
-        name: "Imperfect Breath",
-        description: "Decentralized wellness platform for breathing patterns",
-        url:
-          typeof window !== "undefined"
-            ? window.location.origin
-            : "http://localhost:4567",
-        icons: ["https://imperfectbreath.com/icon.png"],
-      },
     }),
   ],
   transports: {
-    [lensTestnet.id]: http(),
-    [flowTestnet.id]: http(),
+    [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
+    [polygon.id]: http(`https://polygon-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
+    [arbitrum.id]: http(`https://arb-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
+    [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
   },
-});
+})
+
+// Export chains for use in other parts of the app
+export { chains }
+
+// Export types
+export type Config = typeof config
+export type SupportedChainId = typeof chains[number]['id']

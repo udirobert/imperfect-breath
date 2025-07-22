@@ -6,7 +6,24 @@
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import * as faceDetection from '@tensorflow-models/face-landmarks-detection';
-import * as poseDetection from '@tensorflow-models/pose-detection';
+
+// Dynamic pose detection import to handle MediaPipe loading issues
+let poseDetection: any = null;
+
+/**
+ * Safely load pose detection module
+ */
+async function loadPoseDetection() {
+  if (poseDetection) return poseDetection;
+  
+  try {
+    poseDetection = await import('@tensorflow-models/pose-detection');
+    return poseDetection;
+  } catch (error) {
+    console.warn('Pose detection not available, continuing without pose features:', error);
+    return null;
+  }
+}
 
 import type { 
   VisionTier, 
@@ -250,48 +267,82 @@ export class VisionEngine {
    * Load models for standard tier
    */
   private async loadStandardModels(variant: 'mobile' | 'desktop'): Promise<void> {
-    // Face detection with more features
-    const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
-    const faceConfig = {
-      runtime: 'tfjs' as const,
-      refineLandmarks: true,
-      maxFaces: 1,
-    };
+    try {
+      // Face detection with more features
+      const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
+      const faceConfig = {
+        runtime: 'tfjs' as const,
+        refineLandmarks: true,
+        maxFaces: 1,
+      };
+      
+      this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
+    } catch (error) {
+      console.warn('Face detection failed to load, falling back to basic mode:', error);
+      this.faceDetector = null;
+    }
     
-    this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
-    
-    // Basic pose detection
-    const poseModel = poseDetection.SupportedModels.MoveNet;
-    const poseConfig = {
-      modelType: variant === 'mobile' ? 
-        poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING :
-        poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-    };
-    
-    this.poseDetector = await poseDetection.createDetector(poseModel, poseConfig);
+    // Try to load pose detection dynamically
+    const poseDet = await loadPoseDetection();
+    if (poseDet) {
+      try {
+        // Basic pose detection - gracefully degrade if MediaPipe not available
+        const poseModel = poseDet.SupportedModels.MoveNet;
+        const poseConfig = {
+          modelType: variant === 'mobile' ? 
+            poseDet.movenet.modelType.SINGLEPOSE_LIGHTNING :
+            poseDet.movenet.modelType.SINGLEPOSE_THUNDER,
+        };
+        
+        this.poseDetector = await poseDet.createDetector(poseModel, poseConfig);
+      } catch (error) {
+        console.warn('Pose detection failed to load, continuing without pose detection:', error);
+        this.poseDetector = null;
+      }
+    } else {
+      console.log('Pose detection module not available, continuing without pose features');
+      this.poseDetector = null;
+    }
   }
   
   /**
    * Load models for premium tier
    */
   private async loadPremiumModels(variant: 'mobile' | 'desktop'): Promise<void> {
-    // High-quality face detection
-    const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
-    const faceConfig = {
-      runtime: 'tfjs' as const,
-      refineLandmarks: true,
-      maxFaces: 1,
-    };
+    try {
+      // High-quality face detection
+      const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
+      const faceConfig = {
+        runtime: 'tfjs' as const,
+        refineLandmarks: true,
+        maxFaces: 1,
+      };
+      
+      this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
+    } catch (error) {
+      console.warn('Premium face detection failed to load, falling back to basic mode:', error);
+      this.faceDetector = null;
+    }
     
-    this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
-    
-    // High-quality pose detection
-    const poseModel = poseDetection.SupportedModels.MoveNet;
-    const poseConfig = {
-      modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-    };
-    
-    this.poseDetector = await poseDetection.createDetector(poseModel, poseConfig);
+    // Try to load pose detection dynamically for premium features
+    const poseDet = await loadPoseDetection();
+    if (poseDet) {
+      try {
+        // High-quality pose detection
+        const poseModel = poseDet.SupportedModels.MoveNet;
+        const poseConfig = {
+          modelType: poseDet.movenet.modelType.SINGLEPOSE_THUNDER,
+        };
+        
+        this.poseDetector = await poseDet.createDetector(poseModel, poseConfig);
+      } catch (error) {
+        console.warn('Premium pose detection failed to load, continuing without pose detection:', error);
+        this.poseDetector = null;
+      }
+    } else {
+      console.log('Pose detection module not available for premium features');
+      this.poseDetector = null;
+    }
   }
   
   /**
