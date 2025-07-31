@@ -329,6 +329,10 @@ class SessionOrchestrator {
    */
   async initialize(config: SessionConfig): Promise<void> {
     if (this.state.phase !== 'setup') {
+      // If already initialized with same config, just return
+      if (this.config && JSON.stringify(this.config) === JSON.stringify(config)) {
+        return;
+      }
       throw new Error('Session already initialized');
     }
 

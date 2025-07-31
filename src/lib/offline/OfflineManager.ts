@@ -61,8 +61,8 @@ export class OfflineManager {
       // Store essential breathing patterns for offline use
       const essentialPatterns = [
         BREATHING_PATTERNS.box,
-        BREATHING_PATTERNS.fourSevenEight,
-        BREATHING_PATTERNS.resonant,
+        BREATHING_PATTERNS.relaxation,
+        BREATHING_PATTERNS.energy,
       ];
       
       this.saveOfflineData({
@@ -287,23 +287,37 @@ export class OfflineManager {
       return;
     }
 
-    const response = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        patternId: session.patternId,
-        duration: session.duration,
-        cycleCount: session.cycleCount,
-        breathHoldTime: session.breathHoldTime,
-        restlessnessScore: session.restlessnessScore,
-        startTime: startTimeISO,
-        endTime: endTimeISO,
-        completed: session.completed,
-      }),
-    });
+    try {
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patternId: session.patternId,
+          duration: session.duration,
+          cycleCount: session.cycleCount,
+          breathHoldTime: session.breathHoldTime,
+          restlessnessScore: session.restlessnessScore,
+          startTime: startTimeISO,
+          endTime: endTimeISO,
+          completed: session.completed,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Sync failed: ${response.statusText}`);
+      if (!response.ok) {
+        // If API endpoint doesn't exist, just log and continue
+        if (response.status === 404) {
+          console.log('Session API endpoint not available, session saved locally only');
+          return;
+        }
+        throw new Error(`Sync failed: ${response.statusText}`);
+      }
+    } catch (error) {
+      // Handle network errors gracefully
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.log('Network error during sync, session saved locally only');
+        return;
+      }
+      throw error;
     }
   }
 

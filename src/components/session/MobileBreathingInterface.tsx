@@ -53,6 +53,7 @@ export const MobileBreathingInterface: React.FC<
   // Initialize session on component mount
   useEffect(() => {
     const initializeSession = async () => {
+      // Only initialize if we're in setup phase and not already initializing
       if (state.phase !== "setup" || isInitializing) return;
 
       try {
@@ -87,15 +88,19 @@ export const MobileBreathingInterface: React.FC<
 
         await initialize(sessionConfig);
       } catch (error) {
-        console.error("Session initialization failed:", error);
-        setInitializationError((error as Error).message);
+        const errorMessage = (error as Error).message;
+        // Don't show error if session is already initialized
+        if (!errorMessage.includes("already initialized")) {
+          console.error("Session initialization failed:", error);
+          setInitializationError(errorMessage);
+        }
       } finally {
         setIsInitializing(false);
       }
     };
 
     initializeSession();
-  }, [initialize, state.phase, isInitializing]);
+  }, [state.phase]); // Only depend on state.phase, not initialize function
 
   // Only render on mobile
   if (!isMobile) {
@@ -134,75 +139,65 @@ export const MobileBreathingInterface: React.FC<
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden">
-      {/* Status Bar */}
-      <div className="flex-shrink-0 px-4 py-3 bg-background/80 backdrop-blur">
+    <div className="w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden min-h-[calc(100vh-4rem)] pb-safe">
+      {/* Compact Header */}
+      <div className="flex-shrink-0 px-4 py-2 bg-background/80 backdrop-blur">
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium">{patternName}</span>
-          <span className="text-muted-foreground">
-            Cycle {state.sessionData.cycleCount + 1}
+          <span className="text-muted-foreground text-lg font-mono">
+            {getSessionDuration()}
           </span>
         </div>
-        <Progress value={progress} className="mt-2 h-1" />
       </div>
 
-      {/* Main Breathing Area */}
-      <div className="flex-1 flex items-center justify-center relative">
-        {/* Background Animation */}
-        <div className="absolute inset-0 flex items-center justify-center">
+      {/* Compact Main Area */}
+      <div className="flex-grow flex flex-col items-center justify-center py-4 space-y-6">
+        {/* Breathing Animation - no duplicate text */}
+        <div className="flex items-center justify-center">
           <BreathingAnimation
             phase={state.sessionData.currentPhase as BreathingPhaseName}
             text={state.sessionData.currentPhase}
           />
         </div>
 
-        {/* Phase Text Overlay */}
-        <div className="absolute top-1/4 left-0 right-0 text-center z-10">
-          <h2 className="text-2xl font-light text-foreground/90 mb-2">
-            {state.sessionData.currentPhase}
-          </h2>
-        </div>
-
-        {/* Session Stats */}
-        <div className="absolute bottom-1/4 left-0 right-0 px-8">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div className="bg-background/60 backdrop-blur rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Duration</p>
-              <p className="text-lg font-semibold">{getSessionDuration()}</p>
-            </div>
-            <div className="bg-background/60 backdrop-blur rounded-lg p-3">
-              <p className="text-xs text-muted-foreground">Cycles</p>
-              <p className="text-lg font-semibold">
-                {state.sessionData.cycleCount}
-              </p>
-            </div>
+        {/* Compact Session Stats */}
+        <div className="flex items-center justify-center gap-6 text-center">
+          <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">
+            <p className="text-xs text-muted-foreground">Cycles</p>
+            <p className="text-sm font-semibold">
+              {state.sessionData.cycleCount}
+            </p>
+          </div>
+          <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">
+            <p className="text-xs text-muted-foreground">Progress</p>
+            <p className="text-sm font-semibold">{Math.round(progress)}%</p>
           </div>
         </div>
       </div>
 
-      {/* Touch Controls */}
-      <div className="flex-shrink-0 p-4 bg-background/80 backdrop-blur">
+      {/* Compact Touch Controls */}
+      <div className="flex-shrink-0 px-4 py-3 bg-background/80 backdrop-blur">
         {/* Primary Controls */}
-        <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="flex items-center justify-center gap-4 mb-3">
           <Button
             variant="outline"
             size="lg"
             onClick={handlePlayPause}
             disabled={isInitializing || (!isReady && !isActive && !isPaused)}
             className={cn(
-              "h-16 w-16 rounded-full",
-              "touch-manipulation", // Optimize for touch
+              "h-14 w-14 rounded-full",
+              "touch-manipulation",
               isActive
                 ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
                 : "bg-primary hover:bg-primary/90 text-primary-foreground"
             )}
           >
             {isInitializing ? (
-              <div className="animate-spin h-6 w-6 border-2 border-current border-t-transparent rounded-full" />
+              <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full" />
             ) : isActive ? (
-              <Pause className="h-6 w-6" />
+              <Pause className="h-5 w-5" />
             ) : (
-              <Play className="h-6 w-6" />
+              <Play className="h-5 w-5" />
             )}
           </Button>
 
@@ -211,62 +206,60 @@ export const MobileBreathingInterface: React.FC<
             size="lg"
             onClick={handleStop}
             disabled={isInitializing}
-            className="h-16 w-16 rounded-full touch-manipulation"
+            className="h-14 w-14 rounded-full touch-manipulation"
           >
-            <Square className="h-6 w-6" />
+            <Square className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Initialization Status */}
         {(isInitializing || initializationError) && (
-          <div className="mb-4 text-center">
+          <div className="mb-2 text-center">
             {isInitializing && (
-              <p className="text-sm text-muted-foreground">
-                Preparing session...
-              </p>
+              <p className="text-xs text-muted-foreground">Preparing...</p>
             )}
             {initializationError && (
-              <p className="text-sm text-red-600">{initializationError}</p>
+              <p className="text-xs text-red-600">{initializationError}</p>
             )}
           </div>
         )}
 
-        {/* Secondary Controls */}
-        <div className="flex items-center justify-center gap-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {}} // Camera toggle would be handled by parent
-            className={cn(
-              "flex flex-col items-center gap-1 h-auto py-2 px-3",
-              "touch-manipulation",
-              canUseCamera ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            {canUseCamera ? (
-              <Camera className="h-5 w-5" />
-            ) : (
-              <CameraOff className="h-5 w-5" />
-            )}
-            <span className="text-xs">Camera</span>
-          </Button>
-
+        {/* Compact Secondary Controls */}
+        <div className="flex items-center justify-center gap-8">
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleAudio}
             className={cn(
-              "flex flex-col items-center gap-1 h-auto py-2 px-3",
+              "flex flex-col items-center gap-1 h-auto py-1 px-2",
               "touch-manipulation",
               isAudioEnabled ? "text-primary" : "text-muted-foreground"
             )}
           >
             {isAudioEnabled ? (
-              <Volume2 className="h-5 w-5" />
+              <Volume2 className="h-4 w-4" />
             ) : (
-              <VolumeX className="h-5 w-5" />
+              <VolumeX className="h-4 w-4" />
             )}
-            <span className="text-xs">Voice</span>
+            <span className="text-xs">Audio</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {}} // Camera toggle would be handled by parent
+            className={cn(
+              "flex flex-col items-center gap-1 h-auto py-1 px-2",
+              "touch-manipulation",
+              canUseCamera ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            {canUseCamera ? (
+              <Camera className="h-4 w-4" />
+            ) : (
+              <CameraOff className="h-4 w-4" />
+            )}
+            <span className="text-xs">Camera</span>
           </Button>
         </div>
       </div>

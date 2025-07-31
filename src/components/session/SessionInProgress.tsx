@@ -1,12 +1,23 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import BreathingAnimation from "../../components/BreathingAnimation";
-import { BreathingPhaseName } from "../../lib/breathingPatterns";
+import {
+  BreathingPhaseName,
+  BREATHING_PATTERNS,
+} from "../../lib/breathingPatterns";
 import { useEnhancedSession } from "../../hooks/useEnhancedSession";
 import { SessionHeader } from "./SessionHeader";
 import { SessionControls } from "./SessionControls";
 import { Button } from "../../components/ui/button";
 import { TrackingStatus, Keypoint } from "../../hooks/visionTypes";
-import { Loader2, Camera } from "lucide-react";
+import {
+  Loader2,
+  Camera,
+  Volume2,
+  VolumeX,
+  Pause,
+  Play,
+  StopCircle,
+} from "lucide-react";
 import VideoFeed from "../../components/VideoFeed";
 
 type SessionInProgressProps = {
@@ -36,7 +47,77 @@ export const SessionInProgress = ({
   onRequestCamera,
   patternName = "Breathing Session",
 }: SessionInProgressProps) => {
-  const { state, isActive, isReady, start } = useEnhancedSession();
+  const {
+    state,
+    isActive,
+    isReady,
+    isPaused,
+    isAudioEnabled,
+    initialize,
+    start,
+    pause,
+    resume,
+    stop,
+    toggleAudio,
+    getSessionDuration,
+  } = useEnhancedSession();
+
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(
+    null
+  );
+
+  // Initialize session on component mount
+  useEffect(() => {
+    const initializeSession = async () => {
+      // Only initialize if we're in setup phase and not already initializing
+      if (state.phase !== "setup" || isInitializing) return;
+
+      try {
+        setIsInitializing(true);
+        setInitializationError(null);
+
+        // Use default breathing pattern (box breathing) for desktop interface
+        const defaultPattern = BREATHING_PATTERNS.box;
+
+        const sessionConfig = {
+          pattern: {
+            name: defaultPattern.name,
+            phases: {
+              inhale: defaultPattern.inhale,
+              hold: defaultPattern.hold,
+              exhale: defaultPattern.exhale,
+              pause: defaultPattern.rest,
+            },
+            difficulty: "medium",
+            benefits: defaultPattern.benefits || [],
+          },
+          features: {
+            enableCamera: false, // Disable camera by default for desktop
+            enableAI: false, // Disable AI since camera is off
+            enableAudio: true, // Enable audio guidance
+          },
+          cameraSettings: {
+            displayMode: "focus" as const,
+            quality: "medium" as const,
+          },
+        };
+
+        await initialize(sessionConfig);
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        // Don't show error if session is already initialized
+        if (!errorMessage.includes("already initialized")) {
+          console.error("Session initialization failed:", error);
+          setInitializationError(errorMessage);
+        }
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initializeSession();
+  }, [state.phase]); // Only depend on state.phase, not initialize function
 
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
   const cameraReady = trackingStatus === "TRACKING" || cameraInitialized;
@@ -66,20 +147,10 @@ export const SessionInProgress = ({
 
   // Unified interface - no more phase-based screens
   return (
-    <div className="flex-grow flex flex-col items-center justify-center w-full relative animate-fade-in">
-      {/* Breathing Animation - only show when session is running */}
-      {showBreathingInterface && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <BreathingAnimation
-            phase={state.sessionData.currentPhase as BreathingPhaseName}
-            text={state.sessionData.currentPhase}
-          />
-        </div>
-      )}
-
+    <div className="flex-grow flex flex-col w-full relative animate-fade-in">
       {/* Setup Interface - show when not running */}
       {!showBreathingInterface && (
-        <div className="flex flex-col items-center justify-center p-4 text-center">
+        <div className="flex-grow flex flex-col items-center justify-center p-4 text-center">
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-2">
               {needsCameraSetup
@@ -109,10 +180,14 @@ export const SessionInProgress = ({
                   <Button
                     variant="outline"
                     onClick={handleStartSession}
-                    disabled={!isReady}
+                    disabled={!isReady || isInitializing}
                     className="w-48"
                   >
-                    {!isReady ? "Preparing..." : "Start Without Camera"}
+                    {isInitializing
+                      ? "Preparing..."
+                      : !isReady
+                      ? "Preparing..."
+                      : "Start Without Camera"}
                   </Button>
                 </div>
               </>
@@ -125,22 +200,77 @@ export const SessionInProgress = ({
               <Button
                 onClick={handleStartSession}
                 size="lg"
-                disabled={!isReady}
+                disabled={!isReady || isInitializing}
                 className="w-48"
               >
-                {!isReady ? "Preparing..." : "Start Breathing Session"}
+                {isInitializing
+                  ? "Preparing..."
+                  : !isReady
+                  ? "Preparing..."
+                  : "Start Breathing Session"}
               </Button>
             )}
           </div>
         </div>
       )}
 
-      {/* Session Header and Controls - only show when running */}
+      {/* Active Session Interface - show when running */}
       {showBreathingInterface && (
-        <>
-          <SessionHeader patternName={patternName} />
-          <SessionControls onEndSession={handleEndSession} />
-        </>
+        <div className="flex-grow flex flex-col items-center justify-center py-4 px-4 space-y-8">
+          {/* Session Header - compact */}
+          <div className="text-center">
+            <p className="text-lg text-muted-foreground">{patternName}</p>
+            <p className="text-3xl font-mono font-bold text-primary">
+              {getSessionDuration()}
+            </p>
+          </div>
+
+          {/* Breathing Animation - centered, no duplicate text */}
+          <div className="flex items-center justify-center">
+            <BreathingAnimation
+              phase={state.sessionData.currentPhase as BreathingPhaseName}
+              text={state.sessionData.currentPhase}
+            />
+          </div>
+
+          {/* Session Controls - compact */}
+          <div className="flex items-center justify-center space-x-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleAudio}
+              className="rounded-full w-12 h-12"
+            >
+              {isAudioEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (isActive) {
+                  pause();
+                } else if (isPaused) {
+                  resume();
+                }
+              }}
+              className="rounded-full w-14 h-14"
+              disabled={!isActive && !isPaused}
+            >
+              {isActive ? <Pause size={28} /> : <Play size={28} />}
+            </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={() => {
+                stop();
+                handleEndSession?.();
+              }}
+              className="rounded-full w-12 h-12 bg-red-400 hover:bg-red-500"
+            >
+              <StopCircle size={24} />
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Single VideoFeed that changes position/size based on phase */}
