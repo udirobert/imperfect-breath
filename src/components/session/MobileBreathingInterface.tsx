@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEnhancedSession } from "@/hooks/useEnhancedSession";
 import BreathingAnimation from "@/components/BreathingAnimation";
-import { BreathingPhaseName } from "@/lib/breathingPatterns";
+import {
+  BreathingPhaseName,
+  BREATHING_PATTERNS,
+} from "@/lib/breathingPatterns";
 import {
   Play,
   Pause,
@@ -27,11 +30,13 @@ export const MobileBreathingInterface: React.FC<
   const isMobile = useIsMobile();
   const {
     state,
+    isReady,
     isActive,
     isPaused,
     isAudioEnabled,
     canUseCamera,
     cameraStream,
+    initialize,
     start,
     pause,
     resume,
@@ -39,6 +44,58 @@ export const MobileBreathingInterface: React.FC<
     toggleAudio,
     getSessionDuration,
   } = useEnhancedSession();
+
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(
+    null
+  );
+
+  // Initialize session on component mount
+  useEffect(() => {
+    const initializeSession = async () => {
+      if (state.phase !== "setup" || isInitializing) return;
+
+      try {
+        setIsInitializing(true);
+        setInitializationError(null);
+
+        // Use default breathing pattern (box breathing) for mobile interface
+        const defaultPattern = BREATHING_PATTERNS.box;
+
+        const sessionConfig = {
+          pattern: {
+            name: defaultPattern.name,
+            phases: {
+              inhale: defaultPattern.inhale,
+              hold: defaultPattern.hold,
+              exhale: defaultPattern.exhale,
+              pause: defaultPattern.rest,
+            },
+            difficulty: "medium",
+            benefits: defaultPattern.benefits || [],
+          },
+          features: {
+            enableCamera: false, // Disable camera by default for mobile
+            enableAI: false, // Disable AI since camera is off
+            enableAudio: true, // Enable audio guidance
+          },
+          cameraSettings: {
+            displayMode: "focus" as const,
+            quality: "medium" as const,
+          },
+        };
+
+        await initialize(sessionConfig);
+      } catch (error) {
+        console.error("Session initialization failed:", error);
+        setInitializationError((error as Error).message);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initializeSession();
+  }, [initialize, state.phase, isInitializing]);
 
   // Only render on mobile
   if (!isMobile) {
@@ -52,12 +109,22 @@ export const MobileBreathingInterface: React.FC<
       : 0; // 5 min max
 
   const handlePlayPause = async () => {
-    if (isActive) {
-      pause();
-    } else if (isPaused) {
-      resume();
-    } else {
-      await start();
+    try {
+      if (isActive) {
+        pause();
+      } else if (isPaused) {
+        resume();
+      } else {
+        // Only start if session is ready
+        if (!isReady) {
+          console.warn("Session not ready to start");
+          return;
+        }
+        await start();
+      }
+    } catch (error) {
+      console.error("Session control failed:", error);
+      setInitializationError((error as Error).message);
     }
   };
 
@@ -121,6 +188,7 @@ export const MobileBreathingInterface: React.FC<
             variant="outline"
             size="lg"
             onClick={handlePlayPause}
+            disabled={isInitializing || (!isReady && !isActive && !isPaused)}
             className={cn(
               "h-16 w-16 rounded-full",
               "touch-manipulation", // Optimize for touch
@@ -129,7 +197,9 @@ export const MobileBreathingInterface: React.FC<
                 : "bg-primary hover:bg-primary/90 text-primary-foreground"
             )}
           >
-            {isActive ? (
+            {isInitializing ? (
+              <div className="animate-spin h-6 w-6 border-2 border-current border-t-transparent rounded-full" />
+            ) : isActive ? (
               <Pause className="h-6 w-6" />
             ) : (
               <Play className="h-6 w-6" />
@@ -140,11 +210,26 @@ export const MobileBreathingInterface: React.FC<
             variant="destructive"
             size="lg"
             onClick={handleStop}
+            disabled={isInitializing}
             className="h-16 w-16 rounded-full touch-manipulation"
           >
             <Square className="h-6 w-6" />
           </Button>
         </div>
+
+        {/* Initialization Status */}
+        {(isInitializing || initializationError) && (
+          <div className="mb-4 text-center">
+            {isInitializing && (
+              <p className="text-sm text-muted-foreground">
+                Preparing session...
+              </p>
+            )}
+            {initializationError && (
+              <p className="text-sm text-red-600">{initializationError}</p>
+            )}
+          </div>
+        )}
 
         {/* Secondary Controls */}
         <div className="flex items-center justify-center gap-6">

@@ -24,7 +24,7 @@ export const blockchainConfig: BlockchainConfig = {
       | "production",
   },
   connectKit: {
-    projectId: getEnvVar("VITE_WALLETCONNECT_PROJECT_ID", "demo_project_id"),
+    projectId: getEnvVar("VITE_WALLETCONNECT_PROJECT_ID", ""),
     appName: getEnvVar("VITE_APP_NAME", "Imperfect Breath"),
   },
 };
@@ -116,9 +116,14 @@ export const gasSettings = {
 // Feature flags
 export const featureFlags = {
   enableWalletConnect:
-    getEnvVar("VITE_ENABLE_WALLET_CONNECT", "true") === "true",
+    getEnvVar("VITE_ENABLE_WALLET_CONNECT", "true") === "true" &&
+    !!getEnvVar("VITE_WALLETCONNECT_PROJECT_ID") &&
+    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("your_"),
   enableMetamask: getEnvVar("VITE_ENABLE_METAMASK", "true") === "true",
-  enableConnectKit: getEnvVar("VITE_ENABLE_CONNECT_KIT", "true") === "true",
+  enableConnectKit:
+    getEnvVar("VITE_ENABLE_CONNECT_KIT", "true") === "true" &&
+    !!getEnvVar("VITE_WALLETCONNECT_PROJECT_ID") &&
+    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("your_"),
   enableIPRegistration:
     getEnvVar("VITE_ENABLE_IP_REGISTRATION", "true") === "true",
   enableLicensing: getEnvVar("VITE_ENABLE_LICENSING", "true") === "true",
@@ -144,16 +149,23 @@ export const apiEndpoints = {
 
 // Validation functions
 export const validateConfig = (): boolean => {
-  const requiredVars = [
-    "VITE_WALLETCONNECT_PROJECT_ID",
-    "VITE_CROSSMINT_PROJECT_ID",
-  ];
+  const criticalVars = ["VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY"];
+  const walletVars = ["VITE_WALLETCONNECT_PROJECT_ID"];
+  
+  const missingCritical = criticalVars.filter((varName) => !getEnvVar(varName));
+  const missingWallet = walletVars.filter((varName) => {
+    const value = getEnvVar(varName);
+    return !value || value.includes("your_") || value === "demo_project_id";
+  });
 
-  const missingVars = requiredVars.filter((varName) => !getEnvVar(varName));
-
-  if (missingVars.length > 0 && !featureFlags.enableMockMode) {
-    console.error("Missing required environment variables:", missingVars);
+  if (missingCritical.length > 0) {
+    console.error("Missing critical environment variables:", missingCritical);
     return false;
+  }
+
+  if (missingWallet.length > 0) {
+    console.warn("Wallet features disabled due to missing/invalid API keys:", missingWallet);
+    console.warn("Get a WalletConnect Project ID from https://cloud.walletconnect.com/");
   }
 
   return true;

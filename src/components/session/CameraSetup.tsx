@@ -19,7 +19,7 @@ export const CameraSetup = ({
   trackingStatus,
   initializeCamera,
 }: CameraSetupProps) => {
-  const { start } = useEnhancedSession();
+  const { start, isReady: sessionReady, state } = useEnhancedSession();
   const [cameraRequested, setCameraRequested] = useState(false);
   const isReady = trackingStatus === "TRACKING";
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
@@ -30,7 +30,16 @@ export const CameraSetup = ({
   };
 
   const handleStartSession = async () => {
-    await start();
+    try {
+      // Only start if session is ready
+      if (!sessionReady) {
+        console.warn("Session not ready to start");
+        return;
+      }
+      await start();
+    } catch (error) {
+      console.error("Failed to start session:", error);
+    }
   };
 
   return (
@@ -69,11 +78,13 @@ export const CameraSetup = ({
           <Button
             onClick={handleStartSession}
             size="lg"
-            disabled={!isReady}
+            disabled={!isReady || !sessionReady}
             className="w-48"
           >
-            {!isReady && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isReady ? "Start Session" : "Initializing..."}
+            {(!isReady || !sessionReady) && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {isReady && sessionReady ? "Start Session" : "Initializing..."}
           </Button>
         )}
         {!isReady && cameraRequested && (
@@ -83,6 +94,7 @@ export const CameraSetup = ({
               variant="link"
               className="p-0 h-auto"
               onClick={handleStartSession}
+              disabled={!sessionReady}
             >
               skip the camera setup
             </Button>

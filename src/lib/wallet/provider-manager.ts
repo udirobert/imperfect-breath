@@ -283,6 +283,17 @@ class WalletProviderManager {
       this.emit({ type: 'connection-change', provider: targetProvider });
       return accounts;
     } catch (error) {
+      const errorMessage = (error as Error).message;
+      
+      // Handle common wallet errors gracefully
+      if (errorMessage.includes('User rejected') || errorMessage.includes('User denied')) {
+        console.log('User rejected wallet connection');
+      } else if (errorMessage.includes('extension not found') || errorMessage.includes('not found')) {
+        console.warn('Wallet extension not found or not installed');
+      } else {
+        console.error('Wallet connection failed:', errorMessage);
+      }
+      
       this.emit({ type: 'error', error: error as Error });
       throw error;
     }
@@ -300,6 +311,16 @@ class WalletProviderManager {
     try {
       return await this.activeProvider.request(method, params);
     } catch (error) {
+      const errorMessage = (error as Error).message;
+      
+      // Log specific error types for debugging
+      if (errorMessage.includes('extension not found')) {
+        console.warn(`Wallet provider ${this.activeProvider.name} not available`);
+      } else if (errorMessage.includes('User rejected')) {
+        console.log('User rejected wallet request');
+        throw error; // Don't try fallbacks for user rejection
+      }
+
       // Try fallback providers
       const fallbacks = Array.from(this.providers.values())
         .filter(p => p !== this.activeProvider)

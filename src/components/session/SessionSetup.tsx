@@ -45,16 +45,17 @@ const formatSessionDuration = (pattern: BreathingPattern) => {
   return durationString.trim() || "Brief";
 };
 
-const SessionSetupInner: React.FC<SessionSetupProps> = ({ 
+const SessionSetupInner: React.FC<SessionSetupProps> = ({
   onSessionStart,
-  defaultPattern = "boxBreathing" 
+  defaultPattern = "boxBreathing",
 }) => {
   const navigate = useNavigate();
   const { initialize, start, state, isReady } = useEnhancedSession();
   const { handleError } = useSessionErrorHandler();
 
   // Local state for configuration
-  const [selectedPattern, setSelectedPattern] = useState<PatternKey>(defaultPattern);
+  const [selectedPattern, setSelectedPattern] =
+    useState<PatternKey>(defaultPattern);
   const [enableCamera, setEnableCamera] = useState(
     localStorage.getItem("preferEnhancedVision") === "true"
   );
@@ -69,7 +70,7 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
     const initializeSession = async () => {
       try {
         setIsInitializing(true);
-        
+
         const pattern = BREATHING_PATTERNS[selectedPattern];
         const sessionConfig = {
           pattern: {
@@ -80,7 +81,7 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
               exhale: pattern.exhale,
               pause: pattern.rest,
             },
-            difficulty: pattern.difficulty || 'medium',
+            difficulty: "medium",
             benefits: pattern.benefits || [],
           },
           features: {
@@ -89,16 +90,18 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
             enableAudio,
           },
           cameraSettings: {
-            displayMode: enableCamera ? 'awareness' as const : 'focus' as const,
-            quality: 'medium' as const,
+            displayMode: enableCamera
+              ? ("awareness" as const)
+              : ("focus" as const),
+            quality: "medium" as const,
           },
         };
 
         await initialize(sessionConfig);
       } catch (error) {
-        handleError(error as Error, { 
-          pattern: selectedPattern, 
-          features: { enableCamera, enableAI, enableAudio } 
+        handleError(error as Error, {
+          pattern: selectedPattern,
+          features: { enableCamera, enableAI, enableAudio },
         });
       } finally {
         setIsInitializing(false);
@@ -106,7 +109,15 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
     };
 
     initializeSession();
-  }, [selectedPattern, enableCamera, enableAI, enableAudio, initialize, handleError, isInitializing]);
+  }, [
+    selectedPattern,
+    enableCamera,
+    enableAI,
+    enableAudio,
+    initialize,
+    handleError,
+    isInitializing,
+  ]);
 
   // Handle session start
   const handleStartSession = async () => {
@@ -117,7 +128,7 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
       localStorage.setItem("preferAudioGuidance", enableAudio.toString());
 
       await start();
-      
+
       if (onSessionStart) {
         onSessionStart();
       } else {
@@ -129,10 +140,10 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
   };
 
   const renderFeatureStatus = () => {
-    if (!isReady || state.phase !== 'ready') return null;
+    if (!isReady || state.phase !== "ready") return null;
 
     const features = [];
-    
+
     if (enableCamera) {
       const cameraStatus = state.features.camera;
       features.push({
@@ -172,14 +183,14 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
               key={name}
               className={`flex items-center justify-between p-2 rounded-md text-sm ${
                 enabled
-                  ? status === 'active'
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : status === 'available'
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                    : status === 'error'
-                    ? 'bg-red-50 text-red-700 border border-red-200'
-                    : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                  : 'bg-gray-50 text-gray-500 border border-gray-200'
+                  ? status === "active"
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : status === "available"
+                    ? "bg-blue-50 text-blue-700 border border-blue-200"
+                    : status === "error"
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                  : "bg-gray-50 text-gray-500 border border-gray-200"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -187,7 +198,7 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
                 <span>{name}</span>
               </div>
               <span className="text-xs capitalize">
-                {enabled ? status : 'disabled'}
+                {enabled ? status : "disabled"}
               </span>
             </div>
           ))}
@@ -205,7 +216,9 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
         <AlertDescription>
           <div className="space-y-1">
             {state.warnings.map((warning, index) => (
-              <div key={index} className="text-sm">{warning}</div>
+              <div key={index} className="text-sm">
+                {warning}
+              </div>
             ))}
           </div>
         </AlertDescription>
@@ -222,7 +235,9 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
         <CardContent className="space-y-6">
           {/* Pattern Selection */}
           <div>
-            <Label className="text-lg mb-3 block">Choose Your Breathing Pattern</Label>
+            <Label className="text-lg mb-3 block">
+              Choose Your Breathing Pattern
+            </Label>
             <RadioGroup
               value={selectedPattern}
               onValueChange={(value) => setSelectedPattern(value as PatternKey)}
@@ -244,7 +259,8 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
                       {formatSessionDuration(pattern)}
                     </span>
                     <span className="text-xs text-muted-foreground mt-1">
-                      {pattern.inhale}:{pattern.hold}:{pattern.exhale}:{pattern.rest}
+                      {pattern.inhale}:{pattern.hold}:{pattern.exhale}:
+                      {pattern.rest}
                     </span>
                   </Label>
                 </div>
@@ -255,7 +271,7 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
           {/* Feature Configuration */}
           <div className="space-y-4">
             <Label className="text-lg block">Enhancement Features</Label>
-            
+
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-1">
@@ -336,17 +352,15 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
               className="w-full"
               disabled={!isReady || isInitializing}
             >
-              {isInitializing 
-                ? "Preparing Session..." 
-                : isReady 
+              {isInitializing
+                ? "Preparing Session..."
+                : isReady
                 ? "Begin Session"
                 : "Setting Up..."}
             </Button>
-            
+
             {state.error && (
-              <p className="text-red-600 text-sm mt-2">
-                {state.error}
-              </p>
+              <p className="text-red-600 text-sm mt-2">{state.error}</p>
             )}
           </div>
         </CardContent>

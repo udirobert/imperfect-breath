@@ -36,7 +36,7 @@ export const SessionInProgress = ({
   onRequestCamera,
   patternName = "Breathing Session",
 }: SessionInProgressProps) => {
-  const { state, isActive, start } = useEnhancedSession();
+  const { state, isActive, isReady, start } = useEnhancedSession();
 
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
   const cameraReady = trackingStatus === "TRACKING" || cameraInitialized;
@@ -52,7 +52,16 @@ export const SessionInProgress = ({
     : "!relative !inset-0 !w-full !h-full";
 
   const handleStartSession = async () => {
-    await start();
+    try {
+      // Only start if session is ready
+      if (!isReady) {
+        console.warn("Session not ready to start");
+        return;
+      }
+      await start();
+    } catch (error) {
+      console.error("Failed to start session:", error);
+    }
   };
 
   // Unified interface - no more phase-based screens
@@ -100,9 +109,10 @@ export const SessionInProgress = ({
                   <Button
                     variant="outline"
                     onClick={handleStartSession}
+                    disabled={!isReady}
                     className="w-48"
                   >
-                    Start Without Camera
+                    {!isReady ? "Preparing..." : "Start Without Camera"}
                   </Button>
                 </div>
               </>
@@ -112,8 +122,13 @@ export const SessionInProgress = ({
                 Initializing...
               </Button>
             ) : (
-              <Button onClick={handleStartSession} size="lg" className="w-48">
-                Start Breathing Session
+              <Button
+                onClick={handleStartSession}
+                size="lg"
+                disabled={!isReady}
+                className="w-48"
+              >
+                {!isReady ? "Preparing..." : "Start Breathing Session"}
               </Button>
             )}
           </div>
