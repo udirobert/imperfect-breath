@@ -136,17 +136,21 @@ export const BreathingVisualizer: React.FC<BreathingVisualizerProps> = ({
 
   // Phase instruction text
   const getPhaseInstruction = (): string => {
+    if (!isActive) {
+      return "Get Ready";
+    }
+
     switch (currentPhase) {
       case "inhale":
-        return "Breathe in...";
+        return "Breathe In";
       case "hold":
-        return "Hold...";
+        return "Hold";
       case "exhale":
-        return "Breathe out...";
+        return "Breathe Out";
       case "pause":
-        return "Rest...";
+        return "Rest";
       default:
-        return "";
+        return "Breathe";
     }
   };
 
@@ -213,7 +217,7 @@ export const BreathingVisualizer: React.FC<BreathingVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar - always visible for consistency */}
       <div className="w-full">
         <Progress
           value={progress}
@@ -229,7 +233,7 @@ export const BreathingVisualizer: React.FC<BreathingVisualizerProps> = ({
           )}
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
-          <span>{currentPhase}</span>
+          <span className="capitalize">{currentPhase}</span>
           <span>
             {pattern.phases.inhale}s-
             {pattern.phases.hold ? `${pattern.phases.hold}s-` : ""}

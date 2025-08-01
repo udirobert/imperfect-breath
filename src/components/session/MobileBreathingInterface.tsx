@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEnhancedSession } from "@/hooks/useEnhancedSession";
+import { useMobileSessionInitialization } from "@/hooks/useSessionInitialization";
+import { mapPatternForAnimation } from "@/lib/session/pattern-mapper";
 import BreathingAnimation from "@/components/BreathingAnimation";
+import { PreparationPhase } from "./PreparationPhase";
 import {
   BreathingPhaseName,
   BREATHING_PATTERNS,
@@ -28,79 +31,28 @@ export const MobileBreathingInterface: React.FC<
   MobileBreathingInterfaceProps
 > = ({ onEndSession, patternName = "Breathing Session" }) => {
   const isMobile = useIsMobile();
+
+  // Use shared session initialization hook
+  const { isInitializing, initializationError, isReady } =
+    useMobileSessionInitialization(BREATHING_PATTERNS.box);
+
   const {
     state,
-    isReady,
     isActive,
     isPaused,
     isAudioEnabled,
     canUseCamera,
     cameraStream,
-    initialize,
     start,
     pause,
     resume,
     stop,
+    complete,
     toggleAudio,
     getSessionDuration,
   } = useEnhancedSession();
 
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [initializationError, setInitializationError] = useState<string | null>(
-    null
-  );
-
-  // Initialize session on component mount
-  useEffect(() => {
-    const initializeSession = async () => {
-      // Only initialize if we're in setup phase and not already initializing
-      if (state.phase !== "setup" || isInitializing) return;
-
-      try {
-        setIsInitializing(true);
-        setInitializationError(null);
-
-        // Use default breathing pattern (box breathing) for mobile interface
-        const defaultPattern = BREATHING_PATTERNS.box;
-
-        const sessionConfig = {
-          pattern: {
-            name: defaultPattern.name,
-            phases: {
-              inhale: defaultPattern.inhale,
-              hold: defaultPattern.hold,
-              exhale: defaultPattern.exhale,
-              pause: defaultPattern.rest,
-            },
-            difficulty: "medium",
-            benefits: defaultPattern.benefits || [],
-          },
-          features: {
-            enableCamera: false, // Disable camera by default for mobile
-            enableAI: false, // Disable AI since camera is off
-            enableAudio: true, // Enable audio guidance
-          },
-          cameraSettings: {
-            displayMode: "focus" as const,
-            quality: "medium" as const,
-          },
-        };
-
-        await initialize(sessionConfig);
-      } catch (error) {
-        const errorMessage = (error as Error).message;
-        // Don't show error if session is already initialized
-        if (!errorMessage.includes("already initialized")) {
-          console.error("Session initialization failed:", error);
-          setInitializationError(errorMessage);
-        }
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-
-    initializeSession();
-  }, [state.phase]); // Only depend on state.phase, not initialize function
+  const [showPreparation, setShowPreparation] = useState(true);
 
   // Only render on mobile
   if (!isMobile) {
@@ -125,18 +77,38 @@ export const MobileBreathingInterface: React.FC<
           console.warn("Session not ready to start");
           return;
         }
+        setShowPreparation(false);
         await start();
       }
     } catch (error) {
       console.error("Session control failed:", error);
-      setInitializationError((error as Error).message);
+      // Error handling is now managed by the shared initialization hook
     }
   };
 
-  const handleStop = () => {
-    stop();
+  const handleCancelPreparation = () => {
+    setShowPreparation(false);
     onEndSession?.();
   };
+
+  const handleStop = () => {
+    complete(); // Complete the session to capture final data
+    onEndSession?.();
+  };
+
+  // Show preparation phase first
+  if (showPreparation && isReady) {
+    return (
+      <div className="w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden min-h-[calc(100vh-4rem)] pb-safe">
+        <PreparationPhase
+          patternName={patternName}
+          pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
+          onStart={handlePlayPause}
+          onCancel={handleCancelPreparation}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden min-h-[calc(100vh-4rem)] pb-safe">
@@ -152,11 +124,12 @@ export const MobileBreathingInterface: React.FC<
 
       {/* Compact Main Area */}
       <div className="flex-grow flex flex-col items-center justify-center py-4 space-y-6">
-        {/* Breathing Animation - no duplicate text */}
+        {/* Breathing Animation - with pattern info */}
         <div className="flex items-center justify-center">
           <BreathingAnimation
             phase={state.sessionData.currentPhase as BreathingPhaseName}
-            text={state.sessionData.currentPhase}
+            pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
+            isActive={isActive}
           />
         </div>
 

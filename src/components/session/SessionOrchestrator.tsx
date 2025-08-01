@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useMemo } from "react";
 import { BreathingPattern } from "../../lib/breathingPatterns";
+import { mapPatternForAnimation } from "../../lib/session/pattern-mapper";
 import { useIsMobile } from "../../hooks/use-mobile";
 
 // Import specialized session components
@@ -61,20 +62,7 @@ interface SessionOrchestratorProps {
   onComplete: (metrics: any) => void;
 }
 
-/**
- * Enhanced pattern mapping for vision components
- */
-const mapPatternForVision = (pattern: BreathingPattern) => ({
-  name: pattern.name,
-  phases: {
-    inhale: pattern.inhale,
-    hold: pattern.hold,
-    exhale: pattern.exhale,
-    pause: pattern.rest,
-  },
-  difficulty: "intermediate", // Could be derived from pattern complexity
-  benefits: pattern.benefits,
-});
+// Pattern mapping now handled by centralized utility
 
 /**
  * Session initialization logic - extracted for reusability
@@ -86,7 +74,17 @@ const useSessionInitialization = (
 ) => {
   const initializeSession = useCallback(async () => {
     const sessionConfig = {
-      pattern: mapPatternForVision(config.pattern),
+      pattern: {
+        name: config.pattern.name,
+        phases: {
+          inhale: config.pattern.inhale,
+          hold: config.pattern.hold,
+          exhale: config.pattern.exhale,
+          pause: config.pattern.rest,
+        },
+        difficulty: "intermediate",
+        benefits: config.pattern.benefits,
+      },
       features: {
         enableCamera: config.features.enableCamera,
         enableAI: config.features.enableAI && config.features.enableCamera, // AI requires camera
@@ -148,7 +146,17 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
     if (sessionFlow.useEnhancedVision) {
       return (
         <EnhancedDualViewBreathingSession
-          pattern={mapPatternForVision(config.pattern)}
+          pattern={{
+            name: config.pattern.name,
+            phases: {
+              inhale: config.pattern.inhale,
+              hold: config.pattern.hold,
+              exhale: config.pattern.exhale,
+              pause: config.pattern.rest,
+            },
+            difficulty: "intermediate",
+            benefits: config.pattern.benefits,
+          }}
           onSessionComplete={onComplete}
         />
       );
@@ -158,7 +166,16 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
     if (sessionFlow.useMobileInterface && isMobile) {
       return (
         <MobileBreathingInterface
-          onEndSession={() => onComplete({})}
+          onEndSession={() => {
+            // Get session data from orchestrator and pass it to completion handler
+            const sessionData = sessionState.sessionData;
+            onComplete({
+              breathHoldTime: 0, // Default for now
+              restlessnessScore: 0, // Default for now
+              cycleCount: sessionData.cycleCount,
+              elapsedTime: sessionData.duration * 1000, // Convert to milliseconds
+            });
+          }}
           patternName={config.pattern.name}
         />
       );
@@ -168,7 +185,16 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
     // This provides the core breathing experience without complex camera setup
     return (
       <SessionInProgress
-        handleEndSession={() => onComplete({})}
+        handleEndSession={() => {
+          // Get session data from orchestrator and pass it to completion handler
+          const sessionData = sessionState.sessionData;
+          onComplete({
+            breathHoldTime: 0, // Default for now
+            restlessnessScore: 0, // Default for now
+            cycleCount: sessionData.cycleCount,
+            elapsedTime: sessionData.duration * 1000, // Convert to milliseconds
+          });
+        }}
         videoRef={{ current: null }}
         showVideoFeed={false} // Disable video feed for now to avoid complexity
         isTracking={false}

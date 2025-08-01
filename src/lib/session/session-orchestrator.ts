@@ -6,6 +6,7 @@
  */
 
 import { cameraManager, CameraState, CameraEvent } from './camera-manager';
+import { getPhaseSequence } from './pattern-mapper';
 
 export interface SessionConfig {
   pattern: {
@@ -72,6 +73,7 @@ class SessionOrchestrator {
   private listeners: Set<(event: SessionEvent) => void> = new Set();
   private cameraCleanup: (() => void) | null = null;
   private sessionTimer: number | null = null;
+  private breathingTimer: number | null = null;
 
   /**
    * Get initial session state
@@ -304,6 +306,65 @@ class SessionOrchestrator {
   }
 
   /**
+   * Start breathing cycle timer
+   */
+  private startBreathingCycle(): void {
+    if (!this.config || this.breathingTimer) return;
+
+    // Use centralized phase sequence logic
+    const phases = [
+      { name: 'inhale', duration: this.config.pattern.phases.inhale },
+      ...(this.config.pattern.phases.hold ? [{ name: 'hold', duration: this.config.pattern.phases.hold }] : []),
+      { name: 'exhale', duration: this.config.pattern.phases.exhale },
+      ...(this.config.pattern.phases.pause ? [{ name: 'rest', duration: this.config.pattern.phases.pause }] : []),
+    ];
+
+    let currentPhaseIndex = 0;
+    let phaseStartTime = Date.now();
+    let cycleCount = 0;
+
+    const updateBreathingPhase = () => {
+      const currentPhase = phases[currentPhaseIndex];
+      const elapsed = (Date.now() - phaseStartTime) / 1000;
+
+      // Update current phase
+      this.setState({
+        sessionData: {
+          ...this.state.sessionData,
+          currentPhase: currentPhase.name,
+          cycleCount,
+        }
+      });
+
+      // Move to next phase when current phase is complete
+      if (elapsed >= currentPhase.duration) {
+        currentPhaseIndex = (currentPhaseIndex + 1) % phases.length;
+        phaseStartTime = Date.now();
+        
+        // Increment cycle count when we complete a full cycle
+        if (currentPhaseIndex === 0) {
+          cycleCount++;
+        }
+      }
+    };
+
+    // Start immediately
+    updateBreathingPhase();
+    
+    this.breathingTimer = window.setInterval(updateBreathingPhase, 100);
+  }
+
+  /**
+   * Stop breathing cycle timer
+   */
+  private stopBreathingCycle(): void {
+    if (this.breathingTimer) {
+      clearInterval(this.breathingTimer);
+      this.breathingTimer = null;
+    }
+  }
+
+  /**
    * Stop session timer
    */
   private stopTimer(): void {
@@ -311,6 +372,14 @@ class SessionOrchestrator {
       clearInterval(this.sessionTimer);
       this.sessionTimer = null;
     }
+  }
+
+  /**
+   * Stop all timers
+   */
+  private stopAllTimers(): void {
+    this.stopTimer();
+    this.stopBreathingCycle();
   }
 
   /**
@@ -393,8 +462,15 @@ class SessionOrchestrator {
       }
 
       // Start session
-      this.setState({ phase: 'active' });
+      this.setState({
+        phase: 'active',
+        sessionData: {
+          ...this.state.sessionData,
+          currentPhase: 'inhale', // Start with inhale
+        }
+      });
       this.startTimer();
+      this.startBreathingCycle();
 
     } catch (error) {
       this.setError(`Failed to start session: ${(error as Error).message}`);
@@ -407,7 +483,7 @@ class SessionOrchestrator {
   pause(): void {
     if (this.state.phase === 'active') {
       this.setState({ phase: 'paused' });
-      this.stopTimer();
+      this.stopAllTimers();
     }
   }
 
@@ -418,6 +494,7 @@ class SessionOrchestrator {
     if (this.state.phase === 'paused') {
       this.setState({ phase: 'active' });
       this.startTimer();
+      this.startBreathingCycle();
     }
   }
 
@@ -426,7 +503,7 @@ class SessionOrchestrator {
    */
   complete(): void {
     this.setState({ phase: 'complete' });
-    this.stopTimer();
+    this.stopAllTimers();
     this.emit({ type: 'complete', state: this.state });
   }
 
@@ -439,8 +516,8 @@ class SessionOrchestrator {
       cameraManager.stopStream();
     }
 
-    // Stop timer
-    this.stopTimer();
+    // Stop all timers
+    this.stopAllTimers();
 
     // Reset features
     this.setState({

@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import BreathingAnimation from "../../components/BreathingAnimation";
 import {
   BreathingPhaseName,
   BREATHING_PATTERNS,
 } from "../../lib/breathingPatterns";
 import { useEnhancedSession } from "../../hooks/useEnhancedSession";
+import { useDesktopSessionInitialization } from "../../hooks/useSessionInitialization";
+import { mapPatternForAnimation } from "../../lib/session/pattern-mapper";
 import { SessionHeader } from "./SessionHeader";
 import { SessionControls } from "./SessionControls";
+import { SessionControlsBar } from "./SessionControlsBar";
+import { SessionProgressDisplay } from "./SessionProgressDisplay";
+import { PreparationPhase } from "./PreparationPhase";
 import { Button } from "../../components/ui/button";
+import { Progress } from "../../components/ui/progress";
 import { TrackingStatus, Keypoint } from "../../hooks/visionTypes";
 import {
   Loader2,
@@ -47,77 +53,25 @@ export const SessionInProgress = ({
   onRequestCamera,
   patternName = "Breathing Session",
 }: SessionInProgressProps) => {
+  // Use shared session initialization hook
+  const { isInitializing, initializationError, isReady } =
+    useDesktopSessionInitialization(BREATHING_PATTERNS.box);
+
   const {
     state,
     isActive,
-    isReady,
     isPaused,
     isAudioEnabled,
-    initialize,
     start,
     pause,
     resume,
     stop,
+    complete,
     toggleAudio,
     getSessionDuration,
   } = useEnhancedSession();
 
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [initializationError, setInitializationError] = useState<string | null>(
-    null
-  );
-
-  // Initialize session on component mount
-  useEffect(() => {
-    const initializeSession = async () => {
-      // Only initialize if we're in setup phase and not already initializing
-      if (state.phase !== "setup" || isInitializing) return;
-
-      try {
-        setIsInitializing(true);
-        setInitializationError(null);
-
-        // Use default breathing pattern (box breathing) for desktop interface
-        const defaultPattern = BREATHING_PATTERNS.box;
-
-        const sessionConfig = {
-          pattern: {
-            name: defaultPattern.name,
-            phases: {
-              inhale: defaultPattern.inhale,
-              hold: defaultPattern.hold,
-              exhale: defaultPattern.exhale,
-              pause: defaultPattern.rest,
-            },
-            difficulty: "medium",
-            benefits: defaultPattern.benefits || [],
-          },
-          features: {
-            enableCamera: false, // Disable camera by default for desktop
-            enableAI: false, // Disable AI since camera is off
-            enableAudio: true, // Enable audio guidance
-          },
-          cameraSettings: {
-            displayMode: "focus" as const,
-            quality: "medium" as const,
-          },
-        };
-
-        await initialize(sessionConfig);
-      } catch (error) {
-        const errorMessage = (error as Error).message;
-        // Don't show error if session is already initialized
-        if (!errorMessage.includes("already initialized")) {
-          console.error("Session initialization failed:", error);
-          setInitializationError(errorMessage);
-        }
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-
-    initializeSession();
-  }, [state.phase]); // Only depend on state.phase, not initialize function
+  const [showPreparation, setShowPreparation] = useState(true);
 
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
   const cameraReady = trackingStatus === "TRACKING" || cameraInitialized;
@@ -139,17 +93,37 @@ export const SessionInProgress = ({
         console.warn("Session not ready to start");
         return;
       }
+      setShowPreparation(false);
       await start();
     } catch (error) {
       console.error("Failed to start session:", error);
     }
   };
 
+  const handleCancelPreparation = () => {
+    setShowPreparation(false);
+    handleEndSession?.();
+  };
+
+  // Show preparation phase first
+  if (showPreparation && isReady) {
+    return (
+      <div className="flex-grow flex flex-col w-full relative animate-fade-in">
+        <PreparationPhase
+          patternName={patternName}
+          pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
+          onStart={handleStartSession}
+          onCancel={handleCancelPreparation}
+        />
+      </div>
+    );
+  }
+
   // Unified interface - no more phase-based screens
   return (
     <div className="flex-grow flex flex-col w-full relative animate-fade-in">
-      {/* Setup Interface - show when not running */}
-      {!showBreathingInterface && (
+      {/* Setup Interface - show when not running and not in preparation */}
+      {!showBreathingInterface && !showPreparation && (
         <div className="flex-grow flex flex-col items-center justify-center p-4 text-center">
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-2">
@@ -225,12 +199,30 @@ export const SessionInProgress = ({
             </p>
           </div>
 
-          {/* Breathing Animation - centered, no duplicate text */}
+          {/* Breathing Animation - centered, with real-time guidance */}
           <div className="flex items-center justify-center">
             <BreathingAnimation
               phase={state.sessionData.currentPhase as BreathingPhaseName}
-              text={state.sessionData.currentPhase}
+              pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
+              isActive={isActive}
             />
+          </div>
+
+          {/* Progress Indicator - now on desktop too */}
+          <div className="w-full max-w-md space-y-2">
+            <Progress
+              value={Math.min((state.sessionData.duration / 300) * 100, 100)}
+              className="h-2"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Cycle {state.sessionData.cycleCount}</span>
+              <span>
+                {Math.round(
+                  Math.min((state.sessionData.duration / 300) * 100, 100)
+                )}
+                %
+              </span>
+            </div>
           </div>
 
           {/* Session Controls - compact */}
@@ -262,7 +254,7 @@ export const SessionInProgress = ({
               variant="destructive"
               size="icon"
               onClick={() => {
-                stop();
+                complete(); // Complete the session to capture final data
                 handleEndSession?.();
               }}
               className="rounded-full w-12 h-12 bg-red-400 hover:bg-red-500"
