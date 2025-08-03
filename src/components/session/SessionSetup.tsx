@@ -56,9 +56,7 @@ const SessionSetupInner: React.FC<SessionSetupProps> = ({
   // Local state for configuration
   const [selectedPattern, setSelectedPattern] =
     useState<PatternKey>(defaultPattern);
-  const [enableCamera, setEnableCamera] = useState(
-    localStorage.getItem("preferEnhancedVision") === "true"
-  );
+  const [enableCamera, setEnableCamera] = useState(false);
   const [enableAI, setEnableAI] = useState(true);
   const [enableAudio, setEnableAudio] = useState(true);
   const [isInitializing, setIsInitializing] = useState(false);

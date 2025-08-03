@@ -26,8 +26,9 @@ export const useSessionFlow = (): SessionFlowConfig => {
   // Parse all session parameters in one place
   const urlParams = new URLSearchParams(location.search);
   const isQuickStart = urlParams.get('quick') === 'true';
-  const isEnhanced = urlParams.get('enhanced') === 'true' || 
-                    localStorage.getItem('preferEnhancedVision') === 'true';
+  // Only use enhanced mode when explicitly requested via URL parameter
+  // Don't auto-enable based on localStorage preference for classic sessions
+  const isEnhanced = urlParams.get('enhanced') === 'true';
   
   // Determine session mode based on context
   const mode: SessionMode = (() => {

@@ -26,10 +26,11 @@ interface BreathingAnimationProps {
   };
   isActive?: boolean;
   countdownValue?: number;
+  phaseProgress?: number;
 }
 
 const BreathingAnimation = React.memo<BreathingAnimationProps>(
-  ({ phase, text, pattern, isActive = false, countdownValue }) => {
+  ({ phase, text, pattern, isActive = false, countdownValue, phaseProgress = 0 }) => {
     const phaseConfig = useMemo(() => getPhaseConfig(phase), [phase]);
 
     const instruction = useMemo(() => {
@@ -70,11 +71,11 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       <div className="w-40 h-2 bg-blue-100/40 rounded-full mx-auto">
         <div
           className={cn(
-            "h-full rounded-full transition-all duration-1000 ease-in-out bg-gradient-to-r",
+            "h-full rounded-full transition-all duration-100 ease-linear bg-gradient-to-r",
             phaseConfig.rhythmGradient
           )}
           style={{
-            width: isExpandedPhase(phase) ? "100%" : "20%",
+            width: `${Math.max(5, phaseProgress)}%`,
           }}
         />
       </div>

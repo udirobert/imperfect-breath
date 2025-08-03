@@ -45,6 +45,8 @@ export interface SessionState {
     duration: number;
     cycleCount: number;
     currentPhase: string;
+    phaseProgress?: number;
+    phaseDuration?: number;
   };
 }
 
@@ -327,12 +329,17 @@ class SessionOrchestrator {
       const currentPhase = phases[currentPhaseIndex];
       const elapsed = (Date.now() - phaseStartTime) / 1000;
 
+      // Calculate phase progress (0-100%)
+      const phaseProgress = Math.min((elapsed / currentPhase.duration) * 100, 100);
+
       // Update current phase
       this.setState({
         sessionData: {
           ...this.state.sessionData,
           currentPhase: currentPhase.name,
           cycleCount,
+          phaseProgress,
+          phaseDuration: currentPhase.duration,
         }
       });
 

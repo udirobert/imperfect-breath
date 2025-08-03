@@ -130,6 +130,7 @@ export const MobileBreathingInterface: React.FC<
             phase={state.sessionData.currentPhase as BreathingPhaseName}
             pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
             isActive={isActive}
+            phaseProgress={state.sessionData.phaseProgress}
           />
         </div>
 
