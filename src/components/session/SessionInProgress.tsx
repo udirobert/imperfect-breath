@@ -75,7 +75,7 @@ export const SessionInProgress = ({
 
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
   const cameraReady = trackingStatus === "TRACKING" || cameraInitialized;
-  const showBreathingInterface = isActive;
+  const showBreathingInterface = isActive || isPaused;
 
   // VideoFeed positioning: setup phase vs breathing phase
   const videoFeedContainerClass = showBreathingInterface

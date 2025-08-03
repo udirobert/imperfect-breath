@@ -13,7 +13,7 @@ export interface SessionPattern {
     inhale: number;
     hold?: number;
     exhale: number;
-    pause?: number;
+    hold_after_exhale?: number;
   };
   difficulty: string;
   benefits: string[];
@@ -29,7 +29,7 @@ export const mapPatternForSession = (pattern: BreathingPattern): SessionPattern 
     inhale: pattern.inhale,
     hold: pattern.hold,
     exhale: pattern.exhale,
-    pause: pattern.rest,
+    hold_after_exhale: pattern.hold_after_exhale,
   },
   difficulty: "medium", // Could be derived from pattern complexity in future
   benefits: pattern.benefits,
@@ -45,7 +45,7 @@ export const mapPatternForAnimation = (pattern: BreathingPattern) => ({
     inhale: pattern.inhale,
     hold: pattern.hold,
     exhale: pattern.exhale,
-    pause: pattern.rest,
+    hold_after_exhale: pattern.hold_after_exhale,
   },
 });
 
@@ -58,7 +58,7 @@ export const getPhaseSequence = (pattern: BreathingPattern) => {
     { name: 'inhale' as const, duration: pattern.inhale },
     ...(pattern.hold ? [{ name: 'hold' as const, duration: pattern.hold }] : []),
     { name: 'exhale' as const, duration: pattern.exhale },
-    ...(pattern.rest ? [{ name: 'rest' as const, duration: pattern.rest }] : []),
+    ...(pattern.hold_after_exhale ? [{ name: 'hold_after_exhale' as const, duration: pattern.hold_after_exhale }] : []),
   ];
   
   return phases;
@@ -68,7 +68,7 @@ export const getPhaseSequence = (pattern: BreathingPattern) => {
  * Calculates total cycle duration in seconds
  */
 export const calculateCycleDuration = (pattern: BreathingPattern): number => {
-  return pattern.inhale + (pattern.hold || 0) + pattern.exhale + (pattern.rest || 0);
+  return pattern.inhale + (pattern.hold || 0) + pattern.exhale + (pattern.hold_after_exhale || 0);
 };
 
 /**

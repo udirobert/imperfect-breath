@@ -3,7 +3,7 @@
  * Provides standard patterns used in the application
  */
 
-export type BreathingPhaseName = 'inhale' | 'hold' | 'exhale' | 'rest';
+export type BreathingPhaseName = 'inhale' | 'hold' | 'exhale' | 'hold_after_exhale';
 
 export interface BreathingPhase {
   name: BreathingPhaseName;
@@ -11,7 +11,7 @@ export interface BreathingPhase {
 }
 
 export interface CustomBreathingPhase {
-  name: 'inhale' | 'hold' | 'exhale' | 'rest';
+  name: 'inhale' | 'hold' | 'exhale' | 'hold_after_exhale';
   duration: number;
   text?: string;
 }
@@ -23,7 +23,7 @@ export interface BreathingPattern {
   inhale: number;
   hold: number;
   exhale: number;
-  rest: number;
+  hold_after_exhale: number;
   benefits: string[];
 }
 
@@ -35,7 +35,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     inhale: 4,
     hold: 4,
     exhale: 4,
-    rest: 4,
+    hold_after_exhale: 4,
     benefits: ['Stress reduction', 'Improved focus', 'Mental clarity']
   },
   
@@ -46,7 +46,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     inhale: 4,
     hold: 7,
     exhale: 8,
-    rest: 0,
+    hold_after_exhale: 0,
     benefits: ['Anxiety relief', 'Better sleep', 'Relaxation', 'Stress reduction']
   },
   
@@ -57,7 +57,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     inhale: 2,
     hold: 0,
     exhale: 1,
-    rest: 0,
+    hold_after_exhale: 0,
     benefits: ['Energy increase', 'Immune system boost', 'Cold tolerance']
   },
   
@@ -68,7 +68,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     inhale: 3,
     hold: 2,
     exhale: 4,
-    rest: 1,
+    hold_after_exhale: 1,
     benefits: ['Energy boost', 'Increased alertness', 'Morning activation']
   },
   
@@ -79,7 +79,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     inhale: 4,
     hold: 6,
     exhale: 8,
-    rest: 3,
+    hold_after_exhale: 3,
     benefits: ['Improved sleep quality', 'Reduced insomnia', 'Evening relaxation']
   },
   
@@ -90,7 +90,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     inhale: 5,
     hold: 0,
     exhale: 5,
-    rest: 0,
+    hold_after_exhale: 0,
     benefits: ['Meditation support', 'Present moment awareness', 'Anxiety reduction']
   }
 };

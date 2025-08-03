@@ -15,7 +15,7 @@ export interface SessionConfig {
       inhale: number;
       hold?: number;
       exhale: number;
-      pause?: number;
+      hold_after_exhale?: number;
     };
     difficulty: string;
     benefits: string[];
@@ -316,7 +316,7 @@ class SessionOrchestrator {
       { name: 'inhale', duration: this.config.pattern.phases.inhale },
       ...(this.config.pattern.phases.hold ? [{ name: 'hold', duration: this.config.pattern.phases.hold }] : []),
       { name: 'exhale', duration: this.config.pattern.phases.exhale },
-      ...(this.config.pattern.phases.pause ? [{ name: 'rest', duration: this.config.pattern.phases.pause }] : []),
+      ...(this.config.pattern.phases.hold_after_exhale ? [{ name: 'hold_after_exhale', duration: this.config.pattern.phases.hold_after_exhale }] : []),
     ];
 
     let currentPhaseIndex = 0;
