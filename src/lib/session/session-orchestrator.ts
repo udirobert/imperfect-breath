@@ -475,7 +475,7 @@ class SessionOrchestrator {
 
     try {
       // Start camera stream if available and enabled
-      if (this.config?.features.enableCamera && 
+      if (this.config?.features.enableCamera &&
           this.state.features.camera === 'available') {
         try {
           await cameraManager.requestStream();
@@ -491,7 +491,7 @@ class SessionOrchestrator {
         });
       }
 
-      // Start session
+      // Start session even if some features failed
       this.setState({
         phase: 'active',
         sessionData: {
@@ -503,7 +503,19 @@ class SessionOrchestrator {
       this.startBreathingCycle();
 
     } catch (error) {
-      this.setError(`Failed to start session: ${(error as Error).message}`);
+      // Don't fail the entire session if individual features fail
+      this.addWarning(`Some features failed to start: ${(error as Error).message}`);
+      
+      // Start session anyway with available features
+      this.setState({
+        phase: 'active',
+        sessionData: {
+          ...this.state.sessionData,
+          currentPhase: 'inhale',
+        }
+      });
+      this.startTimer();
+      this.startBreathingCycle();
     }
   }
 

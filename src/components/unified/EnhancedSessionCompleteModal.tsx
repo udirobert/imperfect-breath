@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Clock,
   Activity,
@@ -17,8 +18,13 @@ import {
   Shield,
   Loader2,
   CheckCircle,
+  Heart,
+  Zap,
+  Target,
+  TrendingUp,
+  Sparkles,
 } from "lucide-react";
-import { IntegratedSocialFlow } from "@/components/social/IntegratedSocialFlow";
+import { LensIntegratedSocialFlow } from "@/components/social/LensIntegratedSocialFlow";
 
 interface EnhancedSessionCompleteModalProps {
   isOpen: boolean;
@@ -45,7 +51,9 @@ const formatTime = (seconds: number) => {
   return `${secs}s`;
 };
 
-export const EnhancedSessionCompleteModal: React.FC<EnhancedSessionCompleteModalProps> = ({
+export const EnhancedSessionCompleteModal: React.FC<
+  EnhancedSessionCompleteModalProps
+> = ({
   isOpen,
   onClose,
   sessionData,
@@ -59,8 +67,8 @@ export const EnhancedSessionCompleteModal: React.FC<EnhancedSessionCompleteModal
   const score = Math.max(0, 100 - restlessnessValue); // Convert restlessness to score
 
   const handleSocialAction = (action: string, data: any) => {
-    console.log('Social action:', action, data);
-    if (action === 'shared') {
+    console.log("Social action:", action, data);
+    if (action === "shared") {
       onClose(); // Close modal after successful share
     }
   };
@@ -105,14 +113,16 @@ export const EnhancedSessionCompleteModal: React.FC<EnhancedSessionCompleteModal
             </p>
           </div>
 
-          {/* Integrated Social Flow */}
-          <IntegratedSocialFlow
+          {/* Lens Integrated Social Flow */}
+          <LensIntegratedSocialFlow
             phase="completion"
             sessionData={{
               patternName: sessionData.patternName,
               duration: sessionData.duration,
               score,
-              insights: [`Completed ${sessionData.patternName} with ${score}% focus`],
+              insights: [
+                `Completed ${sessionData.patternName} with ${score}% focus`,
+              ],
             }}
             onSocialAction={handleSocialAction}
           />
@@ -124,7 +134,7 @@ export const EnhancedSessionCompleteModal: React.FC<EnhancedSessionCompleteModal
                 <Brain className="mr-2 h-4 w-4" />
                 AI Analysis
               </Button>
-              
+
               {!ipRegistered ? (
                 <Button
                   onClick={onRegisterIP}
@@ -149,9 +159,14 @@ export const EnhancedSessionCompleteModal: React.FC<EnhancedSessionCompleteModal
           </div>
 
           {/* Continue Button */}
-          <Button onClick={onClose} variant="ghost" className="w-full">
-            Continue to Results
-          </Button>
+          <div className="pt-4">
+            <Button
+              onClick={onClose}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium py-3 rounded-xl shadow-lg transition-all duration-200"
+            >
+              Continue Your Journey
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

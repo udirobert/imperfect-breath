@@ -27,6 +27,7 @@ import {
 import { useLens } from "../../hooks/useLens";
 import { BreathingSessionPost } from "./BreathingSessionPost";
 import { toast } from "sonner";
+import { useShareSession, type SessionData as ShareSessionData } from "../../lib/sharing";
 
 interface SessionData {
   patternName?: string;
@@ -62,7 +63,7 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
     actionError,
     timeline,
     isLoadingTimeline,
-    refreshTimeline,
+    loadTimeline,
   } = useLens();
 
   const [walletAddress, setWalletAddress] = useState("");
@@ -121,13 +122,8 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
     }
   };
 
-  // Convert restlessness score to percentage
-  const getQualityScore = () => {
-    if (sessionData.restlessnessScore !== undefined) {
-      return Math.max(0, 100 - sessionData.restlessnessScore);
-    }
-    return sessionData.score || 75;
-  };
+  // Use shared utilities for consistent score calculation
+  const getQualityScore = () => calculateScore(sessionData);
 
   // Render authentication section
   const renderAuthSection = () => (
@@ -238,10 +234,102 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
     );
   };
 
+  // Import shared utilities
+  const { shareOnTwitter, calculateScore } = useShareSession();
+
   // Render quick actions
   const renderQuickActions = () => (
     <Card>
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-
+      <CardContent className="space-y-4">
+        {!isAuthenticated ? (
+          <Button
+            onClick={() => setActiveTab("auth")}
+            className="w-full"
+            variant="default"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Connect to Lens Protocol
+          </Button>
+        ) : (
+          <Button
+            onClick={handleShareSession}
+            disabled={isPosting}
+            className="w-full"
+            variant="default"
+          >
+            {isPosting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Share2 className="h-4 w-4 mr-2" />
+            )}
+            Share to Lens
+          </Button>
+        )}
+
+        <Button
+          onClick={() => {
+            shareOnTwitter(sessionData);
+            onSocialAction("twitter_shared", { sessionData });
+          }}
+          className="w-full"
+          variant="outline"
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Share on Twitter/X
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  // Main render logic
+  return (
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="share">Share</TabsTrigger>
+          <TabsTrigger value="session">Session</TabsTrigger>
+          <TabsTrigger value="auth">Connect</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="share" className="space-y-4">
+          {renderQuickActions()}
+          
+          {isAuthenticated && currentAccount && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                    <Users className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Connected to Lens</p>
+                    <p className="text-xs text-muted-foreground">
+                      {currentAccount.address.slice(0, 6)}...{currentAccount.address.slice(-4)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="session" className="space-y-4">
+          {renderSessionSummary()}
+        </TabsContent>
+
+        <TabsContent value="auth" className="space-y-4">
+          {renderAuthSection()}
+        </TabsContent>
+      </Tabs>
+
+      {actionError && (
+        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+          <strong>Error:</strong> {actionError}
+        </div>
+      )}
+    </div>
+  );
+};

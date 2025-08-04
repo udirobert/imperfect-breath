@@ -23,20 +23,10 @@ import {
 } from "../../components/ui/tabs";
 import {
   Share2,
-  Clock,
-  Target,
-  Repeat,
-  Wind,
-  Award,
-  Hash,
   Twitter,
-  Copy,
-  ExternalLink,
-  Download,
-  Sparkles,
-  Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useShareSession } from "../../lib/sharing";
 interface BreathingSessionPostProps {
   sessionData: BreathingSession;
   onPublished?: (txHash: string) => void;
@@ -50,16 +40,10 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
 }) => {
   const { shareBreathingSession, isPosting, isAuthenticated, actionError } =
     useLens();
+  const { shareOnTwitter, shareNative, copyToClipboard, hasNativeShare } = useShareSession();
   const [isPublishing, setIsPublishing] = useState(false);
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("lens");
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-  const [hasNativeShare, setHasNativeShare] = useState(false);
-
-  // Check for native share API on mount
-  React.useEffect(() => {
-    setHasNativeShare(typeof navigator !== "undefined" && "share" in navigator);
-  }, []);
 
   // Available challenges
   const availableChallenges = [
@@ -128,80 +112,44 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
   const duration = Math.round(sessionData.duration / 60);
   const durationText = duration === 1 ? "1 minute" : `${duration} minutes`;
 
-  const generateChallengeContent = () => {
-    const challengeHashtags = selectedChallenges
+  // Get selected challenge hashtags (DRY helper)
+  const getSelectedChallengeHashtags = () => {
+    return selectedChallenges
       .map((id) => availableChallenges.find((c) => c.id === id)?.hashtag)
-      .filter(Boolean)
-      .join(" ");
-
-    return challengeHashtags ? ` ${challengeHashtags}` : "";
+      .filter(Boolean);
   };
 
-  // Generate calm, wellness-focused share text
-  const generateTwitterText = () => {
-    const baseText = `Just completed a mindful ${sessionData.patternName} practice 🌸`;
-    const simpleMetrics = `${durationText} of focused breathing${
-      sessionData.cycles ? ` • ${sessionData.cycles} cycles` : ""
-    }`;
-    const hashtags = "#Mindfulness #Wellness #BreathingPractice #InnerPeace";
-    const challengeContent = generateChallengeContent();
-
-    return `${baseText}\n\n${simpleMetrics}\n\nTaking time to breathe and be present ✨\n\n${hashtags}${challengeContent}`;
-  };
-
-  // Handle Twitter/X sharing
+  // Handle Twitter/X sharing with challenge support
   const handleTwitterShare = () => {
-    const text = generateTwitterText();
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-      text
-    )}`;
-    window.open(url, "_blank", "width=550,height=420");
-
-    toast.success("Opening Twitter to share your session!", {
-      description: "Complete the tweet to share with your followers",
+    const challengeHashtags = getSelectedChallengeHashtags();
+      
+    shareOnTwitter(sessionData, { 
+      tone: 'mindful',
+      customHashtags: challengeHashtags.length > 0 ? 
+        ["#Mindfulness", "#Wellness", "#BreathingPractice", "#InnerPeace", ...challengeHashtags] : 
+        undefined
     });
-
     onPublished?.("twitter-share");
   };
 
-  // Handle native sharing (if available)
+  // Handle native sharing
   const handleNativeShare = async () => {
-    if (!navigator.share) {
+    const success = await shareNative(sessionData, { tone: 'mindful' });
+    if (success) {
+      onPublished?.("native-share");
+    } else {
       // Fallback to clipboard
       await handleCopyToClipboard();
-      return;
-    }
-
-    try {
-      await navigator.share({
-        title: `${sessionData.patternName} Breathing Session`,
-        text: generateTwitterText(),
-        url: window.location.href,
-      });
-
-      toast.success("Shared successfully!");
-      onPublished?.("native-share");
-    } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        toast.error("Failed to share", {
-          description: "Copying to clipboard instead",
-        });
-        await handleCopyToClipboard();
-      }
     }
   };
 
   // Handle copy to clipboard
   const handleCopyToClipboard = async () => {
     try {
-      const text = generateTwitterText();
-      await navigator.clipboard.writeText(text);
-      toast.success("Copied to clipboard!", {
-        description: "Share text copied - paste it anywhere you like",
-      });
+      await copyToClipboard(sessionData, { tone: 'mindful' });
       onPublished?.("clipboard-copy");
     } catch (error) {
-      toast.error("Failed to copy to clipboard");
+      // Error already handled in utility
     }
   };
 

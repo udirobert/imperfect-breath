@@ -199,8 +199,15 @@ export const useVision = (initialConfig: UseVisionConfig = { tier: 'none' as unk
    * Start processing
    */
   const startProcessing = useCallback(async () => {
-    if (!isInitialized || !stream || !videoElementRef.current) {
-      throw new Error('Vision system not ready for processing');
+    // Wait for initialization to complete if it's in progress
+    if (!isInitialized) {
+      console.warn('Vision system not yet initialized, skipping processing');
+      return;
+    }
+    
+    // Allow processing without stream for audio-only mode
+    if (!stream && !videoElementRef.current) {
+      console.warn('Starting vision processing without camera stream - audio-only mode');
     }
     
     if (isProcessing) {
