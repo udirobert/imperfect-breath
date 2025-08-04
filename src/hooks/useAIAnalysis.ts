@@ -122,9 +122,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.overall || 75,
+                  parsedResult.score?.overall || calculateDynamicScores(sessionData).overall,
                   false,
-                ) ?? 75,
+                ) ?? calculateDynamicScores(sessionData).overall,
               ),
             ),
             focus: Math.min(
@@ -132,9 +132,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.focus || 70,
+                  parsedResult.score?.focus || calculateDynamicScores(sessionData).focus,
                   false,
-                ) ?? 70,
+                ) ?? calculateDynamicScores(sessionData).focus,
               ),
             ),
             consistency: Math.min(
@@ -142,9 +142,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.consistency || 80,
+                  parsedResult.score?.consistency || calculateDynamicScores(sessionData).consistency,
                   false,
-                ) ?? 80,
+                ) ?? calculateDynamicScores(sessionData).consistency,
               ),
             ),
             progress: Math.min(
@@ -152,9 +152,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.progress || 75,
+                  parsedResult.score?.progress || calculateDynamicScores(sessionData).progress,
                   false,
-                ) ?? 75,
+                ) ?? calculateDynamicScores(sessionData).progress,
               ),
             ),
           },
@@ -259,9 +259,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.overall || 75,
+                  parsedResult.score?.overall || calculateDynamicScores(sessionData).overall,
                   false,
-                ) ?? 75,
+                ) ?? calculateDynamicScores(sessionData).overall,
               ),
             ),
             focus: Math.min(
@@ -269,9 +269,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.focus || 70,
+                  parsedResult.score?.focus || calculateDynamicScores(sessionData).focus,
                   false,
-                ) ?? 70,
+                ) ?? calculateDynamicScores(sessionData).focus,
               ),
             ),
             consistency: Math.min(
@@ -279,9 +279,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.consistency || 80,
+                  parsedResult.score?.consistency || calculateDynamicScores(sessionData).consistency,
                   false,
-                ) ?? 80,
+                ) ?? calculateDynamicScores(sessionData).consistency,
               ),
             ),
             progress: Math.min(
@@ -289,9 +289,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.progress || 75,
+                  parsedResult.score?.progress || calculateDynamicScores(sessionData).progress,
                   false,
-                ) ?? 75,
+                ) ?? calculateDynamicScores(sessionData).progress,
               ),
             ),
           },
@@ -391,9 +391,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.overall || 75,
+                  parsedResult.score?.overall || calculateDynamicScores(sessionData).overall,
                   false,
-                ) ?? 75,
+                ) ?? calculateDynamicScores(sessionData).overall,
               ),
             ),
             focus: Math.min(
@@ -401,9 +401,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.focus || 70,
+                  parsedResult.score?.focus || calculateDynamicScores(sessionData).focus,
                   false,
-                ) ?? 70,
+                ) ?? calculateDynamicScores(sessionData).focus,
               ),
             ),
             consistency: Math.min(
@@ -411,9 +411,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.consistency || 80,
+                  parsedResult.score?.consistency || calculateDynamicScores(sessionData).consistency,
                   false,
-                ) ?? 80,
+                ) ?? calculateDynamicScores(sessionData).consistency,
               ),
             ),
             progress: Math.min(
@@ -421,9 +421,9 @@ export const useAIAnalysis = () => {
               Math.max(
                 0,
                 DataSanitizer.sanitizeNumber(
-                  parsedResult.score?.progress || 75,
+                  parsedResult.score?.progress || calculateDynamicScores(sessionData).progress,
                   false,
-                ) ?? 75,
+                ) ?? calculateDynamicScores(sessionData).progress,
               ),
             ),
           },
@@ -511,6 +511,12 @@ export const useAIAnalysis = () => {
       sessionData: SessionData,
       userId?: string,
     ): Promise<AIAnalysisResult[]> => {
+      // Prevent AI analysis for classic sessions
+      if ((sessionData as any).sessionType === "classic") {
+        console.log("Blocking AI analysis for classic session");
+        return [];
+      }
+
       setIsAnalyzing(true);
       setError(null);
 
@@ -790,11 +796,54 @@ function createFallbackAnalysis(
   };
 }
 
+/**
+ * Calculate dynamic scores based on actual session data
+ */
+function calculateDynamicScores(sessionData: SessionData): {
+  overall: number;
+  focus: number;
+  consistency: number;
+  progress: number;
+} {
+  const duration = Math.round(sessionData.sessionDuration / 60);
+  const durationScore = Math.min(100, Math.max(50, 60 + duration * 5)); // 5 points per minute
+
+  // Base scores on actual session metrics
+  const restlessnessScore = sessionData.restlessnessScore || 0;
+  const stillnessScore = Math.max(0, 100 - restlessnessScore);
+
+  // Calculate focus score based on stillness and duration
+  const focusScore = Math.round((stillnessScore * 0.7) + (durationScore * 0.3));
+
+  // Consistency score from session data or estimated from duration
+  const consistencyScore = sessionData.consistencyScore ||
+    Math.min(100, Math.max(60, 70 + duration * 3));
+
+  // Progress score based on completion and performance
+  const progressScore = Math.min(100, Math.max(65, durationScore + 10));
+
+  // Overall score as weighted average
+  const overallScore = Math.round(
+    (focusScore * 0.3) +
+    (consistencyScore * 0.3) +
+    (progressScore * 0.2) +
+    (durationScore * 0.2)
+  );
+
+  return {
+    overall: overallScore,
+    focus: focusScore,
+    consistency: consistencyScore,
+    progress: progressScore,
+  };
+}
+
 function createErrorFallback(
   sessionData: SessionData,
   errorMessage: string,
 ): AIAnalysisResult {
   const duration = Math.round(sessionData.sessionDuration / 60);
+  const dynamicScores = calculateDynamicScores(sessionData);
 
   return {
     provider: "fallback",
@@ -809,19 +858,14 @@ function createErrorFallback(
       "Explore different breathing patterns",
       "Track your progress over time",
     ],
-    score: {
-      overall: 75,
-      focus: 70,
-      consistency: sessionData.consistencyScore || 75,
-      progress: 80,
-    },
+    score: dynamicScores,
     error: `AI analysis unavailable: ${errorMessage}`,
   };
 }
 
 function createTrialFallback(sessionData: SessionData): AIAnalysisResult {
   const duration = Math.round(sessionData.sessionDuration / 60);
-  const baseScore = Math.min(100, Math.max(60, 70 + duration * 3));
+  const dynamicScores = calculateDynamicScores(sessionData);
 
   return {
     provider: "trial",
@@ -837,11 +881,6 @@ function createTrialFallback(sessionData: SessionData): AIAnalysisResult {
       "Practice the same pattern for a few more sessions",
       "Experiment with different breathing techniques",
     ],
-    score: {
-      overall: baseScore,
-      focus: baseScore - 5,
-      consistency: sessionData.consistencyScore || baseScore,
-      progress: baseScore + 5,
-    },
+    score: dynamicScores,
   };
 }

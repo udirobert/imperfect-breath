@@ -111,7 +111,7 @@ export default defineConfig(({ mode }) => {
 
     // Configure server options
     server: {
-      port: 4567,
+      port: 4556,
       open: true,
       strictPort: false,
     },

@@ -20,7 +20,7 @@ app.use(
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:8080",
       "http://localhost:3000",
-      "http://localhost:4567",
+      "http://localhost:4556",
     ],
     credentials: true,
   })

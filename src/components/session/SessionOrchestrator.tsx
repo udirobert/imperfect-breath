@@ -6,6 +6,7 @@ import { useIsMobile } from "../../hooks/use-mobile";
 // Import specialized session components
 import { SessionSetup } from "./SessionSetup";
 import { SessionInProgress } from "./SessionInProgress";
+import { ClassicBreathingSession } from "./ClassicBreathingSession";
 import { MobileBreathingInterface } from "./MobileBreathingInterface";
 import { EnhancedDualViewBreathingSession } from "../vision/EnhancedDualViewBreathingSession";
 
@@ -181,34 +182,23 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
       );
     }
 
-    // Default desktop breathing interface - simplified for now
-    // This provides the core breathing experience without complex camera setup
+    // Classic desktop breathing interface - clean and focused
+    // No camera, no AI, just pure breathing practice
     return (
-      <SessionInProgress
-        handleEndSession={() => {
-          // Get session data from orchestrator and pass it to completion handler
-          const sessionData = sessionState.sessionData;
+      <ClassicBreathingSession
+        patternName={config.pattern.name}
+        onSessionComplete={(metrics) => {
           onComplete({
-            breathHoldTime: 0, // Default for now
-            restlessnessScore: 0, // Default for now
-            cycleCount: sessionData.cycleCount,
-            elapsedTime: sessionData.duration * 1000, // Convert to milliseconds
+            ...metrics,
+            // Classic sessions have no camera-based metrics
+            breathHoldTime: 0,
+            restlessnessScore: 0,
+            // Ensure sessionType is preserved
+            sessionType: "classic",
+            cameraUsed: false,
+            aiUsed: false,
           });
         }}
-        videoRef={{ current: null }}
-        showVideoFeed={false} // Disable video feed for now to avoid complexity
-        isTracking={false}
-        restlessnessScore={0}
-        landmarks={[]}
-        trackingStatus="IDLE"
-        cameraInitialized={false}
-        cameraRequested={false}
-        onRequestCamera={async () => {
-          console.log(
-            "Camera functionality will be implemented in future iteration"
-          );
-        }}
-        patternName={config.pattern.name}
       />
     );
   };

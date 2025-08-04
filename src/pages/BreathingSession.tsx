@@ -65,6 +65,10 @@ const useSessionCompletion = () => {
       breathHoldTime: number;
       restlessnessScore?: number;
       elapsedTime: number;
+      phaseAccuracy?: number;
+      rhythmConsistency?: number;
+      sessionDuration?: number;
+      patternName?: string;
     }) => {
       const {
         pattern,
@@ -72,12 +76,15 @@ const useSessionCompletion = () => {
         breathHoldTime,
         restlessnessScore,
         elapsedTime,
+        phaseAccuracy,
+        rhythmConsistency,
+        sessionDuration,
+        patternName,
       } = sessionData;
 
-      // Calculate session duration based on pattern properties
-      const oneCycleDuration =
-        (pattern.inhale + pattern.hold + pattern.exhale + pattern.rest) * 1000;
-      const sessionDuration = (cycleCount * oneCycleDuration) / 1000;
+      // Use actual session duration if available, otherwise calculate from pattern
+      const actualSessionDuration = sessionDuration || (elapsedTime / 1000);
+      const calculatedDuration = (cycleCount * ((pattern.inhale + pattern.hold + pattern.exhale + pattern.rest))) / 1000;
 
       // Save session offline-first
       const sessionId = saveSession({
@@ -85,7 +92,7 @@ const useSessionCompletion = () => {
         patternName: pattern.name,
         startTime: new Date(Date.now() - elapsedTime),
         endTime: new Date(),
-        duration: sessionDuration,
+        duration: actualSessionDuration,
         cycleCount,
         breathHoldTime,
         restlessnessScore: restlessnessScore || 0,
@@ -96,10 +103,15 @@ const useSessionCompletion = () => {
         state: {
           breathHoldTime,
           restlessnessScore: restlessnessScore || 0,
-          patternName: pattern.name,
-          sessionDuration,
+          patternName: patternName || pattern.name,
+          sessionDuration: actualSessionDuration,
           sessionId,
           isOffline: !syncStatus.isOnline,
+          // Include the new performance metrics
+          cycleCount,
+          phaseAccuracy: sessionData.phaseAccuracy,
+          rhythmConsistency: sessionData.rhythmConsistency,
+          targetCycles: 10, // Default target, could be made configurable
         },
       });
     },
@@ -155,10 +167,15 @@ const BreathingSession: React.FC = () => {
     (metrics: any) => {
       handleSessionComplete({
         pattern: sessionConfig.pattern,
-        cycleCount: sessionState.sessionData.cycleCount,
+        cycleCount: metrics?.cycleCount || sessionState.sessionData.cycleCount,
         breathHoldTime: metrics?.breathHoldTime || 0,
-        restlessnessScore: metrics?.restlessnessScore,
-        elapsedTime: sessionState.sessionData.duration * 1000,
+        restlessnessScore: metrics?.restlessnessScore || 0,
+        elapsedTime: metrics?.elapsedTime || sessionState.sessionData.duration * 1000,
+        // Include the new performance metrics
+        phaseAccuracy: metrics?.phaseAccuracy || sessionState.sessionData.phaseAccuracy,
+        rhythmConsistency: metrics?.rhythmConsistency || sessionState.sessionData.rhythmConsistency,
+        sessionDuration: metrics?.sessionDuration || sessionState.sessionData.duration,
+        patternName: metrics?.patternName || sessionConfig.pattern.name,
       });
 
       complete();

@@ -56,7 +56,7 @@ export default function Index({
           style={{ animationDelay: "200ms", opacity: 0 }}
           className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground animate-fade-in"
         >
-          Transform your breathing with AI-powered guidance
+          Transform your breathing
         </h1>
         <p
           style={{ animationDelay: "400ms", opacity: 0 }}

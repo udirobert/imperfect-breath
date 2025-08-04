@@ -255,8 +255,24 @@ export const SessionInProgress = ({
               variant="destructive"
               size="icon"
               onClick={() => {
-                complete(); // Complete the session to capture final data
-                handleEndSession?.();
+                // Get final session data before completing
+                const finalSessionData = {
+                  breathHoldTime: 0, // TODO: Get from vision system
+                  restlessnessScore: state.sessionData.currentRestlessness || 0,
+                  cycleCount: state.sessionData.cycleCount,
+                  sessionDuration: state.sessionData.duration,
+                  phaseAccuracy: state.sessionData.phaseAccuracy,
+                  rhythmConsistency: state.sessionData.rhythmConsistency,
+                  patternName: patternName,
+                  elapsedTime: state.sessionData.duration * 1000,
+                };
+                
+                complete(); // Complete the session
+                
+                // Pass the data to the completion handler
+                if (handleEndSession) {
+                  handleEndSession(finalSessionData);
+                }
               }}
               className="rounded-full w-12 h-12 bg-red-400 hover:bg-red-500"
             >

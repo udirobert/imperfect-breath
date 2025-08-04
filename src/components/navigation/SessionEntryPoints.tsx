@@ -1,168 +1,147 @@
 /**
- * Session Entry Points - DRY component for all session buttons
- * Eliminates duplication between mobile/desktop
+ * Session Entry Points - Clean UI for choosing between Classic and Enhanced sessions
+ *
+ * SINGLE RESPONSIBILITY: Present clear choice between session types
+ * DRY: Eliminates duplication between mobile/desktop
+ * CLEAN: No mixed concerns, pure presentation logic
  */
 
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { QuickStartButton } from "../session/QuickStartButton";
-import { SmartAuthGate } from "../auth/SmartAuthGate";
+import { useIsMobile } from "../../hooks/use-mobile";
+import { Sparkles, Focus, Camera, Zap } from "lucide-react";
 
 interface SessionEntryPointsProps {
-  variant: "mobile" | "desktop";
+  variant?: "mobile" | "desktop";
   className?: string;
-}
-
-interface SessionButtonConfig {
-  to: string;
-  label: string;
-  variant: "default" | "outline";
-  size: "sm" | "lg";
-  className?: string;
-  delay: string;
 }
 
 export const SessionEntryPoints: React.FC<SessionEntryPointsProps> = ({
   variant,
   className = "",
 }) => {
-  const isMobile = variant === "mobile";
+  const isMobile = useIsMobile();
+  const effectiveVariant = variant || (isMobile ? "mobile" : "desktop");
 
-  // Centralized button configurations - Classic first (free), AI Enhanced second (auth required)
-  const buttonConfigs: SessionButtonConfig[] = [
+  const sessionTypes = [
     {
-      to: "/session",
-      label: isMobile ? "Classic" : "Classic Session",
-      variant: "default",
-      size: isMobile ? "sm" : "lg",
-      className: isMobile
-        ? "w-full text-sm"
-        : "px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700",
-      delay: isMobile ? "650ms" : "600ms",
+      key: "classic",
+      title: "Classic Session",
+      description: "Pure breathing practice with no distractions",
+      badge: "Focus Mode",
+      icon: Focus,
+      to: "/session/classic",
+      buttonClass: isMobile
+        ? "w-full text-sm bg-blue-50 border-2 border-blue-200 text-blue-800 hover:bg-blue-100"
+        : "px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-blue-50 border-2 border-blue-200 text-blue-800 hover:bg-blue-100",
+      badgeClass:
+        "absolute -top-2 -right-2 bg-blue-100 text-blue-700 border-blue-300 text-xs px-2 py-1",
+      features: ["No camera", "Minimal interface", "Pure mindfulness"],
     },
     {
-      to: "/session?enhanced=true",
-      label: isMobile ? "AI Enhanced" : "AI Enhanced Session",
-      variant: "outline",
-      size: isMobile ? "sm" : "lg",
-      className: isMobile
-        ? "w-full text-sm"
-        : "px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-shadow",
-      delay: isMobile ? "700ms" : "650ms",
+      key: "enhanced",
+      title: "Enhanced Session",
+      description: "AI-powered breathing with real-time feedback",
+      badge: "AI + Camera",
+      icon: Camera,
+      to: "/session/enhanced",
+      buttonClass: isMobile
+        ? "w-full text-sm bg-purple-50 border-2 border-purple-300 text-purple-800 hover:bg-purple-100"
+        : "px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-purple-50 border-2 border-purple-300 text-purple-800 hover:bg-purple-100",
+      badgeClass:
+        "absolute -top-2 -right-2 bg-purple-100 text-purple-700 border-purple-300 text-xs px-2 py-1",
+      features: ["Camera tracking", "AI feedback", "Advanced metrics"],
     },
   ];
 
-  if (isMobile) {
+  if (effectiveVariant === "mobile") {
     return (
-      <div className={`flex flex-col gap-4 items-center w-full ${className}`}>
-        {/* Primary CTA: Quick Start */}
-        <QuickStartButton
-          className="animate-fade-in w-full"
-          style={{ animationDelay: "600ms", opacity: 0 }}
-        />
-
-        {/* Secondary options with auth indicators */}
-        <div className="flex gap-2 w-full">
-          {buttonConfigs.map((config, index) => (
-            <div key={config.to} className="flex-1 relative">
-              {config.to === "/session?enhanced=true" ? (
-                <SmartAuthGate
-                  required="supabase"
-                  context="wellness"
-                  fallback="prompt"
-                >
-                  <Link to={config.to}>
-                    <Button
-                      style={{ animationDelay: config.delay, opacity: 0 }}
-                      size={config.size}
-                      variant={config.variant}
-                      className={`animate-fade-in ${config.className}`}
-                    >
-                      {config.label}
-                    </Button>
-                  </Link>
-                </SmartAuthGate>
-              ) : (
-                <Link to={config.to}>
-                  <Button
-                    style={{ animationDelay: config.delay, opacity: 0 }}
-                    size={config.size}
-                    variant={config.variant}
-                    className={`animate-fade-in ${config.className}`}
-                  >
-                    {config.label}
-                  </Button>
-                </Link>
-              )}
-              {/* Auth requirement badges */}
-              {config.to === "/session" && (
-                <Badge
-                  variant="secondary"
-                  className="absolute -top-1 -right-1 bg-green-100 text-green-800 border-green-200 text-xs px-1 py-0.5 scale-75"
-                >
-                  Free
-                </Badge>
-              )}
-              {config.to === "/session?enhanced=true" && (
-                <Badge
-                  variant="outline"
-                  className="absolute -top-1 -right-1 bg-blue-50 text-blue-700 border-blue-200 text-xs px-1 py-0.5 scale-75"
-                >
-                  Auth
-                </Badge>
-              )}
-            </div>
-          ))}
+      <div className={`space-y-6 p-4 ${className}`}>
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold mb-2">Choose Your Experience</h2>
+          <p className="text-muted-foreground">
+            Select the session type that fits your needs
+          </p>
         </div>
+
+        {sessionTypes.map((session) => {
+          const Icon = session.icon;
+          return (
+            <Link key={session.key} to={session.to} className="block">
+              <div className="relative">
+                <Button variant="outline" className={session.buttonClass}>
+                  <div className="flex items-center gap-3 w-full">
+                    <Icon className="w-5 h-5" />
+                    <div className="text-left flex-1">
+                      <div className="font-semibold">{session.title}</div>
+                      <div className="text-xs opacity-80">
+                        {session.description}
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+                <Badge className={session.badgeClass}>{session.badge}</Badge>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     );
   }
 
-  // Desktop layout - Classic first (free), AI Enhanced second (auth required)
+  // Desktop layout
   return (
-    <div className={`flex flex-col gap-4 items-center ${className}`}>
-      {/* Primary CTA - Classic Session (Free) */}
-      <div className="relative">
-        <Link to="/session">
-          <Button
-            style={{ animationDelay: "600ms", opacity: 0 }}
-            size="lg"
-            className="animate-fade-in px-12 py-4 text-lg rounded-full shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white"
-          >
-            Start Classic Session
-          </Button>
-        </Link>
-        <Badge
-          variant="secondary"
-          className="absolute -top-2 -right-2 bg-green-100 text-green-800 border-green-200 text-xs px-2 py-1"
-        >
-          Free
-        </Badge>
+    <div className={`max-w-6xl mx-auto py-12 ${className}`}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
+        {sessionTypes.map((session) => {
+          const Icon = session.icon;
+          return (
+            <div key={session.key} className="w-full max-w-md">
+              <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 mb-4">
+                    <Icon className="w-8 h-8 text-gray-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">{session.title}</h3>
+                  <p className="text-muted-foreground">{session.description}</p>
+                </div>
+
+                <ul className="space-y-2 mb-8">
+                  {session.features.map((feature, index) => (
+                    <li key={index} className="flex items-center gap-2 text-sm">
+                      <Sparkles className="w-4 h-4 text-green-500" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link to={session.to} className="block">
+                  <div className="relative">
+                    <Button className={session.buttonClass}>
+                      <Zap className="w-5 h-5 mr-2" />
+                      Start
+                    </Button>
+                    <Badge className={session.badgeClass}>
+                      {session.badge}
+                    </Badge>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Secondary option - AI Enhanced (Auth Required) */}
-      <div className="relative">
-        <SmartAuthGate required="supabase" context="wellness" fallback="prompt">
-          <Link to="/session?enhanced=true">
-            <Button
-              style={{ animationDelay: "700ms", opacity: 0 }}
-              size="default"
-              variant="outline"
-              className="animate-fade-in px-8 py-3 text-base rounded-full shadow-md hover:shadow-lg transition-all"
-            >
-              AI Enhanced Session
-            </Button>
-          </Link>
-        </SmartAuthGate>
-        <Badge
-          variant="outline"
-          className="absolute -top-2 -right-2 bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-1"
-        >
-          Sign up
-        </Badge>
+      <div className="text-center mt-12">
+        <p className="text-sm text-muted-foreground">
+          Not sure which to choose? Start with Classic for a distraction-free
+          experience.
+        </p>
       </div>
     </div>
   );
 };
+
+export default SessionEntryPoints;

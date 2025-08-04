@@ -220,8 +220,10 @@ export const VisionEnhancedBreathingSession: React.FC<
         const sessionData = {
           pattern_name: pattern.name,
           session_duration: sessionState.sessionData.duration,
-          breath_hold_time: 0, // Vision sessions don't track breath holds
+          breath_hold_time: 0, // Vision sessions don't currently track breath holds in VisionMetrics
           restlessness_score: visionMetrics.restlessnessScore || 0,
+          sessionType: "enhanced", // Explicitly mark as enhanced session
+          cameraUsed: true, // Vision sessions always use camera
           visionMetrics: visionMetrics,
         };
 
@@ -258,8 +260,10 @@ export const VisionEnhancedBreathingSession: React.FC<
       const sessionData = {
         pattern_name: pattern.name,
         session_duration: sessionState.sessionData.duration,
-        breath_hold_time: 0, // Vision sessions don't track breath holds
+        breath_hold_time: 0, // Vision sessions don't currently track breath holds in VisionMetrics
         restlessness_score: visionMetrics.restlessnessScore || 0,
+        sessionType: "enhanced", // Explicitly mark as enhanced session
+        cameraUsed: true, // Vision sessions always use camera
         visionMetrics: visionMetrics,
       };
 
@@ -292,8 +296,10 @@ export const VisionEnhancedBreathingSession: React.FC<
       const sessionData = {
         pattern_name: pattern.name,
         session_duration: sessionState.sessionData.duration,
-        breath_hold_time: 0, // Vision sessions don't track breath holds
+        breath_hold_time: 0, // Vision sessions don't currently track breath holds in VisionMetrics
         restlessness_score: visionMetrics.restlessnessScore || 0,
+        sessionType: "enhanced", // Explicitly mark as enhanced session
+        cameraUsed: true, // Vision sessions always use camera
         visionMetrics: visionMetrics,
       };
 

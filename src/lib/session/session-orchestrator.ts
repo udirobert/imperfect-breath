@@ -47,6 +47,10 @@ export interface SessionState {
     currentPhase: string;
     phaseProgress?: number;
     phaseDuration?: number;
+    // Real-time performance tracking
+    phaseAccuracy?: number; // 0-100% how close to target timing
+    rhythmConsistency?: number; // 0-100% consistency across cycles
+    currentRestlessness?: number; // 0-100% current movement level
   };
 }
 
@@ -76,6 +80,10 @@ class SessionOrchestrator {
   private cameraCleanup: (() => void) | null = null;
   private sessionTimer: number | null = null;
   private breathingTimer: number | null = null;
+  
+  // Performance tracking
+  private phaseTimings: number[] = [];
+  private lastPhaseStart: number = 0;
 
   /**
    * Get initial session state
@@ -331,6 +339,15 @@ class SessionOrchestrator {
 
       // Calculate phase progress (0-100%)
       const phaseProgress = Math.min((elapsed / currentPhase.duration) * 100, 100);
+      
+      // Calculate phase accuracy (how close to target timing)
+      const targetDuration = currentPhase.duration;
+      const phaseAccuracy = targetDuration > 0 
+        ? Math.max(0, 100 - (Math.abs(elapsed - targetDuration) / targetDuration * 100))
+        : 100;
+      
+      // Calculate rhythm consistency from recent phase timings
+      const rhythmConsistency = this.calculateRhythmConsistency();
 
       // Update current phase
       this.setState({
@@ -340,11 +357,17 @@ class SessionOrchestrator {
           cycleCount,
           phaseProgress,
           phaseDuration: currentPhase.duration,
+          phaseAccuracy: Math.round(phaseAccuracy),
+          rhythmConsistency: Math.round(rhythmConsistency),
         }
       });
 
+
       // Move to next phase when current phase is complete
       if (elapsed >= currentPhase.duration) {
+        // Record phase timing for consistency analysis
+        this.recordPhaseTiming(elapsed);
+        
         currentPhaseIndex = (currentPhaseIndex + 1) % phases.length;
         phaseStartTime = Date.now();
         
@@ -505,14 +528,7 @@ class SessionOrchestrator {
     }
   }
 
-  /**
-   * Complete the session
-   */
-  complete(): void {
-    this.setState({ phase: 'complete' });
-    this.stopAllTimers();
-    this.emit({ type: 'complete', state: this.state });
-  }
+
 
   /**
    * Stop the session
@@ -607,6 +623,76 @@ class SessionOrchestrator {
   }
 
   /**
+   * Complete session
+   */
+  complete(): void {
+    this.stopBreathingCycle();
+    this.stopTimer();
+    
+    this.setState({ 
+      phase: 'complete',
+      sessionData: {
+        ...this.state.sessionData,
+        currentPhase: 'complete'
+      }
+    });
+    
+    this.emit({ type: 'complete' });
+  }
+
+
+  /**
+   * Record phase timing for consistency analysis
+   */
+  private recordPhaseTiming(duration: number): void {
+    this.phaseTimings.push(duration);
+    // Keep only last 20 phase timings for performance
+    if (this.phaseTimings.length > 20) {
+      this.phaseTimings.shift();
+    }
+  }
+
+  /**
+   * Calculate rhythm consistency based on phase timing variance
+   */
+  private calculateRhythmConsistency(): number {
+    if (this.phaseTimings.length < 3) return 100; // Not enough data yet
+    
+    const mean = this.phaseTimings.reduce((sum, time) => sum + time, 0) / this.phaseTimings.length;
+    const variance = this.phaseTimings.reduce((sum, time) => sum + Math.pow(time - mean, 2), 0) / this.phaseTimings.length;
+    const standardDeviation = Math.sqrt(variance);
+    
+    // Convert to consistency score (lower variance = higher consistency)
+    const consistencyScore = Math.max(0, 100 - (standardDeviation * 20));
+    return consistencyScore;
+  }
+
+  /**
+   * Update restlessness score from vision system
+   */
+  updateRestlessness(score: number): void {
+    this.setState({
+      sessionData: {
+        ...this.state.sessionData,
+        currentRestlessness: Math.round(Math.max(0, Math.min(100, score))),
+      }
+    });
+  }
+
+  /**
+   * Get current session performance metrics
+   */
+  getPerformanceMetrics() {
+    return {
+      phaseAccuracy: this.state.sessionData.phaseAccuracy || 0,
+      rhythmConsistency: this.state.sessionData.rhythmConsistency || 0,
+      restlessness: this.state.sessionData.currentRestlessness || 0,
+      cycleCount: this.state.sessionData.cycleCount,
+      duration: this.state.sessionData.duration,
+    };
+  }
+
+  /**
    * Cleanup resources
    */
   destroy(): void {
@@ -619,6 +705,7 @@ class SessionOrchestrator {
     }
     
     this.config = null;
+    this.phaseTimings = [];
   }
 }
 

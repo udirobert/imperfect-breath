@@ -22,8 +22,8 @@ export const QuickStartButton: React.FC<QuickStartButtonProps> = ({
   const handleQuickStart = () => {
     // Set quick start mode in localStorage
     localStorage.setItem("quickStartMode", "true");
-    // Navigate to session with minimal setup
-    navigate("/session?quick=true");
+    // Navigate to classic session for quick start (no camera setup needed)
+    navigate("/session/classic?quick=true");
   };
 
   return (

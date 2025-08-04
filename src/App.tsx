@@ -18,6 +18,8 @@ import MainLayout from "@/components/MainLayout";
 import MobileOnboarding from "@/pages/MobileOnboarding";
 import WalletTestPage from "@/pages/WalletTestPage";
 import EnhancedVisionDemo from "@/pages/EnhancedVisionDemo";
+import SessionEntryPoints from "@/components/navigation/SessionEntryPoints";
+import SessionModeWrapper from "@/components/session/SessionModeWrapper";
 
 function App() {
   return (
@@ -27,7 +29,8 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Index enhanced={false} />} />
           <Route path="/enhanced" element={<Index enhanced={true} />} />
-          <Route path="/session" element={<BreathingSession />} />
+          <Route path="/session" element={<SessionEntryPoints />} />
+          <Route path="/session/:mode" element={<SessionModeWrapper />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/results" element={<Results />} />
           <Route path="/marketplace" element={<EnhancedMarketplace />} />

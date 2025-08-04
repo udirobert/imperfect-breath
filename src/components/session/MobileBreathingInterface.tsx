@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -7,6 +7,7 @@ import { useMobileSessionInitialization } from "@/hooks/useSessionInitialization
 import { mapPatternForAnimation } from "@/lib/session/pattern-mapper";
 import BreathingAnimation from "@/components/BreathingAnimation";
 import { PreparationPhase } from "./PreparationPhase";
+import { useTouchGestures } from "@/hooks/useTouchGestures";
 import {
   BreathingPhaseName,
   BREATHING_PATTERNS,
@@ -53,6 +54,7 @@ export const MobileBreathingInterface: React.FC<
   } = useEnhancedSession();
 
   const [showPreparation, setShowPreparation] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Only render on mobile
   if (!isMobile) {
@@ -111,7 +113,10 @@ export const MobileBreathingInterface: React.FC<
   }
 
   return (
-    <div className="w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden min-h-[calc(100vh-4rem)] pb-safe">
+    <div 
+      ref={containerRef}
+      className="w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden min-h-[calc(100vh-4rem)] pb-safe touch-manipulation"
+    >
       {/* Compact Header */}
       <div className="flex-shrink-0 px-4 py-2 bg-background/80 backdrop-blur">
         <div className="flex items-center justify-between text-sm">
