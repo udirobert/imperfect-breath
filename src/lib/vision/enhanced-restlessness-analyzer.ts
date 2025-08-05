@@ -4,7 +4,7 @@
  * Integrates with existing AI feedback and social primitives
  */
 
-import type { VisionMetrics, StandardMetrics, PremiumMetrics } from './types';
+import type { VisionMetrics } from './types';
 
 export interface RestlessnessComponents {
   faceMovement: number;
@@ -281,8 +281,10 @@ export class EnhancedRestlessnessAnalyzer {
     const recent = this.movementHistory.slice(-10);
     const older = this.movementHistory.slice(-20, -10);
     
-    const recentAvg = recent.reduce((a, b) => a + b) / recent.length;
-    const olderAvg = older.reduce((a, b) => a + b) / older.length;
+    if (recent.length === 0 || older.length === 0) return 'stable';
+    
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
 
     const diff = recentAvg - olderAvg;
     

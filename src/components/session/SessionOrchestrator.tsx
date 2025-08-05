@@ -8,7 +8,7 @@ import { SessionSetup } from "./SessionSetup";
 import { SessionInProgress } from "./SessionInProgress";
 import { ClassicBreathingSession } from "./ClassicBreathingSession";
 import { MobileBreathingInterface } from "./MobileBreathingInterface";
-import { EnhancedDualViewBreathingSession } from "../vision/EnhancedDualViewBreathingSession";
+import { UnifiedBreathingSession } from "./UnifiedBreathingSession";
 
 /**
  * SessionOrchestrator - Centralized Session Flow Management
@@ -146,7 +146,7 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
     // Enhanced Vision Session (takes precedence when explicitly requested)
     if (sessionFlow.useEnhancedVision) {
       return (
-        <EnhancedDualViewBreathingSession
+        <UnifiedBreathingSession
           pattern={{
             name: config.pattern.name,
             phases: {
@@ -158,6 +158,7 @@ export const SessionOrchestrator: React.FC<SessionOrchestratorProps> = ({
             difficulty: "intermediate",
             benefits: config.pattern.benefits,
           }}
+          mode="enhanced"
           onSessionComplete={onComplete}
         />
       );

@@ -427,12 +427,20 @@ class SessionOrchestrator {
    * Initialize session with configuration
    */
   async initialize(config: SessionConfig): Promise<void> {
-    if (this.state.phase !== 'setup') {
+    // Allow re-initialization if in setup, complete, or error state
+    const allowedPhases = ['setup', 'complete', 'error'];
+    
+    if (!allowedPhases.includes(this.state.phase)) {
       // If already initialized with same config, just return
       if (this.config && JSON.stringify(this.config) === JSON.stringify(config)) {
         return;
       }
-      throw new Error('Session already initialized');
+      throw new Error(`Session already initialized in ${this.state.phase} phase`);
+    }
+    
+    // Reset state for new initialization
+    if (this.state.phase === 'complete' || this.state.phase === 'error') {
+      this.reset();
     }
 
     this.config = config;
@@ -554,20 +562,35 @@ class SessionOrchestrator {
     // Stop all timers
     this.stopAllTimers();
 
-    // Reset features
+    // Mark as complete instead of setup to avoid confusion
     this.setState({
-      phase: 'setup',
+      phase: 'complete',
       features: {
-        camera: 'unavailable',
-        ai: 'unavailable',
-        audio: 'available',
-      },
-      sessionData: {
-        duration: 0,
-        cycleCount: 0,
-        currentPhase: 'prepare',
+        ...this.state.features,
+        camera: this.state.features.camera === 'active' ? 'available' : this.state.features.camera,
+        ai: this.state.features.ai === 'active' ? 'available' : this.state.features.ai,
       },
     });
+  }
+  
+  /**
+   * Reset session to initial state
+   */
+  reset(): void {
+    // Stop any active resources
+    if (this.state.features.camera === 'active') {
+      cameraManager.stopStream();
+    }
+    
+    // Stop all timers
+    this.stopAllTimers();
+    
+    // Clear configuration
+    this.config = null;
+    this.phaseTimings = [];
+    
+    // Reset to initial state
+    this.state = this.getInitialState();
   }
 
   /**

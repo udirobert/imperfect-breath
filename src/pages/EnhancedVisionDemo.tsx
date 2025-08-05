@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { IntegratedVisionBreathingSession } from '../components/vision/IntegratedVisionBreathingSession';
-import { EnhancedDualViewBreathingSession } from '../components/vision/EnhancedDualViewBreathingSession';
+import { UnifiedBreathingSession } from '../components/session/UnifiedBreathingSession';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Eye, Brain, Share2, Coins } from 'lucide-react';
@@ -130,8 +130,9 @@ export default function EnhancedVisionDemo() {
         </div>
 
         {/* Enhanced Dual View Demo */}
-        <EnhancedDualViewBreathingSession
+        <UnifiedBreathingSession
           pattern={DEMO_PATTERN}
+          mode="enhanced"
           onSessionComplete={handleSessionComplete}
         />
 

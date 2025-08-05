@@ -27,10 +27,6 @@ export interface VisionMetrics {
    */
   lastUpdateTime: number;
   
-  /**
-   * Estimated breathing rate in breaths per minute (standard+ tiers)
-   */
-  estimatedBreathingRate?: number;
   
   /**
    * Quality of user's posture (0-1, higher is better) (standard+ tiers)
@@ -56,6 +52,46 @@ export interface VisionMetrics {
    * Raw pose detection data for enhanced analysis
    */
   poses?: any[];
+  
+  /**
+   * Face landmarks for mesh visualization
+   */
+  faceLandmarks?: any[];
+  
+  /**
+   * Pose landmarks for skeleton visualization
+   */
+  poseLandmarks?: any[];
+  
+  /**
+   * Detailed facial analysis (premium tier)
+   */
+  detailedFacialAnalysis?: {
+    nostrilMovement: number;
+    jawTension: number;
+    eyeMovement: number;
+    microExpressions: number;
+  };
+  
+  /**
+   * Full body posture analysis (premium tier)
+   */
+  fullBodyPosture?: {
+    spinalAlignment: number;
+    shoulderTension: number;
+    chestExpansion: number;
+    overallPosture: number;
+  };
+  
+  /**
+   * Precise breathing metrics (premium tier)
+   */
+  preciseBreathingMetrics?: {
+    actualRate: number;
+    targetRate: number;
+    rhythmAccuracy: number;
+    depthConsistency: number;
+  };
 }
 
 /**

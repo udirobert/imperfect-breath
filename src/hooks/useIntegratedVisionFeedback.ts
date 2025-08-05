@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useVision } from './useVision';
+import { useUnifiedVision } from './useUnifiedVision';
 import { useAIFeedback } from './useAIFeedback';
 import { useAIAnalysis } from './useAIAnalysis';
 import { useLens } from './useLens';
@@ -74,10 +74,19 @@ const DEFAULT_CONFIG: VisionFeedbackConfig = {
 export const useIntegratedVisionFeedback = (
   initialConfig: Partial<VisionFeedbackConfig> = {}
 ): VisionFeedbackReturn => {
-  // Combine existing hooks
-  const vision = useVision({ tier: 'premium', autoStart: false });
+  // Use unified vision system for better performance
+  const vision = useUnifiedVision({ 
+    tier: 'standard',
+    targetFPS: 15,
+    mobileOptimized: false,
+    features: {
+      breathPattern: { enabled: false },
+      postureAnalysis: { enabled: false },
+      performance: { enabled: false }
+    }
+  });
   const { generateFeedback } = useAIFeedback({
-    isRunning: vision.isProcessing,
+    isRunning: vision.state.isActive,
     isFinished: false,
     speak: (text: string) => {
       if ('speechSynthesis' in window) {
@@ -340,8 +349,7 @@ export const useIntegratedVisionFeedback = (
     displayMode: 'focus' | 'awareness' | 'analysis' = 'focus'
   ) => {
     try {
-      // Initialize vision system first
-      await vision.initialize({ tier: 'premium' });
+      // Vision system is already initialized in useUnifiedVision
       
       // Only request camera stream if display mode requires it
       let stream: MediaStream | null = null;
@@ -375,13 +383,11 @@ export const useIntegratedVisionFeedback = (
           setTimeout(reject, 5000); // 5 second timeout
         });
         
-        // Attach to vision system
-        vision.attachToVideo(videoElement);
+        // Vision system handles video attachment internally
       }
       
-      // Start camera and processing
-      await vision.startCamera();
-      await vision.startProcessing();
+      // Start unified vision processing
+      await vision.start(videoElement);
       sessionStartTime.current = Date.now();
       console.log(`Vision feedback system started in ${displayMode} mode`);
     } catch (error) {
@@ -395,8 +401,7 @@ export const useIntegratedVisionFeedback = (
    * Stop vision feedback system
    */
   const stopVisionFeedback = useCallback(() => {
-    vision.stopProcessing();
-    vision.stopCamera();
+    vision.stop();
     
     // Stop camera stream
     if (cameraStream) {
@@ -472,14 +477,14 @@ export const useIntegratedVisionFeedback = (
 
   // Set up vision metrics listener
   useEffect(() => {
-    if (vision.metrics) {
-      processVisionMetrics(vision.metrics);
+    if (vision.state.metrics) {
+      processVisionMetrics(vision.state.metrics);
     }
-  }, [vision.metrics, processVisionMetrics]);
+  }, [vision.state.metrics, processVisionMetrics]);
 
   return {
     // State
-    isVisionActive: vision.isProcessing,
+    isVisionActive: vision.state.isActive,
     sessionMetrics,
     lastFeedbackTime,
     

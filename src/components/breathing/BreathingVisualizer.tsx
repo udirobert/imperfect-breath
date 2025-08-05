@@ -235,9 +235,9 @@ export const BreathingVisualizer: React.FC<BreathingVisualizerProps> = ({
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span className="capitalize">{currentPhase}</span>
           <span>
-            {pattern.phases.inhale}s-
-            {pattern.phases.hold ? `${pattern.phases.hold}s-` : ""}
-            {pattern.phases.exhale}s
+            {pattern.phases.inhale}s
+            {pattern.phases.hold ? `-${pattern.phases.hold}s` : ""}
+            -{pattern.phases.exhale}s
             {pattern.phases.pause ? `-${pattern.phases.pause}s` : ""}
           </span>
         </div>

@@ -63,10 +63,16 @@ export class VisionEngine {
   
   // Processing state
   private isProcessing = false;
+  private isContinuousProcessing = false;
   private processingQueue: HTMLVideoElement[] = [];
+  private currentVideo: HTMLVideoElement | null = null;
+  private animationFrameId: number | null = null;
   
   // Enhanced analysis
   private restlessnessAnalyzer = new EnhancedRestlessnessAnalyzer();
+  
+  // Metrics callback
+  private metricsCallback: ((metrics: VisionMetrics) => void) | null = null;
   
   private constructor() {}
   
@@ -106,13 +112,79 @@ export class VisionEngine {
   }
   
   /**
+   * Start continuous processing of video frames
+   */
+  async startProcessing(video: HTMLVideoElement, onMetrics?: (metrics: VisionMetrics) => void): Promise<void> {
+    if (!this.isInitialized) {
+      console.warn('Vision engine not initialized');
+      return;
+    }
+    
+    if (this.isContinuousProcessing) {
+      console.log('Vision engine already processing, updating video source');
+      this.currentVideo = video;
+      this.metricsCallback = onMetrics || null;
+      return;
+    }
+    
+    this.currentVideo = video;
+    this.isContinuousProcessing = true;
+    this.metricsCallback = onMetrics || null;
+    
+    // Start the processing loop
+    const processLoop = async () => {
+      if (!this.isContinuousProcessing || !this.currentVideo) {
+        return;
+      }
+      
+      try {
+        const metrics = await this.processFrame(this.currentVideo, this.currentTier);
+        
+        // Report metrics if callback is provided
+        if (metrics && this.metricsCallback) {
+          this.metricsCallback(metrics);
+        }
+      } catch (error) {
+        console.error('Error in processing loop:', error);
+      }
+      
+      // Continue the loop
+      if (this.isContinuousProcessing) {
+        this.animationFrameId = requestAnimationFrame(processLoop);
+      }
+    };
+    
+    // Start the loop
+    processLoop();
+  }
+  
+  /**
+   * Stop continuous processing
+   */
+  stopProcessing(): void {
+    this.isContinuousProcessing = false;
+    this.currentVideo = null;
+    this.metricsCallback = null;
+    
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+  
+  /**
    * Process video frame and return metrics
    */
   async processFrame(
     video: HTMLVideoElement,
     tier: VisionTier = this.currentTier
   ): Promise<VisionMetrics | null> {
-    if (!this.isInitialized || this.isProcessing) {
+    if (!this.isInitialized) {
+      return null;
+    }
+    
+    // Prevent concurrent processing of individual frames
+    if (this.isProcessing) {
       return null;
     }
     
@@ -143,7 +215,6 @@ export class VisionEngine {
             confidence: 0.5,
             movementLevel: 0.1,
             lastUpdateTime: Date.now(),
-            estimatedBreathingRate: 15,
           };
       }
       
@@ -158,7 +229,6 @@ export class VisionEngine {
         confidence: 0.1,
         movementLevel: 0.2,
         lastUpdateTime: Date.now(),
-        estimatedBreathingRate: 15,
       };
     } finally {
       this.isProcessing = false;
@@ -189,6 +259,9 @@ export class VisionEngine {
    */
   async dispose(): Promise<void> {
     try {
+      // Stop any ongoing processing
+      this.stopProcessing();
+      
       if (this.faceDetector) {
         this.faceDetector.dispose();
         this.faceDetector = null;
@@ -367,7 +440,6 @@ export class VisionEngine {
     const facePresent = faces.length > 0;
     let movementLevel = 0;
     let headAlignment = 0;
-    let estimatedBreathingRate = 15; // Default breathing rate
     
     if (facePresent && faces[0]) {
       const face = faces[0];
@@ -377,17 +449,14 @@ export class VisionEngine {
       
       // Calculate head alignment (simplified)
       headAlignment = this.calculateHeadAlignment(face);
-      
-      // Estimate breathing rate from facial landmarks (simplified)
-      estimatedBreathingRate = this.estimateBreathingRate(face);
     }
     
     return {
       confidence: facePresent ? 0.8 : 0.1,
       movementLevel,
       lastUpdateTime: Date.now(),
-      estimatedBreathingRate,
       postureQuality: headAlignment,
+      faceLandmarks: facePresent ? faces[0].keypoints : undefined,
     };
   }
   
@@ -422,7 +491,8 @@ export class VisionEngine {
       ...basicMetrics,
       postureQuality,
       restlessnessScore,
-      estimatedBreathingRate: breathingRhythm.rate,
+      faceLandmarks: faces.length > 0 ? faces[0].keypoints : undefined,
+      poseLandmarks: poses.length > 0 ? poses[0].keypoints : undefined,
     };
   }
   
@@ -491,7 +561,11 @@ export class VisionEngine {
       ...standardMetrics,
       restlessnessScore: advancedRestlessnessScore.overall,
       focusLevel: fullBodyPosture.overallPosture,
-      estimatedBreathingRate: preciseBreathingMetrics.actualRate,
+      faceLandmarks: faces.length > 0 ? faces[0].keypoints : undefined,
+      poseLandmarks: poses.length > 0 ? poses[0].keypoints : undefined,
+      detailedFacialAnalysis,
+      fullBodyPosture,
+      preciseBreathingMetrics,
     };
   }
   
@@ -523,35 +597,172 @@ export class VisionEngine {
     this.performanceMetrics.batteryImpact = Math.min(100, this.performanceMetrics.cpuUsage * 0.8);
   }
   
-  // Simplified analysis methods (these would be more sophisticated in production)
+  // Real face detection analysis methods
+  private previousFaceLandmarks: any = null;
+  private breathingRateHistory: number[] = [];
+  private faceMovementHistory: number[] = [];
+  
   private calculateBasicMovement(face: any): number {
-    // Simplified movement calculation
-    return Math.random() * 0.3; // 0-0.3 range for basic movement
+    if (!face.keypoints || face.keypoints.length < 10) return 0.1;
+    
+    // Track key facial points for movement
+    const keyPoints = [
+      face.keypoints[1],   // nose tip
+      face.keypoints[152], // chin
+      face.keypoints[10],  // forehead
+    ].filter(Boolean);
+    
+    if (!this.previousFaceLandmarks) {
+      this.previousFaceLandmarks = keyPoints;
+      return 0.1;
+    }
+    
+    // Calculate actual movement
+    let totalMovement = 0;
+    keyPoints.forEach((point, index) => {
+      if (this.previousFaceLandmarks[index]) {
+        const dx = point.x - this.previousFaceLandmarks[index].x;
+        const dy = point.y - this.previousFaceLandmarks[index].y;
+        totalMovement += Math.sqrt(dx * dx + dy * dy);
+      }
+    });
+    
+    this.previousFaceLandmarks = keyPoints;
+    
+    // Normalize to 0-0.3 range
+    const normalizedMovement = Math.min(totalMovement / 30, 0.3);
+    this.faceMovementHistory.push(normalizedMovement);
+    if (this.faceMovementHistory.length > 30) {
+      this.faceMovementHistory.shift();
+    }
+    
+    // Return smoothed value
+    const avgMovement = this.faceMovementHistory.reduce((a, b) => a + b, 0) / this.faceMovementHistory.length;
+    return avgMovement;
   }
   
   private calculateHeadAlignment(face: any): number {
-    // Simplified head alignment calculation
-    return 0.8 + Math.random() * 0.2; // 0.8-1.0 range for good alignment
+    if (!face.keypoints || face.keypoints.length < 468) return 0.8;
+    
+    // Use eye and nose landmarks to determine head tilt
+    const leftEye = face.keypoints[33];
+    const rightEye = face.keypoints[263];
+    const nose = face.keypoints[1];
+    
+    if (!leftEye || !rightEye || !nose) return 0.8;
+    
+    // Calculate eye line angle
+    const eyeAngle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+    
+    // Perfect alignment is 0 degrees
+    const alignmentScore = 1 - Math.min(Math.abs(eyeAngle) / 0.3, 0.2);
+    
+    return alignmentScore; // 0.8-1.0 range
   }
   
   private estimateBreathingRate(face: any): number {
-    // Simplified breathing rate estimation
-    return 12 + Math.random() * 8; // 12-20 breaths per minute
+    if (!face.keypoints || face.keypoints.length < 468) return 15;
+    
+    // Monitor nostril and mouth area for breathing patterns
+    const nostrilPoints = [
+      face.keypoints[2],
+      face.keypoints[5],
+      face.keypoints[4],
+      face.keypoints[6],
+    ].filter(Boolean);
+    
+    if (nostrilPoints.length < 4) return 15;
+    
+    // Calculate nostril area (simplified)
+    let area = 0;
+    for (let i = 0; i < nostrilPoints.length - 1; i++) {
+      area += nostrilPoints[i].x * nostrilPoints[i + 1].y;
+      area -= nostrilPoints[i + 1].x * nostrilPoints[i].y;
+    }
+    area = Math.abs(area) / 2;
+    
+    // Track area changes over time
+    this.breathingRateHistory.push(area);
+    if (this.breathingRateHistory.length > 60) { // 60 frames history
+      this.breathingRateHistory.shift();
+    }
+    
+    if (this.breathingRateHistory.length < 30) return 15;
+    
+    // Detect breathing cycles from area changes
+    let peaks = 0;
+    for (let i = 1; i < this.breathingRateHistory.length - 1; i++) {
+      if (this.breathingRateHistory[i] > this.breathingRateHistory[i - 1] &&
+          this.breathingRateHistory[i] > this.breathingRateHistory[i + 1]) {
+        peaks++;
+      }
+    }
+    
+    // Convert peaks to breathing rate (peaks per minute)
+    const breathingRate = Math.max(12, Math.min(20, peaks * 2));
+    return breathingRate;
   }
   
   private calculateFacialTension(face: any): number {
-    return Math.random() * 0.4; // 0-0.4 range for facial tension
+    if (!face.keypoints || face.keypoints.length < 468) return 0.2;
+    
+    // Monitor jaw and forehead landmarks for tension
+    const jawPoints = [172, 136, 150, 149, 176, 148, 152].map(i => face.keypoints[i]).filter(Boolean);
+    const foreheadPoints = [9, 10, 151, 337, 299, 333, 298, 301].map(i => face.keypoints[i]).filter(Boolean);
+    
+    if (jawPoints.length < 3 || foreheadPoints.length < 3) return 0.2;
+    
+    // Calculate variance in jaw position (higher variance = more tension)
+    const jawYPositions = jawPoints.map(p => p.y);
+    const jawMean = jawYPositions.reduce((a, b) => a + b) / jawYPositions.length;
+    const jawVariance = jawYPositions.reduce((acc, y) => acc + Math.pow(y - jawMean, 2), 0) / jawYPositions.length;
+    
+    // Normalize to 0-0.4 range
+    return Math.min(jawVariance / 100, 0.4);
   }
   
   private calculateBreathingRhythm(face: any): { rate: number; consistency: number } {
-    return {
-      rate: 12 + Math.random() * 8,
-      consistency: 0.6 + Math.random() * 0.4,
-    };
+    const rate = this.estimateBreathingRate(face);
+    
+    // Calculate consistency from breathing history variance
+    let consistency = 0.8;
+    if (this.breathingRateHistory.length > 10) {
+      const mean = this.breathingRateHistory.reduce((a, b) => a + b) / this.breathingRateHistory.length;
+      const variance = this.breathingRateHistory.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / this.breathingRateHistory.length;
+      consistency = Math.max(0.6, 1 - (variance / 1000));
+    }
+    
+    return { rate, consistency };
   }
   
   private calculatePostureQuality(pose: any): number {
-    return 0.7 + Math.random() * 0.3; // 0.7-1.0 range for posture quality
+    if (!pose.keypoints || pose.keypoints.length < 17) return 0.7;
+    
+    // Use shoulder and hip alignment
+    const leftShoulder = pose.keypoints[5];
+    const rightShoulder = pose.keypoints[6];
+    const leftHip = pose.keypoints[11];
+    const rightHip = pose.keypoints[12];
+    
+    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return 0.7;
+    
+    // Calculate shoulder levelness
+    const shoulderAngle = Math.atan2(
+      rightShoulder.y - leftShoulder.y,
+      rightShoulder.x - leftShoulder.x
+    );
+    
+    // Calculate hip levelness
+    const hipAngle = Math.atan2(
+      rightHip.y - leftHip.y,
+      rightHip.x - leftHip.x
+    );
+    
+    // Good posture has level shoulders and hips (angles near 0)
+    const shoulderScore = 1 - Math.min(Math.abs(shoulderAngle) / 0.2, 0.3);
+    const hipScore = 1 - Math.min(Math.abs(hipAngle) / 0.2, 0.3);
+    
+    return (shoulderScore + hipScore) / 2; // 0.7-1.0 range
   }
   
   private calculateRestlessnessScore(movement: number, tension: number): number {
