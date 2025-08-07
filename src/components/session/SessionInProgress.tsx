@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import BreathingAnimation from "../../components/BreathingAnimation";
 import {
   BreathingPhaseName,
@@ -7,14 +7,10 @@ import {
 import { useEnhancedSession } from "../../hooks/useEnhancedSession";
 import { useDesktopSessionInitialization } from "../../hooks/useSessionInitialization";
 import { mapPatternForAnimation } from "../../lib/session/pattern-mapper";
-import { SessionHeader } from "./SessionHeader";
-import { SessionControls } from "./SessionControls";
-import { SessionControlsBar } from "./SessionControlsBar";
-import { SessionProgressDisplay } from "./SessionProgressDisplay";
 import { PreparationPhase } from "./PreparationPhase";
 import { Button } from "../../components/ui/button";
 import { Progress } from "../../components/ui/progress";
-import { TrackingStatus, Keypoint } from "../../hooks/visionTypes";
+import { Badge } from "../../components/ui/badge";
 import {
   Loader2,
   Camera,
@@ -25,15 +21,13 @@ import {
   StopCircle,
 } from "lucide-react";
 import VideoFeed from "../../components/VideoFeed";
+import { useUnifiedVision } from "../../hooks/useUnifiedVision";
+import { FaceMeshOverlay } from "../vision/FaceMeshOverlay";
 
 type SessionInProgressProps = {
-  handleEndSession?: () => void;
+  handleEndSession?: (sessionData?: any) => void;
   videoRef: React.RefObject<HTMLVideoElement>;
   showVideoFeed: boolean;
-  isTracking: boolean;
-  restlessnessScore: number;
-  landmarks: Keypoint[];
-  trackingStatus: TrackingStatus;
   cameraInitialized: boolean;
   cameraRequested: boolean;
   onRequestCamera: () => Promise<void>;
@@ -44,18 +38,55 @@ export const SessionInProgress = ({
   handleEndSession,
   videoRef,
   showVideoFeed,
-  isTracking,
-  restlessnessScore,
-  landmarks,
-  trackingStatus,
   cameraInitialized,
   cameraRequested,
   onRequestCamera,
   patternName = "Breathing Session",
 }: SessionInProgressProps) => {
+  // Initialize unified vision system
+  const vision = useUnifiedVision({
+    tier: "standard",
+    targetFPS: 15,
+    adaptiveQuality: true,
+    features: {
+      breathPattern: {
+        enabled: true,
+        detectionInterval: 1000,
+        enableGuidance: true,
+      },
+      postureAnalysis: {
+        enabled: true,
+        analysisInterval: 2000,
+        alertThreshold: 60,
+      },
+      performance: {
+        enabled: false,
+        showMonitor: false,
+      },
+    },
+  });
+
+  // Start vision when camera is ready
+  useEffect(() => {
+    if (
+      cameraInitialized &&
+      showVideoFeed &&
+      videoRef.current &&
+      !vision.state.isActive
+    ) {
+      vision.start(videoRef.current).catch(console.error);
+    }
+
+    return () => {
+      if (vision.state.isActive) {
+        vision.stop();
+      }
+    };
+  }, [cameraInitialized, showVideoFeed, videoRef, vision]);
   // Use shared session initialization hook
-  const { isInitializing, initializationError, isReady } =
-    useDesktopSessionInitialization(BREATHING_PATTERNS.box);
+  const { isInitializing, isReady } = useDesktopSessionInitialization(
+    BREATHING_PATTERNS.box
+  );
 
   const {
     state,
@@ -65,7 +96,6 @@ export const SessionInProgress = ({
     start,
     pause,
     resume,
-    stop,
     complete,
     toggleAudio,
     getSessionDuration,
@@ -73,8 +103,8 @@ export const SessionInProgress = ({
 
   const [showPreparation, setShowPreparation] = useState(true);
 
-  const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
-  const cameraReady = trackingStatus === "TRACKING" || cameraInitialized;
+  const needsCameraSetup = !cameraInitialized && !cameraRequested;
+  const cameraReady = cameraInitialized;
   const showBreathingInterface = isActive || isPaused;
 
   // VideoFeed positioning: setup phase vs breathing phase
@@ -258,17 +288,34 @@ export const SessionInProgress = ({
                 // Get final session data before completing
                 const finalSessionData = {
                   breathHoldTime: 0, // TODO: Get from vision system
-                  restlessnessScore: state.sessionData.currentRestlessness || 0,
+                  restlessnessScore: vision.state.metrics?.restlessnessScore
+                    ? vision.state.metrics.restlessnessScore * 100
+                    : state.sessionData.currentRestlessness || 0,
                   cycleCount: state.sessionData.cycleCount,
                   sessionDuration: state.sessionData.duration,
                   phaseAccuracy: state.sessionData.phaseAccuracy,
                   rhythmConsistency: state.sessionData.rhythmConsistency,
                   patternName: patternName,
                   elapsedTime: state.sessionData.duration * 1000,
+                  // Add vision metrics
+                  visionMetrics: vision.state.metrics
+                    ? {
+                        postureQuality: vision.state.metrics.postureQuality,
+                        confidence: vision.state.metrics.confidence,
+                        movementLevel: vision.state.metrics.movementLevel,
+                        faceLandmarks:
+                          vision.state.metrics.faceLandmarks?.length || 0,
+                      }
+                    : undefined,
                 };
-                
+
                 complete(); // Complete the session
-                
+
+                // Stop vision system
+                if (vision.state.isActive) {
+                  vision.stop();
+                }
+
                 // Pass the data to the completion handler
                 if (handleEndSession) {
                   handleEndSession(finalSessionData);
@@ -289,19 +336,82 @@ export const SessionInProgress = ({
             key="persistent-video-feed"
             videoRef={videoRef}
             isActive={showVideoFeed}
-            landmarks={landmarks}
-            trackingStatus={trackingStatus}
+            landmarks={vision.state.metrics?.faceLandmarks || []}
+            trackingStatus={
+              vision.state.isActive
+                ? "TRACKING"
+                : cameraInitialized
+                ? "IDLE"
+                : "ERROR"
+            }
             className={videoFeedClassName}
           />
+
+          {/* Vision metrics overlay */}
+          {vision.state.isActive && vision.state.metrics && (
+            <>
+              {/* Face mesh overlay */}
+              {vision.state.metrics.faceLandmarks && (
+                <FaceMeshOverlay
+                  videoElement={videoRef.current}
+                  landmarks={vision.state.metrics.faceLandmarks}
+                  isActive={true}
+                />
+              )}
+
+              {/* Metrics badges */}
+              <div className="absolute top-4 left-4 space-y-2">
+                {vision.state.metrics.postureQuality !== undefined && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-500/80 text-white"
+                  >
+                    Head Align:{" "}
+                    {Math.round(vision.state.metrics.postureQuality * 100)}%
+                  </Badge>
+                )}
+                {vision.state.metrics.confidence !== undefined && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-500/80 text-white"
+                  >
+                    Face Detect:{" "}
+                    {Math.round(vision.state.metrics.confidence * 100)}%
+                  </Badge>
+                )}
+              </div>
+
+              {/* Movement indicator */}
+              <div className="absolute bottom-4 right-4">
+                {vision.state.metrics.movementLevel !== undefined && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-purple-500/80 text-white"
+                  >
+                    {vision.state.metrics.movementLevel < 0.1
+                      ? "Very Still"
+                      : vision.state.metrics.movementLevel < 0.3
+                      ? "Slight Movement"
+                      : "Active Movement"}
+                  </Badge>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {/* Restlessness Score - only show when tracking during breathing */}
-      {showBreathingInterface && isTracking && (
-        <div className="absolute bottom-4 left-4 bg-gray-900/80 text-white p-2 rounded-lg text-xs z-30 font-mono animate-fade-in">
-          <p>RESTLESSNESS: {Math.round(restlessnessScore)}</p>
-        </div>
-      )}
+      {showBreathingInterface &&
+        vision.state.isActive &&
+        vision.state.metrics?.restlessnessScore !== undefined && (
+          <div className="absolute bottom-4 left-4 bg-gray-900/80 text-white p-2 rounded-lg text-xs z-30 font-mono animate-fade-in">
+            <p>
+              RESTLESSNESS:{" "}
+              {Math.round(vision.state.metrics.restlessnessScore * 100)}
+            </p>
+          </div>
+        )}
     </div>
   );
 };
