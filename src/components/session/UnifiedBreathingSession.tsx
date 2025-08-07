@@ -160,6 +160,8 @@ export const UnifiedBreathingSession: React.FC<
   const [showAdvancedMetrics, setShowAdvancedMetrics] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [completionData, setCompletionData] = useState<any>(null);
+  const [visionInitialized, setVisionInitialized] = useState(false);
+  const [visionInitPeriod, setVisionInitPeriod] = useState(true);
   const [loadingState, setLoadingState] = useState<{
     camera: boolean;
     models: boolean;
@@ -174,6 +176,17 @@ export const UnifiedBreathingSession: React.FC<
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Vision initialization period (3 seconds after vision starts)
+  useEffect(() => {
+    if (vision.state.isActive && !visionInitialized) {
+      setVisionInitialized(true);
+      const timer = setTimeout(() => {
+        setVisionInitPeriod(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [vision.state.isActive, visionInitialized]);
 
   /**
    * Request camera permission
@@ -457,32 +470,39 @@ export const UnifiedBreathingSession: React.FC<
         {/* Vision metrics overlay */}
         {cameraEnabled && vision.state.isActive && (
           <>
-            {/* Face mesh visualization */}
-            <canvas
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ mixBlendMode: "screen" }}
-              ref={(canvas) => {
-                if (canvas && vision.state.metrics) {
-                  // Draw face mesh landmarks
-                  const ctx = canvas.getContext("2d");
-                  if (ctx && videoRef.current) {
-                    canvas.width = videoRef.current.videoWidth || 640;
-                    canvas.height = videoRef.current.videoHeight || 480;
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+            {/* Loading overlay during initialization */}
+            {visionInitPeriod && !vision.state.metrics?.faceLandmarks && (
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                <div className="bg-white/90 rounded-lg p-4 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Initializing AI Vision</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Detecting facial landmarks...
+                  </p>
+                </div>
+              </div>
+            )}
 
-                    // Draw face mesh dots (simplified visualization)
-                    ctx.fillStyle = "rgba(0, 255, 0, 0.6)";
-                    for (let i = 0; i < 20; i++) {
-                      const x = Math.random() * canvas.width;
-                      const y = Math.random() * canvas.height;
-                      ctx.beginPath();
-                      ctx.arc(x, y, 1, 0, 2 * Math.PI);
-                      ctx.fill();
-                    }
-                  }
-                }
-              }}
-            />
+            {/* Face mesh visualization using proper component */}
+            {vision.state.metrics?.faceLandmarks && (
+              <FaceMeshOverlay
+                videoElement={videoRef.current}
+                landmarks={[{ keypoints: vision.state.metrics.faceLandmarks }]}
+                isActive={true}
+              />
+            )}
+
+            {/* No face detected message (after init period) */}
+            {!visionInitPeriod && !vision.state.metrics?.faceLandmarks && (
+              <div className="absolute top-4 left-4">
+                <Badge
+                  variant="secondary"
+                  className="bg-amber-500/80 text-white"
+                >
+                  No face detected - Position yourself in view
+                </Badge>
+              </div>
+            )}
 
             {/* Head alignment instead of full posture */}
             {vision.state.metrics?.postureQuality !== undefined && (

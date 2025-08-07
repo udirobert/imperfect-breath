@@ -3,33 +3,37 @@
  * Showcases the integrated vision feedback system
  */
 
-import React from 'react';
-import { IntegratedVisionBreathingSession } from '../components/vision/IntegratedVisionBreathingSession';
-import { UnifiedBreathingSession } from '../components/session/UnifiedBreathingSession';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Eye, Brain, Share2, Coins } from 'lucide-react';
+import React from "react";
+import { UnifiedBreathingSession } from "../components/session/UnifiedBreathingSession";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Eye, Brain, Share2, Coins } from "lucide-react";
 
 const DEMO_PATTERN = {
-  name: '4-7-8 Relaxation',
+  name: "4-7-8 Relaxation",
   phases: {
     inhale: 4,
     hold: 7,
     exhale: 8,
     pause: 2,
   },
-  difficulty: 'intermediate',
+  difficulty: "intermediate",
   benefits: [
-    'Reduces anxiety',
-    'Improves sleep quality',
-    'Enhances focus',
-    'Promotes relaxation',
+    "Reduces anxiety",
+    "Improves sleep quality",
+    "Enhances focus",
+    "Promotes relaxation",
   ],
 };
 
 export default function EnhancedVisionDemo() {
   const handleSessionComplete = (metrics: any) => {
-    console.log('Session completed with metrics:', metrics);
+    console.log("Session completed with metrics:", metrics);
   };
 
   return (
@@ -43,8 +47,8 @@ export default function EnhancedVisionDemo() {
               Enhanced Vision Breathing Demo
             </CardTitle>
             <p className="text-muted-foreground">
-              Experience AI-powered breathing sessions with real-time vision analysis, 
-              intelligent feedback, and seamless social sharing.
+              Experience AI-powered breathing sessions with real-time vision
+              analysis, intelligent feedback, and seamless social sharing.
             </p>
           </CardHeader>
           <CardContent>
@@ -84,8 +88,8 @@ export default function EnhancedVisionDemo() {
               <Badge variant="outline">Posture Assessment</Badge>
               <Badge variant="outline">Breathing Pattern Detection</Badge>
               <p className="text-sm text-muted-foreground mt-2">
-                Real facial landmark analysis provides accurate restlessness scoring 
-                and personalized feedback.
+                Real facial landmark analysis provides accurate restlessness
+                scoring and personalized feedback.
               </p>
             </CardContent>
           </Card>
@@ -103,7 +107,7 @@ export default function EnhancedVisionDemo() {
               <Badge variant="outline">Trend Analysis</Badge>
               <Badge variant="outline">Personalized Tips</Badge>
               <p className="text-sm text-muted-foreground mt-2">
-                Intelligent coaching adapts to your current state and provides 
+                Intelligent coaching adapts to your current state and provides
                 specific recommendations for improvement.
               </p>
             </CardContent>
@@ -122,8 +126,8 @@ export default function EnhancedVisionDemo() {
               <Badge variant="outline">Community Insights</Badge>
               <Badge variant="outline">Achievement Tracking</Badge>
               <p className="text-sm text-muted-foreground mt-2">
-                Share your sessions with vision data and mint unique NFTs 
-                with verified quality metrics.
+                Share your sessions with vision data and mint unique NFTs with
+                verified quality metrics.
               </p>
             </CardContent>
           </Card>
@@ -136,17 +140,20 @@ export default function EnhancedVisionDemo() {
           onSessionComplete={handleSessionComplete}
         />
 
-        {/* Alternative: Tabbed View */}
+        {/* Alternative: Advanced Mode */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Alternative: Tabbed Interface</CardTitle>
+            <CardTitle className="text-lg">
+              Alternative: Advanced Mode with Performance Monitor
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
-              For users who prefer separate views for animation and metrics
+              Full vision features with performance monitoring
             </p>
           </CardHeader>
           <CardContent>
-            <IntegratedVisionBreathingSession
+            <UnifiedBreathingSession
               pattern={DEMO_PATTERN}
+              mode="advanced"
               onSessionComplete={handleSessionComplete}
             />
           </CardContent>
