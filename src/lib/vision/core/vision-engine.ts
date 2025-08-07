@@ -456,7 +456,7 @@ export class VisionEngine {
       movementLevel,
       lastUpdateTime: Date.now(),
       postureQuality: headAlignment,
-      faceLandmarks: facePresent ? faces[0].keypoints : undefined,
+      faceLandmarks: facePresent && faces[0].keypoints ? faces[0].keypoints : undefined,
     };
   }
   
@@ -491,8 +491,8 @@ export class VisionEngine {
       ...basicMetrics,
       postureQuality,
       restlessnessScore,
-      faceLandmarks: faces.length > 0 ? faces[0].keypoints : undefined,
-      poseLandmarks: poses.length > 0 ? poses[0].keypoints : undefined,
+      faceLandmarks: faces.length > 0 && faces[0].keypoints ? faces[0].keypoints : undefined,
+      poseLandmarks: poses.length > 0 && poses[0].keypoints ? poses[0].keypoints : undefined,
     };
   }
   
@@ -561,8 +561,8 @@ export class VisionEngine {
       ...standardMetrics,
       restlessnessScore: advancedRestlessnessScore.overall,
       focusLevel: fullBodyPosture.overallPosture,
-      faceLandmarks: faces.length > 0 ? faces[0].keypoints : undefined,
-      poseLandmarks: poses.length > 0 ? poses[0].keypoints : undefined,
+      faceLandmarks: faces.length > 0 && faces[0].keypoints ? faces[0].keypoints : undefined,
+      poseLandmarks: poses.length > 0 && poses[0].keypoints ? poses[0].keypoints : undefined,
       detailedFacialAnalysis,
       fullBodyPosture,
       preciseBreathingMetrics,
@@ -771,32 +771,157 @@ export class VisionEngine {
   }
   
   private calculateDetailedFacialAnalysis(face: any): any {
+    if (!face.keypoints || face.keypoints.length < 468) {
+      return {
+        nostrilMovement: 0.1,
+        jawTension: 0.1,
+        eyeMovement: 0.1,
+        microExpressions: 0.05,
+      };
+    }
+    
+    // Calculate actual nostril movement
+    const nostrilPoints = [2, 5, 4, 6].map(i => face.keypoints[i]).filter(Boolean);
+    let nostrilMovement = 0.1;
+    if (nostrilPoints.length >= 4 && this.previousFaceLandmarks) {
+      const prevNostrils = [2, 5, 4, 6].map(i => this.previousFaceLandmarks[i]).filter(Boolean);
+      if (prevNostrils.length >= 4) {
+        nostrilMovement = nostrilPoints.reduce((acc, point, idx) => {
+          if (prevNostrils[idx]) {
+            const dist = Math.sqrt(
+              Math.pow(point.x - prevNostrils[idx].x, 2) +
+              Math.pow(point.y - prevNostrils[idx].y, 2)
+            );
+            return acc + dist;
+          }
+          return acc;
+        }, 0) / nostrilPoints.length;
+        nostrilMovement = Math.min(nostrilMovement * 100, 0.3);
+      }
+    }
+    
+    // Calculate jaw tension from jaw landmarks
+    const jawTension = this.calculateFacialTension(face);
+    
+    // Calculate eye movement
+    const eyePoints = [33, 133, 157, 158, 159, 160, 161, 246].map(i => face.keypoints[i]).filter(Boolean);
+    let eyeMovement = 0.1;
+    if (eyePoints.length > 4) {
+      // Track blink rate and eye movement
+      const leftEyeCenter = face.keypoints[159];
+      const rightEyeCenter = face.keypoints[386];
+      if (leftEyeCenter && rightEyeCenter && this.previousFaceLandmarks) {
+        const prevLeft = this.previousFaceLandmarks[159];
+        const prevRight = this.previousFaceLandmarks[386];
+        if (prevLeft && prevRight) {
+          const leftMove = Math.sqrt(
+            Math.pow(leftEyeCenter.x - prevLeft.x, 2) +
+            Math.pow(leftEyeCenter.y - prevLeft.y, 2)
+          );
+          const rightMove = Math.sqrt(
+            Math.pow(rightEyeCenter.x - prevRight.x, 2) +
+            Math.pow(rightEyeCenter.y - prevRight.y, 2)
+          );
+          eyeMovement = Math.min((leftMove + rightMove) * 50, 0.2);
+        }
+      }
+    }
+    
     return {
-      nostrilMovement: Math.random() * 0.3,
-      jawTension: Math.random() * 0.4,
-      eyeMovement: Math.random() * 0.2,
-      microExpressions: Math.random() * 0.1,
+      nostrilMovement,
+      jawTension,
+      eyeMovement,
+      microExpressions: Math.min(nostrilMovement + eyeMovement, 0.1),
     };
   }
   
   private calculateFullBodyPosture(pose: any): any {
+    if (!pose.keypoints || pose.keypoints.length < 17) {
+      return {
+        spinalAlignment: 0.8,
+        shoulderTension: 0.1,
+        chestExpansion: 0.7,
+        overallPosture: 0.75,
+      };
+    }
+    
+    // Calculate spinal alignment from shoulder and hip positions
+    const leftShoulder = pose.keypoints[5];
+    const rightShoulder = pose.keypoints[6];
+    const leftHip = pose.keypoints[11];
+    const rightHip = pose.keypoints[12];
+    const nose = pose.keypoints[0];
+    
+    let spinalAlignment = 0.8;
+    let shoulderTension = 0.1;
+    let chestExpansion = 0.7;
+    
+    if (leftShoulder && rightShoulder && leftHip && rightHip) {
+      // Check if shoulders are level
+      const shoulderAngle = Math.atan2(
+        rightShoulder.y - leftShoulder.y,
+        rightShoulder.x - leftShoulder.x
+      );
+      spinalAlignment = 1 - Math.min(Math.abs(shoulderAngle) / 0.3, 0.2);
+      
+      // Calculate shoulder width for tension
+      const shoulderWidth = Math.sqrt(
+        Math.pow(rightShoulder.x - leftShoulder.x, 2) +
+        Math.pow(rightShoulder.y - leftShoulder.y, 2)
+      );
+      
+      // Narrower shoulders indicate tension
+      shoulderTension = Math.max(0, 0.3 - shoulderWidth);
+      
+      // Chest expansion from shoulder-hip alignment
+      const torsoHeight = Math.abs(
+        ((leftShoulder.y + rightShoulder.y) / 2) -
+        ((leftHip.y + rightHip.y) / 2)
+      );
+      chestExpansion = Math.min(0.6 + torsoHeight, 1.0);
+    }
+    
+    const overallPosture = (spinalAlignment + (1 - shoulderTension) + chestExpansion) / 3;
+    
     return {
-      spinalAlignment: 0.8 + Math.random() * 0.2,
-      shoulderTension: Math.random() * 0.3,
-      chestExpansion: 0.6 + Math.random() * 0.4,
-      overallPosture: 0.7 + Math.random() * 0.3,
+      spinalAlignment,
+      shoulderTension,
+      chestExpansion,
+      overallPosture,
     };
   }
   
   private calculatePreciseBreathingMetrics(face: any): any {
-    const actualRate = 12 + Math.random() * 8;
+    const actualRate = this.estimateBreathingRate(face);
     const targetRate = 15;
+    
+    // Calculate rhythm accuracy based on breathing rate consistency
+    let rhythmAccuracy = 0.8;
+    if (this.breathingRateHistory.length > 10) {
+      const recentRates = this.breathingRateHistory.slice(-10);
+      const avgRate = recentRates.reduce((a, b) => a + b) / recentRates.length;
+      const variance = recentRates.reduce((acc, rate) =>
+        acc + Math.pow(rate - avgRate, 2), 0
+      ) / recentRates.length;
+      rhythmAccuracy = Math.max(0.5, 1 - (variance / 100));
+    }
+    
+    // Estimate depth consistency from nostril movement amplitude
+    let depthConsistency = 0.7;
+    if (face.keypoints && this.breathingRateHistory.length > 5) {
+      const amplitudes = this.breathingRateHistory.slice(-5);
+      const avgAmplitude = amplitudes.reduce((a, b) => a + b) / amplitudes.length;
+      const ampVariance = amplitudes.reduce((acc, amp) =>
+        acc + Math.pow(amp - avgAmplitude, 2), 0
+      ) / amplitudes.length;
+      depthConsistency = Math.max(0.5, 1 - (ampVariance / 50));
+    }
     
     return {
       actualRate,
       targetRate,
-      rhythmAccuracy: 0.7 + Math.random() * 0.3,
-      depthConsistency: 0.6 + Math.random() * 0.4,
+      rhythmAccuracy,
+      depthConsistency,
     };
   }
   

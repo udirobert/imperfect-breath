@@ -488,7 +488,7 @@ export const UnifiedBreathingSession: React.FC<
             {vision.state.metrics?.faceLandmarks && (
               <FaceMeshOverlay
                 videoElement={videoRef.current}
-                landmarks={[{ keypoints: vision.state.metrics.faceLandmarks }]}
+                landmarks={vision.state.metrics.faceLandmarks}
                 isActive={true}
               />
             )}

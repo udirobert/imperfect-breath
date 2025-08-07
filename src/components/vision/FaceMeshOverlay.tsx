@@ -36,8 +36,10 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
 
     // Draw face mesh landmarks
     if (landmarks && landmarks.length > 0) {
-      const face = landmarks[0];
-      if (face.keypoints) {
+      // Handle both formats: array of keypoints or array of faces with keypoints
+      const keypoints = landmarks[0].keypoints || landmarks;
+
+      if (keypoints && keypoints.length > 0) {
         // Draw key facial landmarks
         ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
 
@@ -53,8 +55,8 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
         ];
 
         keyLandmarks.forEach((index) => {
-          if (face.keypoints[index]) {
-            const point = face.keypoints[index];
+          if (keypoints[index]) {
+            const point = keypoints[index];
             const x = point.x * canvas.width;
             const y = point.y * canvas.height;
 
@@ -75,8 +77,8 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
 
         ctx.beginPath();
         faceOutline.forEach((index, i) => {
-          if (face.keypoints[index]) {
-            const point = face.keypoints[index];
+          if (keypoints[index]) {
+            const point = keypoints[index];
             const x = point.x * canvas.width;
             const y = point.y * canvas.height;
 
@@ -104,8 +106,8 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
           ctx.strokeStyle = "rgba(255, 255, 0, 0.6)";
           ctx.beginPath();
           eyeIndices.forEach((index, i) => {
-            if (face.keypoints[index]) {
-              const point = face.keypoints[index];
+            if (keypoints[index]) {
+              const point = keypoints[index];
               const x = point.x * canvas.width;
               const y = point.y * canvas.height;
 
