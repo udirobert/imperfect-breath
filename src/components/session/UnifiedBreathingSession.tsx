@@ -31,11 +31,12 @@ import { useMobileOptimization } from "../../hooks/useMobileOptimization";
 import { useAuth } from "../../hooks/useAuth";
 
 // Reusable components
-import { BreathingVisualizer } from "../breathing/BreathingVisualizer";
+import BreathingAnimation from "../BreathingAnimation";
 import { MobileBreathingControls } from "../mobile/MobileBreathingControls";
 import { PerformanceMonitor } from "../vision/PerformanceMonitor";
 import { FaceMeshOverlay } from "../vision/FaceMeshOverlay";
 import { EnhancedSessionCompleteModal } from "../unified/EnhancedSessionCompleteModal";
+import { BreathingPhaseName } from "../../lib/breathingPatterns";
 
 // Session mode configuration
 type SessionMode = "basic" | "enhanced" | "advanced" | "mobile";
@@ -609,8 +610,31 @@ export const UnifiedBreathingSession: React.FC<
    * Render breathing animation
    */
   const renderBreathingAnimation = () => (
-    <div className="aspect-video relative">
-      <BreathingVisualizer pattern={pattern} isActive={isSessionActive} />
+    <div className="aspect-video relative flex items-center justify-center">
+      <BreathingAnimation
+        phase={
+          (sessionState.sessionData.currentPhase as BreathingPhaseName) ||
+          "prepare"
+        }
+        pattern={pattern}
+        isActive={isSessionActive}
+        phaseProgress={sessionState.sessionData.phaseProgress}
+        showTimer={config.enableAdvancedFeatures} // Show timer in enhanced/advanced modes
+        compactMode={mobileOpt.state.isMobile} // Compact on mobile
+        cycleCount={sessionState.sessionData.cycleCount}
+        overlayMetrics={
+          config.enableAdvancedFeatures && vision.state.metrics
+            ? {
+                stillness: vision.state.metrics.restlessnessScore
+                  ? (1 - vision.state.metrics.restlessnessScore) * 100
+                  : undefined,
+                confidence: vision.state.metrics.confidence
+                  ? vision.state.metrics.confidence * 100
+                  : undefined,
+              }
+            : undefined
+        }
+      />
     </div>
   );
 

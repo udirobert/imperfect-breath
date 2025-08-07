@@ -231,6 +231,7 @@ export const ClassicBreathingSession: React.FC<
               pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
               isActive={isActive}
               phaseProgress={state.sessionData.phaseProgress}
+              cycleCount={state.sessionData.cycleCount}
             />
 
             {/* Simple cycle counter only */}

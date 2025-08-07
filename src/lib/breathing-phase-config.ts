@@ -111,3 +111,36 @@ export const isExpandedPhase = (phase: string): boolean =>
  */
 export const shouldShowRhythmIndicator = (isActive: boolean, pattern: any, phase: string): boolean =>
   isActive && pattern && phase !== "countdown";
+
+/**
+ * Animation mode configurations
+ */
+export const ANIMATION_MODES = {
+  classic: {
+    showTimer: false,
+    showProgress: true,
+    circleStyle: 'soft',
+    transitionDuration: 1000,
+  },
+  enhanced: {
+    showTimer: true,
+    showProgress: true,
+    circleStyle: 'soft', // Keep same visual style
+    transitionDuration: 1000,
+  }
+} as const;
+
+/**
+ * Get timer display for a phase
+ * @param phase Current breathing phase
+ * @param progress Phase progress (0-100)
+ * @param duration Phase duration in seconds
+ * @returns Formatted timer string or null
+ */
+export const getTimerDisplay = (phase: string, progress: number, duration: number): string | null => {
+  if (phase === "countdown" || phase === "prepare") {
+    return null;
+  }
+  const remaining = Math.ceil(duration * (1 - progress / 100));
+  return remaining > 0 ? remaining.toString() : '0';
+};

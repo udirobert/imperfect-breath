@@ -18,3 +18,24 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+/**
+ * Simple localStorage wrapper for session preferences
+ * Minimal implementation to avoid code bloat
+ */
+export const storage = {
+  set: (key: string, value: any) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`breath_${key}`, JSON.stringify(value));
+    }
+  },
+  get: <T = any>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+      const item = localStorage.getItem(`breath_${key}`);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  }
+};
