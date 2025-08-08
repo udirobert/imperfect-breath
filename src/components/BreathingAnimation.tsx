@@ -199,18 +199,6 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
             {pattern.name}
           </p>
         )}
-
-        {/* Optional metrics overlay */}
-        {overlayMetrics && isActive && (
-          <div className="flex gap-4 justify-center text-xs text-muted-foreground">
-            {overlayMetrics.stillness !== undefined && (
-              <span>Stillness: {Math.round(overlayMetrics.stillness)}%</span>
-            )}
-            {overlayMetrics.confidence !== undefined && (
-              <span>Tracking: {Math.round(overlayMetrics.confidence)}%</span>
-            )}
-          </div>
-        )}
       </div>
     );
 

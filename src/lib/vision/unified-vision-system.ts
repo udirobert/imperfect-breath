@@ -43,6 +43,7 @@ interface VisionState {
     fps: number;
     cpuUsage: number;
     memoryUsage: number;
+    processingTime?: number;
   };
 }
 
@@ -89,6 +90,7 @@ export class UnifiedVisionSystem {
         fps: 0,
         cpuUsage: 0,
         memoryUsage: 0,
+        processingTime: 0,
       },
     };
 
@@ -147,11 +149,12 @@ export class UnifiedVisionSystem {
    */
   public configure(config: Partial<VisionConfig>): void {
     this.config = { ...this.config, ...config };
-    
-    // Apply mobile optimizations
+
+    // Apply mobile optimizations (but preserve tier if explicitly set)
     if (this.config.mobile.optimizeForMobile) {
       this.config.performance.targetFPS = Math.min(this.config.performance.targetFPS, 10);
-      this.config.tier = this.config.tier === 'premium' ? 'standard' : this.config.tier;
+      // Only downgrade tier if it wasn't explicitly set to premium
+      // This allows enhanced/advanced modes to force premium tier
     }
   }
 
@@ -160,6 +163,11 @@ export class UnifiedVisionSystem {
    */
   public async start(videoElement: HTMLVideoElement): Promise<void> {
     try {
+      // Validate video element
+      if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+        throw new Error('Video element has no dimensions - camera may not be ready');
+      }
+
       // Initialize enabled plugins
       for (const featureName of this.config.enabledFeatures) {
         const plugin = this.plugins.get(featureName);
@@ -172,11 +180,12 @@ export class UnifiedVisionSystem {
       await this.engine.initialize({
         tier: this.config.tier,
         modelVariant: this.config.mobile.optimizeForMobile ? 'mobile' : 'desktop',
-        enableGPU: !this.config.mobile.optimizeForMobile,
+        // Always enable GPU for better performance, even on mobile
+        enableGPU: true,
         maxConcurrentProcessing: 1,
         frameSkipRatio: this.config.mobile.optimizeForMobile ? 2 : 1,
       });
-      
+
       // Start processing with metrics callback
       await this.engine.startProcessing(videoElement, async (metrics) => {
         if (!this.state.isActive) return;
@@ -204,6 +213,7 @@ export class UnifiedVisionSystem {
           fps: perfMetrics.frameRate,
           cpuUsage: perfMetrics.cpuUsage,
           memoryUsage: perfMetrics.memoryUsage,
+          processingTime: perfMetrics.processingTime,
         };
         
         this.notifyStateChange();
@@ -272,6 +282,7 @@ export class UnifiedVisionSystem {
         fps: perfMetrics.frameRate,
         cpuUsage: perfMetrics.cpuUsage,
         memoryUsage: perfMetrics.memoryUsage,
+        processingTime: perfMetrics.processingTime,
       };
 
       this.notifyStateChange();

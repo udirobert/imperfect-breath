@@ -350,14 +350,12 @@ export const SessionInProgress = ({
           {/* Vision metrics overlay */}
           {vision.state.isActive && vision.state.metrics && (
             <>
-              {/* Face mesh overlay */}
-              {vision.state.metrics.faceLandmarks && (
-                <FaceMeshOverlay
-                  videoElement={videoRef.current}
-                  landmarks={vision.state.metrics.faceLandmarks}
-                  isActive={true}
-                />
-              )}
+              {/* Face mesh overlay - always render when vision is active */}
+              <FaceMeshOverlay
+                videoElement={videoRef.current}
+                landmarks={vision.state.metrics.faceLandmarks || []}
+                isActive={true}
+              />
 
               {/* Metrics badges */}
               <div className="absolute top-4 left-4 space-y-2">

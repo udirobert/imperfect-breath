@@ -47,6 +47,7 @@ interface VisionState {
     fps: number;
     cpuUsage: number;
     memoryUsage: number;
+    processingTime?: number;
   };
 }
 

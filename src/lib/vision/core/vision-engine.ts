@@ -6,6 +6,8 @@
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import * as faceDetection from '@tensorflow-models/face-landmarks-detection';
+// Import BlazeFace for more reliable face detection
+import * as blazeface from '@tensorflow-models/blazeface';
 
 // Dynamic pose detection import to handle MediaPipe loading issues
 let poseDetection: any = null;
@@ -15,10 +17,15 @@ let poseDetection: any = null;
  */
 async function loadPoseDetection() {
   if (poseDetection) return poseDetection;
-  
+
   try {
-    poseDetection = await import('@tensorflow-models/pose-detection');
-    return poseDetection;
+    // Temporarily disable pose detection to focus on face detection performance
+    console.log('Pose detection temporarily disabled for performance optimization');
+    return null;
+
+    // TODO: Re-enable once MediaPipe compatibility issues are resolved
+    // poseDetection = await import('@tensorflow-models/pose-detection');
+    // return poseDetection;
   } catch (error) {
     console.warn('Pose detection not available, continuing without pose features:', error);
     return null;
@@ -46,19 +53,23 @@ export class VisionEngine {
   private currentTier: VisionTier = 'loading';
   
   // Model instances
-  private faceDetector: faceDetection.FaceLandmarksDetector | null = null;
+  private faceDetector: any | null = null; // Can be either BlazeFace or FaceLandmarks
   private poseDetector: any | null = null;
+  private usingBlazeFace: boolean = false;
   
   // Performance tracking
   private frameCount = 0;
   private lastFrameTime = 0;
+  private totalProcessingTime = 0;
+  private processingTimeSamples = 0;
   private performanceMetrics: PerformanceMetrics = {
     cpuUsage: 0,
     memoryUsage: 0,
     frameRate: 0,
     frameDrops: 0,
     batteryImpact: 0,
-    thermalState: 'normal'
+    thermalState: 'normal',
+    processingTime: 0
   };
   
   // Processing state
@@ -67,6 +78,10 @@ export class VisionEngine {
   private processingQueue: HTMLVideoElement[] = [];
   private currentVideo: HTMLVideoElement | null = null;
   private animationFrameId: number | null = null;
+  private lastProcessTime = 0;
+  private minProcessInterval = 100; // Minimum 100ms between processing (max 10 FPS)
+  private consecutiveErrors = 0;
+  private maxConsecutiveErrors = 10; // Increased to allow for recovery
   
   // Enhanced analysis
   private restlessnessAnalyzer = new EnhancedRestlessnessAnalyzer();
@@ -93,7 +108,11 @@ export class VisionEngine {
     if (this.isInitialized && this.currentTier === config.tier) {
       return;
     }
-    
+
+    // Reset error counter on re-initialization
+    this.consecutiveErrors = 0;
+    console.log('Vision engine error counter reset on initialization');
+
     try {
       // Initialize TensorFlow.js backend
       await this.initializeTensorFlow(config);
@@ -182,7 +201,19 @@ export class VisionEngine {
     if (!this.isInitialized) {
       return null;
     }
-    
+
+    // Circuit breaker: stop processing if too many consecutive errors
+    if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+      console.warn('Vision processing stopped due to too many consecutive errors');
+      return null;
+    }
+
+    // Throttle processing to prevent infinite rerenders
+    const now = Date.now();
+    if (now - this.lastProcessTime < this.minProcessInterval) {
+      return null;
+    }
+
     // Prevent concurrent processing of individual frames
     if (this.isProcessing) {
       return null;
@@ -194,6 +225,7 @@ export class VisionEngine {
     }
     
     this.isProcessing = true;
+    this.lastProcessTime = now;
     const startTime = performance.now();
     
     try {
@@ -220,10 +252,15 @@ export class VisionEngine {
       
       // Update performance metrics
       this.updatePerformanceMetrics(startTime);
-      
+
+      // Reset error counter on successful processing
+      this.consecutiveErrors = 0;
+
       return metrics;
     } catch (error) {
       console.error('Frame processing failed:', error);
+      this.consecutiveErrors++;
+
       // Return fallback metrics instead of null
       return {
         confidence: 0.1,
@@ -288,21 +325,37 @@ export class VisionEngine {
    * Initialize TensorFlow.js backend
    */
   private async initializeTensorFlow(config: VisionEngineConfig): Promise<void> {
-    // Set backend based on device capabilities
-    if (config.enableGPU && await tf.ready()) {
+    // Always try GPU acceleration for better performance, unless explicitly disabled
+    if (config.enableGPU !== false) {
       try {
+        // Try WebGL first (most compatible GPU backend)
         await tf.setBackend('webgl');
-        console.log('Using WebGL backend for TensorFlow.js');
-      } catch (error) {
-        console.warn('WebGL backend failed, falling back to CPU');
-        await tf.setBackend('cpu');
+        await tf.ready();
+        console.log('Using WebGL backend for TensorFlow.js (GPU acceleration enabled)');
+        return;
+      } catch (webglError) {
+        console.warn('WebGL backend failed:', webglError);
+
+        try {
+          // Try to load and use WebGPU as fallback
+          await import('@tensorflow/tfjs-backend-webgpu');
+          await tf.setBackend('webgpu');
+          await tf.ready();
+          console.log('Using WebGPU backend for TensorFlow.js (GPU acceleration enabled)');
+          return;
+        } catch (webgpuError) {
+          console.warn('WebGPU backend also failed:', webgpuError);
+        }
       }
-    } else {
-      await tf.setBackend('cpu');
-      console.log('Using CPU backend for TensorFlow.js');
+
+      // Fall back to CPU if all GPU backends fail
+      console.warn('All GPU backends failed, falling back to CPU (reduced performance)');
     }
-    
+
+    // Use CPU backend
+    await tf.setBackend('cpu');
     await tf.ready();
+    console.log('Using CPU backend for TensorFlow.js' + (config.enableGPU === false ? ' (GPU disabled)' : ' (GPU unavailable)'));
   }
   
   /**
@@ -396,18 +449,37 @@ export class VisionEngine {
    */
   private async loadPremiumModels(variant: 'mobile' | 'desktop'): Promise<void> {
     try {
-      // High-quality face detection
-      const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
-      const faceConfig = {
-        runtime: 'tfjs' as const,
-        refineLandmarks: true,
+      console.log('Loading BlazeFace model for reliable face detection...');
+      // Use BlazeFace with CORRECT input dimensions (128x128 as required by the model)
+      this.faceDetector = await blazeface.load({
         maxFaces: 1,
-      };
-      
-      this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
+        inputWidth: 128,   // FIXED: Model requires 128x128 input
+        inputHeight: 128,  // FIXED: Model requires 128x128 input
+        iouThreshold: 0.5,  // More permissive
+        scoreThreshold: 0.5  // Much lower threshold - most faces score 0.5-0.7
+      });
+      this.usingBlazeFace = true;
+      console.log('BlazeFace detector loaded successfully with CORRECT 128x128 config');
     } catch (error) {
-      console.warn('Premium face detection failed to load, falling back to basic mode:', error);
-      this.faceDetector = null;
+      console.warn('BlazeFace failed to load, trying MediaPipe FaceMesh:', error);
+
+      // Fallback to MediaPipe FaceMesh with more permissive settings
+      try {
+        console.log('Loading MediaPipe FaceMesh as fallback...');
+        const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
+        const faceConfig = {
+          runtime: 'tfjs' as const,
+          refineLandmarks: false,
+          maxFaces: 1,
+        };
+        this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
+        this.usingBlazeFace = false;
+        console.log('MediaPipe FaceMesh loaded as fallback');
+      } catch (fallbackError) {
+        console.error('All face detection models failed:', fallbackError);
+        this.faceDetector = null;
+        this.usingBlazeFace = false;
+      }
     }
     
     // Try to load pose detection dynamically for premium features
@@ -452,10 +524,10 @@ export class VisionEngine {
     }
     
     return {
-      confidence: facePresent ? 0.8 : 0.1,
-      movementLevel,
+      confidence: facePresent ? 0.8 : 0,
+      movementLevel: facePresent ? movementLevel : 0,
       lastUpdateTime: Date.now(),
-      postureQuality: headAlignment,
+      postureQuality: facePresent && headAlignment > 0 ? headAlignment : 0, // Only include if we have a real value
       faceLandmarks: facePresent && faces[0].keypoints ? faces[0].keypoints : undefined,
     };
   }
@@ -466,7 +538,77 @@ export class VisionEngine {
   private async processStandardMetrics(video: HTMLVideoElement): Promise<VisionMetrics> {
     const basicMetrics = await this.processBasicMetrics(video);
     
-    const faces = this.faceDetector ? await this.faceDetector.estimateFaces(video) : [];
+    // Debug: Check if face detector is available
+    if (!this.faceDetector) {
+      console.warn('Face detector not initialized');
+      return {
+        confidence: 0,
+        movementLevel: 0,
+        lastUpdateTime: Date.now(),
+        postureQuality: 0,
+      };
+    }
+
+    // Video validation (minimal logging)
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.warn('Video has no dimensions - camera may not be streaming');
+      return {
+        confidence: 0,
+        movementLevel: 0,
+        lastUpdateTime: Date.now(),
+        postureQuality: 0,
+      };
+    }
+
+    // Check if video is actually playing and has dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.warn('Video has no dimensions - camera may not be streaming');
+      return {
+        confidence: 0,
+        movementLevel: 0,
+        lastUpdateTime: Date.now(),
+        postureQuality: 0,
+      };
+    }
+
+    if (video.readyState < 2) {
+      console.warn('Video not ready for processing, readyState:', video.readyState);
+      return {
+        confidence: 0,
+        movementLevel: 0,
+        lastUpdateTime: Date.now(),
+        postureQuality: 0,
+      };
+    }
+
+    let faces: any[] = [];
+    try {
+      if (this.usingBlazeFace) {
+        // BlazeFace detection
+        const rawFaces = await this.faceDetector.estimateFaces(video, false, true, true);
+        faces = rawFaces || [];
+
+        if (faces.length > 0) {
+          // Convert BlazeFace format to our expected format
+          faces = faces.map(face => ({
+            keypoints: this.convertBlazeFaceToKeypoints(face),
+            box: face
+          }));
+        }
+      } else {
+        // MediaPipe FaceMesh format
+        faces = await this.faceDetector.estimateFaces(video);
+      }
+    } catch (error) {
+      console.error('Face detection error:', error);
+      return {
+        confidence: 0,
+        movementLevel: 0,
+        lastUpdateTime: Date.now(),
+        postureQuality: 0,
+      };
+    }
+
     const poses = this.poseDetector ? await this.poseDetector.estimatePoses(video) : [];
     
     let facialTension = 0;
@@ -485,12 +627,12 @@ export class VisionEngine {
     
     // Use enhanced restlessness analysis
     const restlessnessAnalysis = this.restlessnessAnalyzer.analyzeFromLandmarks(faces, poses);
-    restlessnessScore = restlessnessAnalysis.overall;
+    restlessnessScore = faces.length > 0 ? restlessnessAnalysis.overall : 0;
     
     return {
       ...basicMetrics,
-      postureQuality,
-      restlessnessScore,
+      postureQuality: faces.length > 0 ? postureQuality : 0,
+      restlessnessScore: faces.length > 0 ? restlessnessScore : 0,
       faceLandmarks: faces.length > 0 && faces[0].keypoints ? faces[0].keypoints : undefined,
       poseLandmarks: poses.length > 0 && poses[0].keypoints ? poses[0].keypoints : undefined,
     };
@@ -548,24 +690,39 @@ export class VisionEngine {
     // Use enhanced restlessness analysis for premium tier
     const restlessnessAnalysis = this.restlessnessAnalyzer.analyzeFromLandmarks(faces, poses);
     advancedRestlessnessScore = {
-      overall: restlessnessAnalysis.overall,
+      overall: faces.length > 0 ? restlessnessAnalysis.overall : 0,
       components: {
-        faceMovement: restlessnessAnalysis.components.faceMovement,
-        eyeMovement: restlessnessAnalysis.components.eyeMovement,
-        postureShifts: restlessnessAnalysis.components.postureShifts,
-        breathingIrregularity: restlessnessAnalysis.components.breathingIrregularity,
+        faceMovement: faces.length > 0 ? restlessnessAnalysis.components.faceMovement : 0,
+        eyeMovement: faces.length > 0 ? restlessnessAnalysis.components.eyeMovement : 0,
+        postureShifts: faces.length > 0 ? restlessnessAnalysis.components.postureShifts : 0,
+        breathingIrregularity: faces.length > 0 ? restlessnessAnalysis.components.breathingIrregularity : 0,
       },
     };
     
     return {
       ...standardMetrics,
-      restlessnessScore: advancedRestlessnessScore.overall,
-      focusLevel: fullBodyPosture.overallPosture,
+      restlessnessScore: faces.length > 0 ? advancedRestlessnessScore.overall : 0,
+      focusLevel: faces.length > 0 ? fullBodyPosture.overallPosture : 0,
       faceLandmarks: faces.length > 0 && faces[0].keypoints ? faces[0].keypoints : undefined,
       poseLandmarks: poses.length > 0 && poses[0].keypoints ? poses[0].keypoints : undefined,
-      detailedFacialAnalysis,
-      fullBodyPosture,
-      preciseBreathingMetrics,
+      detailedFacialAnalysis: faces.length > 0 ? detailedFacialAnalysis : {
+        nostrilMovement: 0,
+        jawTension: 0,
+        eyeMovement: 0,
+        microExpressions: 0,
+      },
+      fullBodyPosture: faces.length > 0 ? fullBodyPosture : {
+        spinalAlignment: 0,
+        shoulderTension: 0,
+        chestExpansion: 0,
+        overallPosture: 0,
+      },
+      preciseBreathingMetrics: faces.length > 0 ? preciseBreathingMetrics : {
+        actualRate: 0,
+        targetRate: 0,
+        rhythmAccuracy: 0,
+        depthConsistency: 0,
+      },
     };
   }
   
@@ -575,6 +732,10 @@ export class VisionEngine {
   private updatePerformanceMetrics(startTime: number): void {
     const processingTime = performance.now() - startTime;
     this.frameCount++;
+    
+    // Track processing time for averaging
+    this.totalProcessingTime += processingTime;
+    this.processingTimeSamples++;
     
     // Calculate frame rate
     const now = performance.now();
@@ -586,6 +747,17 @@ export class VisionEngine {
     
     // Estimate CPU usage based on processing time
     this.performanceMetrics.cpuUsage = Math.min(100, (processingTime / 33.33) * 100); // 30fps = 33.33ms per frame
+    
+    // Calculate average processing time (average over last 30 frames)
+    if (this.processingTimeSamples > 0) {
+      this.performanceMetrics.processingTime = this.totalProcessingTime / this.processingTimeSamples;
+    }
+    
+    // Reset averaging periodically to prevent overflow and keep recent data relevant
+    if (this.processingTimeSamples > 30) {
+      this.totalProcessingTime = this.performanceMetrics.processingTime || 0;
+      this.processingTimeSamples = 1;
+    }
     
     // Estimate memory usage (with type assertion for Chrome-specific API)
     const perfMemory = (performance as any).memory;
@@ -599,6 +771,7 @@ export class VisionEngine {
   
   // Real face detection analysis methods
   private previousFaceLandmarks: any = null;
+  private previousKeyPoints: any[] | null = null;
   private breathingRateHistory: number[] = [];
   private faceMovementHistory: number[] = [];
   
@@ -612,52 +785,69 @@ export class VisionEngine {
       face.keypoints[10],  // forehead
     ].filter(Boolean);
     
-    if (!this.previousFaceLandmarks) {
-      this.previousFaceLandmarks = keyPoints;
+    if (!this.previousKeyPoints || keyPoints.length === 0) {
+      this.previousKeyPoints = keyPoints;
       return 0.1;
     }
     
     // Calculate actual movement
     let totalMovement = 0;
+    let validPoints = 0;
+    
     keyPoints.forEach((point, index) => {
-      if (this.previousFaceLandmarks[index]) {
-        const dx = point.x - this.previousFaceLandmarks[index].x;
-        const dy = point.y - this.previousFaceLandmarks[index].y;
-        totalMovement += Math.sqrt(dx * dx + dy * dy);
+      if (this.previousKeyPoints && this.previousKeyPoints[index] && point) {
+        const dx = point.x - this.previousKeyPoints[index].x;
+        const dy = point.y - this.previousKeyPoints[index].y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (!isNaN(distance)) {
+          totalMovement += distance;
+          validPoints++;
+        }
       }
     });
     
-    this.previousFaceLandmarks = keyPoints;
+    this.previousKeyPoints = keyPoints;
+    
+    // Avoid division by zero
+    if (validPoints === 0) return 0.1;
     
     // Normalize to 0-0.3 range
-    const normalizedMovement = Math.min(totalMovement / 30, 0.3);
-    this.faceMovementHistory.push(normalizedMovement);
-    if (this.faceMovementHistory.length > 30) {
-      this.faceMovementHistory.shift();
+    const avgMovementPerPoint = totalMovement / validPoints;
+    const normalizedMovement = Math.min(avgMovementPerPoint * 10, 0.3);
+    
+    // Ensure we don't push NaN values
+    if (!isNaN(normalizedMovement)) {
+      this.faceMovementHistory.push(normalizedMovement);
+      if (this.faceMovementHistory.length > 30) {
+        this.faceMovementHistory.shift();
+      }
     }
     
     // Return smoothed value
+    if (this.faceMovementHistory.length === 0) return 0.1;
     const avgMovement = this.faceMovementHistory.reduce((a, b) => a + b, 0) / this.faceMovementHistory.length;
-    return avgMovement;
+    return isNaN(avgMovement) ? 0.1 : avgMovement;
   }
   
   private calculateHeadAlignment(face: any): number {
-    if (!face.keypoints || face.keypoints.length < 468) return 0.8;
+    // Return 0 if we don't have the required landmarks - let the UI decide whether to show it
+    if (!face.keypoints || face.keypoints.length < 468) return 0;
     
     // Use eye and nose landmarks to determine head tilt
     const leftEye = face.keypoints[33];
     const rightEye = face.keypoints[263];
     const nose = face.keypoints[1];
     
-    if (!leftEye || !rightEye || !nose) return 0.8;
+    if (!leftEye || !rightEye || !nose) return 0;
     
     // Calculate eye line angle
     const eyeAngle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
     
-    // Perfect alignment is 0 degrees
+    // Perfect alignment is 0 degrees, max misalignment around 0.3 radians (~17 degrees)
     const alignmentScore = 1 - Math.min(Math.abs(eyeAngle) / 0.3, 0.2);
     
-    return alignmentScore; // 0.8-1.0 range
+    // Return 0 if calculation failed, otherwise return the real score
+    return isNaN(alignmentScore) ? 0 : alignmentScore; // 0.8-1.0 range when valid
   }
   
   private estimateBreathingRate(face: any): number {
@@ -783,22 +973,39 @@ export class VisionEngine {
     // Calculate actual nostril movement
     const nostrilPoints = [2, 5, 4, 6].map(i => face.keypoints[i]).filter(Boolean);
     let nostrilMovement = 0.1;
+    
+    // Store full landmarks for detailed analysis
+    if (!this.previousFaceLandmarks) {
+      this.previousFaceLandmarks = face.keypoints;
+    }
+    
     if (nostrilPoints.length >= 4 && this.previousFaceLandmarks) {
       const prevNostrils = [2, 5, 4, 6].map(i => this.previousFaceLandmarks[i]).filter(Boolean);
       if (prevNostrils.length >= 4) {
-        nostrilMovement = nostrilPoints.reduce((acc, point, idx) => {
-          if (prevNostrils[idx]) {
+        let totalDist = 0;
+        let validPoints = 0;
+        
+        nostrilPoints.forEach((point, idx) => {
+          if (prevNostrils[idx] && point) {
             const dist = Math.sqrt(
               Math.pow(point.x - prevNostrils[idx].x, 2) +
               Math.pow(point.y - prevNostrils[idx].y, 2)
             );
-            return acc + dist;
+            if (!isNaN(dist)) {
+              totalDist += dist;
+              validPoints++;
+            }
           }
-          return acc;
-        }, 0) / nostrilPoints.length;
-        nostrilMovement = Math.min(nostrilMovement * 100, 0.3);
+        });
+        
+        if (validPoints > 0) {
+          nostrilMovement = Math.min((totalDist / validPoints) * 100, 0.3);
+        }
       }
     }
+    
+    // Update previous landmarks at the end
+    this.previousFaceLandmarks = face.keypoints;
     
     // Calculate jaw tension from jaw landmarks
     const jawTension = this.calculateFacialTension(face);
@@ -942,6 +1149,32 @@ export class VisionEngine {
         breathingIrregularity,
       },
     };
+  }
+
+  /**
+   * Convert BlazeFace detection to keypoints format for compatibility
+   */
+  private convertBlazeFaceToKeypoints(blazeFace: any): any[] {
+    // BlazeFace provides 6 keypoints: right eye, left eye, nose, mouth, right ear, left ear
+    const landmarks = blazeFace.landmarks || [];
+
+    // Create a simplified keypoints array with basic face landmarks
+    // This won't have 478 landmarks like MediaPipe, but will provide basic face detection
+    const keypoints = [];
+
+    if (landmarks.length >= 6) {
+      // Map BlazeFace landmarks to basic keypoints
+      keypoints.push(
+        { x: landmarks[2][0] / 1280, y: landmarks[2][1] / 720 }, // nose
+        { x: landmarks[0][0] / 1280, y: landmarks[0][1] / 720 }, // right eye
+        { x: landmarks[1][0] / 1280, y: landmarks[1][1] / 720 }, // left eye
+        { x: landmarks[3][0] / 1280, y: landmarks[3][1] / 720 }, // mouth
+        { x: landmarks[4][0] / 1280, y: landmarks[4][1] / 720 }, // right ear
+        { x: landmarks[5][0] / 1280, y: landmarks[5][1] / 720 }  // left ear
+      );
+    }
+
+    return keypoints;
   }
 }
 

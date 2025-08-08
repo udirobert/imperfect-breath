@@ -127,4 +127,9 @@ export interface PerformanceMetrics {
    * Current thermal state of the device ('normal', 'elevated', 'critical')
    */
   thermalState: 'normal' | 'elevated' | 'critical';
+  
+  /**
+   * Average processing time per frame in milliseconds
+   */
+  processingTime?: number;
 }

@@ -9,17 +9,19 @@ interface FaceMeshOverlayProps {
   videoElement: HTMLVideoElement | null;
   landmarks: any[] | null;
   isActive: boolean;
+  confidence?: number; // Add confidence to properly detect face presence
 }
 
 export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
   videoElement,
   landmarks,
   isActive,
+  confidence = 0,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (!canvasRef.current || !videoElement || !isActive || !landmarks) {
+    if (!canvasRef.current || !videoElement || !isActive) {
       return;
     }
 
@@ -27,111 +29,99 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size to match video
-    canvas.width = videoElement.videoWidth || 640;
-    canvas.height = videoElement.videoHeight || 480;
+    // Animation frame for smooth rendering
+    let animationFrameId: number;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const drawFrame = () => {
+      if (!canvas || !ctx || !videoElement) return;
 
-    // Draw face mesh landmarks
-    if (landmarks && landmarks.length > 0) {
-      // Handle both formats: array of keypoints or array of faces with keypoints
-      const keypoints = landmarks[0].keypoints || landmarks;
+      // Set canvas size to match video
+      canvas.width = videoElement.videoWidth || 640;
+      canvas.height = videoElement.videoHeight || 480;
 
-      if (keypoints && keypoints.length > 0) {
-        // Draw key facial landmarks
-        ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Key landmarks to highlight
-        const keyLandmarks = [
-          1, // nose tip
-          33, // left eye outer corner
-          263, // right eye outer corner
-          61, // left mouth corner
-          291, // right mouth corner
-          152, // chin
-          10, // forehead center
-        ];
+      // Minimal, calming face presence indicator
+      if (landmarks && landmarks.length > 0) {
+        // Handle both formats: array of keypoints or direct landmarks array
+        const keypoints =
+          Array.isArray(landmarks) && landmarks[0]?.keypoints
+            ? landmarks[0].keypoints
+            : landmarks;
 
-        keyLandmarks.forEach((index) => {
-          if (keypoints[index]) {
-            const point = keypoints[index];
-            const x = point.x * canvas.width;
-            const y = point.y * canvas.height;
+        if (keypoints && keypoints.length > 0) {
+          // Create a gentle, breathing-like glow around the face center
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
 
-            ctx.beginPath();
-            ctx.arc(x, y, 3, 0, 2 * Math.PI);
-            ctx.fill();
-          }
-        });
+          // Subtle breathing animation
+          const time = Date.now() / 1000;
+          const breathingScale = 1 + Math.sin(time * 0.5) * 0.1; // Slow, gentle pulse
 
-        // Draw face outline (simplified)
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
-        ctx.lineWidth = 1;
+          // Soft gradient circle to indicate face presence
+          const gradient = ctx.createRadialGradient(
+            centerX,
+            centerY,
+            0,
+            centerX,
+            centerY,
+            80 * breathingScale
+          );
+          gradient.addColorStop(0, "rgba(255, 255, 255, 0.1)");
+          gradient.addColorStop(0.7, "rgba(255, 255, 255, 0.05)");
+          gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
 
-        const faceOutline = [
-          10, 151, 9, 8, 168, 6, 148, 152, 175, 136, 150, 149, 176, 148, 152,
-          377, 400, 378, 379, 365, 397, 288, 361, 323,
-        ];
-
-        ctx.beginPath();
-        faceOutline.forEach((index, i) => {
-          if (keypoints[index]) {
-            const point = keypoints[index];
-            const x = point.x * canvas.width;
-            const y = point.y * canvas.height;
-
-            if (i === 0) {
-              ctx.moveTo(x, y);
-            } else {
-              ctx.lineTo(x, y);
-            }
-          }
-        });
-        ctx.closePath();
-        ctx.stroke();
-
-        // Draw eye regions
-        const leftEye = [
-          33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160,
-          161, 246,
-        ];
-        const rightEye = [
-          362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385,
-          384, 398,
-        ];
-
-        [leftEye, rightEye].forEach((eyeIndices) => {
-          ctx.strokeStyle = "rgba(255, 255, 0, 0.6)";
+          ctx.fillStyle = gradient;
           ctx.beginPath();
-          eyeIndices.forEach((index, i) => {
-            if (keypoints[index]) {
-              const point = keypoints[index];
-              const x = point.x * canvas.width;
-              const y = point.y * canvas.height;
+          ctx.arc(centerX, centerY, 80 * breathingScale, 0, 2 * Math.PI);
+          ctx.fill();
 
-              if (i === 0) {
-                ctx.moveTo(x, y);
-              } else {
-                ctx.lineTo(x, y);
-              }
-            }
-          });
-          ctx.closePath();
-          ctx.stroke();
-        });
+          // Optional: Very subtle center dot for focus
+          ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 2, 0, 2 * Math.PI);
+          ctx.fill();
+        }
       }
-    }
+
+      // Continue animation loop
+      animationFrameId = requestAnimationFrame(drawFrame);
+    };
+
+    // Start animation loop
+    animationFrameId = requestAnimationFrame(drawFrame);
+
+    // Cleanup function
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [videoElement, landmarks, isActive]);
 
   if (!isActive) return null;
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ mixBlendMode: "screen" }}
-    />
+    <>
+      {/* Canvas for minimal face presence indicator */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ mixBlendMode: "soft-light", opacity: 0.8 }}
+      />
+
+      {/* Only show guidance when truly no face is detected - use confidence instead of landmarks */}
+      {confidence === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-2xl text-sm font-light border border-white/20">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-white/50 rounded-full animate-pulse"></div>
+              <span>Gently position yourself in view</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

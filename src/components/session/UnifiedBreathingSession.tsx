@@ -79,7 +79,7 @@ const MODE_CONFIGS: Record<SessionMode, SessionModeConfig> = {
   enhanced: {
     enableCamera: true,
     enableVision: true,
-    enableAdvancedFeatures: false,
+    enableAdvancedFeatures: true,
     enableMobileOptimizations: true,
     showPerformanceMonitor: false,
     layout: "dual",
@@ -122,8 +122,16 @@ export const UnifiedBreathingSession: React.FC<
   } = useEnhancedSession();
 
   // Unified vision system
+  // Force premium tier for enhanced/advanced modes regardless of device detection
+  const visionTier =
+    mode === "enhanced" || mode === "advanced"
+      ? "premium"
+      : config.enableAdvancedFeatures
+      ? "premium"
+      : "standard";
+
   const vision = useUnifiedVision({
-    tier: config.enableAdvancedFeatures ? "premium" : "standard",
+    tier: visionTier,
     targetFPS: config.enableMobileOptimizations ? 10 : 15,
     mobileOptimized: config.enableMobileOptimizations,
     features: {
@@ -189,6 +197,20 @@ export const UnifiedBreathingSession: React.FC<
     }
   }, [vision.state.isActive, visionInitialized]);
 
+  // Debug vision metrics updates
+  useEffect(() => {
+    if (vision.state.metrics && process.env.NODE_ENV === "development") {
+      console.log("Vision metrics updated:", {
+        movementLevel: vision.state.metrics.movementLevel,
+        confidence: vision.state.metrics.confidence,
+        postureQuality: vision.state.metrics.postureQuality,
+        restlessnessScore: vision.state.metrics.restlessnessScore,
+        hasLandmarks: !!vision.state.metrics.faceLandmarks,
+        landmarkCount: vision.state.metrics.faceLandmarks?.length || 0,
+      });
+    }
+  }, [vision.state.metrics]);
+
   /**
    * Request camera permission
    */
@@ -251,8 +273,20 @@ export const UnifiedBreathingSession: React.FC<
         }));
 
         try {
+          // Ensure video is playing before starting vision
+          if (videoRef.current.paused) {
+            await videoRef.current.play();
+          }
+
           await vision.start(videoRef.current);
           setLoadingState((prev) => ({ ...prev, models: false }));
+
+          // Log successful vision start
+          console.log("Vision system started successfully", {
+            isActive: vision.state.isActive,
+            metrics: vision.state.metrics,
+            features: vision.getAvailableFeatures(),
+          });
         } catch (visionError) {
           console.error("Vision initialization failed:", visionError);
           setLoadingState((prev) => ({
@@ -436,7 +470,7 @@ export const UnifiedBreathingSession: React.FC<
         {/* Placeholder when camera not enabled */}
         {(!config.enableCamera || !cameraEnabled) && (
           <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-gray-500 max-w-md px-6">
               <Eye className="h-12 w-12 mx-auto mb-2" />
               <p className="text-sm">
                 {config.enableCamera
@@ -457,11 +491,28 @@ export const UnifiedBreathingSession: React.FC<
                   </p>
                 )}
               {loadingState.models && (
-                <div className="mt-4">
+                <div className="mt-4 space-y-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500 mx-auto" />
-                  <p className="text-xs mt-2">
-                    This may take a moment on first load
-                  </p>
+                  <div className="space-y-3 text-left">
+                    <p className="text-sm font-medium text-gray-700">
+                      Preparing your mindful breathing space...
+                    </p>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      As the AI awakens, take this moment to settle into your
+                      body. Feel your feet on the ground, your spine gently
+                      elongated.
+                    </p>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Notice your natural breath flowing in and out. There's
+                      nothing to change yet - simply observe this ancient rhythm
+                      that has sustained you since birth.
+                    </p>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      When ready, our AI guide will help you explore deeper
+                      patterns of breath, tracking your journey toward greater
+                      calm and clarity.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -471,103 +522,45 @@ export const UnifiedBreathingSession: React.FC<
         {/* Vision metrics overlay */}
         {cameraEnabled && vision.state.isActive && (
           <>
-            {/* Loading overlay during initialization */}
-            {visionInitPeriod && !vision.state.metrics?.faceLandmarks && (
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <div className="bg-white/90 rounded-lg p-4 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Initializing AI Vision</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Detecting facial landmarks...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Face mesh visualization using proper component */}
-            {vision.state.metrics?.faceLandmarks && (
-              <FaceMeshOverlay
-                videoElement={videoRef.current}
-                landmarks={vision.state.metrics.faceLandmarks}
-                isActive={true}
-              />
-            )}
-
-            {/* No face detected message (after init period) */}
-            {!visionInitPeriod && !vision.state.metrics?.faceLandmarks && (
-              <div className="absolute top-4 left-4">
-                <Badge
-                  variant="secondary"
-                  className="bg-amber-500/80 text-white"
-                >
-                  No face detected - Position yourself in view
-                </Badge>
-              </div>
-            )}
-
-            {/* Head alignment instead of full posture */}
-            {vision.state.metrics?.postureQuality !== undefined && (
-              <div className="absolute top-4 right-4">
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-500/80 text-white"
-                >
-                  Head Align:{" "}
-                  {Math.round(vision.state.metrics.postureQuality * 100)}%
-                </Badge>
-              </div>
-            )}
-
-            {/* Stillness score (more accurate than restlessness) */}
-            {config.enableAdvancedFeatures &&
-              vision.state.metrics?.restlessnessScore !== undefined && (
-                <div className="absolute top-14 left-4">
-                  <Badge
-                    variant="secondary"
-                    className="bg-purple-500/80 text-white"
-                  >
-                    Stillness:{" "}
-                    {Math.round(
-                      (1 - vision.state.metrics.restlessnessScore) * 100
-                    )}
-                    %
-                  </Badge>
+            {/* Loading overlay during initialization - hide once face is detected */}
+            {visionInitPeriod &&
+              (!vision.state.metrics ||
+                vision.state.metrics.confidence === 0) && (
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                  <div className="bg-white/90 rounded-lg p-4 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium">
+                      Initializing AI Vision
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Detecting facial landmarks...
+                    </p>
+                  </div>
                 </div>
               )}
 
-            {/* Face detection confidence */}
-            {vision.state.metrics?.confidence !== undefined && (
-              <div className="absolute top-14 right-4">
-                <Badge
-                  variant="secondary"
-                  className="bg-yellow-500/80 text-white"
-                >
-                  Face Detect:{" "}
-                  {Math.round(vision.state.metrics.confidence * 100)}%
-                </Badge>
-              </div>
-            )}
+            {/* Face mesh visualization using proper component */}
+            <FaceMeshOverlay
+              videoElement={videoRef.current}
+              landmarks={vision.state.metrics?.faceLandmarks || []}
+              confidence={vision.state.metrics?.confidence || 0}
+              isActive={true}
+            />
 
-            {/* Movement indicator */}
-            {vision.state.metrics?.movementLevel !== undefined && (
-              <div className="absolute bottom-16 left-4">
-                <div className="bg-black/70 text-white px-3 py-1 rounded-full text-xs">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        vision.state.metrics.movementLevel < 0.1
-                          ? "bg-green-400"
-                          : vision.state.metrics.movementLevel < 0.3
-                          ? "bg-yellow-400"
-                          : "bg-red-400"
-                      }`}
-                    />
-                    {vision.state.metrics.movementLevel < 0.1
-                      ? "Very Still"
-                      : vision.state.metrics.movementLevel < 0.3
-                      ? "Slight Movement"
-                      : "Active Movement"}
-                  </div>
+            {/* Clean development info */}
+            {process.env.NODE_ENV === "development" && vision.state.metrics && (
+              <div className="absolute bottom-4 right-4 bg-black/20 backdrop-blur-sm text-white/80 text-xs px-3 py-2 rounded-lg font-mono">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      vision.state.metrics.confidence > 0
+                        ? "bg-green-400"
+                        : "bg-red-400"
+                    }`}
+                  ></div>
+                  <span>
+                    {Math.round(vision.state.performance?.fps || 0)} fps
+                  </span>
                 </div>
               </div>
             )}
@@ -782,6 +775,41 @@ export const UnifiedBreathingSession: React.FC<
         shouldUseMobileLayout ? "min-h-screen" : "max-w-6xl"
       }`}
     >
+      {/* Global loading overlay for AI models */}
+      {loadingState.models && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Card className="bg-white/95 max-w-md mx-4 shadow-2xl">
+            <CardContent className="p-8 space-y-6">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Loading AI models...
+                </h3>
+              </div>
+              <div className="space-y-4 text-center">
+                <p className="text-sm font-medium text-gray-700">
+                  Preparing your mindful breathing space...
+                </p>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  As the AI awakens, take this moment to settle into your body.
+                  Feel your feet on the ground, your spine gently elongated.
+                </p>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Notice your natural breath flowing in and out. There's nothing
+                  to change yet - simply observe this ancient rhythm that has
+                  sustained you since birth.
+                </p>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  When ready, our AI guide will help you explore deeper patterns
+                  of breath, tracking your journey toward greater calm and
+                  clarity.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Header */}
       <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader className="text-center pb-4">
@@ -859,6 +887,18 @@ export const UnifiedBreathingSession: React.FC<
         <PerformanceMonitor
           isVisible={showAdvancedMetrics}
           compact={shouldUseMobileLayout}
+          performanceData={
+            vision.state.performance
+              ? {
+                  cpuUsage: vision.state.performance?.cpuUsage || 0,
+                  memoryUsage: vision.state.performance?.memoryUsage || 0,
+                  frameRate: vision.state.performance?.fps || 0,
+                  processingTime: vision.state.performance?.processingTime || 0,
+                  batteryLevel: 100, // Default to full battery
+                  thermalState: "nominal", // Default state
+                }
+              : undefined
+          }
         />
       )}
 
