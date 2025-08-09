@@ -1,10 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
-import dotenv from "dotenv";
-
-// Load environment variables
-dotenv.config();
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const OpenAI = require("openai");
+const Anthropic = require("@anthropic-ai/sdk");
+require("dotenv").config();
 
 // Initialize AI clients
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
@@ -50,7 +47,7 @@ function generateCacheKey(provider, sessionData, analysisType) {
 }
 
 // AI Analysis endpoint
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Set CORS headers
   res.setHeader(
     "Access-Control-Allow-Origin",
@@ -286,3 +283,5 @@ function parseAIResponse(text, analysisType) {
     throw new Error("Failed to parse AI response");
   }
 }
+
+module.exports = handler;

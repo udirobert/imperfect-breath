@@ -9,6 +9,17 @@ export type VisionTier = 'loading' | 'basic' | 'standard' | 'premium';
 export type PerformanceMode = 'performance' | 'auto' | 'quality';
 
 /**
+ * MediaPipe landmark interface for better type safety
+ */
+export interface MediaPipeLandmark {
+  x: number;
+  y: number;
+  z?: number;
+  visibility?: number;
+  confidence?: number;
+}
+
+/**
  * Core vision metrics interface - metrics available across all tiers
  */
 export interface VisionMetrics {
@@ -56,12 +67,12 @@ export interface VisionMetrics {
   /**
    * Face landmarks for mesh visualization
    */
-  faceLandmarks?: any[];
+  faceLandmarks?: MediaPipeLandmark[];
   
   /**
    * Pose landmarks for skeleton visualization
    */
-  poseLandmarks?: any[];
+  poseLandmarks?: MediaPipeLandmark[];
   
   /**
    * Detailed facial analysis (premium tier)

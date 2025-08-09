@@ -116,6 +116,18 @@ export default defineConfig(({ mode }) => {
       strictPort: false,
     },
 
+    // Configure web workers
+    worker: {
+      format: 'es',
+      plugins: () => [
+        // Apply the same plugins to workers
+        react({
+          jsxRuntime: "automatic",
+          include: "**/*.{jsx,tsx}",
+        }),
+      ],
+    },
+
     // Configure preview server (for testing production builds locally)
     preview: {
       port: 4173,

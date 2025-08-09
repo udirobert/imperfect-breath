@@ -19,13 +19,9 @@ async function loadPoseDetection() {
   if (poseDetection) return poseDetection;
 
   try {
-    // Temporarily disable pose detection to focus on face detection performance
-    console.log('Pose detection temporarily disabled for performance optimization');
-    return null;
-
-    // TODO: Re-enable once MediaPipe compatibility issues are resolved
-    // poseDetection = await import('@tensorflow-models/pose-detection');
-    // return poseDetection;
+    // Re-enable pose detection with lazy loading for better performance
+    poseDetection = await import('@tensorflow-models/pose-detection');
+    return poseDetection;
   } catch (error) {
     console.warn('Pose detection not available, continuing without pose features:', error);
     return null;
@@ -56,6 +52,9 @@ export class VisionEngine {
   private faceDetector: any | null = null; // Can be either BlazeFace or FaceLandmarks
   private poseDetector: any | null = null;
   private usingBlazeFace: boolean = false;
+  
+  // Model cache for faster reinitialization
+  private static modelCache: Map<string, any> = new Map();
   
   // Performance tracking
   private frameCount = 0;
@@ -208,6 +207,9 @@ export class VisionEngine {
       return null;
     }
 
+    // Dynamically adjust processing interval based on device thermal state
+    this.adjustProcessingInterval();
+
     // Throttle processing to prevent infinite rerenders
     const now = Date.now();
     if (now - this.lastProcessTime < this.minProcessInterval) {
@@ -299,12 +301,13 @@ export class VisionEngine {
       // Stop any ongoing processing
       this.stopProcessing();
       
-      if (this.faceDetector) {
+      // Dispose models
+      if (this.faceDetector && typeof this.faceDetector.dispose === 'function') {
         this.faceDetector.dispose();
         this.faceDetector = null;
       }
       
-      if (this.poseDetector) {
+      if (this.poseDetector && typeof this.poseDetector.dispose === 'function') {
         this.poseDetector.dispose();
         this.poseDetector = null;
       }
@@ -319,6 +322,25 @@ export class VisionEngine {
     } catch (error) {
       console.error('Error disposing vision engine:', error);
     }
+  }
+  
+  /**
+   * Clear model cache to free up memory
+   */
+  static clearModelCache(): void {
+    // Dispose cached models before clearing
+    for (const [key, model] of VisionEngine.modelCache.entries()) {
+      if (model && typeof model.dispose === 'function') {
+        try {
+          model.dispose();
+        } catch (error) {
+          console.warn(`Failed to dispose cached model ${key}:`, error);
+        }
+      }
+    }
+    
+    VisionEngine.modelCache.clear();
+    console.log('Vision engine model cache cleared');
   }
   
   /**
@@ -392,6 +414,14 @@ export class VisionEngine {
    * Load models for basic tier
    */
   private async loadBasicModels(variant: 'mobile' | 'desktop'): Promise<void> {
+    const cacheKey = `basic-${variant}`;
+    
+    // Check cache first
+    if (VisionEngine.modelCache.has(cacheKey)) {
+      this.faceDetector = VisionEngine.modelCache.get(cacheKey);
+      return;
+    }
+    
     const model = faceDetection.SupportedModels.MediaPipeFaceMesh;
     const detectorConfig = {
       runtime: 'tfjs' as const,
@@ -400,25 +430,45 @@ export class VisionEngine {
     };
     
     this.faceDetector = await faceDetection.createDetector(model, detectorConfig);
+    
+    // Cache the model
+    VisionEngine.modelCache.set(cacheKey, this.faceDetector);
   }
   
   /**
    * Load models for standard tier
    */
   private async loadStandardModels(variant: 'mobile' | 'desktop'): Promise<void> {
+    const faceCacheKey = `standard-face-${variant}`;
+    const poseCacheKey = `standard-pose-${variant}`;
+    
     try {
-      // Face detection with more features
-      const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
-      const faceConfig = {
-        runtime: 'tfjs' as const,
-        refineLandmarks: true,
-        maxFaces: 1,
-      };
-      
-      this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
+      // Check face model cache first
+      if (VisionEngine.modelCache.has(faceCacheKey)) {
+        this.faceDetector = VisionEngine.modelCache.get(faceCacheKey);
+      } else {
+        // Face detection with more features
+        const faceModel = faceDetection.SupportedModels.MediaPipeFaceMesh;
+        const faceConfig = {
+          runtime: 'tfjs' as const,
+          refineLandmarks: true,
+          maxFaces: 1,
+        };
+        
+        this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
+        
+        // Cache the model
+        VisionEngine.modelCache.set(faceCacheKey, this.faceDetector);
+      }
     } catch (error) {
       console.warn('Face detection failed to load, falling back to basic mode:', error);
       this.faceDetector = null;
+    }
+    
+    // Check pose model cache first
+    if (VisionEngine.modelCache.has(poseCacheKey)) {
+      this.poseDetector = VisionEngine.modelCache.get(poseCacheKey);
+      return;
     }
     
     // Try to load pose detection dynamically
@@ -434,6 +484,9 @@ export class VisionEngine {
         };
         
         this.poseDetector = await poseDet.createDetector(poseModel, poseConfig);
+        
+        // Cache the model
+        VisionEngine.modelCache.set(poseCacheKey, this.poseDetector);
       } catch (error) {
         console.warn('Pose detection failed to load, continuing without pose detection:', error);
         this.poseDetector = null;
@@ -448,6 +501,17 @@ export class VisionEngine {
    * Load models for premium tier
    */
   private async loadPremiumModels(variant: 'mobile' | 'desktop'): Promise<void> {
+    const blazeFaceCacheKey = `premium-blazeface-${variant}`;
+    const faceMeshCacheKey = `premium-facemesh-${variant}`;
+    const poseCacheKey = `premium-pose-${variant}`;
+    
+    // Check BlazeFace cache first
+    if (VisionEngine.modelCache.has(blazeFaceCacheKey)) {
+      this.faceDetector = VisionEngine.modelCache.get(blazeFaceCacheKey);
+      this.usingBlazeFace = true;
+      return;
+    }
+    
     try {
       console.log('Loading BlazeFace model for reliable face detection...');
       // Use BlazeFace with CORRECT input dimensions (128x128 as required by the model)
@@ -460,8 +524,18 @@ export class VisionEngine {
       });
       this.usingBlazeFace = true;
       console.log('BlazeFace detector loaded successfully with CORRECT 128x128 config');
+      
+      // Cache the model
+      VisionEngine.modelCache.set(blazeFaceCacheKey, this.faceDetector);
     } catch (error) {
       console.warn('BlazeFace failed to load, trying MediaPipe FaceMesh:', error);
+
+      // Check FaceMesh cache
+      if (VisionEngine.modelCache.has(faceMeshCacheKey)) {
+        this.faceDetector = VisionEngine.modelCache.get(faceMeshCacheKey);
+        this.usingBlazeFace = false;
+        return;
+      }
 
       // Fallback to MediaPipe FaceMesh with more permissive settings
       try {
@@ -475,11 +549,20 @@ export class VisionEngine {
         this.faceDetector = await faceDetection.createDetector(faceModel, faceConfig);
         this.usingBlazeFace = false;
         console.log('MediaPipe FaceMesh loaded as fallback');
+        
+        // Cache the model
+        VisionEngine.modelCache.set(faceMeshCacheKey, this.faceDetector);
       } catch (fallbackError) {
         console.error('All face detection models failed:', fallbackError);
         this.faceDetector = null;
         this.usingBlazeFace = false;
       }
+    }
+    
+    // Check pose model cache first
+    if (VisionEngine.modelCache.has(poseCacheKey)) {
+      this.poseDetector = VisionEngine.modelCache.get(poseCacheKey);
+      return;
     }
     
     // Try to load pose detection dynamically for premium features
@@ -493,6 +576,9 @@ export class VisionEngine {
         };
         
         this.poseDetector = await poseDet.createDetector(poseModel, poseConfig);
+        
+        // Cache the model
+        VisionEngine.modelCache.set(poseCacheKey, this.poseDetector);
       } catch (error) {
         console.warn('Premium pose detection failed to load, continuing without pose detection:', error);
         this.poseDetector = null;
@@ -767,6 +853,36 @@ export class VisionEngine {
     
     // Battery impact estimation (simplified)
     this.performanceMetrics.batteryImpact = Math.min(100, this.performanceMetrics.cpuUsage * 0.8);
+    
+    // Update thermal state based on CPU usage
+    if (this.performanceMetrics.cpuUsage > 80) {
+      this.performanceMetrics.thermalState = 'critical';
+    } else if (this.performanceMetrics.cpuUsage > 60) {
+      this.performanceMetrics.thermalState = 'elevated';
+    } else {
+      this.performanceMetrics.thermalState = 'normal';
+    }
+  }
+
+  /**
+   * Adjust processing interval based on device thermal state
+   */
+  private adjustProcessingInterval(): void {
+    switch (this.performanceMetrics.thermalState) {
+      case 'critical':
+        // Reduce FPS to 5fps when device is overheating
+        this.minProcessInterval = 200; // 200ms = 5fps
+        break;
+      case 'elevated':
+        // Reduce FPS to 10fps when device is warm
+        this.minProcessInterval = 100; // 100ms = 10fps
+        break;
+      case 'normal':
+      default:
+        // Normal 15fps processing
+        this.minProcessInterval = 67; // 67ms ≈ 15fps
+        break;
+    }
   }
   
   // Real face detection analysis methods

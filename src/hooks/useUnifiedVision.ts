@@ -14,11 +14,21 @@ interface VisionFeatureConfig {
     enabled: boolean;
     detectionInterval?: number;
     enableGuidance?: boolean;
+    historicalData?: {
+      averageRate?: number;
+      typicalRhythm?: 'regular' | 'irregular' | 'deep' | 'shallow';
+      sessionCount?: number;
+    };
   };
   postureAnalysis?: {
     enabled: boolean;
     analysisInterval?: number;
     alertThreshold?: number;
+    sessionContext?: {
+      sessionCount?: number;
+      duration?: number;
+      previousScore?: number;
+    };
   };
   performance?: {
     enabled: boolean;
@@ -65,6 +75,7 @@ interface UseUnifiedVisionReturn {
   enableFeature: (feature: string) => void;
   disableFeature: (feature: string) => void;
   updateConfig: (config: Partial<VisionConfig>) => void;
+  updateFeatureConfig: (feature: string, config: any) => void;
   
   // Utilities
   getAvailableFeatures: () => string[];
@@ -262,6 +273,7 @@ export const useUnifiedVision = (
           targetFPS: config.current.targetFPS || 15,
           adaptiveQuality: config.current.adaptiveQuality !== false,
           backgroundProcessing: true,
+          useWebWorkers: config.current.features?.performance?.enabled !== false,
         },
         mobile: {
           optimizeForMobile: config.current.mobileOptimized || false,
@@ -270,6 +282,18 @@ export const useUnifiedVision = (
       });
     }
   }, [getEnabledFeatures]);
+
+  /**
+   * Update feature-specific configuration
+   */
+  const updateFeatureConfig = useCallback((feature: string, featureConfig: any) => {
+    if (config.current.features) {
+      (config.current.features as any)[feature] = {
+        ...(config.current.features as any)[feature],
+        ...featureConfig,
+      };
+    }
+  }, []);
 
   /**
    * Get available features
@@ -311,6 +335,7 @@ export const useUnifiedVision = (
     enableFeature,
     disableFeature,
     updateConfig,
+    updateFeatureConfig,
     
     // Utilities
     getAvailableFeatures,

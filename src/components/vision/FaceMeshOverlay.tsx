@@ -5,11 +5,15 @@
 
 import React, { useRef, useEffect } from "react";
 
+import type { MediaPipeLandmark } from '../../lib/vision/types';
+
 interface FaceMeshOverlayProps {
   videoElement: HTMLVideoElement | null;
-  landmarks: any[] | null;
+  landmarks: MediaPipeLandmark[] | null;
   isActive: boolean;
   confidence?: number; // Add confidence to properly detect face presence
+  breathPhase?: 'inhale' | 'exhale' | 'hold' | 'transition'; // Add breathing phase for visualization
+  breathQuality?: number; // Add breath quality for color feedback (0-100)
 }
 
 export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
@@ -17,6 +21,8 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
   landmarks,
   isActive,
   confidence = 0,
+  breathPhase,
+  breathQuality = 50,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -36,52 +42,78 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
       if (!canvas || !ctx || !videoElement) return;
 
       // Set canvas size to match video
-      canvas.width = videoElement.videoWidth || 640;
-      canvas.height = videoElement.videoHeight || 480;
+      canvas.width = videoElement.videoWidth || videoElement.clientWidth || 640;
+      canvas.height = videoElement.videoHeight || videoElement.clientHeight || 480;
 
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Minimal, calming face presence indicator
-      if (landmarks && landmarks.length > 0) {
+      // Enhanced face presence indicator with breathing phase visualization
+      if (landmarks && landmarks.length > 0 && confidence > 0) {
         // Handle both formats: array of keypoints or direct landmarks array
-        const keypoints =
-          Array.isArray(landmarks) && landmarks[0]?.keypoints
-            ? landmarks[0].keypoints
+        const keypoints: MediaPipeLandmark[] =
+          Array.isArray(landmarks) && (landmarks as any)[0]?.keypoints
+            ? (landmarks as any)[0].keypoints
             : landmarks;
 
         if (keypoints && keypoints.length > 0) {
-          // Create a gentle, breathing-like glow around the face center
+          // Calculate face center from landmarks
           const centerX = canvas.width / 2;
           const centerY = canvas.height / 2;
+          
+          // Determine color based on breath quality (0-100)
+          let glowColor: string;
+          if (breathQuality >= 80) {
+            // Green for good quality
+            glowColor = `rgba(46, 204, 113, ${0.1 + (breathQuality / 100) * 0.2})`;
+          } else if (breathQuality >= 60) {
+            // Yellow for moderate quality
+            glowColor = `rgba(241, 196, 15, ${0.1 + (breathQuality / 100) * 0.2})`;
+          } else {
+            // Red for poor quality
+            glowColor = `rgba(231, 76, 60, ${0.1 + (breathQuality / 100) * 0.2})`;
+          }
 
-          // Subtle breathing animation
-          const time = Date.now() / 1000;
-          const breathingScale = 1 + Math.sin(time * 0.5) * 0.1; // Slow, gentle pulse
+          // Adjust glow size based on breathing phase
+          let baseRadius = 80;
+          let breathingScale = 1;
+          
+          if (breathPhase === 'inhale') {
+            // Expand during inhale
+            const time = Date.now() / 1000;
+            breathingScale = 1 + Math.sin(time * 2) * 0.15;
+          } else if (breathPhase === 'exhale') {
+            // Contract during exhale
+            const time = Date.now() / 1000;
+            breathingScale = 1 - Math.sin(time * 2) * 0.15;
+          }
 
-          // Soft gradient circle to indicate face presence
+          // Create dynamic glow based on breathing phase and quality
           const gradient = ctx.createRadialGradient(
             centerX,
             centerY,
             0,
             centerX,
             centerY,
-            80 * breathingScale
+            baseRadius * breathingScale
           );
-          gradient.addColorStop(0, "rgba(255, 255, 255, 0.1)");
-          gradient.addColorStop(0.7, "rgba(255, 255, 255, 0.05)");
-          gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+          gradient.addColorStop(0, glowColor);
+          gradient.addColorStop(0.7, glowColor.replace(/[^,]+(?=\))/, '0.05'));
+          gradient.addColorStop(1, glowColor.replace(/[^,]+(?=\))/, '0'));
 
           ctx.fillStyle = gradient;
           ctx.beginPath();
-          ctx.arc(centerX, centerY, 80 * breathingScale, 0, 2 * Math.PI);
+          ctx.arc(centerX, centerY, baseRadius * breathingScale, 0, 2 * Math.PI);
           ctx.fill();
 
-          // Optional: Very subtle center dot for focus
-          ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, 2, 0, 2 * Math.PI);
-          ctx.fill();
+          // Draw confidence indicator
+          if (confidence > 0) {
+            const confidenceSize = 4 + (confidence * 4);
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + confidence * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, confidenceSize, 0, 2 * Math.PI);
+            ctx.fill();
+          }
         }
       }
 
@@ -98,7 +130,7 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [videoElement, landmarks, isActive]);
+  }, [videoElement, landmarks, isActive, confidence, breathPhase, breathQuality]);
 
   if (!isActive) return null;
 

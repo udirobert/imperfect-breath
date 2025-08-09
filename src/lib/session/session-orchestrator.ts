@@ -361,6 +361,9 @@ class SessionOrchestrator {
       // This would be updated from vision system
       this.updateRestlessness(0);
     }
+    
+    // Trigger haptic feedback for phase transitions
+    this.triggerHapticFeedback(transition.to);
   };
 
   /**
@@ -670,6 +673,37 @@ class SessionOrchestrator {
         currentRestlessness: Math.round(Math.max(0, Math.min(100, score))),
       }
     });
+  }
+
+  /**
+   * Trigger haptic feedback based on breathing phase
+   */
+  private triggerHapticFeedback(phase: string): void {
+    // Only trigger haptic feedback on mobile devices
+    if (!('vibrate' in navigator)) return;
+    
+    // Different haptic patterns for different phases
+    switch (phase) {
+      case 'inhale':
+        // Light vibration for inhale
+        navigator.vibrate([10]);
+        break;
+      case 'exhale':
+        // Slightly stronger vibration for exhale
+        navigator.vibrate([20]);
+        break;
+      case 'hold':
+        // Double tap for hold phases
+        navigator.vibrate([5, 50, 5]);
+        break;
+      case 'pause':
+        // Gentle pulse for pause
+        navigator.vibrate([15]);
+        break;
+      default:
+        // Subtle confirmation
+        navigator.vibrate([5]);
+    }
   }
 
   /**

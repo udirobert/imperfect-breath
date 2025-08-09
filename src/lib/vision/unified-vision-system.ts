@@ -8,6 +8,8 @@ import { VisionEngine } from './core/vision-engine';
 import { PerformanceOptimizer } from './performance-optimizer';
 import { BreathPatternDetector } from './breath-pattern-detector';
 import { PostureAnalyzer } from './posture-analyzer';
+import { visionWorkerManager } from './web-worker-manager';
+import { testWebWorkerSupport } from './web-worker-test';
 import type { VisionTier, VisionMetrics } from './types';
 
 // Plugin interface for modular features
@@ -26,6 +28,7 @@ interface VisionConfig {
     targetFPS: number;
     adaptiveQuality: boolean;
     backgroundProcessing: boolean;
+    useWebWorkers: boolean; // Enable web workers for intensive calculations
   };
   mobile: {
     optimizeForMobile: boolean;
@@ -74,6 +77,7 @@ export class UnifiedVisionSystem {
         targetFPS: 15,
         adaptiveQuality: true,
         backgroundProcessing: true,
+        useWebWorkers: true, // Enable by default for better performance
       },
       mobile: {
         optimizeForMobile: false,
@@ -95,6 +99,7 @@ export class UnifiedVisionSystem {
     };
 
     this.initializeBuiltInPlugins();
+    this.testWebWorkerSupport();
   }
 
   /**
@@ -138,6 +143,25 @@ export class UnifiedVisionSystem {
   }
 
   /**
+   * Test web worker support and adjust configuration accordingly
+   */
+  private async testWebWorkerSupport(): Promise<void> {
+    try {
+      const webWorkerSupported = await testWebWorkerSupport();
+      
+      if (!webWorkerSupported) {
+        console.warn('Web workers not supported, disabling web worker processing');
+        this.config.performance.useWebWorkers = false;
+      } else {
+        console.log('Web workers supported and enabled');
+      }
+    } catch (error) {
+      console.warn('Web worker test failed, disabling web worker processing:', error);
+      this.config.performance.useWebWorkers = false;
+    }
+  }
+
+  /**
    * Register a vision plugin
    */
   public registerPlugin(plugin: VisionPlugin): void {
@@ -155,6 +179,11 @@ export class UnifiedVisionSystem {
       this.config.performance.targetFPS = Math.min(this.config.performance.targetFPS, 10);
       // Only downgrade tier if it wasn't explicitly set to premium
       // This allows enhanced/advanced modes to force premium tier
+    }
+    
+    // On mobile devices, disable web workers by default to conserve battery
+    if (this.config.mobile.optimizeForMobile) {
+      this.config.performance.useWebWorkers = false;
     }
   }
 
@@ -193,16 +222,22 @@ export class UnifiedVisionSystem {
         this.state.metrics = metrics;
         
         // Process through enabled plugins
-        for (const featureName of this.config.enabledFeatures) {
-          const plugin = this.plugins.get(featureName);
-          if (plugin) {
-            try {
-              const featureResult = plugin.process(metrics);
-              if (featureResult) {
-                this.state.features[featureName] = featureResult;
+        if (this.config.performance.useWebWorkers) {
+          // Use web workers for intensive calculations
+          await this.processWithWebWorkers(metrics);
+        } else {
+          // Process directly in main thread
+          for (const featureName of this.config.enabledFeatures) {
+            const plugin = this.plugins.get(featureName);
+            if (plugin) {
+              try {
+                const featureResult = plugin.process(metrics);
+                if (featureResult) {
+                  this.state.features[featureName] = featureResult;
+                }
+              } catch (error) {
+                console.error(`Plugin ${featureName} processing error:`, error);
               }
-            } catch (error) {
-              console.error(`Plugin ${featureName} processing error:`, error);
             }
           }
         }
@@ -225,7 +260,30 @@ export class UnifiedVisionSystem {
       this.notifyStateChange();
     } catch (error) {
       console.error('Failed to start unified vision system:', error);
-      throw error;
+      // Try to start with fallback configuration
+      try {
+        // Try with basic tier as fallback
+        await this.engine.initialize({
+          tier: 'basic',
+          modelVariant: 'mobile',
+          enableGPU: false, // Disable GPU for fallback
+          maxConcurrentProcessing: 1,
+          frameSkipRatio: 3,
+        });
+        
+        await this.engine.startProcessing(videoElement, async (metrics) => {
+          if (!this.state.isActive) return;
+          
+          this.state.metrics = metrics;
+          this.state.isActive = true;
+          this.state.currentTier = 'basic';
+          
+          this.notifyStateChange();
+        });
+      } catch (fallbackError) {
+        console.error('Failed to start vision system with fallback configuration:', fallbackError);
+        throw error; // Re-throw the original error
+      }
     }
   }
 
@@ -266,12 +324,18 @@ export class UnifiedVisionSystem {
       this.state.metrics = metrics;
 
       // Process through enabled plugins
-      for (const featureName of this.config.enabledFeatures) {
-        const plugin = this.plugins.get(featureName);
-        if (plugin) {
-          const featureResult = plugin.process(metrics);
-          if (featureResult) {
-            this.state.features[featureName] = featureResult;
+      if (this.config.performance.useWebWorkers) {
+        // Use web workers for intensive calculations
+        await this.processWithWebWorkers(metrics);
+      } else {
+        // Process directly in main thread
+        for (const featureName of this.config.enabledFeatures) {
+          const plugin = this.plugins.get(featureName);
+          if (plugin) {
+            const featureResult = plugin.process(metrics);
+            if (featureResult) {
+              this.state.features[featureName] = featureResult;
+            }
           }
         }
       }
@@ -337,6 +401,84 @@ export class UnifiedVisionSystem {
       this.config.enabledFeatures.splice(index, 1);
       delete this.state.features[featureName];
       this.notifyStateChange();
+    }
+  }
+
+  /**
+   * Process features using web workers
+   */
+  private async processWithWebWorkers(metrics: VisionMetrics): Promise<void> {
+    try {
+      // Process enabled features in parallel using web workers
+      const promises: Promise<void>[] = [];
+      
+      if (this.config.enabledFeatures.includes('breathPattern') && metrics.faceLandmarks) {
+        const promise = visionWorkerManager.analyzeBreathPattern(
+          metrics.faceLandmarks,
+          Date.now(),
+          this.state.performance.fps
+        ).then(result => {
+          this.state.features.breathPattern = result;
+        }).catch(error => {
+          console.warn('Breath pattern analysis failed in worker, falling back to main thread:', error);
+          // Fallback to main thread processing
+          const plugin = this.plugins.get('breathPattern');
+          if (plugin) {
+            try {
+              const featureResult = plugin.process(metrics);
+              if (featureResult) {
+                this.state.features.breathPattern = featureResult;
+              }
+            } catch (pluginError) {
+              console.error('Breath pattern plugin processing error:', pluginError);
+            }
+          }
+        });
+        promises.push(promise);
+      }
+      
+      if (this.config.enabledFeatures.includes('postureAnalysis')) {
+        const promise = visionWorkerManager.analyzePosture(
+          metrics.faceLandmarks || [],
+          metrics.poseLandmarks
+        ).then(result => {
+          this.state.features.postureAnalysis = result;
+        }).catch(error => {
+          console.warn('Posture analysis failed in worker, falling back to main thread:', error);
+          // Fallback to main thread processing
+          const plugin = this.plugins.get('postureAnalysis');
+          if (plugin) {
+            try {
+              const featureResult = plugin.process(metrics);
+              if (featureResult) {
+                this.state.features.postureAnalysis = featureResult;
+              }
+            } catch (pluginError) {
+              console.error('Posture analysis plugin processing error:', pluginError);
+            }
+          }
+        });
+        promises.push(promise);
+      }
+      
+      // Wait for all analyses to complete
+      await Promise.all(promises);
+    } catch (error) {
+      console.error('Web worker processing error, falling back to main thread:', error);
+      // Fallback to main thread processing
+      for (const featureName of this.config.enabledFeatures) {
+        const plugin = this.plugins.get(featureName);
+        if (plugin) {
+          try {
+            const featureResult = plugin.process(metrics);
+            if (featureResult) {
+              this.state.features[featureName] = featureResult;
+            }
+          } catch (error) {
+            console.error(`Plugin ${featureName} processing error:`, error);
+          }
+        }
+      }
     }
   }
 

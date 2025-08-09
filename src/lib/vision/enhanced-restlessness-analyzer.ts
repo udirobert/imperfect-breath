@@ -83,14 +83,18 @@ export class EnhancedRestlessnessAnalyzer {
    * Calculate face movement using landmark displacement
    */
   private calculateFaceMovement(landmarks: any[]): number {
-    if (landmarks.length < 10) return 0;
+    // Robust validation of landmark data
+    if (!landmarks || landmarks.length < 10) return 0;
 
     // Use key facial landmarks (nose tip, chin, forehead)
     const keyPoints = [
       landmarks[1],   // nose tip
       landmarks[152], // chin
       landmarks[10],  // forehead
-    ].filter(Boolean);
+    ].filter(point => point && point.x !== undefined && point.y !== undefined);
+
+    // Ensure we have valid points
+    if (keyPoints.length < 3) return 0;
 
     if (this.previousLandmarks.length === 0) {
       this.previousLandmarks = keyPoints.map(p => [p.x, p.y]);
@@ -99,19 +103,32 @@ export class EnhancedRestlessnessAnalyzer {
 
     // Calculate displacement from previous frame
     let totalDisplacement = 0;
+    let validPoints = 0;
+    
     keyPoints.forEach((point, index) => {
-      if (this.previousLandmarks[index]) {
+      if (this.previousLandmarks[index] && 
+          this.previousLandmarks[index][0] !== undefined && 
+          this.previousLandmarks[index][1] !== undefined) {
         const dx = point.x - this.previousLandmarks[index][0];
         const dy = point.y - this.previousLandmarks[index][1];
-        totalDisplacement += Math.sqrt(dx * dx + dy * dy);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Ensure we don't add NaN values
+        if (!isNaN(distance)) {
+          totalDisplacement += distance;
+          validPoints++;
+        }
       }
     });
 
     // Update previous landmarks
     this.previousLandmarks = keyPoints.map(p => [p.x, p.y]);
 
+    // Avoid division by zero
+    if (validPoints === 0) return 0;
+
     // Normalize to 0-1 range (typical movement is 0-10 pixels)
-    return Math.min(totalDisplacement / 10, 1);
+    const avgDisplacement = totalDisplacement / validPoints;
+    return isNaN(avgDisplacement) ? 0 : Math.min(avgDisplacement / 10, 1);
   }
 
   /**

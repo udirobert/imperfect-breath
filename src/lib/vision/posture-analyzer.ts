@@ -124,8 +124,26 @@ export class PostureAnalyzer {
       const LEFT_EAR = 234; // Approximate ear position
       const RIGHT_EAR = 454; // Approximate ear position
       
+      // Robust validation of face landmarks
       if (!faceLandmarks || faceLandmarks.length < 468) {
         return null;
+      }
+      
+      // Validate required landmarks exist with proper coordinates
+      const requiredLandmarks = [
+        { index: NOSE_TIP, name: 'nose' },
+        { index: LEFT_EYE, name: 'leftEye' },
+        { index: RIGHT_EYE, name: 'rightEye' },
+        { index: LEFT_EAR, name: 'leftEar' },
+        { index: RIGHT_EAR, name: 'rightEar' }
+      ];
+      
+      for (const landmark of requiredLandmarks) {
+        const point = faceLandmarks[landmark.index];
+        if (!point || point.x === undefined || point.y === undefined) {
+          console.warn(`Missing or invalid ${landmark.name} landmark`);
+          return null;
+        }
       }
       
       const landmarks: PostureLandmarks = {
@@ -142,8 +160,15 @@ export class PostureAnalyzer {
       
       // Use pose landmarks if available for better accuracy
       if (poseLandmarks && poseLandmarks.length > 11) {
-        landmarks.leftShoulder = poseLandmarks[11]; // Left shoulder
-        landmarks.rightShoulder = poseLandmarks[12]; // Right shoulder
+        // Validate pose landmarks before using them
+        const leftShoulder = poseLandmarks[11];
+        const rightShoulder = poseLandmarks[12];
+        
+        if (leftShoulder && leftShoulder.x !== undefined && leftShoulder.y !== undefined &&
+            rightShoulder && rightShoulder.x !== undefined && rightShoulder.y !== undefined) {
+          landmarks.leftShoulder = leftShoulder;
+          landmarks.rightShoulder = rightShoulder;
+        }
       }
       
       return landmarks;
@@ -454,9 +479,14 @@ export class PostureAnalyzer {
   /**
    * Get posture guidance based on current metrics
    */
-  public getPostureGuidance(metrics: PostureMetrics): string[] {
+  public getPostureGuidance(metrics: PostureMetrics, sessionContext?: {
+    sessionCount?: number;
+    duration?: number;
+    previousScore?: number;
+  }): string[] {
     const guidance: string[] = [];
     
+    // Base guidance based on classification
     switch (metrics.classification) {
       case 'excellent':
         guidance.push("Perfect posture! You're setting a great example.");
@@ -475,6 +505,29 @@ export class PostureAnalyzer {
     // Add specific guidance from recommendations
     guidance.push(...metrics.recommendations.slice(0, 2));
     
-    return guidance;
+    // Contextual guidance based on session data
+    if (sessionContext) {
+      // Progress tracking
+      if (sessionContext.previousScore !== undefined) {
+        const improvement = metrics.overallPosture - sessionContext.previousScore;
+        if (improvement > 5) {
+          guidance.push("Great improvement in your posture!");
+        } else if (improvement < -5) {
+          guidance.push("Your posture has slipped a bit. Refocus on the recommendations.");
+        }
+      }
+      
+      // Session count encouragement
+      if (sessionContext.sessionCount && sessionContext.sessionCount > 5) {
+        guidance.push(`You've worked on posture in ${sessionContext.sessionCount} sessions - consistency is key!`);
+      }
+      
+      // Duration awareness
+      if (sessionContext.duration && sessionContext.duration > 300) { // 5 minutes
+        guidance.push("You've been in this position for a while. Consider a brief stretch.");
+      }
+    }
+    
+    return guidance.slice(0, 4); // Limit to 4 pieces of guidance
   }
 }

@@ -35,6 +35,7 @@ export class BreathPatternDetector {
   
   // Mobile optimization: smaller history sizes
   private readonly MAX_HISTORY = 30; // 30 seconds at 1Hz
+  private currentFPS = 1; // Track actual FPS for dynamic history sizing
   private readonly PHASE_HISTORY_SIZE = 20;
   
   // Breathing detection parameters
@@ -51,11 +52,17 @@ export class BreathPatternDetector {
    */
   public detectBreathingPattern(
     faceLandmarks: LandmarkPoint[],
-    timestamp: number = Date.now()
+    timestamp: number = Date.now(),
+    actualFPS?: number // Allow dynamic FPS adjustment
   ): BreathPattern | null {
     const endTimer = startTimer('breath-pattern-detection');
     
     try {
+      // Update FPS tracking for dynamic history sizing
+      if (actualFPS && actualFPS > 0) {
+        this.currentFPS = actualFPS;
+      }
+      
       if (!faceLandmarks || faceLandmarks.length < 200) {
         return null;
       }
@@ -64,9 +71,12 @@ export class BreathPatternDetector {
       const breathingSignal = this.extractBreathingSignal(faceLandmarks);
       if (breathingSignal === null) return null;
       
-      // Add to history with mobile-optimized size limits
+      // Dynamic history size based on actual FPS (maintain ~30 seconds of data)
+      const dynamicHistorySize = Math.max(10, Math.min(this.MAX_HISTORY, Math.round(30 * this.currentFPS)));
+      
+      // Add to history with dynamic size limits
       this.breathingHistory.push(breathingSignal);
-      if (this.breathingHistory.length > this.MAX_HISTORY) {
+      if (this.breathingHistory.length > dynamicHistorySize) {
         this.breathingHistory.shift();
       }
       
@@ -107,7 +117,12 @@ export class BreathPatternDetector {
       const chin = landmarks[this.CHIN_INDEX];
       const forehead = landmarks[this.FOREHEAD_INDEX];
       
-      if (!noseTip || !chin || !forehead) return null;
+      // Robust validation of landmark data
+      if (!noseTip || !noseTip.x || !noseTip.y || 
+          !chin || !chin.x || !chin.y || 
+          !forehead || !forehead.x || !forehead.y) {
+        return null;
+      }
       
       // Calculate face height (nose to chin distance)
       const faceHeight = Math.sqrt(
@@ -130,7 +145,9 @@ export class BreathPatternDetector {
         this.movingAverage.shift();
       }
       
-      return this.movingAverage.reduce((sum, val) => sum + val, 0) / this.movingAverage.length;
+      // Ensure we don't return NaN
+      const smoothedSignal = this.movingAverage.reduce((sum, val) => sum + val, 0) / this.movingAverage.length;
+      return isNaN(smoothedSignal) ? null : smoothedSignal;
       
     } catch (error) {
       console.error('Signal extraction error:', error);
@@ -319,29 +336,62 @@ export class BreathPatternDetector {
   /**
    * Get breathing guidance based on current pattern
    */
-  public getBreathingGuidance(pattern: BreathPattern): string[] {
+  public getBreathingGuidance(pattern: BreathPattern, historicalData?: { 
+    averageRate?: number; 
+    typicalRhythm?: 'regular' | 'irregular' | 'deep' | 'shallow';
+    sessionCount?: number;
+  }): string[] {
     const guidance: string[] = [];
     
-    if (pattern.rate > 20) {
-      guidance.push("Your breathing is quite fast. Try to slow down and breathe more deeply.");
-    } else if (pattern.rate < 8) {
-      guidance.push("Your breathing is very slow. Ensure you're getting enough oxygen.");
+    // Compare with historical data if available
+    if (historicalData?.averageRate) {
+      const rateDiff = pattern.rate - historicalData.averageRate;
+      if (Math.abs(rateDiff) > 3) {
+        if (rateDiff > 0) {
+          guidance.push(`Your breathing is faster than your typical pace (${historicalData.averageRate} BPM). Try to slow down.`);
+        } else {
+          guidance.push(`Your breathing is slower than your typical pace (${historicalData.averageRate} BPM). Find a comfortable rhythm.`);
+        }
+      }
+    } else {
+      // Generic rate guidance
+      if (pattern.rate > 20) {
+        guidance.push("Your breathing is quite fast. Try to slow down and breathe more deeply.");
+      } else if (pattern.rate < 8) {
+        guidance.push("Your breathing is very slow. Ensure you're getting enough oxygen.");
+      }
     }
     
+    // Rhythm guidance
     if (pattern.rhythm === 'irregular') {
       guidance.push("Focus on creating a steady, consistent breathing rhythm.");
     } else if (pattern.rhythm === 'shallow') {
       guidance.push("Try to breathe more deeply, expanding your diaphragm.");
     }
     
+    // Quality guidance
     if (pattern.quality < 60) {
       guidance.push("Relax your face and jaw muscles for better breathing detection.");
     }
     
+    // Trend guidance with session context
     if (pattern.trend === 'declining') {
-      guidance.push("Take a moment to reset and refocus on your breathing technique.");
+      if (historicalData?.sessionCount && historicalData.sessionCount > 5) {
+        guidance.push("Your breathing pattern has become less consistent recently. This is normal - take a moment to reset.");
+      } else {
+        guidance.push("Take a moment to reset and refocus on your breathing technique.");
+      }
     } else if (pattern.trend === 'improving') {
-      guidance.push("Excellent! Your breathing pattern is becoming more stable.");
+      if (historicalData?.sessionCount && historicalData.sessionCount > 3) {
+        guidance.push("Great progress! Your breathing pattern is becoming more stable with practice.");
+      } else {
+        guidance.push("Excellent! Your breathing pattern is becoming more stable.");
+      }
+    }
+    
+    // Encouragement based on session count
+    if (historicalData?.sessionCount && historicalData.sessionCount > 10) {
+      guidance.push(`You've completed ${historicalData.sessionCount} sessions - your dedication is paying off!`);
     }
     
     return guidance.length > 0 ? guidance : ["Your breathing pattern looks good. Keep it up!"];

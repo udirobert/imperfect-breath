@@ -6,8 +6,8 @@ export class SecureAIClient {
     sessionData: any,
     analysisType: 'session' | 'pattern' = 'session'
   ): Promise<SecureAIResponse> {
-    const apiUrl = import.meta.env.VITE_APP_URL || 'http://localhost:3001';
-    const endpoint = `${apiUrl}${AI_CONFIG.apiEndpoint}`;
+    // Use relative path for Netlify functions, or construct full URL only if needed
+    const endpoint = AI_CONFIG.apiEndpoint;
 
     const requestBody = {
       provider,

@@ -66,15 +66,47 @@ export const SessionInProgress = ({
     },
   });
 
-  // Start vision when camera is ready
+  // Start vision when camera is ready and video element is properly loaded
   useEffect(() => {
-    if (
-      cameraInitialized &&
-      showVideoFeed &&
-      videoRef.current &&
-      !vision.state.isActive
-    ) {
-      vision.start(videoRef.current).catch(console.error);
+    const startVision = async () => {
+      if (
+        cameraInitialized &&
+        showVideoFeed &&
+        videoRef.current &&
+        !vision.state.isActive &&
+        videoRef.current.readyState >= 2 // HAVE_CURRENT_DATA
+      ) {
+        try {
+          await vision.start(videoRef.current);
+        } catch (error) {
+          console.error("Failed to start vision processing:", error);
+        }
+      }
+    };
+
+    // Start immediately if conditions are met
+    startVision();
+
+    // Also listen for video ready state changes
+    const handleVideoReady = () => {
+      if (cameraInitialized && showVideoFeed && !vision.state.isActive) {
+        startVision();
+      }
+    };
+
+    const video = videoRef.current;
+    if (video) {
+      video.addEventListener("loadeddata", handleVideoReady);
+      video.addEventListener("canplay", handleVideoReady);
+
+      return () => {
+        video.removeEventListener("loadeddata", handleVideoReady);
+        video.removeEventListener("canplay", handleVideoReady);
+        
+        if (vision.state.isActive) {
+          vision.stop();
+        }
+      };
     }
 
     return () => {

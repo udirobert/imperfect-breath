@@ -50,6 +50,14 @@ interface SessionModeConfig {
   layout: "single" | "dual" | "mobile";
 }
 
+// Historical session data for contextual guidance
+interface HistoricalSessionData {
+  averageBreathingRate?: number;
+  typicalRhythm?: "regular" | "irregular" | "deep" | "shallow";
+  sessionCount?: number;
+  previousPostureScore?: number;
+}
+
 interface UnifiedBreathingSessionProps {
   pattern: {
     name: string;
@@ -121,37 +129,6 @@ export const UnifiedBreathingSession: React.FC<
     getSessionDuration,
   } = useEnhancedSession();
 
-  // Unified vision system
-  // Force premium tier for enhanced/advanced modes regardless of device detection
-  const visionTier =
-    mode === "enhanced" || mode === "advanced"
-      ? "premium"
-      : config.enableAdvancedFeatures
-      ? "premium"
-      : "standard";
-
-  const vision = useUnifiedVision({
-    tier: visionTier,
-    targetFPS: config.enableMobileOptimizations ? 10 : 15,
-    mobileOptimized: config.enableMobileOptimizations,
-    features: {
-      breathPattern: {
-        enabled: config.enableAdvancedFeatures,
-        detectionInterval: 1000,
-        enableGuidance: true,
-      },
-      postureAnalysis: {
-        enabled: config.enableAdvancedFeatures,
-        analysisInterval: 2000,
-        alertThreshold: 60,
-      },
-      performance: {
-        enabled: config.showPerformanceMonitor,
-        showMonitor: true,
-      },
-    },
-  });
-
   // Mobile optimizations
   const mobileOpt = useMobileOptimization({
     enableOrientationLock: config.enableMobileOptimizations,
@@ -171,6 +148,9 @@ export const UnifiedBreathingSession: React.FC<
   const [completionData, setCompletionData] = useState<any>(null);
   const [visionInitialized, setVisionInitialized] = useState(false);
   const [visionInitPeriod, setVisionInitPeriod] = useState(true);
+  const [historicalData, setHistoricalData] = useState<HistoricalSessionData>(
+    {}
+  );
   const [loadingState, setLoadingState] = useState<{
     camera: boolean;
     models: boolean;
@@ -183,8 +163,112 @@ export const UnifiedBreathingSession: React.FC<
     message: "",
   });
 
+  // Unified vision system
+  // Force premium tier for enhanced/advanced modes regardless of device detection
+  const visionTier =
+    mode === "enhanced" || mode === "advanced"
+      ? "premium"
+      : config.enableAdvancedFeatures
+      ? "premium"
+      : "standard";
+
+  const vision = useUnifiedVision({
+    tier: visionTier,
+    targetFPS: config.enableMobileOptimizations ? 10 : 15,
+    mobileOptimized: config.enableMobileOptimizations,
+    features: {
+      breathPattern: {
+        enabled: config.enableAdvancedFeatures,
+        detectionInterval: 1000,
+        enableGuidance: true,
+        historicalData: {
+          averageRate: historicalData.averageBreathingRate,
+          typicalRhythm: historicalData.typicalRhythm,
+          sessionCount: historicalData.sessionCount,
+        },
+      },
+      postureAnalysis: {
+        enabled: config.enableAdvancedFeatures,
+        analysisInterval: 2000,
+        alertThreshold: 60,
+        sessionContext: {
+          sessionCount: historicalData.sessionCount,
+          duration: sessionState.sessionData.duration,
+          previousScore: historicalData.previousPostureScore,
+        },
+      },
+      performance: {
+        enabled: config.showPerformanceMonitor,
+        showMonitor: true,
+      },
+    },
+  });
+
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Start vision processing when camera is enabled and video is ready
+  useEffect(() => {
+    const startVisionProcessing = async () => {
+      if (
+        cameraEnabled &&
+        videoRef.current &&
+        config.enableVision &&
+        !vision.state.isActive &&
+        videoRef.current.readyState >= 2 // HAVE_CURRENT_DATA
+      ) {
+        try {
+          console.log("Starting vision processing...");
+          await vision.start(videoRef.current);
+          console.log("Vision processing started successfully");
+        } catch (error) {
+          console.error("Failed to start vision processing:", error);
+          // Try with fallback configuration
+          try {
+            // Retry with basic tier
+            const fallbackVision = useUnifiedVision({
+              tier: "basic",
+              targetFPS: 10,
+              mobileOptimized: true,
+              features: {
+                breathPattern: { enabled: false },
+                postureAnalysis: { enabled: false },
+                performance: { enabled: false, showMonitor: false },
+              },
+            });
+            
+            if (videoRef.current && videoRef.current.readyState >= 2) {
+              await fallbackVision.start(videoRef.current);
+              console.log("Vision processing started with fallback configuration");
+            }
+          } catch (fallbackError) {
+            console.error("Failed to start vision processing with fallback:", fallbackError);
+          }
+        }
+      }
+    };
+
+    // Start vision processing when conditions are met
+    startVisionProcessing();
+
+    // Also listen for video ready state changes
+    const handleVideoReady = () => {
+      if (cameraEnabled && config.enableVision && !vision.state.isActive) {
+        startVisionProcessing();
+      }
+    };
+
+    const video = videoRef.current;
+    if (video) {
+      video.addEventListener("loadeddata", handleVideoReady);
+      video.addEventListener("canplay", handleVideoReady);
+
+      return () => {
+        video.removeEventListener("loadeddata", handleVideoReady);
+        video.removeEventListener("canplay", handleVideoReady);
+      };
+    }
+  }, [cameraEnabled, config.enableVision, vision.state.isActive, vision]);
 
   // Vision initialization period (3 seconds after vision starts)
   useEffect(() => {
@@ -196,6 +280,26 @@ export const UnifiedBreathingSession: React.FC<
       return () => clearTimeout(timer);
     }
   }, [vision.state.isActive, visionInitialized]);
+
+  // Update historical data when vision features are available
+  useEffect(() => {
+    if (
+      vision.state.features.breathPattern ||
+      vision.state.features.postureAnalysis
+    ) {
+      // In a real implementation, this would fetch historical data from a service
+      // For now, we'll simulate with some basic values
+      setHistoricalData((prev) => ({
+        ...prev,
+        averageBreathingRate: prev.averageBreathingRate || 15,
+        typicalRhythm: prev.typicalRhythm || "regular",
+        sessionCount: (prev.sessionCount || 0) + 1,
+        previousPostureScore:
+          vision.state.features.postureAnalysis?.overallPosture ||
+          prev.previousPostureScore,
+      }));
+    }
+  }, [vision.state.features]);
 
   // Debug vision metrics updates
   useEffect(() => {
@@ -254,114 +358,60 @@ export const UnifiedBreathingSession: React.FC<
   }, [config.enableCamera, mobileOpt.state.isMobile]);
 
   /**
-   * Start unified session
+   * Handle start session
    */
   const handleStartSession = useCallback(async () => {
+    if (!pattern) return;
+
+    setLoadingState({
+      camera: false,
+      models: false,
+      session: true,
+      message: "Starting session...",
+    });
+
     try {
-      setLoadingState((prev) => ({
-        ...prev,
-        session: true,
-        message: "Initializing session...",
-      }));
-
-      // Initialize vision if enabled and camera is ready
-      if (config.enableVision && cameraEnabled && videoRef.current) {
-        setLoadingState((prev) => ({
-          ...prev,
-          models: true,
-          message: "Loading AI models...",
-        }));
-
-        try {
-          // Ensure video is playing before starting vision
-          if (videoRef.current.paused) {
-            await videoRef.current.play();
-          }
-
-          await vision.start(videoRef.current);
-          setLoadingState((prev) => ({ ...prev, models: false }));
-
-          // Log successful vision start
-          console.log("Vision system started successfully", {
-            isActive: vision.state.isActive,
-            metrics: vision.state.metrics,
-            features: vision.getAvailableFeatures(),
-          });
-        } catch (visionError) {
-          console.error("Vision initialization failed:", visionError);
-          setLoadingState((prev) => ({
-            ...prev,
-            models: false,
-            message: "AI features unavailable, continuing without them.",
-          }));
-        }
-      }
-
       // Initialize session
-      setLoadingState((prev) => ({
-        ...prev,
-        message: "Starting breathing session...",
-      }));
-
-      const sessionConfig = {
-        pattern: {
-          name: pattern.name,
-          phases: {
-            inhale: pattern.phases.inhale,
-            hold: pattern.phases.hold,
-            exhale: pattern.phases.exhale,
-            hold_after_exhale: pattern.phases.pause,
-          },
-          difficulty: pattern.difficulty,
-          benefits: pattern.benefits,
-        },
+      await initializeSession({
+        pattern,
         features: {
-          enableCamera: config.enableCamera && cameraEnabled,
-          enableAI: config.enableVision && vision.state.isActive,
-          enableAudio: audioEnabled,
+          enableCamera: config.enableCamera,
+          enableAI: config.enableVision,
+          enableAudio: true,
         },
-      };
+      });
 
-      await initializeSession(sessionConfig);
-      await startSession();
-      setSessionStarted(true);
-
-      // Start mobile optimizations if enabled
+      // Start mobile optimizations if needed
       if (config.enableMobileOptimizations) {
         mobileOpt.startMobileSession();
       }
 
-      // Haptic feedback
-      if (config.enableMobileOptimizations) {
-        mobileOpt.triggerHapticFeedback("light");
+      // Start session
+      await startSession();
+
+      // Trigger haptic feedback on start
+      if (mobileOpt.state.isMobile) {
+        mobileOpt.triggerHapticFeedback("heavy");
       }
 
+      setSessionStarted(true);
+    } catch (error) {
+      console.error("Failed to start session:", error);
+      setError("Failed to start session. Please try again.");
+
+      // Trigger haptic feedback on error
+      if (mobileOpt.state.isMobile) {
+        mobileOpt.triggerHapticFeedback("heavy");
+      }
+    } finally {
       setLoadingState({
         camera: false,
         models: false,
         session: false,
         message: "",
       });
-      console.log(`Unified session started in ${mode} mode`);
-    } catch (error) {
-      console.error("Failed to start unified session:", error);
-      setLoadingState((prev) => ({
-        ...prev,
-        session: false,
-        message: "Failed to start session. Please try again.",
-      }));
     }
-  }, [
-    pattern,
-    config,
-    audioEnabled,
-    initializeSession,
-    startSession,
-    mobileOpt,
-    vision,
-    mode,
-    cameraEnabled,
-  ]);
+  }, [pattern, initializeSession, startSession, config, mobileOpt]);
 
   /**
    * Stop session and cleanup
@@ -414,7 +464,7 @@ export const UnifiedBreathingSession: React.FC<
     onSessionComplete?.(metrics);
 
     if (config.enableMobileOptimizations) {
-      mobileOpt.triggerHapticFeedback("medium");
+      mobileOpt.triggerHapticFeedback("heavy");
     }
   }, [
     stopSession,
@@ -429,24 +479,33 @@ export const UnifiedBreathingSession: React.FC<
   ]);
 
   /**
-   * Toggle pause/resume
+   * Handle play/pause button
    */
   const handlePlayPause = useCallback(() => {
-    if (isSessionActive) {
-      pauseSession();
-    } else if (isPaused) {
-      resumeSession();
+    if (!sessionStarted) {
+      handleStartSession();
+      return;
     }
 
-    if (config.enableMobileOptimizations) {
-      mobileOpt.triggerHapticFeedback("light");
+    if (isSessionActive) {
+      pauseSession();
+      // Trigger haptic feedback on pause
+      if (mobileOpt.state.isMobile) {
+        mobileOpt.triggerHapticFeedback("medium");
+      }
+    } else {
+      resumeSession();
+      // Trigger haptic feedback on resume
+      if (mobileOpt.state.isMobile) {
+        mobileOpt.triggerHapticFeedback("light");
+      }
     }
   }, [
+    sessionStarted,
     isSessionActive,
-    isPaused,
+    handleStartSession,
     pauseSession,
     resumeSession,
-    config,
     mobileOpt,
   ]);
 
@@ -544,6 +603,14 @@ export const UnifiedBreathingSession: React.FC<
               videoElement={videoRef.current}
               landmarks={vision.state.metrics?.faceLandmarks || []}
               confidence={vision.state.metrics?.confidence || 0}
+              breathPhase={
+                sessionState.sessionData.currentPhase as
+                  | "inhale"
+                  | "exhale"
+                  | "hold"
+                  | "transition"
+              }
+              breathQuality={vision.state.features.breathPattern?.quality || 50}
               isActive={true}
             />
 
