@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { isTouchDevice } from "@/utils/mobile-detection";
 import { ProgressiveOnboarding } from "@/components/onboarding/ProgressiveOnboarding";
 
 /**
@@ -10,7 +10,7 @@ import { ProgressiveOnboarding } from "@/components/onboarding/ProgressiveOnboar
 const MobileOnboarding = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const isMobile = useIsMobile();
+  const isMobile = isTouchDevice();
 
   // Redirect desktop users to main page
   useEffect(() => {

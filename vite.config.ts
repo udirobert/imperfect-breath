@@ -68,28 +68,70 @@ export default defineConfig(({ mode }) => {
 
       // Common build settings
       assetsInlineLimit: 4096,
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 2000, // Increase limit since we have better chunking now
+      
+      // Target modern browsers for better optimization
+      target: 'esnext',
 
       // Rollup options for build optimization
       rollupOptions: {
         output: {
           manualChunks: {
-            // Keep TensorFlow core and backends together to avoid initialization issues
-            'tensorflow': [
+            // Core vendor libraries (stable packages only)
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-ui': [
+              '@radix-ui/react-dialog', 
+              '@radix-ui/react-select', 
+              '@radix-ui/react-slot',
+              '@radix-ui/react-toast'
+            ],
+            'vendor-crypto': ['@wagmi/core', 'viem', 'wagmi'],
+            'vendor-state': ['zustand'],
+            
+            // TensorFlow core and backends (keep together to avoid initialization issues)
+            'tensorflow-core': [
               '@tensorflow/tfjs',
               '@tensorflow/tfjs-core',
               '@tensorflow/tfjs-backend-webgl',
               '@tensorflow/tfjs-backend-cpu'
             ],
-            // Group TensorFlow models separately
+            
+            // TensorFlow models (separate chunk for lazy loading)
             'tensorflow-models': [
               '@tensorflow-models/face-landmarks-detection',
-              '@tensorflow-models/pose-detection'
+              '@tensorflow-models/pose-detection',
+              '@tensorflow-models/blazeface'
             ],
-            // Keep optional dependencies separate
-            'tensorflow-optional': [
-              '@tensorflow/tfjs-backend-webgpu'
-            ],
+            
+            // Utility libraries
+            'vendor-utils': [
+              'date-fns',
+              'uuid',
+              '@tanstack/react-query'
+            ]
+          },
+          
+          // Configure chunk file naming
+          chunkFileNames: (chunkInfo) => {
+            const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+            return `js/[name]-[hash].js`;
+          },
+          
+          // Configure asset file naming
+          assetFileNames: (assetInfo) => {
+            if (!assetInfo.name) {
+              return `assets/[name]-[hash][extname]`;
+            }
+            
+            const info = assetInfo.name.split('.');
+            const ext = info[info.length - 1];
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+              return `img/[name]-[hash][extname]`;
+            }
+            if (/css/i.test(ext)) {
+              return `css/[name]-[hash][extname]`;
+            }
+            return `assets/[name]-[hash][extname]`;
           },
         },
       },
@@ -140,17 +182,25 @@ export default defineConfig(({ mode }) => {
         "react",
         "react-dom",
         "react/jsx-runtime",
+        "zustand",
         "@tensorflow/tfjs",
         "@tensorflow/tfjs-core",
         "@tensorflow/tfjs-backend-webgl",
         "@tensorflow/tfjs-backend-cpu",
         "@tensorflow-models/face-landmarks-detection",
         "@tensorflow-models/pose-detection",
+        "@tensorflow-models/blazeface",
+        "@tanstack/react-query"
       ],
       // Exclude optional dependencies that may not be available
       exclude: [
         "@tensorflow/tfjs-backend-webgpu",
-        "@mediapipe/pose"
+        "@mediapipe/pose",
+        "@mediapipe/camera_utils",
+        "@mediapipe/control_utils",
+        "@mediapipe/drawing_utils",
+        "@lens-chain/sdk",
+        "@lens-chain/storage-client"
       ],
     },
 

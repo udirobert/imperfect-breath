@@ -1,13 +1,15 @@
 import React, { useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { useEnhancedSession } from "../hooks/useEnhancedSession";
+import { useSession } from "../hooks/useSession";
 import { BREATHING_PATTERNS, BreathingPattern } from "../lib/breathingPatterns";
-import { useSessionFlow } from "../hooks/useSessionFlow";
 import { useOfflineManager } from "../lib/offline/OfflineManager";
 
 // Specialized components for different concerns
-import { SessionOrchestrator } from "../components/session/SessionOrchestrator";
+import {
+  MeditationSession,
+  MeditationSessionConfig,
+} from "../components/session/MeditationSession";
 import { SessionErrorBoundary } from "../lib/errors/error-boundary";
 
 /**
@@ -83,8 +85,14 @@ const useSessionCompletion = () => {
       } = sessionData;
 
       // Use actual session duration if available, otherwise calculate from pattern
-      const actualSessionDuration = sessionDuration || (elapsedTime / 1000);
-      const calculatedDuration = (cycleCount * ((pattern.inhale + pattern.hold + pattern.exhale + pattern.rest))) / 1000;
+      const actualSessionDuration = sessionDuration || elapsedTime / 1000;
+      const calculatedDuration =
+        (cycleCount *
+          (pattern.inhale +
+            pattern.hold +
+            pattern.exhale +
+            (pattern.hold_after_exhale || 0))) /
+        1000;
 
       // Save session offline-first
       const sessionId = saveSession({
@@ -121,16 +129,9 @@ const useSessionCompletion = () => {
 
 /**
  * Main BreathingSession Component
- *
- * PERFORMANCE OPTIMIZATIONS:
- * - Memoized pattern initialization
- * - Extracted completion handler
- * - Lazy component loading
- * - Minimal re-renders
  */
 const BreathingSession: React.FC = () => {
   const location = useLocation();
-  const sessionFlow = useSessionFlow();
 
   // Memoized pattern initialization - PERFORMANCE
   const initialPattern = usePatternInitialization(location);
@@ -146,59 +147,61 @@ const BreathingSession: React.FC = () => {
     initialize,
     start,
     complete,
-  } = useEnhancedSession();
+  } = useSession();
+
+  // Simple mode detection - determine if enhanced vision should be used
+  const useEnhancedVision =
+    location.pathname.includes("/enhanced") ||
+    location.search.includes("enhanced=true");
 
   // Memoized session configuration - PERFORMANCE
-  const sessionConfig = useMemo(
-    (): SessionConfig => ({
-      pattern: initialPattern,
-      features: {
-        enableCamera: sessionFlow.useEnhancedVision,
-        enableAI: sessionFlow.useEnhancedVision,
-        enableAudio: true, // Default to enabled
+  const sessionConfig: MeditationSessionConfig = useMemo(
+    () => ({
+      mode: useEnhancedVision ? "enhanced" : "classic",
+      pattern: {
+        name: initialPattern.name,
+        phases: {
+          inhale: initialPattern.inhale,
+          hold: initialPattern.hold,
+          exhale: initialPattern.exhale,
+          pause: initialPattern.hold_after_exhale || 0,
+        },
+        difficulty: "intermediate",
+        benefits: initialPattern.benefits,
       },
-      displayMode: sessionFlow.useEnhancedVision ? "analysis" : "focus",
+      autoStart: false,
     }),
-    [initialPattern, sessionFlow.useEnhancedVision]
+    [initialPattern, useEnhancedVision]
   );
 
   // Session completion callback - CLEAN
   const onSessionComplete = useCallback(
     (metrics: any) => {
       handleSessionComplete({
-        pattern: sessionConfig.pattern,
-        cycleCount: metrics?.cycleCount || sessionState.sessionData.cycleCount,
+        pattern: {
+          id: initialPattern.id || "custom",
+          name: initialPattern.name,
+          ...initialPattern,
+        },
+        cycleCount: metrics?.cycleCount || 0,
         breathHoldTime: metrics?.breathHoldTime || 0,
         restlessnessScore: metrics?.restlessnessScore || 0,
-        elapsedTime: metrics?.elapsedTime || sessionState.sessionData.duration * 1000,
-        // Include the new performance metrics
-        phaseAccuracy: metrics?.phaseAccuracy || sessionState.sessionData.phaseAccuracy,
-        rhythmConsistency: metrics?.rhythmConsistency || sessionState.sessionData.rhythmConsistency,
-        sessionDuration: metrics?.sessionDuration || sessionState.sessionData.duration,
-        patternName: metrics?.patternName || sessionConfig.pattern.name,
+        elapsedTime: metrics?.elapsedTime || metrics?.duration * 1000 || 0,
+        phaseAccuracy: metrics?.phaseAccuracy || 0,
+        rhythmConsistency: metrics?.rhythmConsistency || 0,
+        sessionDuration: metrics?.sessionDuration || metrics?.duration || 0,
+        patternName: metrics?.patternName || initialPattern.name,
       });
-
-      complete();
     },
-    [
-      handleSessionComplete,
-      sessionConfig.pattern,
-      sessionState.sessionData,
-      complete,
-    ]
+    [handleSessionComplete, initialPattern]
   );
 
   return (
     <SessionErrorBoundary>
-      <SessionOrchestrator
+      <MeditationSession
         config={sessionConfig}
-        sessionFlow={sessionFlow}
-        sessionState={sessionState}
-        isReady={isReady}
-        isActive={isActive}
-        onInitialize={initialize}
-        onStart={start}
-        onComplete={onSessionComplete}
+        onSessionComplete={onSessionComplete}
+        onSessionExit={() => window.history.back()}
       />
     </SessionErrorBoundary>
   );

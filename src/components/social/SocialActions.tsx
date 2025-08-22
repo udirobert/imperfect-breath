@@ -19,6 +19,7 @@ import {
 import { Textarea } from "../../components/ui/textarea";
 import { Input } from "../../components/ui/input";
 import { useToast } from "../../hooks/use-toast";
+import { apiClient } from "../../lib/api/unified-client";
 import type { CustomPattern } from "../../lib/patternStorage";
 
 interface SocialActionsProps {
@@ -143,14 +144,21 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
     try {
       await onComment(pattern.id, newComment);
 
-      // Refresh comments from API instead of manually adding
+      // Refresh comments using unified client
       setIsLoadingComments(true);
-      const response = await fetch(`/api/patterns/${pattern.id}/comments`);
-      if (!response.ok) {
-        throw new Error("Failed to refresh comments");
+      try {
+        const response = await apiClient.request(
+          "social",
+          `/api/patterns/${pattern.id}/comments`
+        );
+        if (response.success) {
+          setComments(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to refresh comments:", error);
+      } finally {
+        setIsLoadingComments(false);
       }
-      const updatedComments = await response.json();
-      setComments(updatedComments);
 
       setNewComment("");
       toast({
@@ -164,8 +172,6 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
         description: "Failed to post comment",
         variant: "destructive",
       });
-    } finally {
-      setIsLoadingComments(false);
     }
   };
 
@@ -233,17 +239,16 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
         onOpenChange={(open) => {
           setShowComments(open);
           if (open) {
-            // Fetch comments when dialog opens
+            // Fetch comments using unified client
             setIsLoadingComments(true);
-            fetch(`/api/patterns/${pattern.id}/comments`)
+            apiClient
+              .request("social", `/api/patterns/${pattern.id}/comments`)
               .then((response) => {
-                if (!response.ok) {
-                  throw new Error("Failed to fetch comments");
+                if (response.success) {
+                  setComments(response.data);
+                } else {
+                  throw new Error(response.error || "Failed to fetch comments");
                 }
-                return response.json();
-              })
-              .then((data) => {
-                setComments(data);
               })
               .catch((error) => {
                 console.error("Error fetching comments:", error);

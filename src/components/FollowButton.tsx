@@ -1,4 +1,4 @@
-import { useFollow } from "../hooks/useFollow";
+import { useLens } from "../hooks/useLens";
 import { Button } from "./ui/button";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
@@ -12,15 +12,15 @@ export const FollowButton = ({
   address,
   isFollowed = false,
 }: FollowButtonProps) => {
-  const { follow, unfollow, isFollowing } = useFollow();
+  const { followProfile, unfollowProfile, isLoading } = useLens();
   const [userIsFollowed, setUserIsFollowed] = useState(isFollowed);
 
   const handleFollow = async () => {
     if (!userIsFollowed) {
-      await follow(address);
+      await followProfile(address);
       setUserIsFollowed(true);
     } else {
-      await unfollow(address);
+      await unfollowProfile(address);
       setUserIsFollowed(false);
     }
   };
@@ -28,11 +28,11 @@ export const FollowButton = ({
   return (
     <Button
       onClick={handleFollow}
-      disabled={isFollowing}
+      disabled={isLoading}
       size="sm"
       variant={userIsFollowed ? "outline" : "default"}
     >
-      {isFollowing ? (
+      {isLoading ? (
         "Processing..."
       ) : userIsFollowed ? (
         <>

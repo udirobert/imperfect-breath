@@ -28,13 +28,13 @@ We believe breathing is the foundation of wellness, and technology should enhanc
 # Clone and run immediately
 git clone [your-repo-url]
 cd imperfect-breath
-bun install
+npm install
 
 # Start both frontend and AI server
-bun run dev:full    # Starts both frontend (4567) and AI server (3001)
+npm run dev:full    # Starts both frontend (4556) and AI server (3001)
 # OR run separately:
-bun run dev         # Frontend only (localhost:4567)
-bun run dev:server  # AI server only (localhost:3001)
+npm run dev         # Frontend only (localhost:4556)
+npm run dev:server  # AI server only (localhost:3001)
 ```
 
 **No signup required** - Start breathing immediately with:
@@ -76,7 +76,7 @@ bun run dev:server  # AI server only (localhost:3001)
 **Frontend**
 
 - **React 18** + **TypeScript** - Modern UI framework
-- **Vite** + **Bun** - Lightning-fast build system
+- **Vite** - Lightning-fast build system
 - **Tailwind CSS** + **shadcn/ui** - Beautiful, accessible components
 - **TensorFlow.js** - Client-side computer vision
 - **PWA** - Offline-capable mobile experience
@@ -152,8 +152,8 @@ bun run dev:server  # AI server only (localhost:3001)
 
 ```bash
 # Required
-Bun (package manager)
 Node.js 18+
+npm or yarn
 Git
 
 # Optional (for full features)
@@ -166,7 +166,7 @@ Docker (containerized deployment)
 
 ```bash
 # 1. Install dependencies
-bun install
+npm install
 
 # 2. Setup environment
 cp .env.example .env
@@ -176,10 +176,77 @@ cp flow.json.example flow.json
 # See docs/TECHNICAL_GUIDE.md for complete setup
 
 # 4. Start development
-bun run dev:full         # Both frontend (4567) and AI server (3001)
+npm run dev:full         # Both frontend (4556) and AI server (3001)
 # OR separately:
-bun run dev              # Frontend only (localhost:4567)
-bun run dev:server       # AI server only (localhost:3001)
+npm run dev              # Frontend only (localhost:4556)
+npm run dev:server       # AI server only (localhost:3001)
+```
+
+### Local Development vs Production Deployment
+
+#### 🏠 Local Development
+
+For local development, you need to run two separate services:
+
+```bash
+# Terminal 1: Start the frontend development server
+npm run dev
+# Access at: http://localhost:4556
+
+# Terminal 2: Start the backend AI server
+npm run dev:server
+# AI API endpoint: http://localhost:3001/api/ai-analysis
+```
+
+**Key Points for Local Development:**
+- The frontend runs on port `4556`
+- The AI backend server runs on port `3001`
+- Both services must be running simultaneously for full functionality
+- Camera access requires HTTPS in production but works with HTTP locally
+- AI analysis features require the backend server to be running
+
+#### 🚀 Production Deployment
+
+For production deployment, you have several options:
+
+1. **Netlify Deployment** (Recommended for frontend):
+   ```bash
+   # Netlify automatically builds and deploys the frontend
+   # Backend functions are deployed as Netlify Functions
+   # See netlify.toml for configuration
+   ```
+
+2. **Vercel Deployment**:
+   ```bash
+   # Configure Vercel to build the frontend
+   # Deploy the server separately or as serverless functions
+   ```
+
+3. **Traditional Server Deployment**:
+   ```bash
+   # Build frontend for production
+   npm run build
+   
+   # Serve built files with any static server
+   # Deploy the server/ directory separately
+   ```
+
+**Environment Variables for Production:**
+```bash
+# Frontend (.env in root)
+VITE_APP_URL=                    # Leave empty for relative paths
+VITE_ENABLE_AI_ANALYSIS=true     # Enable AI features
+# Add your client-side AI keys for unlimited use:
+VITE_GOOGLE_GEMINI_API_KEY=your_key
+VITE_OPENAI_API_KEY=your_key
+VITE_ANTHROPIC_API_KEY=your_key
+
+# Backend (server/.env)
+PORT=3001                        # Server port
+# Server-side keys for trial system:
+GOOGLE_AI_API_KEY=your_key
+OPENAI_API_KEY=your_key
+ANTHROPIC_API_KEY=your_key
 ```
 
 ### AI Configuration - Dual System
@@ -218,16 +285,16 @@ ANTHROPIC_API_KEY=your_server_key_here
 
 ```bash
 # Development
-bun run dev              # Start frontend (localhost:4567)
-bun run dev:server       # Start AI server (localhost:3001)
-bun run dev:full         # Start both frontend and server
-bun run build           # Production build
-bun run preview         # Preview build
+npm run dev              # Start frontend (localhost:4556)
+npm run dev:server       # Start AI server (localhost:3001)
+npm run dev:full         # Start both frontend and server
+npm run build           # Production build
+npm run preview         # Preview build
 
 # Testing
-bun run test            # Run tests
-bun run test:vision     # Test computer vision
-bun run test:blockchain # Test blockchain connections
+npm run test            # Run tests
+npm run test:vision     # Test computer vision
+npm run test:blockchain # Test blockchain connections
 
 # AI Agent
 cd eliza-agent-temp
@@ -235,9 +302,9 @@ pnpm install
 pnpm start --character="../characters/breathing-coach.character.json"
 
 # Blockchain
-bun run flow:setup      # Setup Flow environment
-bun run flow:deploy     # Deploy contracts
-bun run flow:test       # Test contracts
+npm run flow:setup      # Setup Flow environment
+npm run flow:deploy     # Deploy contracts
+npm run flow:test       # Test contracts
 ```
 
 ## 📚 Documentation
@@ -318,8 +385,8 @@ We welcome contributions from developers, breathing instructors, and wellness pr
 git checkout -b feature/amazing-feature
 
 # 3. Make changes and test
-bun run test
-bun run lint
+npm run test
+npm run lint
 
 # 4. Submit pull request
 ```

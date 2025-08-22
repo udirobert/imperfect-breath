@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./useAuth";
-import { useIsMobile } from "./use-mobile";
+import { isTouchDevice } from "../utils/mobile-detection";
 
 interface FirstTimeUserState {
   isFirstTime: boolean;
@@ -14,7 +14,7 @@ interface FirstTimeUserState {
  */
 export const useFirstTimeUser = () => {
   const { isAuthenticated } = useAuth();
-  const isMobile = useIsMobile();
+  const isMobile = isTouchDevice();
   
   const [state, setState] = useState<FirstTimeUserState>({
     isFirstTime: false,

@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { isTouchDevice } from "@/utils/mobile-detection";
 import {
   Play,
   Heart,
@@ -57,7 +57,7 @@ interface BottomTabBarProps {
 
 export const BottomTabBar: React.FC<BottomTabBarProps> = ({ className }) => {
   const location = useLocation();
-  const isMobile = useIsMobile();
+  const isMobile = isTouchDevice();
 
   // Only show on mobile devices
   if (!isMobile) {

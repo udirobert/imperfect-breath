@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  vision-service:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - ENV=production
+      - MAX_CONCURRENT_SESSIONS=10
+      - MODEL_DOWNLOAD_ON_START=true
+      - LOG_LEVEL=info
+    volumes:
+      # Persist models across container restarts
+      - ./models:/app/models
+      # Optional: persist session data
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Optional: Add nginx for SSL termination and load balancing
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - vision-service
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge

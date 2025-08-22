@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { BreathingPattern, BREATHING_PATTERNS } from "@/lib/breathingPatterns";
+import { apiClient } from '../api/unified-client';
 
 export interface OfflineSession {
   id: string;
@@ -288,9 +289,8 @@ export class OfflineManager {
     }
 
     try {
-      const response = await fetch('/api/sessions', {
+      const response = await apiClient.request('social', '/api/sessions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patternId: session.patternId,
           duration: session.duration,
@@ -303,17 +303,17 @@ export class OfflineManager {
         }),
       });
 
-      if (!response.ok) {
+      if (!response.success) {
         // If API endpoint doesn't exist, just log and continue
-        if (response.status === 404) {
+        if (response.error && response.error.includes('404')) {
           console.log('Session API endpoint not available, session saved locally only');
           return;
         }
-        throw new Error(`Sync failed: ${response.statusText}`);
+        throw new Error(`Sync failed: ${response.error}`);
       }
     } catch (error) {
       // Handle network errors gracefully
-      if (error instanceof TypeError && error.message.includes('fetch')) {
+      if (error instanceof Error && error.message.includes('network')) {
         console.log('Network error during sync, session saved locally only');
         return;
       }

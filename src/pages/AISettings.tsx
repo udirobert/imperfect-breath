@@ -14,7 +14,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { AI_PROVIDERS, AIConfigManager, SessionData } from "@/lib/ai/config";
-import { useAIAnalysis } from "@/hooks/useAIAnalysis";
 import { AITrialManager } from "@/lib/ai/trial-manager";
 import {
   CheckCircle,
@@ -27,6 +26,9 @@ import {
   Gift,
 } from "lucide-react";
 import { toast } from "sonner";
+import { IntegrationStatus } from "@/components/integration/IntegrationStatus";
+import { SystemHealthMonitor } from "@/components/monitoring/SystemHealthMonitor";
+import { apiClient } from "@/lib/api/unified-client";
 
 const AISettings = () => {
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
@@ -36,7 +38,7 @@ const AISettings = () => {
     usageCount: number;
     isExhausted: boolean;
   }>({ usageCount: 0, isExhausted: false });
-  const { analyzeWithProvider } = useAIAnalysis();
+  // AI analysis functionality would go here if needed
 
   // Load existing API keys and trial status on mount
   useEffect(() => {
@@ -146,9 +148,9 @@ const AISettings = () => {
         landmarks: 68,
       };
 
-      const result = await analyzeWithProvider(testSession, providerId);
+      const result = await apiClient.analyzeSession(providerId, testSession);
 
-      if (result && !result.error) {
+      if (result && result.success) {
         toast.success(
           `${
             AI_PROVIDERS.find((p) => p.id === providerId)?.name
@@ -241,8 +243,10 @@ const AISettings = () => {
       </Card>
 
       <Tabs defaultValue="providers" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="providers">API Providers</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="system">System Health</TabsTrigger>
           <TabsTrigger value="about">About AI Analysis</TabsTrigger>
         </TabsList>
 
@@ -361,6 +365,24 @@ const AISettings = () => {
               Clear All API Keys
             </Button>
           </div>
+        </TabsContent>
+
+        <TabsContent value="integrations" className="space-y-6">
+          <IntegrationStatus />
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Health Monitor</CardTitle>
+              <CardDescription>
+                Real-time status of all backend services and integrations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SystemHealthMonitor showInDevelopment={true} compact={false} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="about" className="space-y-6">

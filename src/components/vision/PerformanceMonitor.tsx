@@ -18,7 +18,7 @@ import {
   Settings,
   AlertTriangle,
 } from "lucide-react";
-import { PerformanceOptimizer } from "../../lib/vision/performance-optimizer";
+// Removed complex performance optimizer dependency
 
 interface PerformanceMonitorProps {
   isVisible?: boolean;
@@ -59,48 +59,22 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       externalPerformanceData.memoryUsage > 0 ||
       externalPerformanceData.frameRate > 0);
 
-  const [optimizationStatus, setOptimizationStatus] = useState({
-    activeOptimizations: [] as string[],
-    performanceTrend: "stable" as "improving" | "stable" | "declining",
-    recommendations: [] as string[],
-  });
-
-  const [performanceSummary, setPerformanceSummary] = useState({
-    averageCPU: 0,
-    averageMemory: 0,
-    averageFrameRate: 0,
-    optimizationCount: 0,
-    uptimeSeconds: 0,
-  });
-
-  const optimizer = PerformanceOptimizer.getInstance();
-
-  // Accept actual performance data as props
+  // Simplified performance tracking - no complex optimizer needed
+  const [performanceTrend] = useState<"improving" | "stable" | "declining">("stable");
+  const [startTime] = useState(Date.now());
+  
+  // Simple uptime calculation
+  const [uptime, setUptime] = useState(0);
+  
   useEffect(() => {
     if (!isVisible) return;
-
-    // Only use internal metrics if no external performance data is provided
-    if (!externalPerformanceData) {
-      // Don't show any data if no real performance data is available
-      // This respects the user's preference to not show fake data
-      return;
-    }
-
-    // Update optimization status based on real data
-    const optimizations = optimizer.optimizePerformance(
-      externalPerformanceData
-    );
-    const status = optimizer.getOptimizationStatus();
-    const summary = optimizer.getPerformanceSummary();
-
-    setOptimizationStatus(status);
-    setPerformanceSummary(summary);
-
-    // Notify parent of optimization changes
-    if (onOptimizationChange && optimizations.length > 0) {
-      onOptimizationChange(status.activeOptimizations);
-    }
-  }, [isVisible, externalPerformanceData, onOptimizationChange]);
+    
+    const interval = setInterval(() => {
+      setUptime(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isVisible, startTime]);
 
   if (!isVisible || !performanceData) return null;
 
@@ -153,11 +127,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
         >
           FPS: {Math.round(performanceData.frameRate || 0)}
         </span>
-        {optimizationStatus.activeOptimizations.length > 0 && (
-          <Badge variant="secondary" className="text-xs">
-            {optimizationStatus.activeOptimizations.length} opts
-          </Badge>
-        )}
+        {/* Removed complex optimizations display */}
       </div>
     );
   }
@@ -170,7 +140,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
             <Activity className="h-3 w-3 text-white" />
           </div>
           Performance Monitor
-          {getTrendIcon(optimizationStatus.performanceTrend)}
+          {getTrendIcon(performanceTrend)}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -256,66 +226,24 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
           </div>
         </div>
 
-        {/* Active Optimizations */}
-        {optimizationStatus.activeOptimizations.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-gray-700 flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3 text-orange-500" />
-              Active Optimizations
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {optimizationStatus.activeOptimizations.map((opt) => (
-                <Badge
-                  key={opt}
-                  variant="secondary"
-                  className="text-xs bg-orange-100 text-orange-800"
-                >
-                  {opt.replace("-", " ")}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Recommendations */}
-        {optimizationStatus.recommendations.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-gray-700">
-              Recommendations
-            </div>
-            <div className="space-y-1">
-              {optimizationStatus.recommendations
-                .slice(0, 2)
-                .map((rec, index) => (
-                  <div
-                    key={index}
-                    className="text-xs text-gray-600 bg-blue-50 p-2 rounded"
-                  >
-                    {rec}
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Performance Summary */}
+        {/* Simple Performance Summary */}
         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-200">
           <div className="text-center">
-            <div className="text-xs text-gray-500">Avg CPU</div>
+            <div className="text-xs text-gray-500">CPU</div>
             <div className="text-sm font-medium">
-              {Math.round(performanceSummary.averageCPU)}%
+              {Math.round(performanceData.cpuUsage || 0)}%
             </div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-gray-500">Avg FPS</div>
+            <div className="text-xs text-gray-500">FPS</div>
             <div className="text-sm font-medium">
-              {Math.round(performanceSummary.averageFrameRate)}
+              {Math.round(performanceData.frameRate || 0)}
             </div>
           </div>
           <div className="text-center">
             <div className="text-xs text-gray-500">Uptime</div>
             <div className="text-sm font-medium">
-              {Math.floor(performanceSummary.uptimeSeconds / 60)}m
+              {Math.floor(uptime / 60)}m
             </div>
           </div>
         </div>

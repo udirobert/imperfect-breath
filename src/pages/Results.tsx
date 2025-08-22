@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
 import { useSessionHistory } from "../hooks/useSessionHistory";
-import { useAIAnalysis } from "../hooks/useAIAnalysis";
+import { useSecureAIAnalysis } from "../hooks/useSecureAIAnalysis";
 import { AI_PROVIDERS, AIConfigManager, SessionData } from "../lib/ai/config";
 import { toast } from "sonner";
 import { useAuth } from "../hooks/useAuth";
@@ -55,7 +55,12 @@ const Results = () => {
   const { user } = useAuth();
   const { isAuthenticated: isLensAuthenticated } = useLens();
   const { streak, totalMinutes, saveSession, history } = useSessionHistory();
-  const { analyzeSession, analyses, isAnalyzing, error } = useAIAnalysis();
+  const {
+    analyzeSession,
+    results: analyses,
+    isAnalyzing,
+    error,
+  } = useSecureAIAnalysis();
   const hasSavedRef = useRef(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
 

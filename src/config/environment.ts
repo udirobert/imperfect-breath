@@ -1,6 +1,25 @@
 // Centralized environment configuration for multichain architecture
 
+interface ServiceEndpoints {
+  ai: {
+    url: string;
+    timeout: number;
+    retries: number;
+  };
+  vision: {
+    url: string;
+    timeout: number;
+    retries: number;
+  };
+  social: {
+    url: string;
+    timeout: number;
+    retries: number;
+  };
+}
+
 interface EnvironmentConfig {
+  services: ServiceEndpoints;
   supabase: {
     url: string;
     anonKey: string;
@@ -33,6 +52,8 @@ interface EnvironmentConfig {
   development: {
     debugMode: boolean;
     enableAnalytics: boolean;
+    enableServiceDiscovery: boolean;
+    enableUnifiedAPI: boolean;
   };
 }
 
@@ -74,6 +95,23 @@ if (missingOptionalVars.length > 0) {
 }
 
 export const config: EnvironmentConfig = {
+  services: {
+    ai: {
+      url: import.meta.env.VITE_AI_SERVICE_URL || window.location.origin,
+      timeout: parseInt(import.meta.env.VITE_AI_TIMEOUT || '30000'),
+      retries: parseInt(import.meta.env.VITE_AI_RETRIES || '3'),
+    },
+    vision: {
+      url: import.meta.env.VITE_VISION_SERVICE_URL || 'http://localhost:8000',
+      timeout: parseInt(import.meta.env.VITE_VISION_TIMEOUT || '10000'),
+      retries: parseInt(import.meta.env.VITE_VISION_RETRIES || '2'),
+    },
+    social: {
+      url: import.meta.env.VITE_SOCIAL_SERVICE_URL || window.location.origin,
+      timeout: parseInt(import.meta.env.VITE_SOCIAL_TIMEOUT || '15000'),
+      retries: parseInt(import.meta.env.VITE_SOCIAL_RETRIES || '3'),
+    },
+  },
   supabase: {
     url: import.meta.env.VITE_SUPABASE_URL!,
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY!,
@@ -121,11 +159,13 @@ export const config: EnvironmentConfig = {
   development: {
     debugMode: import.meta.env.VITE_DEBUG_MODE === "true",
     enableAnalytics: import.meta.env.VITE_ENABLE_ANALYTICS !== "false",
+    enableServiceDiscovery: import.meta.env.VITE_ENABLE_SERVICE_DISCOVERY !== "false",
+    enableUnifiedAPI: import.meta.env.VITE_ENABLE_UNIFIED_API !== "false",
   },
 } as const;
 
 // Export individual configs for convenience
-export const { supabase, flow, lens, ai, app, development } = config;
+export const { services, supabase, flow, lens, ai, app, development } = config;
 
 // Development helpers
 export const isDevelopment = import.meta.env.DEV;

@@ -11,7 +11,7 @@ import {
   Coins,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { useIsMobile } from "../hooks/use-mobile";
+import { useIsMobile } from "../hooks/useAdaptivePerformance";
 import { SessionEntryPoints } from "../components/navigation/SessionEntryPoints";
 import { SmartAuthGate } from "../components/auth/SmartAuthGate";
 import { MESSAGING } from "../config/messaging";

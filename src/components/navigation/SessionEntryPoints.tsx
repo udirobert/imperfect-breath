@@ -10,7 +10,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { useIsMobile } from "../../hooks/use-mobile";
+import { isTouchDevice } from "../../utils/mobile-detection";
 import { Sparkles, Focus, Camera, Zap } from "lucide-react";
 
 interface SessionEntryPointsProps {
@@ -22,7 +22,7 @@ export const SessionEntryPoints: React.FC<SessionEntryPointsProps> = ({
   variant,
   className = "",
 }) => {
-  const isMobile = useIsMobile();
+  const isMobile = isTouchDevice();
   const effectiveVariant = variant || (isMobile ? "mobile" : "desktop");
 
   const sessionTypes = [

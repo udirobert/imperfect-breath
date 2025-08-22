@@ -4,7 +4,10 @@
  */
 
 import React from "react";
-import { UnifiedBreathingSession } from "../components/session/UnifiedBreathingSession";
+import {
+  MeditationSession,
+  MeditationSessionConfig,
+} from "../components/session/MeditationSession";
 import {
   Card,
   CardContent,
@@ -134,9 +137,17 @@ export default function EnhancedVisionDemo() {
         </div>
 
         {/* Enhanced Dual View Demo */}
-        <UnifiedBreathingSession
-          pattern={DEMO_PATTERN}
-          mode="enhanced"
+        <MeditationSession
+          config={{
+            mode: "enhanced",
+            pattern: {
+              name: DEMO_PATTERN.name,
+              phases: DEMO_PATTERN.phases,
+              difficulty: DEMO_PATTERN.difficulty,
+              benefits: DEMO_PATTERN.benefits,
+            },
+            autoStart: false,
+          }}
           onSessionComplete={handleSessionComplete}
         />
 
@@ -151,9 +162,17 @@ export default function EnhancedVisionDemo() {
             </p>
           </CardHeader>
           <CardContent>
-            <UnifiedBreathingSession
-              pattern={DEMO_PATTERN}
-              mode="advanced"
+            <MeditationSession
+              config={{
+                mode: "advanced",
+                pattern: {
+                  name: DEMO_PATTERN.name,
+                  phases: DEMO_PATTERN.phases,
+                  difficulty: DEMO_PATTERN.difficulty,
+                  benefits: DEMO_PATTERN.benefits,
+                },
+                autoStart: false,
+              }}
               onSessionComplete={handleSessionComplete}
             />
           </CardContent>

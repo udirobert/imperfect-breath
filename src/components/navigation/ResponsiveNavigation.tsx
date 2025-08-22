@@ -1,5 +1,5 @@
 import React from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { isTouchDevice } from "@/utils/mobile-detection";
 import { MobileHeader } from "./MobileHeader";
 import { BottomTabBar } from "./BottomTabBar";
 import Header from "@/components/Header";
@@ -17,7 +17,7 @@ interface ResponsiveNavigationProps {
 export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
   children,
 }) => {
-  const isMobile = useIsMobile();
+  const isMobile = isTouchDevice();
 
   return (
     <div className="min-h-screen w-full bg-calm-gradient flex flex-col">

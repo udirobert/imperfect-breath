@@ -1,7 +1,7 @@
 /**
  * Session Mode Wrapper - Routes and configures sessions based on URL mode
  *
- * SINGLE RESPONSIBILITY: Parse URL mode and configure SessionOrchestrator
+ * SINGLE RESPONSIBILITY: Parse URL mode and configure MeditationSession
  * CLEAN: Separates routing logic from session logic
  * MODULAR: Easy to extend with new session modes
  */
@@ -13,11 +13,14 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { useIsMobile } from "../../hooks/use-mobile";
 import { BREATHING_PATTERNS } from "../../lib/breathingPatterns";
-import { useEnhancedSession } from "../../hooks/useEnhancedSession";
+import { useSession } from "../../hooks/useSession";
+import { isTouchDevice } from "../../utils/mobile-detection";
 import { useOfflineManager } from "../../lib/offline/OfflineManager";
-import SessionOrchestrator from "./SessionOrchestrator";
+import {
+  MeditationSession,
+  MeditationSessionConfig,
+} from "./MeditationSession";
 import { SessionErrorBoundary } from "../../lib/errors/error-boundary";
 
 /**
@@ -96,7 +99,7 @@ const useSessionCompletion = () => {
 export const SessionModeWrapper: React.FC = () => {
   const { mode } = useParams<{ mode: "classic" | "enhanced" | "mobile" }>();
   const location = useLocation();
-  const isMobile = useIsMobile();
+  const isMobile = isTouchDevice();
 
   // Validate mode
   if (!mode || !["classic", "enhanced", "mobile"].includes(mode)) {
@@ -123,85 +126,66 @@ export const SessionModeWrapper: React.FC = () => {
   // Session completion handler
   const handleSessionComplete = useSessionCompletion();
 
-  // Enhanced session management
+  // Session management using unified hook
   const {
-    state: sessionState,
-    isReady,
+    phase: sessionState,
     isActive,
-    initialize,
     start,
     complete,
-  } = useEnhancedSession();
+  } = useSession();
 
   // Determine session configuration based on mode
   const useEnhancedVision = mode === "enhanced";
   const useMobileInterface =
     mode === "mobile" || (isMobile && mode === "enhanced");
 
-  // Build configuration for SessionOrchestrator
-  const sessionConfig = useMemo(
+  // Build configuration for MeditationSession
+  const sessionConfig: MeditationSessionConfig = useMemo(
     () => ({
-      pattern: initialPattern,
-      features: {
-        enableCamera: useEnhancedVision,
-        enableAI: useEnhancedVision,
-        enableAudio: true,
+      mode:
+        mode === "enhanced"
+          ? "enhanced"
+          : mode === "mobile"
+          ? "mobile"
+          : "classic",
+      pattern: {
+        name: initialPattern.name,
+        phases: {
+          inhale: initialPattern.inhale,
+          hold: initialPattern.hold,
+          exhale: initialPattern.exhale,
+          pause: initialPattern.hold_after_exhale || 0,
+        },
+        difficulty: "intermediate",
+        benefits: initialPattern.benefits,
       },
-      displayMode: useEnhancedVision
-        ? ("analysis" as const)
-        : ("focus" as const),
+      autoStart: false,
     }),
-    [initialPattern, useEnhancedVision]
+    [initialPattern, mode]
   );
 
-  const sessionFlow = useMemo(
-    () => ({
-      mode: mode as "classic" | "enhanced" | "mobile",
-      shouldBypassSetup: false,
-      useEnhancedVision,
-      useMobileInterface,
-      defaultPattern: undefined,
-    }),
-    [mode, useEnhancedVision, useMobileInterface]
-  );
-
-  // Session completion callback - pass through all metrics to avoid data loss
+  // Session completion callback
   const onSessionComplete = useCallback(
     (metrics: any) => {
-      // Pass through all metrics and add pattern info
       handleSessionComplete({
-        ...metrics, // Preserve all fields from the session
-        pattern: sessionConfig.pattern,
-        // Only override specific fields if they're missing
-        cycleCount: metrics?.cycleCount ?? sessionState.sessionData.cycleCount,
-        elapsedTime:
-          metrics?.elapsedTime ?? sessionState.sessionData.duration * 1000,
-        sessionDuration:
-          metrics?.sessionDuration ?? sessionState.sessionData.duration,
-        patternName: metrics?.patternName ?? sessionConfig.pattern.name,
+        ...metrics,
+        pattern: {
+          id: initialPattern.id || "custom",
+          name: initialPattern.name,
+        },
+        patternName: metrics?.patternName ?? initialPattern.name,
       });
-
       complete();
     },
-    [
-      handleSessionComplete,
-      sessionConfig.pattern,
-      sessionState.sessionData,
-      complete,
-    ]
+    [handleSessionComplete, initialPattern, complete]
   );
 
   return (
     <SessionErrorBoundary>
-      <SessionOrchestrator
+      <MeditationSession
         config={sessionConfig}
-        sessionFlow={sessionFlow}
-        sessionState={sessionState}
-        isReady={isReady}
-        isActive={isActive}
-        onInitialize={initialize}
-        onStart={start}
-        onComplete={onSessionComplete}
+        onSessionComplete={onSessionComplete}
+        onSessionExit={() => window.history.back()}
       />
     </SessionErrorBoundary>
   );

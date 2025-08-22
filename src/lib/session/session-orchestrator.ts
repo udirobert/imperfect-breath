@@ -221,31 +221,43 @@ class SessionOrchestrator {
   }
 
   /**
-   * Initialize camera feature
+   * Initialize camera feature with better error handling
    */
   private async initializeCamera(): Promise<void> {
-    if (!this.config?.features.enableCamera) return;
+    if (!this.config?.features.enableCamera) {
+      this.setState({
+        features: { ...this.state.features, camera: 'unavailable' }
+      });
+      return;
+    }
 
     this.setState({
       features: { ...this.state.features, camera: 'requesting' }
     });
 
     try {
-      // Setup camera event listener
+      // Setup camera event listener with better error handling
       this.cameraCleanup = cameraManager.addEventListener(this.handleCameraEvent);
 
       // Check initial camera state
       this.updateCameraFeatureState();
 
-      // Pre-validate camera access without starting stream
+      // Pre-validate camera access
       const cameraState = cameraManager.getState();
+      
       if (!cameraState.isAvailable) {
-        this.addWarning('Camera not supported in this browser');
+        this.addWarning('Camera not supported - continuing with audio-only session');
+        this.setState({
+          features: { ...this.state.features, camera: 'unavailable' }
+        });
         return;
       }
 
       if (!cameraState.hasPermission) {
-        this.addWarning('Camera permission required for enhanced features');
+        this.addWarning('Camera permission needed for enhanced features - you can enable this later');
+        this.setState({
+          features: { ...this.state.features, camera: 'unavailable' }
+        });
         return;
       }
 
@@ -254,10 +266,11 @@ class SessionOrchestrator {
       });
 
     } catch (error) {
+      console.warn('Camera initialization failed:', error);
       this.setState({
         features: { ...this.state.features, camera: 'error' }
       });
-      this.addWarning(`Camera initialization failed: ${(error as Error).message}`);
+      this.addWarning('Camera unavailable - session will continue without video features');
     }
   }
 

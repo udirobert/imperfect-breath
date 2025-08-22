@@ -1,7 +1,9 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const OpenAI = require("openai");
-const Anthropic = require("@anthropic-ai/sdk");
-require("dotenv").config();
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Initialize AI clients
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
@@ -284,4 +286,4 @@ function parseAIResponse(text, analysisType) {
   }
 }
 
-module.exports = handler;
+export default handler;

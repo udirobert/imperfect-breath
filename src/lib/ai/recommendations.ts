@@ -1,5 +1,6 @@
 import { CustomPattern } from "../patternStorage";
 import { BreathingPhase } from "../breathingPatterns";
+import { apiClient } from '../api/unified-client';
 
 export interface SessionData {
   id: string;
@@ -45,71 +46,38 @@ export interface UserFeedback {
 
 export class PatternRecommendationEngine {
   async getPersonalizedRecommendations(userId: string): Promise<CustomPattern[]> {
-    try {
-      console.log("Fetching personalized recommendations for user:", userId);
-      
-      const response = await fetch(`/api/recommendations/personalized/${userId}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch personalized recommendations: ${response.statusText}`);
-      }
-      
-      const recommendations = await response.json();
-      return recommendations;
-    } catch (error) {
-      console.error("Error fetching personalized recommendations:", error);
-      throw new Error(`Failed to get personalized recommendations for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
+    const response = await apiClient.request('ai', `/api/recommendations/personalized/${userId}`);
+    
+    if (!response.success) {
+      throw new Error(response.error || `Failed to get personalized recommendations for user ${userId}`);
     }
+    
+    return response.data;
   }
 
   async analyzePatternEffectiveness(patternId: string, sessionData: SessionData[]): Promise<EffectivenessReport> {
-    try {
-      console.log("Analyzing effectiveness of pattern:", patternId, "with session data count:", sessionData.length);
-      
-      const response = await fetch(`/api/recommendations/analysis/${patternId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ sessionData }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to analyze pattern effectiveness: ${response.statusText}`);
-      }
-      
-      const report = await response.json();
-      return report;
-    } catch (error) {
-      console.error("Error analyzing pattern effectiveness:", error);
-      throw new Error(`Failed to analyze effectiveness for pattern ${patternId}: ${error instanceof Error ? error.message : String(error)}`);
+    const response = await apiClient.request('ai', `/api/recommendations/analysis/${patternId}`, {
+      method: 'POST',
+      body: JSON.stringify({ sessionData }),
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error || `Failed to analyze effectiveness for pattern ${patternId}`);
     }
+    
+    return response.data;
   }
 
   async suggestOptimizations(pattern: CustomPattern, userFeedback: UserFeedback[]): Promise<OptimizationSuggestions> {
-    try {
-      console.log("Suggesting optimizations for pattern:", pattern.id, "based on feedback count:", userFeedback.length);
-      
-      const response = await fetch(`/api/recommendations/optimize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pattern,
-          userFeedback
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to get optimization suggestions: ${response.statusText}`);
-      }
-      
-      const suggestions = await response.json();
-      return suggestions;
-    } catch (error) {
-      console.error("Error suggesting optimizations:", error);
-      throw new Error(`Failed to suggest optimizations for pattern ${pattern.id}: ${error instanceof Error ? error.message : String(error)}`);
+    const response = await apiClient.request('ai', '/api/recommendations/optimize', {
+      method: 'POST',
+      body: JSON.stringify({ pattern, userFeedback }),
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error || `Failed to suggest optimizations for pattern ${pattern.id}`);
     }
+    
+    return response.data;
   }
 }

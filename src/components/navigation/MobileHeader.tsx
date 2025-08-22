@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { isTouchDevice } from "@/utils/mobile-detection";
 import { useAuth } from "@/hooks/useAuth";
 import { WalletManager } from "@/components/WalletManager";
 import { OfflineIndicator } from "@/components/offline/OfflineIndicator";
@@ -22,7 +22,7 @@ interface MobileHeaderProps {
 
 export const MobileHeader: React.FC<MobileHeaderProps> = ({ className }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
+  const isMobile = isTouchDevice();
   const { user, logout } = useAuth();
 
   // Only show on mobile devices

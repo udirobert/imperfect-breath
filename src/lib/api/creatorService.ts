@@ -1,88 +1,60 @@
 import type { CreatorStats, PatternStats } from "../../types/creator";
-import { handleError } from "../../lib/utils/error-utils";
+import { apiClient } from './unified-client';
 
 /**
  * Fetches creator's patterns from the blockchain
  */
 export async function getCreatorPatterns(): Promise<PatternStats[]> {
-  try {
-    // Fetch patterns from the Lens Chain API
-    const response = await fetch('/api/creator/patterns');
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch creator patterns: ${response.statusText}`);
-    }
-    
-    const patterns = await response.json();
-    return patterns;
-  } catch (error) {
-    throw handleError("fetch creator patterns", error);
+  const response = await apiClient.request('social', '/api/creator/patterns');
+  
+  if (!response.success) {
+    throw new Error(response.error || 'Failed to fetch creator patterns');
   }
+  
+  return response.data;
 }
 
 /**
  * Fetches creator statistics from the blockchain
  */
 export async function getCreatorStats(): Promise<CreatorStats> {
-  try {
-    // Fetch stats from the Lens Chain API
-    const response = await fetch('/api/creator/stats');
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch creator stats: ${response.statusText}`);
-    }
-    
-    const stats = await response.json();
-    return stats;
-  } catch (error) {
-    throw handleError("fetch creator stats", error);
+  const response = await apiClient.request('social', '/api/creator/stats');
+  
+  if (!response.success) {
+    throw new Error(response.error || 'Failed to fetch creator stats');
   }
+  
+  return response.data;
 }
 
 /**
  * Updates a pattern's metadata on the blockchain
  */
 export async function updatePattern(pattern: PatternStats): Promise<PatternStats> {
-  try {
-    const response = await fetch(`/api/creator/patterns/${pattern.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(pattern)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to update pattern: ${response.statusText}`);
-    }
-    
-    const updatedPattern = await response.json();
-    return updatedPattern;
-  } catch (error) {
-    throw handleError(`update pattern ${pattern.id}`, error);
+  const response = await apiClient.request('social', `/api/creator/patterns/${pattern.id}`, {
+    method: 'PUT',
+    body: JSON.stringify(pattern),
+  });
+  
+  if (!response.success) {
+    throw new Error(response.error || `Failed to update pattern ${pattern.id}`);
   }
+  
+  return response.data;
 }
 
 /**
  * Creates a new pattern on the blockchain
  */
 export async function createPattern(pattern: Omit<PatternStats, 'id'>): Promise<PatternStats> {
-  try {
-    const response = await fetch('/api/creator/patterns', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(pattern)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create pattern: ${response.statusText}`);
-    }
-    
-    const newPattern = await response.json();
-    return newPattern;
-  } catch (error) {
-    throw handleError("create pattern", error);
+  const response = await apiClient.request('social', '/api/creator/patterns', {
+    method: 'POST',
+    body: JSON.stringify(pattern),
+  });
+  
+  if (!response.success) {
+    throw new Error(response.error || 'Failed to create pattern');
   }
+  
+  return response.data;
 }

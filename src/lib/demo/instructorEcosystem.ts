@@ -1,6 +1,8 @@
 // Demo data showcasing the instructor ecosystem
 // This demonstrates how instructors create content and users consume it
 
+import { apiClient } from '../api/unified-client';
+
 export interface DemoInstructor {
   id: string;
   name: string;
@@ -390,7 +392,7 @@ import { SimpleCache } from '../utils/cache-utils';
 // Cache for instructor data
 const instructorCache = SimpleCache.getInstance(100); // Use singleton cache with 100 max entries
 
-// Real data API functions with advanced error handling, caching, and retry mechanisms
+// Consolidated API functions using unified client - eliminates 6+ duplicate fetch patterns
 export const getInstructorById = async (id: string): Promise<DemoInstructor | undefined> => {
   // Check cache first
   const cacheKey = `instructor-${id}`;
@@ -400,51 +402,22 @@ export const getInstructorById = async (id: string): Promise<DemoInstructor | un
   }
   
   try {
-    // Try to fetch from API with retry mechanism
-    let attempts = 0;
-    const maxAttempts = 3;
+    const response = await apiClient.request('social', `/api/instructors/${id}`);
     
-    while (attempts < maxAttempts) {
-      try {
-        const response = await fetch(`/api/instructors/${id}`);
-        
-        if (response.ok) {
-          const instructor = await response.json();
-          // Store in cache
-          instructorCache.set(cacheKey, instructor);
-          return instructor;
-        }
-        
-        // If rate limited, wait and retry
-        if (response.status === 429) {
-          const retryAfter = parseInt(response.headers.get('Retry-After') || '2', 10);
-          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-          attempts++;
-          continue;
-        }
-        
-        // For other errors, throw
-        throw new Error(`Failed to fetch instructor: ${response.statusText}`);
-      } catch (attemptError) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw attemptError;
-        }
-        // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
-      }
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch instructor');
     }
     
-    throw new Error(`Failed to fetch instructor after ${maxAttempts} attempts`);
+    const instructor = response.data;
+    instructorCache.set(cacheKey, instructor);
+    return instructor;
   } catch (error) {
     console.error(`Error fetching instructor ${id}:`, error);
-    // Properly propagate the error instead of silently falling back
     throw new Error(`Failed to fetch instructor with ID ${id}: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
 export const getPatternsByInstructor = async (instructorId: string): Promise<DemoPattern[]> => {
-  // Check cache
   const cacheKey = `patterns-by-instructor-${instructorId}`;
   const cachedPatterns = instructorCache.get<DemoPattern[]>(cacheKey);
   if (cachedPatterns) {
@@ -452,49 +425,22 @@ export const getPatternsByInstructor = async (instructorId: string): Promise<Dem
   }
   
   try {
-    // Fetch with retry logic
-    let attempts = 0;
-    const maxAttempts = 3;
+    const response = await apiClient.request('social', `/api/instructors/${instructorId}/patterns`);
     
-    while (attempts < maxAttempts) {
-      try {
-        const response = await fetch(`/api/instructors/${instructorId}/patterns`);
-        
-        if (response.ok) {
-          const patterns = await response.json();
-          // Store in cache
-          instructorCache.set(cacheKey, patterns);
-          return patterns;
-        }
-        
-        // Handle rate limiting
-        if (response.status === 429) {
-          const retryAfter = parseInt(response.headers.get('Retry-After') || '2', 10);
-          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-          attempts++;
-          continue;
-        }
-        
-        throw new Error(`Failed to fetch patterns: ${response.statusText}`);
-      } catch (attemptError) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw attemptError;
-        }
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
-      }
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch patterns');
     }
     
-    throw new Error(`Failed to fetch patterns after ${maxAttempts} attempts`);
+    const patterns = response.data;
+    instructorCache.set(cacheKey, patterns);
+    return patterns;
   } catch (error) {
     console.error(`Error fetching patterns for instructor ${instructorId}:`, error);
-    // Properly propagate the error instead of silently falling back
     throw new Error(`Failed to fetch patterns for instructor ${instructorId}: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
 export const getTopPatterns = async (limit: number = 5): Promise<DemoPattern[]> => {
-  // Check cache
   const cacheKey = `top-patterns-${limit}`;
   const cachedPatterns = instructorCache.get<DemoPattern[]>(cacheKey);
   if (cachedPatterns) {
@@ -502,49 +448,22 @@ export const getTopPatterns = async (limit: number = 5): Promise<DemoPattern[]> 
   }
   
   try {
-    // Fetch with retry mechanism
-    let attempts = 0;
-    const maxAttempts = 3;
+    const response = await apiClient.request('social', `/api/patterns/top?limit=${limit}`);
     
-    while (attempts < maxAttempts) {
-      try {
-        const response = await fetch(`/api/patterns/top?limit=${limit}`);
-        
-        if (response.ok) {
-          const patterns = await response.json();
-          // Store in cache
-          instructorCache.set(cacheKey, patterns);
-          return patterns;
-        }
-        
-        // Handle rate limiting
-        if (response.status === 429) {
-          const retryAfter = parseInt(response.headers.get('Retry-After') || '2', 10);
-          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-          attempts++;
-          continue;
-        }
-        
-        throw new Error(`Failed to fetch top patterns: ${response.statusText}`);
-      } catch (attemptError) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw attemptError;
-        }
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
-      }
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch top patterns');
     }
     
-    throw new Error(`Failed to fetch top patterns after ${maxAttempts} attempts`);
+    const patterns = response.data;
+    instructorCache.set(cacheKey, patterns);
+    return patterns;
   } catch (error) {
-    console.error(`Error fetching top patterns:`, error);
-    // Properly propagate the error instead of silently falling back
+    console.error('Error fetching top patterns:', error);
     throw new Error(`Failed to fetch top patterns: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
 export const calculateInstructorStats = async (instructorId: string) => {
-  // Check cache
   const cacheKey = `instructor-stats-${instructorId}`;
   const cachedStats = instructorCache.get(cacheKey);
   if (cachedStats) {
@@ -552,48 +471,20 @@ export const calculateInstructorStats = async (instructorId: string) => {
   }
   
   try {
-    // Fetch with retry mechanism
-    let attempts = 0;
-    const maxAttempts = 3;
+    const response = await apiClient.request('social', `/api/instructors/${instructorId}/stats`);
     
-    while (attempts < maxAttempts) {
-      try {
-        const response = await fetch(`/api/instructors/${instructorId}/stats`);
-        
-        if (response.ok) {
-          const stats = await response.json();
-          // Store in cache
-          instructorCache.set(cacheKey, stats);
-          return stats;
-        }
-        
-        // Handle rate limiting
-        if (response.status === 429) {
-          const retryAfter = parseInt(response.headers.get('Retry-After') || '2', 10);
-          await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-          attempts++;
-          continue;
-        }
-        
-        throw new Error(`Failed to fetch instructor stats: ${response.statusText}`);
-      } catch (attemptError) {
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw attemptError;
-        }
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
-      }
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch instructor stats');
     }
     
-    throw new Error(`Failed to fetch instructor stats after ${maxAttempts} attempts`);
+    const stats = response.data;
+    instructorCache.set(cacheKey, stats);
+    return stats;
   } catch (error) {
     console.error(`Error calculating instructor stats for ${instructorId}:`, error);
-    // Properly propagate the error instead of silently falling back
     throw new Error(`Failed to calculate instructor stats for ${instructorId}: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
-
-// New API functions to support additional features
 
 export const searchPatterns = async (query: string, filters?: {
   category?: string;
@@ -608,10 +499,7 @@ export const searchPatterns = async (query: string, filters?: {
   }
   
   try {
-    // Build query string from filters
-    const queryParams = new URLSearchParams({
-      q: query
-    });
+    const queryParams = new URLSearchParams({ q: query });
     
     if (filters) {
       if (filters.category) queryParams.append('category', filters.category);
@@ -619,18 +507,17 @@ export const searchPatterns = async (query: string, filters?: {
       if (filters.minRating) queryParams.append('minRating', filters.minRating.toString());
     }
     
-    const response = await fetch(`/api/patterns/search?${queryParams.toString()}`);
+    const response = await apiClient.request('social', `/api/patterns/search?${queryParams.toString()}`);
     
-    if (response.ok) {
-      const results = await response.json();
-      instructorCache.set(cacheKey, results, 300); // 5 minutes
-      return results;
+    if (!response.success) {
+      throw new Error(response.error || 'Search failed');
     }
     
-    throw new Error(`Search failed: ${response.statusText}`);
+    const results = response.data;
+    instructorCache.set(cacheKey, results, 300); // 5 minutes
+    return results;
   } catch (error) {
-    console.error(`Error searching patterns:`, error);
-    // Properly propagate the error instead of silently falling back
+    console.error('Error searching patterns:', error);
     throw new Error(`Failed to search patterns with query '${query}': ${error instanceof Error ? error.message : String(error)}`);
   }
 };
@@ -644,18 +531,17 @@ export const getEcosystemStats = async (): Promise<typeof ecosystemStats> => {
   }
   
   try {
-    const response = await fetch('/api/ecosystem/stats');
+    const response = await apiClient.request('social', '/api/ecosystem/stats');
     
-    if (response.ok) {
-      const stats = await response.json();
-      instructorCache.set(cacheKey, stats, 600); // 10 minutes
-      return stats;
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch ecosystem stats');
     }
     
-    throw new Error(`Failed to fetch ecosystem stats: ${response.statusText}`);
+    const stats = response.data;
+    instructorCache.set(cacheKey, stats, 600); // 10 minutes
+    return stats;
   } catch (error) {
     console.error('Error fetching ecosystem stats:', error);
-    // Properly propagate the error instead of silently falling back
     throw new Error(`Failed to fetch ecosystem stats: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
@@ -669,18 +555,17 @@ export const getUserJourneys = async (limit: number = 5): Promise<DemoUserJourne
   }
   
   try {
-    const response = await fetch(`/api/user-journeys?limit=${limit}`);
+    const response = await apiClient.request('social', `/api/user-journeys?limit=${limit}`);
     
-    if (response.ok) {
-      const journeys = await response.json();
-      instructorCache.set(cacheKey, journeys, 300); // 5 minutes
-      return journeys;
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to fetch user journeys');
     }
     
-    throw new Error(`Failed to fetch user journeys: ${response.statusText}`);
+    const journeys = response.data;
+    instructorCache.set(cacheKey, journeys, 300); // 5 minutes
+    return journeys;
   } catch (error) {
     console.error('Error fetching user journeys:', error);
-    // Properly propagate the error instead of silently falling back
     throw new Error(`Failed to fetch user journeys: ${error instanceof Error ? error.message : String(error)}`);
   }
 };

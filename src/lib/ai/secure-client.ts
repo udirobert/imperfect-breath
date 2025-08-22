@@ -1,4 +1,5 @@
 import { AI_CONFIG, type SecureAIProvider, type AIAnalysisResponse, type AIPatternResponse, type SecureAIResponse } from './config';
+import { apiClient } from '../api/unified-client';
 
 export class SecureAIClient {
   private static async makeRequest(
@@ -6,28 +7,34 @@ export class SecureAIClient {
     sessionData: any,
     analysisType: 'session' | 'pattern' = 'session'
   ): Promise<SecureAIResponse> {
-    // Use relative path for Netlify functions, or construct full URL only if needed
-    const endpoint = AI_CONFIG.apiEndpoint;
-
-    const requestBody = {
-      provider,
-      sessionData,
-      analysisType
-    };
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const response = await apiClient.analyzeSession(provider, {
+        ...sessionData,
+        analysisType
+      });
+      
+      if (!response.success) {
+        throw new Error(response.error || 'AI analysis failed');
+      }
+      
+      return {
+        success: true,
+        provider,
+        analysisType,
+        result: response.data,
+      };
+    } catch (error) {
+      console.error(`AI Analysis failed for ${provider}:`, error);
+      
+      // Return error response
+      return {
+        success: false,
+        provider,
+        analysisType,
+        result: {} as any,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
-
-    return await response.json();
   }
 
   static async analyzeSession(
