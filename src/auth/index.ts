@@ -3,7 +3,6 @@ export { useAuth, useBasicAuth, useWeb3Auth, useFlowOnlyAuth, useFullAuth } from
 export type { AuthFeatures, AuthState, AuthActions } from "./useAuth";
 
 // Individual composables (for advanced use cases)
-export { useBaseAuth } from "./composables/useBaseAuth";
 export { useBlockchainAuth } from "./composables/useBlockchainAuth";
 export { useFlowAuth, FlowAuthManager } from "./composables/useFlowAuth";
 export { useLensAuth } from "./composables/useLensAuth";

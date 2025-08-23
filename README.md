@@ -102,249 +102,15 @@ npm run dev:server  # AI server only (localhost:3001)
 - **Local Storage** - Offline capability
 - **Real-time sync** - Cross-device synchronization
 
-## 🎯 Key Features
 
-### 🫁 Breathing Practice
-
-- **20+ Traditional Patterns** - 4-7-8, Box Breathing, Wim Hof, Pranayama
-- **Custom Pattern Creator** - Build and share your own techniques
-- **Difficulty Progression** - Beginner to advanced practices
-- **Visual Guidance** - Beautiful breathing animations and timers
-
-### 🤖 Zen AI Coach
-
-- **Real-time Feedback** - "I notice you're moving quite a bit. Let's find your center..."
-- **Personalized Coaching** - Adapts to your progress and preferences
-- **Session Assessment** - Comprehensive scoring and improvement suggestions
-- **Cultural Sensitivity** - Respects traditional practices and diverse perspectives
-
-### 📱 Computer Vision System
-
-- **Three Performance Tiers** - Adapts to device capabilities
-- **Real-time Analysis** - Breathing rate, posture, stress indicators
-- **Privacy-First** - All processing happens locally on your device
-- **95% Device Compatibility** - Works on budget phones to high-end desktops
-
-| Tier        | Devices                      | Features                                   |
-| ----------- | ---------------------------- | ------------------------------------------ |
-| 🟢 Basic    | Budget phones, older laptops | Motion detection, basic breathing rate     |
-| 🟡 Standard | Mid-range devices            | Posture analysis, facial tension detection |
-| 🔴 Premium  | High-end devices             | Full body analysis, micro-expressions      |
-
-### ⛓️ Blockchain Features
-
-- **NFT Creation** - Mint exceptional breathing sessions as unique NFTs
-- **Content Ownership** - Decentralized storage with Grove
-- **Social Sharing** - Share achievements on Lens Protocol V3
-- **Creator Economy** - Earn from pattern sales and licensing
-- **Marketplace** - Buy and sell breathing patterns and courses
-
-### 👥 Social Community
-
-- **Breathing Circles** - Group sessions with friends
-- **Achievement Sharing** - Celebrate milestones together
-- **Instructor Network** - Connect with certified breathing coaches
-- **Global Challenges** - Community-wide wellness goals
-
-## 🛠️ Development
-
-### Prerequisites
-
-```bash
-# Required
-Node.js 18+
-npm or yarn
-Git
-
-# Optional (for full features)
-Flow CLI (blockchain development)
-Supabase CLI (database management)
-Docker (containerized deployment)
-```
-
-### Environment Setup
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Setup environment
-cp .env.example .env
-cp flow.json.example flow.json
-
-# 3. Configure environment variables
-# See docs/TECHNICAL_GUIDE.md for complete setup
-
-# 4. Start development
-npm run dev:full         # Both frontend (4556) and AI server (3001)
-# OR separately:
-npm run dev              # Frontend only (localhost:4556)
-npm run dev:server       # AI server only (localhost:3001)
-```
-
-### Local Development vs Production Deployment
-
-#### 🏠 Local Development
-
-For local development, you need to run two separate services:
-
-```bash
-# Terminal 1: Start the frontend development server
-npm run dev
-# Access at: http://localhost:4556
-
-# Terminal 2: Start the backend AI server
-npm run dev:server
-# AI API endpoint: http://localhost:3001/api/ai-analysis
-```
-
-**Key Points for Local Development:**
-- The frontend runs on port `4556`
-- The AI backend server runs on port `3001`
-- Both services must be running simultaneously for full functionality
-- Camera access requires HTTPS in production but works with HTTP locally
-- AI analysis features require the backend server to be running
-
-#### 🚀 Production Deployment
-
-For production deployment, you have several options:
-
-1. **Netlify Deployment** (Recommended for frontend):
-   ```bash
-   # Netlify automatically builds and deploys the frontend
-   # Backend functions are deployed as Netlify Functions
-   # See netlify.toml for configuration
-   ```
-
-2. **Vercel Deployment**:
-   ```bash
-   # Configure Vercel to build the frontend
-   # Deploy the server separately or as serverless functions
-   ```
-
-3. **Traditional Server Deployment**:
-   ```bash
-   # Build frontend for production
-   npm run build
-   
-   # Serve built files with any static server
-   # Deploy the server/ directory separately
-   ```
-
-**Environment Variables for Production:**
-```bash
-# Frontend (.env in root)
-VITE_APP_URL=                    # Leave empty for relative paths
-VITE_ENABLE_AI_ANALYSIS=true     # Enable AI features
-# Add your client-side AI keys for unlimited use:
-VITE_GOOGLE_GEMINI_API_KEY=your_key
-VITE_OPENAI_API_KEY=your_key
-VITE_ANTHROPIC_API_KEY=your_key
-
-# Backend (server/.env)
-PORT=3001                        # Server port
-# Server-side keys for trial system:
-GOOGLE_AI_API_KEY=your_key
-OPENAI_API_KEY=your_key
-ANTHROPIC_API_KEY=your_key
-```
-
-### AI Configuration - Dual System
-
-The app uses **two separate AI systems** for optimal user experience:
-
-#### 🆓 Trial System (Server-side keys)
-
-- **1 free AI analysis** per user
-- Uses server-side API keys (secure, never exposed)
-- No user setup required
-
-#### 🔓 Unlimited Personal Use (Client-side keys)
-
-- **Unlimited AI analysis** with your own keys
-- Add keys in AI Settings page
-- Keys stored securely in your browser
-
-```bash
-# In your .env file:
-
-# CLIENT-SIDE (VITE_ prefix) - For unlimited personal use
-VITE_GOOGLE_GEMINI_API_KEY=your_personal_key_here
-VITE_OPENAI_API_KEY=your_personal_key_here
-VITE_ANTHROPIC_API_KEY=your_personal_key_here
-
-# SERVER-SIDE (NO prefix) - For trial system
-GOOGLE_AI_API_KEY=your_server_key_here
-OPENAI_API_KEY=your_server_key_here
-ANTHROPIC_API_KEY=your_server_key_here
-```
-
-**Important**: Client-side keys (with `VITE_` prefix) are for users' personal unlimited use, while server-side keys (no prefix) power the trial system.
-
-### Key Commands
-
-```bash
-# Development
-npm run dev              # Start frontend (localhost:4556)
-npm run dev:server       # Start AI server (localhost:3001)
-npm run dev:full         # Start both frontend and server
-npm run build           # Production build
-npm run preview         # Preview build
-
-# Testing
-npm run test            # Run tests
-npm run test:vision     # Test computer vision
-npm run test:blockchain # Test blockchain connections
-
-# AI Agent
-cd eliza-agent-temp
-pnpm install
-pnpm start --character="../characters/breathing-coach.character.json"
-
-# Blockchain
-npm run flow:setup      # Setup Flow environment
-npm run flow:deploy     # Deploy contracts
-npm run flow:test       # Test contracts
-```
 
 ## 📚 Documentation
 
-Our documentation is organized into three comprehensive guides:
+For detailed information about the project, please see the documentation in the `docs` directory.
 
-### 📖 [Technical Guide](docs/TECHNICAL_GUIDE.md)
-
-Complete technical documentation for developers:
-
-- System architecture and data flow
-- Development setup and workflow
-- AI agent integration (Eliza framework)
-- Computer vision system (three-tier architecture)
-- Blockchain integration (Flow, Lens V3)
-- Database schema and API design
-- Security considerations and testing
-
-### 👤 [User Features Guide](docs/USER_FEATURES_GUIDE.md)
-
-Comprehensive user experience documentation:
-
-- Progressive onboarding flow
-- Breathing pattern library and custom creation
-- AI-powered coaching examples
-- Computer vision features and privacy
-- Blockchain features (NFTs, IP protection, social)
-- Progress tracking and achievements
-- Customization and accessibility
-
-### 🚀 [Project History & Deployment](docs/PROJECT_HISTORY_DEPLOYMENT.md)
-
-Project evolution and deployment procedures:
-
-- Mobile-first strategic pivot
-- Blockchain migration status (Lens V3, Flow)
-- Architectural consolidation summary
-- Complete deployment procedures
-- Monitoring and security considerations
-- Backup and recovery strategies
+- **[README.md](docs/README.md)**: The main entry point for the documentation.
+- **[Technical Guide](docs/TECHNICAL_GUIDE.md)**: For developers who want to contribute to the project.
+- **[User Guide](docs/USER_GUIDE.md)**: For users who want to learn how to use the platform.
 
 ## 🌟 Getting Started as a User
 
@@ -423,28 +189,28 @@ npm run lint
 
 ## 🌍 Roadmap
 
-### Q1 2024 - Foundation ✅
+### Foundation ✅
 
 - ✅ Core breathing patterns and AI coaching
 - ✅ Computer vision system (three-tier)
 - ✅ Flow blockchain integration
 - ✅ Mobile-first responsive design
 
-### Q2 2024 - Social & IP ✅
+### Social & IP ✅
 
 - ✅ Lens Protocol social features
 - ✅ Decentralized content storage
 - ✅ NFT marketplace
 - ✅ Creator economy features
 
-### Q3 2024 - Enhancement 🔄
+### Enhancement 🔄
 
 - 🔄 Advanced biometrics (HRV, stress detection)
 - 🔄 Instructor certification program
 - 🔄 Enterprise wellness partnerships
 - 🔄 Multi-language support
 
-### Q4 2024 - Scale 📋
+### Scale 📋
 
 - 📋 Mobile app (iOS/Android)
 - 📋 Wearable device integration

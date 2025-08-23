@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useBaseAuth } from "./composables/useBaseAuth";
+import { useAuth as useEnhancedAuth } from "../hooks/useAuth";
 import { useBlockchainAuth } from "./composables/useBlockchainAuth";
 import { useFlowAuth } from "./composables/useFlowAuth";
 import { useLensAuth } from "./composables/useLensAuth";
@@ -64,12 +64,13 @@ export interface AuthActions {
 /**
  * Main auth composer hook - only loads requested features
  * 
+ * Enhanced modular auth system that builds on the main useAuth hook
  * @param features - Which auth features to enable
  * @returns Combined auth state and actions
  */
 export const useAuth = (features: AuthFeatures = {}) => {
-  // Core auth (always loaded)
-  const baseAuth = useBaseAuth();
+  // Use the enhanced auth hook without blockchain features first
+  const baseAuth = useEnhancedAuth();
   
   // Conditional blockchain auth
   const blockchainAuth = features.blockchain ? useBlockchainAuth() : null;

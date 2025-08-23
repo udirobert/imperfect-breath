@@ -7,6 +7,7 @@ export interface FlowConfig {
   contractAddress: string;
   flowTokenAddress: string;
   fungibleTokenAddress: string;
+  evmRpcUrl?: string; // Optional EVM RPC endpoint
 }
 
 export class FlowConfigService {
@@ -28,18 +29,21 @@ export class FlowConfigService {
         discoveryWallet: "https://fcl-discovery.onflow.org/testnet/authn",
         flowTokenAddress: "0x7e60df042a9c0868",
         fungibleTokenAddress: "0x9a0766d93b6608b7",
+        evmRpcUrl: "https://testnet.evm.nodes.onflow.org",
       },
       mainnet: {
         accessNode: "https://rest-mainnet.onflow.org",
         discoveryWallet: "https://fcl-discovery.onflow.org/authn",
         flowTokenAddress: "0x1654653399040a61",
         fungibleTokenAddress: "0xf233dcee88fe0abe",
+        evmRpcUrl: "https://mainnet.evm.nodes.onflow.org",
       },
       emulator: {
         accessNode: "http://127.0.0.1:8888",
         discoveryWallet: "http://localhost:8701/fcl/authn",
         flowTokenAddress: "0x0ae53cb6e3f42a79",
         fungibleTokenAddress: "0xee82856bf20e2aa6",
+        evmRpcUrl: "http://127.0.0.1:8545", // Local EVM emulator
       },
     };
 
@@ -62,6 +66,8 @@ export class FlowConfigService {
       fungibleTokenAddress:
         import.meta.env.VITE_FUNGIBLE_TOKEN_ADDRESS ||
         defaultConfig.fungibleTokenAddress,
+      evmRpcUrl:
+        import.meta.env.VITE_FLOW_EVM_RPC_URL || defaultConfig.evmRpcUrl,
     };
   }
 

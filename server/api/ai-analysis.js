@@ -5,14 +5,48 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize AI clients
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Lazy initialization of AI clients to handle missing keys gracefully
+let genAI = null;
+let openai = null;
+let anthropic = null;
+
+// Initialize AI clients only when needed
+function getGenAI() {
+  if (
+    !genAI &&
+    process.env.GOOGLE_AI_API_KEY &&
+    process.env.GOOGLE_AI_API_KEY !== "your_google_ai_api_key_here"
+  ) {
+    genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+  }
+  return genAI;
+}
+
+function getOpenAI() {
+  if (
+    !openai &&
+    process.env.OPENAI_API_KEY &&
+    process.env.OPENAI_API_KEY !== "your_openai_api_key_here"
+  ) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
+
+function getAnthropic() {
+  if (
+    !anthropic &&
+    process.env.ANTHROPIC_API_KEY &&
+    process.env.ANTHROPIC_API_KEY !== "your_anthropic_api_key_here"
+  ) {
+    anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+  }
+  return anthropic;
+}
 
 // Token optimization configurations
 const OPTIMIZATION_CONFIG = {
@@ -138,7 +172,12 @@ async function handler(req, res) {
 }
 
 async function analyzeWithGemini(sessionData, analysisType) {
-  const model = genAI.getGenerativeModel({
+  const genAIClient = getGenAI();
+  if (!genAIClient) {
+    throw new Error("Google AI API key not configured");
+  }
+
+  const model = genAIClient.getGenerativeModel({
     model: OPTIMIZATION_CONFIG.models.google,
     generationConfig: {
       maxOutputTokens: OPTIMIZATION_CONFIG.maxTokens[analysisType],
@@ -159,12 +198,17 @@ async function analyzeWithGemini(sessionData, analysisType) {
 }
 
 async function analyzeWithOpenAI(sessionData, analysisType) {
+  const openaiClient = getOpenAI();
+  if (!openaiClient) {
+    throw new Error("OpenAI API key not configured");
+  }
+
   const prompt =
     analysisType === "pattern"
       ? createOptimizedPatternPrompt(sessionData)
       : createOptimizedSessionPrompt(sessionData);
 
-  const completion = await openai.chat.completions.create({
+  const completion = await openaiClient.chat.completions.create({
     model: OPTIMIZATION_CONFIG.models.openai,
     messages: [
       {
@@ -184,12 +228,17 @@ async function analyzeWithOpenAI(sessionData, analysisType) {
 }
 
 async function analyzeWithClaude(sessionData, analysisType) {
+  const anthropicClient = getAnthropic();
+  if (!anthropicClient) {
+    throw new Error("Anthropic API key not configured");
+  }
+
   const prompt =
     analysisType === "pattern"
       ? createOptimizedPatternPrompt(sessionData)
       : createOptimizedSessionPrompt(sessionData);
 
-  const message = await anthropic.messages.create({
+  const message = await anthropicClient.messages.create({
     model: OPTIMIZATION_CONFIG.models.anthropic,
     max_tokens: OPTIMIZATION_CONFIG.maxTokens[analysisType],
     temperature: 0.7,
