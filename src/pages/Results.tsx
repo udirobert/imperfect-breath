@@ -28,6 +28,7 @@ import {
   Shield,
   CheckCircle,
   BarChart3,
+  Heart,
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
 import { useSessionHistory } from "../hooks/useSessionHistory";
@@ -935,22 +936,68 @@ Check out Imperfect Breath!`;
           </div>
         )}
 
-        <div className="flex gap-4">
-          <Link to="/">
-            <Button size="lg" className="rounded-full shadow-lg">
-              Back to Home
+        {/* Main Actions - Prioritized for user journey */}
+        <div className="space-y-6">
+          {/* Primary Action: Try Different Pattern */}
+          <div className="text-center">
+            <h3 className="text-xl font-semibold mb-4">
+              🌟 Ready to explore different breathing techniques?
+            </h3>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <Link to="/patterns" className="w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-8 py-3"
+                >
+                  <Heart className="mr-2 h-5 w-5" />
+                  Explore Breathing Patterns
+                </Button>
+              </Link>
+              <div className="text-sm text-muted-foreground">
+                Wim Hof, 4-7-8, and more
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <Link
+              to={
+                enhancedSessionData.sessionType === "classic"
+                  ? "/session/enhanced"
+                  : "/session/classic"
+              }
+            >
+              <Button size="lg" variant="outline" className="px-8 py-3">
+                {enhancedSessionData.sessionType === "classic" ? (
+                  <>
+                    <Brain className="mr-2 h-5 w-5" />
+                    Try Enhanced Session
+                  </>
+                ) : (
+                  <>
+                    <Heart className="mr-2 h-5 w-5" />
+                    Try Classic Session
+                  </>
+                )}
+              </Button>
+            </Link>
+            <Button
+              size="lg"
+              variant="outline"
+              className="rounded-full shadow-lg"
+              onClick={handleShare}
+              disabled={!sessionData.patternName || isSharing}
+            >
+              <Share className="mr-2 h-5 w-5" />
+              {isSharing ? "Sharing..." : "Share Results"}
             </Button>
-          </Link>
-          <Button
-            size="lg"
-            variant="outline"
-            className="rounded-full shadow-lg"
-            onClick={handleShare}
-            disabled={!sessionData.patternName || isSharing}
-          >
-            <Share className="mr-2 h-5 w-5" />
-            {isSharing ? "Sharing..." : "Share Results"}
-          </Button>
+            <Link to="/">
+              <Button size="lg" variant="ghost" className="rounded-full">
+                Back to Home
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Enhanced Social Sharing - Available for all session types */}

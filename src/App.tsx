@@ -11,6 +11,7 @@ import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 import MobileOnboarding from "@/pages/MobileOnboarding";
+import PatternSelectionPage from "@/pages/PatternSelectionPage";
 
 // Large pages - lazy load these to reduce initial bundle size
 const AISettings = React.lazy(() => import("@/pages/AISettings"));
@@ -52,6 +53,7 @@ function App() {
             <Route path="/" element={<Index enhanced={false} />} />
             <Route path="/enhanced" element={<Index enhanced={true} />} />
             <Route path="/session" element={<SessionEntryPoints />} />
+            <Route path="/patterns" element={<PatternSelectionPage />} />
             <Route path="/session/:mode" element={<SessionModeWrapper />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="/results" element={<Results />} />

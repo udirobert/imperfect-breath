@@ -197,16 +197,27 @@ export const useSessionStore = create<SessionState & SessionActions>()(
 
     // Phase management
     updateBreathPhase: (phase, progress) => {
-      set((state) => ({
-        metrics: {
-          ...state.metrics,
-          currentPhase: phase,
-          phaseProgress: progress,
-          duration: state.metrics.startTime ? 
-            Math.floor((Date.now() - state.metrics.startTime) / 1000) : 
-            state.metrics.duration,
-        },
-      }));
+      set((state) => {
+        const currentDuration = state.metrics.startTime ? 
+          Math.floor((Date.now() - state.metrics.startTime) / 1000) : 
+          state.metrics.duration;
+        
+        // Only update if values actually changed
+        if (state.metrics.currentPhase === phase && 
+            Math.abs(state.metrics.phaseProgress - progress) < 1 &&
+            state.metrics.duration === currentDuration) {
+          return state; // No significant change
+        }
+        
+        return {
+          metrics: {
+            ...state.metrics,
+            currentPhase: phase,
+            phaseProgress: Math.round(progress), // Round to prevent micro-updates
+            duration: currentDuration,
+          },
+        };
+      });
     },
 
     incrementCycle: () => {
@@ -237,7 +248,17 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     },
 
     updateVisionMetrics: (metrics) => {
-      set({ visionMetrics: metrics });
+      set((state) => {
+        // Only update if metrics actually changed
+        const currentMetrics = state.visionMetrics;
+        if (currentMetrics && 
+            currentMetrics.stillness === metrics?.stillness &&
+            currentMetrics.presence === metrics?.presence &&
+            currentMetrics.posture === metrics?.posture) {
+          return state; // No change, don't trigger re-render
+        }
+        return { visionMetrics: metrics };
+      });
     },
 
     // Error handling

@@ -227,15 +227,62 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   const session = useSession({
     autoStart: config.autoStart,
     enableVision: modeConfig.enableVision && !isLowEndDevice, // Adaptive vision
-    targetFPS: profile.visionFPS, // Use performance-optimized FPS
+    targetFPS: 2, // Default FPS for vision processing
   });
+
+  // Track initialization to prevent infinite re-renders
+  const isInitializedRef = useRef(false);
+  const configHashRef = useRef("");
+
+  // Initialize session with pattern configuration
+  useEffect(() => {
+    if (config && config.pattern) {
+      // Create a hash of the config to detect actual changes
+      const configHash = JSON.stringify({
+        mode: config.mode,
+        pattern: config.pattern,
+        enableCamera: modeConfig.enableCamera,
+        enableAudio: modeConfig.enableAudio,
+        enableVision: modeConfig.enableVision,
+      });
+
+      // Only initialize if config actually changed
+      if (configHash !== configHashRef.current || !isInitializedRef.current) {
+        configHashRef.current = configHash;
+        isInitializedRef.current = true;
+
+        // Convert MeditationSessionConfig to SessionConfig for the store
+        const sessionConfig = {
+          mode:
+            config.mode === "classic"
+              ? ("basic" as const)
+              : ("enhanced" as const),
+          pattern: {
+            id: config.pattern.name.toLowerCase().replace(/\s+/g, "_"),
+            name: config.pattern.name,
+            description: `${config.pattern.name} breathing pattern`,
+            inhale: config.pattern.phases.inhale,
+            hold: config.pattern.phases.hold || 0,
+            exhale: config.pattern.phases.exhale,
+            hold_after_exhale: config.pattern.phases.pause || 0,
+            benefits: config.pattern.benefits || [],
+          },
+          enableCamera: modeConfig.enableCamera,
+          enableAudio: modeConfig.enableAudio,
+          enableAI: modeConfig.enableVision,
+        };
+
+        session.initialize(sessionConfig);
+      }
+    }
+  }, [config, modeConfig]);
 
   // Vision processing (when enabled)
   const vision = useMeditationVision(
     modeConfig.enableVision && modeConfig.enableCamera
       ? {
           sessionId: `session_${user?.id || "anonymous"}_${Date.now()}`,
-          targetFPS: shouldUseBatterySaver ? 1 : profile.visionFPS,
+          targetFPS: shouldUseBatterySaver ? 1 : 2,
           silentMode: true, // Meditation UX requirement
           gracefulDegradation: true, // Handle failures peacefully
         }
@@ -278,7 +325,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         video: {
           width: { ideal: isMobile ? 480 : 640 },
           height: { ideal: isMobile ? 360 : 480 },
-          frameRate: { ideal: profile.visionFPS, max: 15 }, // Adaptive frame rate
+          frameRate: { ideal: 15, max: 15 }, // Default frame rate
         },
       };
 
@@ -316,7 +363,6 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   }, [
     featuresEnabled.camera,
     isMobile,
-    profile.visionFPS,
     vision,
     featuresEnabled.vision,
     videoRef,
@@ -327,7 +373,13 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // ========================================================================
 
   const handleStartSession = useCallback(async () => {
-    if (config.autoStart || !showPreparation) {
+    // Ensure session is initialized
+    if (!session.config) {
+      console.warn("Session not initialized, cannot start");
+      return;
+    }
+
+    if (!showPreparation) {
       setShowPreparation(true);
 
       // Brief preparation phase (meditation UX)
@@ -339,7 +391,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       setPhase("active");
       session.start();
     }
-  }, [config.autoStart, showPreparation, session]);
+  }, [showPreparation, session]);
 
   const handlePauseResume = useCallback(() => {
     if (session.isActive) {

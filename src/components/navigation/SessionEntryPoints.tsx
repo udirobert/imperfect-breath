@@ -1,9 +1,10 @@
 /**
- * Session Entry Points - Clean UI for choosing between Classic and Enhanced sessions
+ * Session Entry Points - Clean UI for choosing between session experiences
  *
- * SINGLE RESPONSIBILITY: Present clear choice between session types
+ * SINGLE RESPONSIBILITY: Present clear choice between session types and patterns
  * DRY: Eliminates duplication between mobile/desktop
  * CLEAN: No mixed concerns, pure presentation logic
+ * WELLNESS UX: Promotes delightful pattern discovery and choice
  */
 
 import React from "react";
@@ -11,7 +12,7 @@ import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { isTouchDevice } from "../../utils/mobile-detection";
-import { Sparkles, Focus, Camera, Zap } from "lucide-react";
+import { Sparkles, Camera, Zap, Heart } from "lucide-react";
 
 interface SessionEntryPointsProps {
   variant?: "mobile" | "desktop";
@@ -28,31 +29,40 @@ export const SessionEntryPoints: React.FC<SessionEntryPointsProps> = ({
   const sessionTypes = [
     {
       key: "classic",
-      title: "Classic Session",
-      description: "Pure breathing practice with no distractions",
-      badge: "Focus Mode",
-      icon: Focus,
+      title: "Try Breathing",
+      description: "Start with guided box breathing - simple and effective",
+      badge: "Start Here",
+      icon: Heart,
       to: "/session/classic",
       buttonClass: isMobile
-        ? "w-full text-sm bg-blue-50 border-2 border-blue-200 text-blue-800 hover:bg-blue-100"
-        : "px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-blue-50 border-2 border-blue-200 text-blue-800 hover:bg-blue-100",
+        ? "w-full text-sm bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 text-blue-800 hover:from-blue-100 hover:to-indigo-100"
+        : "px-6 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 text-blue-800 hover:from-blue-100 hover:to-indigo-100",
       badgeClass:
-        "absolute -top-2 -right-2 bg-blue-100 text-blue-700 border-blue-300 text-xs px-2 py-1",
-      features: ["No camera", "Minimal interface", "Pure mindfulness"],
+        "absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 text-xs px-3 py-1 shadow-md",
+      features: [
+        "4-4-4-4 box breathing pattern",
+        "No camera or signup required",
+        "Immediate stress relief",
+      ],
     },
     {
       key: "enhanced",
-      title: "Enhanced Session",
-      description: "AI-powered breathing with real-time feedback",
-      badge: "AI + Camera",
+      title: "Enhanced Experience",
+      description:
+        "AI-powered feedback with camera tracking for deeper practice",
+      badge: "Popular",
       icon: Camera,
       to: "/session/enhanced",
       buttonClass: isMobile
-        ? "w-full text-sm bg-purple-50 border-2 border-purple-300 text-purple-800 hover:bg-purple-100"
-        : "px-10 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-purple-50 border-2 border-purple-300 text-purple-800 hover:bg-purple-100",
+        ? "w-full text-sm bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 text-purple-800 hover:from-purple-100 hover:to-pink-100"
+        : "px-6 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 text-purple-800 hover:from-purple-100 hover:to-pink-100",
       badgeClass:
-        "absolute -top-2 -right-2 bg-purple-100 text-purple-700 border-purple-300 text-xs px-2 py-1",
-      features: ["Camera tracking", "AI feedback", "Advanced metrics"],
+        "absolute -top-2 -right-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 text-xs px-3 py-1 shadow-md",
+      features: [
+        "Real-time posture feedback",
+        "AI coaching insights",
+        "Advanced session metrics",
+      ],
     },
   ];
 
@@ -60,17 +70,17 @@ export const SessionEntryPoints: React.FC<SessionEntryPointsProps> = ({
     return (
       <div className={`space-y-6 p-4 ${className}`}>
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold mb-2">Choose Your Experience</h2>
+          <h2 className="text-2xl font-bold mb-2">Start Your Practice</h2>
           <p className="text-muted-foreground">
-            Select the session type that fits your needs
+            Choose your breathing experience
           </p>
         </div>
 
         {sessionTypes.map((session) => {
           const Icon = session.icon;
           return (
-            <Link key={session.key} to={session.to} className="block">
-              <div className="relative">
+            <div key={session.key} className="relative">
+              <Link to={session.to} className="block">
                 <Button variant="outline" className={session.buttonClass}>
                   <div className="flex items-center gap-3 w-full">
                     <Icon className="w-5 h-5" />
@@ -82,9 +92,9 @@ export const SessionEntryPoints: React.FC<SessionEntryPointsProps> = ({
                     </div>
                   </div>
                 </Button>
-                <Badge className={session.badgeClass}>{session.badge}</Badge>
-              </div>
-            </Link>
+              </Link>
+              <Badge className={session.badgeClass}>{session.badge}</Badge>
+            </div>
           );
         })}
       </div>
@@ -93,7 +103,7 @@ export const SessionEntryPoints: React.FC<SessionEntryPointsProps> = ({
 
   // Desktop layout
   return (
-    <div className={`max-w-6xl mx-auto py-12 ${className}`}>
+    <div className={`max-w-5xl mx-auto py-12 ${className}`}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
         {sessionTypes.map((session) => {
           const Icon = session.icon;
@@ -117,27 +127,26 @@ export const SessionEntryPoints: React.FC<SessionEntryPointsProps> = ({
                   ))}
                 </ul>
 
-                <Link to={session.to} className="block">
-                  <div className="relative">
+                <div className="relative">
+                  <Link to={session.to} className="block">
                     <Button className={session.buttonClass}>
                       <Zap className="w-5 h-5 mr-2" />
-                      Start
+                      Start Session
                     </Button>
-                    <Badge className={session.badgeClass}>
-                      {session.badge}
-                    </Badge>
-                  </div>
-                </Link>
+                  </Link>
+                  <Badge className={session.badgeClass}>{session.badge}</Badge>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="text-center mt-12">
-        <p className="text-sm text-muted-foreground">
-          Not sure which to choose? Start with Classic for a distraction-free
-          experience.
+      {/* Post-session pattern discovery hint */}
+      <div className="mt-12 text-center">
+        <p className="text-sm text-muted-foreground bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg inline-block">
+          ✨ Complete your first session to unlock 6+ breathing patterns
+          including Wim Hof, 4-7-8, and more
         </p>
       </div>
     </div>

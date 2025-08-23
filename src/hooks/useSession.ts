@@ -111,77 +111,13 @@ export const useSession = (options: UseSessionOptions = {}) => {
   }, [enableVision, vision, setCameraStream, setCameraPermission, setVisionActive, setError]);
 
   // ========================================================================
-  // SESSION LIFECYCLE - Simplified, clean
-  // ========================================================================
-
-  const initialize = useCallback(async (sessionConfig: SessionConfig) => {
-    initializeSession(sessionConfig);
-    
-    // Request camera if needed
-    if (sessionConfig.enableCamera) {
-      await requestCamera();
-    }
-    
-    // Auto-start if enabled
-    if (autoStart) {
-      setTimeout(() => startSession(), 1000);
-    }
-  }, [initializeSession, requestCamera, autoStart, startSession]);
-
-  const start = useCallback(() => {
-    if (!config) {
-      setError('Session not properly initialized');
-      return;
-    }
-    
-    startSession();
-    
-    // Start breathing phase cycle
-    startBreathingCycle();
-  }, [config, startSession, setError]);
-
-  const pause = useCallback(() => {
-    pauseSession();
-    stopBreathingCycle();
-  }, [pauseSession]);
-
-  const resume = useCallback(() => {
-    resumeSession();
-    startBreathingCycle();
-  }, [resumeSession]);
-
-  const complete = useCallback(() => {
-    completeSession();
-    stopBreathingCycle();
-    
-    // Cleanup camera
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
-      setCameraStream(null);
-    }
-    
-    // Stop vision
-    if (vision) {
-      vision.stop();
-      setVisionActive(false);
-    }
-  }, [completeSession, cameraStream, setCameraStream, vision, setVisionActive]);
-
-  const reset = useCallback(() => {
-    stopBreathingCycle();
-    resetSession();
-    
-    if (vision) {
-      vision.reset();
-    }
-  }, [resetSession, vision]);
-
-  // ========================================================================
   // BREATHING CYCLE MANAGEMENT - Clean timing
   // ========================================================================
 
   const startBreathingCycle = useCallback(() => {
-    if (!config?.pattern) return;
+    if (!config?.pattern) {
+      return;
+    }
     
     const { pattern } = config;
     const phases = [
@@ -226,21 +162,100 @@ export const useSession = (options: UseSessionOptions = {}) => {
   }, []);
 
   // ========================================================================
+  // SESSION LIFECYCLE - Simplified, clean
+  // ========================================================================
+
+  const initialize = useCallback(async (sessionConfig: SessionConfig) => {
+    initializeSession(sessionConfig);
+    
+    // Request camera if needed
+    if (sessionConfig.enableCamera) {
+      await requestCamera();
+    }
+    
+    // Auto-start if enabled
+    if (autoStart) {
+      setTimeout(() => {
+        const { startSession: start } = useSessionStore.getState();
+        start();
+      }, 1000);
+    }
+  }, [initializeSession, requestCamera, autoStart]);
+
+  const start = useCallback(() => {
+    if (!config) {
+      setError('Session not properly initialized');
+      return;
+    }
+    
+    startSession();
+    
+    // Start breathing phase cycle
+    startBreathingCycle();
+  }, [config, startSession, setError, startBreathingCycle]);
+
+  const pause = useCallback(() => {
+    pauseSession();
+    stopBreathingCycle();
+  }, [pauseSession, stopBreathingCycle]);
+
+  const resume = useCallback(() => {
+    resumeSession();
+    startBreathingCycle();
+  }, [resumeSession, startBreathingCycle]);
+
+  const complete = useCallback(() => {
+    completeSession();
+    stopBreathingCycle();
+    
+    // Cleanup camera
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    
+    // Stop vision
+    if (vision) {
+      vision.stop();
+      setVisionActive(false);
+    }
+  }, [completeSession, cameraStream, setCameraStream, vision, setVisionActive]);
+
+  const reset = useCallback(() => {
+    stopBreathingCycle();
+    resetSession();
+    
+    if (vision) {
+      vision.reset();
+    }
+  }, [resetSession, vision]);
+
+  // ========================================================================
   // VISION INTEGRATION - Clean, optional
   // ========================================================================
+  
+  const previousVisionMetricsRef = useRef<string>('');
 
   useEffect(() => {
     if (enableVision && vision?.state.metrics) {
       const { stillness, presence, posture, faceLandmarks } = vision.state.metrics;
       
-      updateVisionMetrics({
-        stillness,
-        presence,
-        posture,
-        faceLandmarks,
-      });
+      // Create a hash to detect actual changes in metrics
+      const metricsHash = JSON.stringify({ stillness, presence, posture });
+      
+      // Only update if metrics actually changed
+      if (metricsHash !== previousVisionMetricsRef.current) {
+        previousVisionMetricsRef.current = metricsHash;
+        
+        updateVisionMetrics({
+          stillness,
+          presence,
+          posture,
+          faceLandmarks,
+        });
+      }
     }
-  }, [enableVision, vision?.state.metrics, updateVisionMetrics]);
+  }, [enableVision, vision?.state.metrics?.stillness, vision?.state.metrics?.presence, vision?.state.metrics?.posture, updateVisionMetrics]);
 
   // ========================================================================
   // CLEANUP - Proper resource management

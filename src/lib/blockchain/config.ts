@@ -116,17 +116,19 @@ export const gasSettings = {
 // Feature flags
 export const featureFlags = {
   enableWalletConnect:
-    getEnvVar("VITE_ENABLE_WALLET_CONNECT", "true") === "true" &&
+    getEnvVar("VITE_ENABLE_WALLET_CONNECT", "false") === "true" &&
     !!getEnvVar("VITE_WALLETCONNECT_PROJECT_ID") &&
-    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("your_"),
+    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("your_") &&
+    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("demo"),
   enableMetamask: getEnvVar("VITE_ENABLE_METAMASK", "true") === "true",
   enableConnectKit:
-    getEnvVar("VITE_ENABLE_CONNECT_KIT", "true") === "true" &&
+    getEnvVar("VITE_ENABLE_CONNECT_KIT", "false") === "true" &&
     !!getEnvVar("VITE_WALLETCONNECT_PROJECT_ID") &&
-    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("your_"),
+    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("your_") &&
+    !getEnvVar("VITE_WALLETCONNECT_PROJECT_ID").includes("demo"),
   enableIPRegistration:
-    getEnvVar("VITE_ENABLE_IP_REGISTRATION", "true") === "true",
-  enableLicensing: getEnvVar("VITE_ENABLE_LICENSING", "true") === "true",
+    getEnvVar("VITE_ENABLE_IP_REGISTRATION", "false") === "true",
+  enableLicensing: getEnvVar("VITE_ENABLE_LICENSING", "false") === "true",
   enableMockMode: false, // No more mock mode - always use real blockchain interactions
 };
 

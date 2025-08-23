@@ -317,12 +317,14 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
 
   // Frame processing with graceful failure
   const processFrame = useCallback(async () => {
-    if (!state.isActive || !videoRef.current) return;
+    // Use current state values directly rather than depending on them
+    const currentState = state;
+    if (!currentState.isActive || !videoRef.current) return;
 
     // FPS limiting
     const now = Date.now();
     const timeSinceLastFrame = now - lastFrameTime.current;
-    const targetFrameTime = 1000 / state.currentFPS;
+    const targetFrameTime = 1000 / currentState.currentFPS;
     
     if (timeSinceLastFrame < targetFrameTime) return;
     
@@ -345,7 +347,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       
       let metrics: MeditationMetrics;
       
-      if (state.backendAvailable && clientRef.current) {
+      if (currentState.backendAvailable && clientRef.current) {
         // Try backend processing
         try {
           metrics = await clientRef.current.processFrame(
@@ -387,10 +389,6 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       }
     }
   }, [
-    state.isActive, 
-    state.currentFPS, 
-    state.backendAvailable,
-    finalConfig.sessionId,
     finalConfig.features,
     finalConfig.silentMode,
     finalConfig.gracefulDegradation,
@@ -409,7 +407,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       error: null
     }));
 
-    // Start processing loop
+    // Start processing loop - use current state value directly
     const interval = Math.floor(1000 / state.currentFPS);
     processingInterval.current = setInterval(processFrame, interval);
     
@@ -419,7 +417,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       metrics: createFallbackMetrics()
     }));
     
-  }, [state.isActive, state.currentFPS, processFrame]);
+  }, [processFrame]); // Remove state dependencies
 
   // Stop processing
   const stop = useCallback(() => {
