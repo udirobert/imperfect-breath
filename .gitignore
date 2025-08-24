@@ -72,3 +72,32 @@ logs/
 # OS generated files
 Thumbs.db
 .DS_Store?
+
+# --- Python / backend ---
+venv/
+.venv/
+env/
+ENV/
+backend/**/venv/
+backend/**/.venv/
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/pip/
+pip-wheel-metadata/
+
+# --- Supabase local artifacts ---
+supabase/.temp/
+
+# --- Local tooling / assistants ---
+.zencoder/
+.qodo/
+.claude/
