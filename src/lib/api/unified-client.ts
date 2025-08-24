@@ -81,49 +81,48 @@ class ServiceRegistry {
   }
 
   private initializeServices() {
-    // AI Analysis Service (Essential - backend running on port 3001)
+    // AI Analysis Service (Essential - uses Netlify Functions in production, localhost in dev)
     this.registerService({
       name: 'ai',
-      baseUrl: 'http://localhost:3001',
+      baseUrl: config.services.ai.url,
       healthCheck: '/health',
-      timeout: 30000,
-      retries: 3,
+      timeout: config.services.ai.timeout,
+      retries: config.services.ai.retries,
       requiresAuth: false,
     });
 
     // Social/Pattern Service (Essential - same as AI service)
     this.registerService({
       name: 'social',
-      baseUrl: 'http://localhost:3001',
+      baseUrl: config.services.social.url,
       healthCheck: '/health',
-      timeout: 15000,
-      retries: 3,
+      timeout: config.services.social.timeout,
+      retries: config.services.social.retries,
       requiresAuth: false,
     });
 
     // Vision Processing Service (Optional - with fallback to AI service)
     const visionEnabled = import.meta.env.VITE_ENABLE_VISION_PROCESSING === 'true';
-    const visionServiceUrl = import.meta.env.VITE_VISION_SERVICE_URL;
-    
+
     if (visionEnabled) {
-      if (visionServiceUrl && visionServiceUrl !== 'http://localhost:3001') {
+      if (config.services.vision.url !== config.services.ai.url) {
         // Register standalone vision service if configured differently
         this.registerService({
           name: 'vision',
-          baseUrl: visionServiceUrl,
+          baseUrl: config.services.vision.url,
           healthCheck: '/health',
-          timeout: 10000,
-          retries: 2,
+          timeout: config.services.vision.timeout,
+          retries: config.services.vision.retries,
           requiresAuth: false,
         });
       } else {
         // Use AI service as vision service (integrated mode)
         this.registerService({
           name: 'vision',
-          baseUrl: 'http://localhost:3001',
+          baseUrl: config.services.ai.url,
           healthCheck: '/health',
-          timeout: 10000,
-          retries: 2,
+          timeout: config.services.vision.timeout,
+          retries: config.services.vision.retries,
           requiresAuth: false,
         });
       }
@@ -367,9 +366,16 @@ export class UnifiedAPIClient {
    */
   async analyzeSession(provider: string, sessionData: any): Promise<APIResponse> {
     try {
+      // CLEAN: Explicit format for Hetzner server AI analysis
+      const requestBody = {
+        provider,
+        session_data: sessionData, // Match Hetzner server format
+        analysis_type: 'session'
+      };
+
       return await this.request('ai', '/api/ai-analysis', {
         method: 'POST',
-        body: JSON.stringify({ provider, sessionData, analysisType: 'session' }),
+        body: JSON.stringify(requestBody),
       });
     } catch (error) {
       console.warn('AI analysis failed, using fallback:', error);

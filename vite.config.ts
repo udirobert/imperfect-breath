@@ -5,25 +5,19 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // MODULAR: Extract chunking logic for better composability
 const getChunkName = (id: string): string | undefined => {
-  // Core vendor libraries (stable packages only)
-  if (id.includes('react') && !id.includes('react-router') && !id.includes('@radix-ui')) {
-    return 'vendor-react';
+  // NEVER chunk React - it must stay in main bundle
+  if (id.includes('react') || id.includes('scheduler')) {
+    return undefined;
   }
-  if (id.includes('react-dom') && !id.includes('@radix-ui')) {
-    return 'vendor-react';
-  }
-  if (id.includes('react-router-dom')) {
-    return 'vendor-react';
+  
+  // Crypto/Web3 libraries - these were causing the React import issues
+  if (id.includes('@wagmi') || id.includes('viem') || id.includes('wagmi') || id.includes('connectkit')) {
+    return 'vendor-crypto';
   }
   
   // Radix UI components
   if (id.includes('@radix-ui')) {
     return 'vendor-ui';
-  }
-  
-  // Crypto/Web3 libraries
-  if (id.includes('@wagmi') || id.includes('viem') || id.includes('wagmi') || id.includes('connectkit')) {
-    return 'vendor-crypto';
   }
   
   // State management
@@ -41,28 +35,26 @@ const getChunkName = (id: string): string | undefined => {
     return 'tensorflow-models';
   }
   
-  // Large AI/ML libraries
-  if (id.includes('@anthropic-ai') || id.includes('@google/generative-ai') || id.includes('openai')) {
-    return 'vendor-ai';
-  }
+  // AI/ML libraries (now handled by Hetzner server)
+  // Removed: @anthropic-ai, @google/generative-ai, openai
   
   // Lens Protocol
   if (id.includes('@lens-protocol') || id.includes('@lens-chain')) {
     return 'vendor-lens';
   }
   
-  // Flow blockchain
-  if (id.includes('@onflow')) {
-    return 'vendor-flow';
-  }
+  // Flow blockchain - exclude from vendor chunk to avoid reference errors
+  // if (id.includes('@onflow')) {
+  //   return 'vendor-flow';
+  // }
   
   // Utility libraries
   if (id.includes('date-fns') || id.includes('uuid') || id.includes('@tanstack/react-query') || id.includes('lodash')) {
     return 'vendor-utils';
   }
   
-  // Other vendor packages
-  if (id.includes('node_modules')) {
+  // Other vendor packages (but not React - React stays in main bundle)
+  if (id.includes('node_modules') && !id.includes('react') && !id.includes('scheduler')) {
     return 'vendor-misc';
   }
   
@@ -142,8 +134,31 @@ export default defineConfig(({ mode }) => {
 
       // Rollup options for build optimization
       rollupOptions: {
+        // Ensure React is externalized properly
+        external: (id) => {
+          // Don't externalize React - keep it bundled
+          return false;
+        },
         output: {
-          manualChunks: getChunkName,
+          manualChunks: (id) => {
+            // Don't chunk React at all - it should stay in main bundle
+            if (id.includes('react') || id.includes('scheduler')) {
+              return undefined; // Keep in main bundle
+            }
+            
+            // Apply our other chunking rules but never chunk React
+            const chunkName = getChunkName(id);
+            if (chunkName) {
+              return chunkName;
+            }
+            
+            // Default behavior for other node_modules (but React is already excluded)
+            if (id.includes('node_modules')) {
+              return 'vendor-misc';
+            }
+            
+            return undefined;
+          },
           
           // Configure chunk file naming
           chunkFileNames: (chunkInfo) => {
@@ -167,6 +182,12 @@ export default defineConfig(({ mode }) => {
             }
             return `assets/[name]-[hash][extname]`;
           },
+          
+          // Ensure proper globals for React
+          globals: {
+            'react': 'React',
+            'react-dom': 'ReactDOM'
+          }
         },
       },
 
@@ -212,6 +233,8 @@ export default defineConfig(({ mode }) => {
 
     // React-specific optimizations
     optimizeDeps: {
+      // Force React to be included in dependency optimization
+      force: true,
       include: [
         "react",
         "react-dom",
@@ -219,13 +242,7 @@ export default defineConfig(({ mode }) => {
         "react/jsx-runtime",
         "react-router-dom",
         "zustand",
-        "@tensorflow/tfjs",
-        "@tensorflow/tfjs-core",
-        "@tensorflow/tfjs-backend-webgl",
-        "@tensorflow/tfjs-backend-cpu",
-        "@tensorflow-models/face-landmarks-detection",
-        "@tensorflow-models/pose-detection",
-        "@tensorflow-models/blazeface",
+        // AGGRESSIVE CONSOLIDATION: Removed TensorFlow deps (now using Hetzner server)
         "@tanstack/react-query"
       ],
       // Exclude optional dependencies that may not be available

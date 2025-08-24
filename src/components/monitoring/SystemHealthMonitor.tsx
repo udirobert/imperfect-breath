@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { api, apiClient } from "../../lib/api/unified-client";
-import { development } from "../../config/environment";
+import { development, config } from "../../config/environment";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -166,9 +166,9 @@ export const SystemHealthMonitor: React.FC<SystemHealthProps> = ({
   // Helper functions
   const getServiceEndpoint = (serviceName: string): string => {
     const endpoints: Record<string, string> = {
-      ai: "localhost:3001",
-      social: "localhost:3001",
-      vision: "localhost:3001/vision",
+      ai: config.services.ai.url.replace(/^https?:\/\//, ''),
+      social: config.services.social.url.replace(/^https?:\/\//, ''),
+      vision: config.services.vision.url.replace(/^https?:\/\//, ''),
       flow: "rest-testnet.onflow.org",
       lens: "api-v2.lens.dev",
     };

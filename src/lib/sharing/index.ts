@@ -4,13 +4,11 @@
  */
 
 import { toast } from "sonner";
+import { SessionData } from "../ai/config"; // DRY: Use unified SessionData interface
 
-export interface SessionData {
-  patternName?: string;
-  duration?: number;
+// Sharing-specific extensions
+export interface ShareableSessionData extends SessionData {
   score?: number;
-  breathHoldTime?: number;
-  restlessnessScore?: number;
   cycles?: number;
   insights?: string[];
   flowNFTId?: string;
@@ -44,7 +42,7 @@ export class ShareTextGenerator {
     growth: "🌱"
   };
 
-  static generateTwitterText(sessionData: SessionData, options: ShareOptions = {}): string {
+  static generateTwitterText(sessionData: ShareableSessionData, options: ShareOptions = {}): string {
     const {
       includeScore = true,
       includeCycles = true,

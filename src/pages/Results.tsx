@@ -101,17 +101,77 @@ const Results = () => {
       return;
     }
 
-    const currentSession: SessionData = {
+    // UNIFIED DATA FLOW: Combine session + vision data (AGGRESSIVE CONSOLIDATION)
+    let enhancedSessionData: SessionData = {
       breathHoldTime: sessionData.breathHoldTime || 0,
       restlessnessScore: sessionData.restlessnessScore || 0,
       patternName: sessionData.patternName,
       sessionDuration: sessionData.sessionDuration || 0,
       timestamp: new Date().toISOString(),
-      landmarks: 68, // Assuming 68-point face model
+      landmarks: 68,
     };
 
+    // If vision was used, get actual vision metrics from Hetzner server
+    if (sessionData.visionSessionId && sessionData.cameraUsed !== false) {
+      try {
+        // PERFORMANT: Cache vision data fetches to avoid redundant requests
+        const cacheKey = `vision_summary_${sessionData.visionSessionId}`;
+        let visionData = sessionStorage.getItem(cacheKey);
+
+        if (!visionData) {
+          const visionSummary = await fetch(`${import.meta.env.VITE_HETZNER_SERVICE_URL || 'http://localhost:8001'}/api/vision/sessions/${sessionData.visionSessionId}/summary`);
+
+          if (visionSummary.ok) {
+            visionData = await visionSummary.text();
+            // Cache for 5 minutes
+            sessionStorage.setItem(cacheKey, visionData);
+            sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+          }
+        } else {
+          // Check cache expiry (5 minutes)
+          const timestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
+          if (timestamp && Date.now() - parseInt(timestamp) > 300000) {
+            sessionStorage.removeItem(cacheKey);
+            sessionStorage.removeItem(`${cacheKey}_timestamp`);
+            // Refetch
+            const visionSummary = await fetch(`${import.meta.env.VITE_HETZNER_SERVICE_URL || 'http://localhost:8001'}/api/vision/sessions/${sessionData.visionSessionId}/summary`);
+            if (visionSummary.ok) {
+              visionData = await visionSummary.text();
+              sessionStorage.setItem(cacheKey, visionData);
+              sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+            }
+          }
+        }
+
+        if (visionData) {
+          const parsedVisionData = JSON.parse(visionData);
+
+          // Map vision metrics to AI analysis format (DRY: Single source of truth)
+          enhancedSessionData = {
+            ...enhancedSessionData,
+            restlessnessScore: Math.round((1 - parsedVisionData.avg_movement_level) * 100),
+            bpm: parsedVisionData.avg_breathing_rate || enhancedSessionData.breathHoldTime,
+            landmarks: parsedVisionData.total_frames,
+            // Add vision-specific data for AI analysis
+            visionMetrics: {
+              confidence: parsedVisionData.avg_confidence,
+              postureScore: parsedVisionData.avg_posture_score,
+              movementLevel: parsedVisionData.avg_movement_level,
+              stillnessPercentage: parsedVisionData.stillness_percentage,
+              consistencyScore: parsedVisionData.consistency_score,
+            }
+          };
+
+          console.log('Enhanced session data with vision metrics:', enhancedSessionData);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch vision data, using session data only:', error);
+        toast.warning('Using session data only - vision metrics unavailable');
+      }
+    }
+
     setShowAIAnalysis(true);
-    await analyzeSession(currentSession);
+    await analyzeSession(enhancedSessionData);
   };
 
   const formatTime = (seconds: number) => {

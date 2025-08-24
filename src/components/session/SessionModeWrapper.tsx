@@ -89,6 +89,8 @@ const useSessionCompletion = () => {
           sessionType: sessionData.sessionType,
           cameraUsed: sessionData.cameraUsed,
           aiUsed: sessionData.aiUsed,
+          // UNIFIED: Include vision session ID for AI integration (DRY)
+          visionSessionId: sessionData.visionSessionId,
         },
       });
     },

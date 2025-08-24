@@ -12,7 +12,7 @@ import { PatternSelection } from "../components/session/PatternSelection";
 import { Button } from "../components/ui/button";
 import { ArrowLeft, Star, Heart } from "lucide-react";
 import { Badge } from "../components/ui/badge";
-import type { CustomPattern } from "../lib/ai/providers";
+import type { CustomPattern } from "../lib/patternStorage";
 
 export const PatternSelectionPage: React.FC = () => {
   const navigate = useNavigate();

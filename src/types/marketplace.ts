@@ -1,5 +1,5 @@
 import type { LicenseTerms } from "./blockchain";
-import type { CustomPattern } from "../lib/ai/providers";
+import type { CustomPattern } from "../lib/patternStorage";
 
 /**
  * Represents a pattern available in the marketplace

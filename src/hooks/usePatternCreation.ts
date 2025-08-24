@@ -10,7 +10,7 @@ import { useFlow } from "./useFlow";
 
 import { useLens } from "./useLens";
 import { useToast } from "./use-toast";
-import type { CustomPattern } from "../lib/ai/providers";
+import type { CustomPattern } from "../lib/patternStorage";
 import type { BlockchainType } from "../components/blockchain/BlockchainSelector";
 import type {
   BreathingPatternAttributes,

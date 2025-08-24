@@ -71,6 +71,10 @@ const useSessionCompletion = () => {
       rhythmConsistency?: number;
       sessionDuration?: number;
       patternName?: string;
+      // UNIFIED: Vision session ID for AI integration
+      visionSessionId?: string;
+      sessionType?: string;
+      cameraUsed?: boolean;
     }) => {
       const {
         pattern,
@@ -82,6 +86,9 @@ const useSessionCompletion = () => {
         rhythmConsistency,
         sessionDuration,
         patternName,
+        visionSessionId,
+        sessionType,
+        cameraUsed,
       } = sessionData;
 
       // Use actual session duration if available, otherwise calculate from pattern
@@ -120,6 +127,10 @@ const useSessionCompletion = () => {
           phaseAccuracy: sessionData.phaseAccuracy,
           rhythmConsistency: sessionData.rhythmConsistency,
           targetCycles: 10, // Default target, could be made configurable
+          // UNIFIED: Include vision session ID and metadata for AI integration
+          visionSessionId,
+          sessionType,
+          cameraUsed,
         },
       });
     },
@@ -138,6 +149,28 @@ const BreathingSession: React.FC = () => {
 
   // Session completion handler - DRY
   const handleSessionComplete = useSessionCompletion();
+
+  // UNIFIED: Handle MeditationSession metrics (CLEAN separation)
+  const onSessionComplete = useCallback((metrics: any) => {
+    // Convert MeditationSession metrics to legacy format for compatibility
+    const legacySessionData = {
+      pattern: initialPattern,
+      cycleCount: metrics.cycleCount,
+      breathHoldTime: metrics.breathHoldTime || 0,
+      restlessnessScore: metrics.stillnessScore ? 100 - metrics.stillnessScore : 0,
+      elapsedTime: metrics.duration * 1000, // Convert to milliseconds
+      phaseAccuracy: 85, // Default value
+      rhythmConsistency: 90, // Default value
+      sessionDuration: metrics.duration,
+      patternName: initialPattern.name,
+      // UNIFIED: Pass through vision session ID for AI integration
+      visionSessionId: metrics.visionSessionId,
+      sessionType: metrics.sessionType,
+      cameraUsed: metrics.cameraUsed,
+    };
+
+    handleSessionComplete(legacySessionData);
+  }, [handleSessionComplete, initialPattern]);
 
   // Enhanced session management - MODERN
   const {

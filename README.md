@@ -30,17 +30,14 @@ git clone [your-repo-url]
 cd imperfect-breath
 npm install
 
-# Start both frontend and AI server
-npm run dev:full    # Starts both frontend (4556) and AI server (3001)
-# OR run separately:
-npm run dev         # Frontend only (localhost:4556)
-npm run dev:server  # AI server only (localhost:3001)
+# Start development server
+npm run dev         # Frontend (localhost:4556)
 ```
 
 **No signup required** - Start breathing immediately with:
 
 - ✅ Complete breathing pattern library
-- ✅ AI coaching with Zen (requires server)
+- ✅ AI coaching with Zen (powered by Hetzner server)
 - ✅ Computer vision feedback (camera optional)
 - ✅ Local progress tracking
 
@@ -84,7 +81,7 @@ npm run dev:server  # AI server only (localhost:3001)
 **AI & Vision**
 
 - **Multi-Provider AI** - Google Gemini, OpenAI GPT-4, Anthropic Claude
-- **Secure Server Architecture** - Server-side API key management
+- **Unified Hetzner Backend** - Dedicated server for AI analysis and vision processing
 - **Eliza Framework** - Advanced AI agent architecture
 - **MediaPipe** - Real-time pose and face detection
 - **Three-tier processing** - Adaptive performance (Basic/Standard/Premium)

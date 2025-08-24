@@ -44,5 +44,5 @@ Our AI coach, Zen, will guide you through each session with personalized feedbac
 We are constantly working to improve the user experience. Here are some of the latest enhancements:
 
 - **Immediate Visual Feedback**: The new FaceMeshOverlay provides instant feedback to let you know the system is working.
-- **Real-time Performance Display**: The PerformanceDisplay component shows you your restlessness score and other metrics in real-time.
+- **Real-time Performance Monitoring**: The PerformanceMonitor component shows system performance metrics during sessions.
 - **Adaptive Performance Optimization**: Our system automatically adjusts the processing load to ensure a smooth experience on any device.

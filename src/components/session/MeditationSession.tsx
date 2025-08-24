@@ -166,6 +166,8 @@ export interface SessionMetrics {
   stillnessScore?: number;
   cameraUsed: boolean;
   sessionType: string;
+  // UNIFIED: Vision session ID for AI integration (DRY principle)
+  visionSessionId?: string;
   visionMetrics?: {
     averageStillness: number;
     faceDetectionRate: number;
@@ -278,11 +280,17 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     }
   }, [config, modeConfig]);
 
+  // Vision session ID for unified data flow (DRY principle)
+  const visionSessionId = useMemo(() =>
+    `session_${user?.id || "anonymous"}_${Date.now()}`,
+    [user?.id]
+  );
+
   // Vision processing (when enabled)
   const vision = useMeditationVision(
     modeConfig.enableVision && modeConfig.enableCamera
       ? {
-          sessionId: `session_${user?.id || "anonymous"}_${Date.now()}`,
+          sessionId: visionSessionId,
           targetFPS: shouldUseBatterySaver ? 1 : 2,
           silentMode: true, // Meditation UX requirement
           gracefulDegradation: true, // Handle failures peacefully
@@ -405,13 +413,15 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   }, [session, phase]);
 
   const handleEndSession = useCallback(() => {
-    // Compile comprehensive metrics
+    // Compile comprehensive metrics with unified vision data (CLEAN separation)
     const metrics: SessionMetrics = {
       duration: session.metrics.duration,
       cycleCount: session.metrics.cycleCount,
       stillnessScore: session.visionMetrics?.stillness,
       cameraUsed: Boolean(featuresEnabled.camera && cameraPermissionGranted),
       sessionType: config.mode,
+      // UNIFIED: Include vision session ID for AI integration
+      visionSessionId: vision?.state.isActive ? visionSessionId : undefined,
       visionMetrics: vision?.state.isActive
         ? {
             averageStillness: vision.state.metrics?.stillness

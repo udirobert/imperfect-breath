@@ -8,30 +8,32 @@ export interface AIProvider {
   website: string;
 }
 
+// AI providers are now handled by the Hetzner server
+// Frontend only needs to know which providers are available
 export const AI_PROVIDERS: AIProvider[] = [
   {
     id: "openai",
     name: "OpenAI GPT",
-    description: "Advanced AI analysis with GPT-4",
-    requiresApiKey: true,
-    apiKeyPlaceholder: "sk-...",
-    website: "https://platform.openai.com/api-keys",
+    description: "Advanced AI analysis with GPT-4 (via Hetzner server)",
+    requiresApiKey: false, // API keys managed on server
+    apiKeyPlaceholder: "",
+    website: "",
   },
   {
     id: "anthropic",
     name: "Anthropic Claude",
-    description: "Thoughtful AI insights with Claude",
-    requiresApiKey: true,
-    apiKeyPlaceholder: "sk-ant-...",
-    website: "https://console.anthropic.com/",
+    description: "Thoughtful AI insights with Claude (via Hetzner server)",
+    requiresApiKey: false, // API keys managed on server
+    apiKeyPlaceholder: "",
+    website: "",
   },
   {
     id: "google",
     name: "Google Gemini",
-    description: "Google's multimodal AI analysis",
-    requiresApiKey: true,
-    apiKeyPlaceholder: "AIza...",
-    website: "https://aistudio.google.com/app/apikey",
+    description: "Google's multimodal AI analysis (via Hetzner server)",
+    requiresApiKey: false, // API keys managed on server
+    apiKeyPlaceholder: "",
+    website: "",
   },
 ];
 
@@ -44,7 +46,14 @@ export interface SessionData {
   bpm?: number; // Breaths per minute, if calculated
   landmarks?: number; // Number of facial landmarks detected
   timestamp?: string; // Session timestamp
-  // Add other relevant session metrics here
+  // UNIFIED: Vision metrics integration (CLEAN separation)
+  visionMetrics?: {
+    confidence: number;
+    postureScore: number;
+    movementLevel: number;
+    stillnessPercentage: number;
+    consistencyScore: number;
+  };
 }
 
 export interface AIAnalysisRequest {
@@ -89,9 +98,9 @@ export interface SecureAIResponse {
 }
 
 export const AI_CONFIG = {
-  // Server-side API endpoint for secure AI requests
+  // Hetzner server API endpoint for AI requests
   apiEndpoint: '/api/ai-analysis',
-  
+
   providers: {
     google: {
       name: 'Google Gemini',
@@ -100,22 +109,16 @@ export const AI_CONFIG = {
     },
     openai: {
       name: 'OpenAI GPT-4',
-      model: 'gpt-4',
+      model: 'gpt-4o-mini',
       enabled: true
     },
     anthropic: {
       name: 'Anthropic Claude',
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-3-haiku-20240307',
       enabled: true
     }
   },
-  
-  // Fallback configuration
-  fallback: {
-    enabled: true,
-    mockResponses: true
-  },
-  
+
   // Request configuration
   timeout: 30000,
   retries: 2
@@ -123,28 +126,16 @@ export const AI_CONFIG = {
 
 export type SecureAIProvider = keyof typeof AI_CONFIG.providers;
 
-import { TieredStorageManager } from '../crypto/tiered-storage';
-
+// API keys are now managed on the Hetzner server
+// Frontend only needs basic provider information
 export class AIConfigManager {
-  static async setApiKey(provider: string, apiKey: string): Promise<void> {
-    await TieredStorageManager.setAPIKey(provider, apiKey);
-  }
-
-  static async getApiKey(provider: string): Promise<string | null> {
-    return await TieredStorageManager.getAPIKey(provider);
-  }
-
-  static removeApiKey(provider: string): void {
-    TieredStorageManager.removeAPIKey(provider);
-  }
-
-  static hasApiKey(provider: string): boolean {
-    return TieredStorageManager.hasAPIKey(provider);
-  }
-
   static getConfiguredProviders(): AIProvider[] {
-    const configuredProviderIds = TieredStorageManager.getConfiguredProviders();
-    return AI_PROVIDERS.filter((provider) => configuredProviderIds.includes(provider.id));
+    // All providers are available through the Hetzner server
+    return AI_PROVIDERS;
+  }
+
+  static getProvider(id: string): AIProvider | undefined {
+    return AI_PROVIDERS.find(provider => provider.id === id);
   }
 
   static clearAllKeys(): void {
