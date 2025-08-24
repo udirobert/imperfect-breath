@@ -3,6 +3,72 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
+// MODULAR: Extract chunking logic for better composability
+const getChunkName = (id: string): string | undefined => {
+  // Core vendor libraries (stable packages only)
+  if (id.includes('react') && !id.includes('react-router') && !id.includes('@radix-ui')) {
+    return 'vendor-react';
+  }
+  if (id.includes('react-dom') && !id.includes('@radix-ui')) {
+    return 'vendor-react';
+  }
+  if (id.includes('react-router-dom')) {
+    return 'vendor-react';
+  }
+  
+  // Radix UI components
+  if (id.includes('@radix-ui')) {
+    return 'vendor-ui';
+  }
+  
+  // Crypto/Web3 libraries
+  if (id.includes('@wagmi') || id.includes('viem') || id.includes('wagmi') || id.includes('connectkit')) {
+    return 'vendor-crypto';
+  }
+  
+  // State management
+  if (id.includes('zustand')) {
+    return 'vendor-state';
+  }
+  
+  // TensorFlow core and backends
+  if (id.includes('@tensorflow/tfjs') && !id.includes('models')) {
+    return 'tensorflow-core';
+  }
+  
+  // TensorFlow models (separate for lazy loading)
+  if (id.includes('@tensorflow-models') || id.includes('@vladmandic/face-api')) {
+    return 'tensorflow-models';
+  }
+  
+  // Large AI/ML libraries
+  if (id.includes('@anthropic-ai') || id.includes('@google/generative-ai') || id.includes('openai')) {
+    return 'vendor-ai';
+  }
+  
+  // Lens Protocol
+  if (id.includes('@lens-protocol') || id.includes('@lens-chain')) {
+    return 'vendor-lens';
+  }
+  
+  // Flow blockchain
+  if (id.includes('@onflow')) {
+    return 'vendor-flow';
+  }
+  
+  // Utility libraries
+  if (id.includes('date-fns') || id.includes('uuid') || id.includes('@tanstack/react-query') || id.includes('lodash')) {
+    return 'vendor-utils';
+  }
+  
+  // Other vendor packages
+  if (id.includes('node_modules')) {
+    return 'vendor-misc';
+  }
+  
+  return undefined;
+};
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const isProduction = mode === "production";
@@ -77,68 +143,7 @@ export default defineConfig(({ mode }) => {
       // Rollup options for build optimization
       rollupOptions: {
         output: {
-          manualChunks: (id) => {
-            // Core vendor libraries (stable packages only)
-            if (id.includes('react') && !id.includes('react-router') && !id.includes('@radix-ui')) {
-              return 'vendor-react';
-            }
-            if (id.includes('react-dom') && !id.includes('@radix-ui')) {
-              return 'vendor-react';
-            }
-            if (id.includes('react-router-dom')) {
-              return 'vendor-react';
-            }
-            
-            // Radix UI components
-            if (id.includes('@radix-ui')) {
-              return 'vendor-ui';
-            }
-            
-            // Crypto/Web3 libraries
-            if (id.includes('@wagmi') || id.includes('viem') || id.includes('wagmi') || id.includes('connectkit')) {
-              return 'vendor-crypto';
-            }
-            
-            // State management
-            if (id.includes('zustand')) {
-              return 'vendor-state';
-            }
-            
-            // TensorFlow core and backends
-            if (id.includes('@tensorflow/tfjs') && !id.includes('models')) {
-              return 'tensorflow-core';
-            }
-            
-            // TensorFlow models (separate for lazy loading)
-            if (id.includes('@tensorflow-models') || id.includes('@vladmandic/face-api')) {
-              return 'tensorflow-models';
-            }
-            
-            // Large AI/ML libraries
-            if (id.includes('@anthropic-ai') || id.includes('@google/generative-ai') || id.includes('openai')) {
-              return 'vendor-ai';
-            }
-            
-            // Lens Protocol
-            if (id.includes('@lens-protocol') || id.includes('@lens-chain')) {
-              return 'vendor-lens';
-            }
-            
-            // Flow blockchain
-            if (id.includes('@onflow')) {
-              return 'vendor-flow';
-            }
-            
-            // Utility libraries
-            if (id.includes('date-fns') || id.includes('uuid') || id.includes('@tanstack/react-query') || id.includes('lodash')) {
-              return 'vendor-utils';
-            }
-            
-            // Other vendor packages
-            if (id.includes('node_modules')) {
-              return 'vendor-misc';
-            }
-          },
+          manualChunks: getChunkName,
           
           // Configure chunk file naming
           chunkFileNames: (chunkInfo) => {
