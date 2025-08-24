@@ -177,6 +177,7 @@ interface MeditationSessionProps {
   config: MeditationSessionConfig;
   onSessionComplete?: (metrics: SessionMetrics) => void;
   onSessionExit?: () => void;
+  adaptiveFlow?: boolean; // New: indicates if this is part of adaptive flow
 }
 
 // ============================================================================

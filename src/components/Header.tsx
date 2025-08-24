@@ -11,6 +11,7 @@ import {
   Plus,
   DollarSign,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { WalletManager } from "./WalletManager";
@@ -38,7 +39,7 @@ const Header = () => {
         </Link>
 
         <div className="flex items-center gap-4">
-          {/* Core Navigation - Only Essential Items */}
+          {/* Core Navigation - Enhanced Desktop Experience */}
           <div className="hidden md:flex items-center gap-2">
             <Link to="/session">
               <Button
@@ -51,7 +52,19 @@ const Header = () => {
               </Button>
             </Link>
 
-            {/* Only show marketplace if user has shown interest in patterns */}
+            {/* Desktop Social Creation */}
+            <Link to="/create-post">
+              <Button
+                variant={location.pathname === "/create-post" ? "default" : "ghost"}
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Share
+              </Button>
+            </Link>
+
+            {/* Enhanced Marketplace for Desktop */}
             {user && (
               <Link to="/marketplace">
                 <Button
@@ -63,6 +76,20 @@ const Header = () => {
                 >
                   <Heart className="w-4 h-4" />
                   Patterns
+                </Button>
+              </Link>
+            )}
+
+            {/* Desktop Progress/Analytics */}
+            {user && (
+              <Link to="/progress">
+                <Button
+                  variant={location.pathname === "/progress" ? "default" : "ghost"}
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Progress
                 </Button>
               </Link>
             )}

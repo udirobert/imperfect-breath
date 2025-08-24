@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useIsMobile } from "../hooks/useAdaptivePerformance";
-import { SessionEntryPoints } from "../components/navigation/SessionEntryPoints";
+import { AdaptiveSessionFlow } from "../components/navigation/AdaptiveSessionFlow";
+import { DesktopAdaptiveSessionFlow } from "../components/desktop/DesktopAdaptiveSessionFlow";
 import { SmartAuthGate } from "../components/auth/SmartAuthGate";
 import { MESSAGING } from "../config/messaging";
 
@@ -71,10 +72,18 @@ export default function Index({
           className="animate-fade-in"
         >
           <SmartAuthGate required="none" context="wellness">
-            <SessionEntryPoints
-              variant={isMobile ? "mobile" : "desktop"}
-              className="max-w-md mx-auto"
-            />
+            {isMobile ? (
+              <AdaptiveSessionFlow
+                variant="mobile"
+                className="max-w-4xl mx-auto"
+              />
+            ) : (
+              <DesktopAdaptiveSessionFlow
+                className="max-w-7xl mx-auto"
+                onPatternSelect={(patternId) => console.log("Selected pattern:", patternId)}
+                onSessionStart={() => console.log("Starting session")}
+              />
+            )}
           </SmartAuthGate>
         </div>
       </section>
@@ -114,11 +123,10 @@ export default function Index({
       <section className="space-y-8">
         <div className="text-center">
           <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-4">
-            Why Imperfect Breath?
+            Why does this work so well?
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            In the asymptote towards perfection lies a blend of ancient wisdom
-            and modern technology
+            Ancient breathing wisdom meets modern AI coaching. Proven techniques that activate your body's natural relaxation response.
           </p>
         </div>
 

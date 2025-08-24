@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { BreathingSessionPost } from '@/components/social/BreathingSessionPost';
+import { PostSessionCelebration } from '@/components/session/PostSessionCelebration';
 import { 
   Trophy, 
   Clock, 
@@ -27,6 +28,9 @@ interface SessionData {
   breathHoldTime?: number;
   restlessnessScore?: number;
   flowNFTId?: string;
+  sessionType?: "classic" | "enhanced";
+  isFirstSession?: boolean;
+  adaptiveFlow?: boolean;
 }
 
 interface SessionCompleteModalProps {
@@ -42,7 +46,7 @@ export const SessionCompleteModal: React.FC<SessionCompleteModalProps> = ({
   sessionData,
   onContinue
 }) => {
-  const [activeTab, setActiveTab] = useState('results');
+  const [activeTab, setActiveTab] = useState(sessionData.adaptiveFlow ? 'celebration' : 'results');
   const [isShared, setIsShared] = useState(false);
 
   const duration = Math.round(sessionData.duration / 60);
@@ -89,7 +93,13 @@ export const SessionCompleteModal: React.FC<SessionCompleteModalProps> = ({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${sessionData.adaptiveFlow ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {sessionData.adaptiveFlow && (
+              <TabsTrigger value="celebration" className="flex items-center gap-2">
+                <Trophy className="h-4 w-4" />
+                Celebration
+              </TabsTrigger>
+            )}
             <TabsTrigger value="results" className="flex items-center gap-2">
               <Award className="h-4 w-4" />
               Results
@@ -100,6 +110,27 @@ export const SessionCompleteModal: React.FC<SessionCompleteModalProps> = ({
               {isShared && <CheckCircle className="h-3 w-3 text-green-500" />}
             </TabsTrigger>
           </TabsList>
+
+          {sessionData.adaptiveFlow && (
+            <TabsContent value="celebration" className="space-y-6">
+              <PostSessionCelebration
+                metrics={{
+                  patternName: sessionData.patternName,
+                  duration: sessionData.duration,
+                  score: sessionData.score,
+                  cycles: sessionData.cycles,
+                  sessionType: sessionData.sessionType || "classic",
+                  isFirstSession: sessionData.isFirstSession
+                }}
+                onContinue={onContinue}
+                onExplorePatterns={() => {
+                  onClose();
+                  window.location.href = '/patterns';
+                }}
+                onClose={onClose}
+              />
+            </TabsContent>
+          )}
 
           <TabsContent value="results" className="space-y-6">
             {/* Session Summary */}

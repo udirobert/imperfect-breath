@@ -13,6 +13,10 @@ import NotFound from "@/pages/NotFound";
 import MobileOnboarding from "@/pages/MobileOnboarding";
 import PatternSelectionPage from "@/pages/PatternSelectionPage";
 
+// Responsive components
+import { ResponsiveSocialCreate } from "@/components/social/ResponsiveSocialCreate";
+import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
+
 // Large pages - lazy load these to reduce initial bundle size
 const AISettings = React.lazy(() => import("@/pages/AISettings"));
 const Progress = React.lazy(() => import("@/pages/Progress"));
@@ -59,6 +63,11 @@ function App() {
             <Route path="/results" element={<Results />} />
             <Route path="/marketplace" element={<EnhancedMarketplace />} />
             <Route path="/create" element={<CreatePattern />} />
+          <Route path="/create-post" element={
+            <div className="min-h-screen">
+              <ResponsiveSocialCreate />
+            </div>
+          } />
             <Route path="/community" element={<CommunityFeed />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route
@@ -79,6 +88,9 @@ function App() {
           {/* Catch all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
       </Suspense>
     </BrowserRouter>
   );

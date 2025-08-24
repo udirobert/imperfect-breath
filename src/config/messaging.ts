@@ -10,9 +10,9 @@ export type AuthContext = 'social' | 'nft' | 'progress' | 'instructor' | 'wellne
 
 export const MESSAGING = {
   hero: {
-    wellness: "Transform your breathing with AI-powered guidance",
-    instructor: "Teach mindful breathing with professional tools",
-    community: "Join a community of mindful breathers",
+    wellness: "Peace through patterns. Breathe like never before.",
+    instructor: "Share the gift of mindful breathing with others",
+    community: "Connect with fellow mindful breathers",
   },
   
   cta: {
@@ -24,13 +24,13 @@ export const MESSAGING = {
   
   auth: {
     supabase: {
-      context: "Track your progress and see improvement over time",
+      context: "Track your mindful journey and celebrate growth",
       benefits: [
-        "Session history & analytics",
-        "Progress tracking over time", 
-        "Personalized breathing insights",
-        "Achievement system",
-        "Custom pattern creation"
+        "Your breathing journey history",
+        "Gentle progress insights",
+        "Personalized pattern suggestions",
+        "Mindful milestone celebrations",
+        "Create your own breathing patterns"
       ],
       cta: "Create Free Account",
       skip: "Continue as Guest"
@@ -66,8 +66,8 @@ export const MESSAGING = {
   // Context-specific prompts
   prompts: {
     progress: {
-      title: "Save Your Progress?",
-      description: "Create a free account to track your breathing journey and see improvement over time.",
+      title: "Continue Your Journey?",
+      description: "Create a free account to nurture your breathing practice and celebrate your mindful moments.",
       trigger: "After completing 3rd session"
     },
     

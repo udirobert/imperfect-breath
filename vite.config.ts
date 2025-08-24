@@ -42,8 +42,9 @@ export default defineConfig(({ mode }) => {
         types: resolve(__dirname, "./src/types"),
         pages: resolve(__dirname, "./src/pages"),
         utils: resolve(__dirname, "./src/utils"),
-        react: resolve(__dirname, "./node_modules/react"),
-        "react-dom": resolve(__dirname, "./node_modules/react-dom"),
+        // Remove React aliases to prevent bundling issues
+        // react: resolve(__dirname, "./node_modules/react"),
+        // "react-dom": resolve(__dirname, "./node_modules/react-dom"),
       },
     },
 
@@ -68,7 +69,7 @@ export default defineConfig(({ mode }) => {
 
       // Common build settings
       assetsInlineLimit: 4096,
-      chunkSizeWarningLimit: 2000, // Increase limit since we have better chunking now
+      chunkSizeWarningLimit: 1500, // Set a reasonable limit for chunks
       
       // Target modern browsers for better optimization
       target: 'esnext',
@@ -76,39 +77,67 @@ export default defineConfig(({ mode }) => {
       // Rollup options for build optimization
       rollupOptions: {
         output: {
-          manualChunks: {
+          manualChunks: (id) => {
             // Core vendor libraries (stable packages only)
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-ui': [
-              '@radix-ui/react-dialog', 
-              '@radix-ui/react-select', 
-              '@radix-ui/react-slot',
-              '@radix-ui/react-toast'
-            ],
-            'vendor-crypto': ['@wagmi/core', 'viem', 'wagmi'],
-            'vendor-state': ['zustand'],
+            if (id.includes('react') && !id.includes('react-router') && !id.includes('@radix-ui')) {
+              return 'vendor-react';
+            }
+            if (id.includes('react-dom') && !id.includes('@radix-ui')) {
+              return 'vendor-react';
+            }
+            if (id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
             
-            // TensorFlow core and backends (keep together to avoid initialization issues)
-            'tensorflow-core': [
-              '@tensorflow/tfjs',
-              '@tensorflow/tfjs-core',
-              '@tensorflow/tfjs-backend-webgl',
-              '@tensorflow/tfjs-backend-cpu'
-            ],
+            // Radix UI components
+            if (id.includes('@radix-ui')) {
+              return 'vendor-ui';
+            }
             
-            // TensorFlow models (separate chunk for lazy loading)
-            'tensorflow-models': [
-              '@tensorflow-models/face-landmarks-detection',
-              '@tensorflow-models/pose-detection',
-              '@tensorflow-models/blazeface'
-            ],
+            // Crypto/Web3 libraries
+            if (id.includes('@wagmi') || id.includes('viem') || id.includes('wagmi') || id.includes('connectkit')) {
+              return 'vendor-crypto';
+            }
+            
+            // State management
+            if (id.includes('zustand')) {
+              return 'vendor-state';
+            }
+            
+            // TensorFlow core and backends
+            if (id.includes('@tensorflow/tfjs') && !id.includes('models')) {
+              return 'tensorflow-core';
+            }
+            
+            // TensorFlow models (separate for lazy loading)
+            if (id.includes('@tensorflow-models') || id.includes('@vladmandic/face-api')) {
+              return 'tensorflow-models';
+            }
+            
+            // Large AI/ML libraries
+            if (id.includes('@anthropic-ai') || id.includes('@google/generative-ai') || id.includes('openai')) {
+              return 'vendor-ai';
+            }
+            
+            // Lens Protocol
+            if (id.includes('@lens-protocol') || id.includes('@lens-chain')) {
+              return 'vendor-lens';
+            }
+            
+            // Flow blockchain
+            if (id.includes('@onflow')) {
+              return 'vendor-flow';
+            }
             
             // Utility libraries
-            'vendor-utils': [
-              'date-fns',
-              'uuid',
-              '@tanstack/react-query'
-            ]
+            if (id.includes('date-fns') || id.includes('uuid') || id.includes('@tanstack/react-query') || id.includes('lodash')) {
+              return 'vendor-utils';
+            }
+            
+            // Other vendor packages
+            if (id.includes('node_modules')) {
+              return 'vendor-misc';
+            }
           },
           
           // Configure chunk file naming
@@ -181,7 +210,9 @@ export default defineConfig(({ mode }) => {
       include: [
         "react",
         "react-dom",
+        "react-dom/client",
         "react/jsx-runtime",
+        "react-router-dom",
         "zustand",
         "@tensorflow/tfjs",
         "@tensorflow/tfjs-core",

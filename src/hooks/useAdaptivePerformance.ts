@@ -28,12 +28,16 @@ const useAdaptivePerformance = () => {
     maxTextureSize: 2048,
   });
 
+  const [batteryLevel, setBatteryLevel] = useState<number>(100);
+  const [isLowPowerMode, setIsLowPowerMode] = useState<boolean>(false);
+  const [networkStatus, setNetworkStatus] = useState<'online' | 'offline' | 'slow'>('online');
+
   // Initialize capabilities
   useEffect(() => {
     const detectCapabilities = () => {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
       const isLowEnd = navigator.hardwareConcurrency <= 2 || (navigator as any).deviceMemory <= 2;
-      
+
       setCapabilities({
         isMobile,
         isLowEnd,
@@ -45,6 +49,56 @@ const useAdaptivePerformance = () => {
     detectCapabilities();
   }, []);
 
+  // Monitor battery status
+  useEffect(() => {
+    const updateBatteryInfo = async () => {
+      if ('getBattery' in navigator) {
+        try {
+          const battery = await (navigator as any).getBattery();
+          setBatteryLevel(Math.round(battery.level * 100));
+          setIsLowPowerMode(battery.level < 0.2);
+
+          battery.addEventListener('levelchange', () => {
+            setBatteryLevel(Math.round(battery.level * 100));
+            setIsLowPowerMode(battery.level < 0.2);
+          });
+        } catch (error) {
+          // Battery API not supported, use defaults
+          setBatteryLevel(100);
+          setIsLowPowerMode(false);
+        }
+      }
+    };
+
+    updateBatteryInfo();
+  }, []);
+
+  // Monitor network status
+  useEffect(() => {
+    const updateNetworkStatus = () => {
+      if (navigator.onLine) {
+        const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+        if (connection) {
+          const effectiveType = connection.effectiveType;
+          setNetworkStatus(effectiveType === 'slow-2g' || effectiveType === '2g' ? 'slow' : 'online');
+        } else {
+          setNetworkStatus('online');
+        }
+      } else {
+        setNetworkStatus('offline');
+      }
+    };
+
+    updateNetworkStatus();
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+
+    return () => {
+      window.removeEventListener('online', updateNetworkStatus);
+      window.removeEventListener('offline', updateNetworkStatus);
+    };
+  }, []);
+
   const adjustQuality = useCallback((level: 'high' | 'medium' | 'low') => {
     setProfile(prev => ({
       ...prev,
@@ -53,6 +107,10 @@ const useAdaptivePerformance = () => {
     }));
   }, []);
 
+  // Determine performance level based on capabilities
+  const performanceLevel: 'low' | 'medium' | 'high' = capabilities.isLowEnd ? 'low' :
+    (capabilities.supportsWebGL && !capabilities.isMobile) ? 'high' : 'medium';
+
   return {
     profile,
     capabilities,
@@ -60,6 +118,11 @@ const useAdaptivePerformance = () => {
     isMobileOptimized: capabilities.isMobile,
     isLowEndDevice: capabilities.isLowEnd,
     shouldUseBatterySaver: profile.enableBatterySaver,
+    // Additional properties for desktop components
+    performanceLevel,
+    batteryLevel,
+    isLowPowerMode,
+    networkStatus,
   };
 };
 
@@ -68,4 +131,6 @@ export function useIsMobile(): boolean {
   return capabilities.isMobile;
 }
 
+// Export both as named and default export for compatibility
+export { useAdaptivePerformance };
 export default useAdaptivePerformance;
