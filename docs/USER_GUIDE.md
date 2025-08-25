@@ -36,7 +36,6 @@ Our AI coach, Zen, will guide you through each session with personalized feedbac
 ## ⛓️ Blockchain Integration Features
 
 - **Flow Blockchain**: Mint your best breathing sessions as NFTs and trade them on our marketplace.
-- **Story Protocol**: Protect your intellectual property by registering your custom breathing patterns and guided meditations.
 - **Lens Protocol**: Share your progress with the community, follow other users, and participate in breathing challenges.
 
 ## 🎨 UX Improvements

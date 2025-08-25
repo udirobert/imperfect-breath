@@ -140,7 +140,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
       : 0;
   const reviewCount = reviews.length;
   const sessionCount = pattern.sessionCount || 0;
-  const isPremium = pattern.licenseSettings.commercialUse;
+  const isPremium = pattern.access.type === "premium";
   const needsPurchase = isPremium && !hasAccess;
 
   const handlePlay = () => {
@@ -209,8 +209,8 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                 <div className="text-right space-y-2">
                   {isPremium ? (
                     <div className="text-2xl font-bold text-primary">
-                      {pattern.licenseSettings.price}{" "}
-                      {pattern.licenseSettings.currency}
+                      {pattern.access.price}{" "}
+                      {pattern.access.currency}
                     </div>
                   ) : (
                     <Badge variant="secondary" className="text-lg px-3 py-1">
@@ -270,7 +270,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                   <TabsTrigger value="benefits">Benefits</TabsTrigger>
                   <TabsTrigger value="reviews">Reviews</TabsTrigger>
                   <TabsTrigger value="instructor">Instructor</TabsTrigger>
-                  <TabsTrigger value="licensing">Licensing</TabsTrigger>
+                  <TabsTrigger value="access">Access</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
@@ -530,96 +530,47 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
                   </div>
                 </TabsContent>
 
-                {/* Licensing & IP Tab */}
-                <TabsContent value="licensing" className="space-y-4">
+                {/* Access Tab */}
+                <TabsContent value="access" className="space-y-4">
                   <div>
-                    <h3 className="font-semibold mb-4">License Information</h3>
+                    <h3 className="font-semibold mb-4">Access Information</h3>
                     <Card>
                       <CardContent className="p-4">
                         <div className="space-y-4">
-                          {/* IP Registration Status */}
                           <div className="flex items-start gap-3">
-                            {pattern.storyProtocol?.isRegistered ? (
-                              <>
-                                <ShieldCheck className="h-5 w-5 text-green-600 mt-0.5" />
-                                <div>
-                                  <h4 className="font-medium">
-                                    Blockchain Protected
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    This pattern is registered as intellectual
-                                    property on the Story Protocol blockchain,
-                                    ensuring the creator's rights are protected
-                                    and properly compensated.
-                                  </p>
-                                  {pattern.ipId && (
-                                    <div className="mt-2 p-2 bg-muted rounded text-xs font-mono">
-                                      IP ID: {pattern.ipId}
-                                    </div>
-                                  )}
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                <div>
-                                  <h4 className="font-medium">
-                                    Standard Protection
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    This pattern uses traditional copyright
-                                    protection rather than blockchain
-                                    registration.
-                                  </p>
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          {/* License Terms */}
-                          <div className="space-y-3 mt-4">
-                            <h4 className="font-medium">License Terms</h4>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="p-3 bg-muted rounded-lg">
-                                <h5 className="text-sm font-medium">
-                                  Commercial Use
-                                </h5>
-                                <p className="text-sm text-muted-foreground">
-                                  {pattern.storyProtocol?.licenseTerms
-                                    ?.commercialUse ||
-                                  pattern.licenseSettings.commercialUse
-                                    ? "Allowed"
-                                    : "Not Allowed"}
-                                </p>
-                              </div>
-                              <div className="p-3 bg-muted rounded-lg">
-                                <h5 className="text-sm font-medium">
-                                  Derivatives
-                                </h5>
-                                <p className="text-sm text-muted-foreground">
-                                  {pattern.licenseSettings.derivativeWorks
-                                    ? "Allowed"
-                                    : "Not Allowed"}
-                                </p>
-                              </div>
-                              <div className="p-3 bg-muted rounded-lg">
-                                <h5 className="text-sm font-medium">
-                                  Attribution
-                                </h5>
-                                <p className="text-sm text-muted-foreground">
-                                  {pattern.licenseSettings.attributionRequired
-                                    ? "Required"
-                                    : "Not Required"}
-                                </p>
-                              </div>
-                              <div className="p-3 bg-muted rounded-lg">
-                                <h5 className="text-sm font-medium">Royalty</h5>
-                                <p className="text-sm text-muted-foreground">
-                                  {pattern.licenseSettings.royaltyPercent}%
-                                </p>
-                              </div>
+                            <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+                            <div>
+                              <h4 className="font-medium">
+                                {pattern.access.type === "free" ? "Free Pattern" : "Premium Pattern"}
+                              </h4>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {pattern.access.type === "free" 
+                                  ? "This pattern is freely available to all users."
+                                  : `This premium pattern costs ${pattern.access.price} ${pattern.access.currency} and creates an NFT when purchased.`
+                                }
+                              </p>
                             </div>
                           </div>
+
+                          {pattern.access.type === "premium" && (
+                            <div className="space-y-3 mt-4">
+                              <h4 className="font-medium">What You Get</h4>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <span>Permanent access to the pattern</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <span>NFT ownership on Flow blockchain</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                  <span>Support the creator</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>

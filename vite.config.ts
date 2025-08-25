@@ -3,45 +3,52 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
-// CONSERVATIVE CHUNKING: Only chunk libraries that are guaranteed safe
+/**
+ * Production-Safe Chunking Strategy
+ * 
+ * CORE PRINCIPLE: React must NEVER be separated from main bundle
+ * to prevent "Cannot read properties of undefined (reading 'createContext')" errors
+ */
 const getChunkName = (id: string): string | undefined => {
-  // CRITICAL: Absolutely never chunk React or any React ecosystem packages
-  // React, React DOM, JSX runtime, scheduler must all stay in main bundle
+  // CRITICAL: React ecosystem stays in main bundle for stability
   if (id.includes('react') || 
       id.includes('scheduler') || 
       id.includes('jsx') ||
       id.includes('React') ||
       id.includes('@types/react')) {
-    return undefined; // Force into main bundle
+    return undefined; // Keep in main bundle
   }
   
-  // Only chunk libraries that we know are completely independent of React
-  // TensorFlow libraries - these are safe as they don't use React
+  // Safe independent libraries that can be chunked
   if (id.includes('@tensorflow/tfjs-core') || 
       id.includes('@tensorflow/tfjs-backend') ||
       id.includes('@tensorflow/tfjs-converter')) {
     return 'tensorflow-core';
   }
   
-  // TensorFlow models - safe to chunk
   if (id.includes('@tensorflow-models')) {
     return 'tensorflow-models';
   }
   
-  // Utility libraries that don't depend on React
   if (id.includes('date-fns') || 
       id.includes('uuid') || 
       id.includes('lodash')) {
     return 'vendor-utils';
   }
   
-  // For everything else, be extremely conservative
-  // Only chunk if we're absolutely certain it's safe
-  
-  return undefined; // Keep everything else in main bundle
+  // Conservative default: keep everything else in main bundle
+  return undefined;
 };
 
-// https://vitejs.dev/config/
+/**
+ * Vite Configuration - Production Optimized
+ * 
+ * Key principles:
+ * - React stability: Never separate React from main bundle
+ * - Performance: Optimized chunking and minification
+ * - Security: Clean path aliases and disabled source maps in production
+ * - Compatibility: Node.js polyfills for blockchain libraries
+ */
 export default defineConfig(({ mode }) => {
   const isProduction = mode === "production";
 
@@ -86,30 +93,26 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    // Optimization settings for production
+    // Production-optimized build configuration
     build: {
-      // Ensure sourcemaps for debugging
+      // Source maps: hidden in production for security, visible in development
       sourcemap: isProduction ? "hidden" : true,
 
-      // Apply optimizations only in production
+      // Production minification
       ...(isProduction
         ? {
-            // Production-specific settings
             minify: "terser",
             terserOptions: {
               compress: {
-                drop_console: false, // Keep console for production debugging
+                drop_console: false, // Keep for production debugging
                 drop_debugger: true,
               },
             },
           }
         : {}),
 
-      // Common build settings
-      assetsInlineLimit: 4096,
-      chunkSizeWarningLimit: 10000, // Increase limit to prevent automatic splitting
-      
-      // Target modern browsers for better optimization
+      // Chunking configuration to prevent bundle splitting issues
+      chunkSizeWarningLimit: 10000,
       target: 'esnext',
 
       // Rollup options for build optimization

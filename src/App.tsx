@@ -10,7 +10,6 @@ import SessionModeWrapper from "@/components/session/SessionModeWrapper";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
-import MobileOnboarding from "@/pages/MobileOnboarding";
 import PatternSelectionPage from "@/pages/PatternSelectionPage";
 
 // Responsive components
@@ -30,11 +29,6 @@ const UserProfile = React.lazy(() => import("@/pages/UserProfile"));
 const InstructorOnboarding = React.lazy(
   () => import("@/pages/InstructorOnboarding")
 );
-const WalletTestPage = React.lazy(() => import("@/pages/WalletTestPage"));
-const EnhancedVisionDemo = React.lazy(
-  () => import("@/pages/EnhancedVisionDemo")
-);
-const LensV3TestPage = React.lazy(() => import("@/pages/LensV3TestPage"));
 
 // Loading component for lazy routes
 const PageLoader = () => (
@@ -63,11 +57,14 @@ function App() {
             <Route path="/results" element={<Results />} />
             <Route path="/marketplace" element={<EnhancedMarketplace />} />
             <Route path="/create" element={<CreatePattern />} />
-          <Route path="/create-post" element={
-            <div className="min-h-screen">
-              <ResponsiveSocialCreate />
-            </div>
-          } />
+            <Route
+              path="/create-post"
+              element={
+                <div className="min-h-screen">
+                  <ResponsiveSocialCreate />
+                </div>
+              }
+            />
             <Route path="/community" element={<CommunityFeed />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route
@@ -79,16 +76,12 @@ function App() {
 
           {/* Routes without Header */}
           <Route path="/auth" element={<Auth />} />
-          <Route path="/onboarding" element={<MobileOnboarding />} />
-
-          <Route path="/lens-demo" element={<LensV3TestPage />} />
-          <Route path="/wallet-test" element={<WalletTestPage />} />
-          <Route path="/vision-demo" element={<EnhancedVisionDemo />} />
+          <Route path="/onboarding" element={<Auth />} />
 
           {/* Catch all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        
+
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav />
       </Suspense>

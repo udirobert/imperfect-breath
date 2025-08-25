@@ -1,6 +1,10 @@
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { isTouchDevice } from "@/utils/mobile-detection";
+import { OfflineIndicator } from "@/components/offline/OfflineIndicator";
 import {
   Brain,
   Settings,
@@ -12,139 +16,276 @@ import {
   DollarSign,
   Sparkles,
   BarChart3,
+  Menu,
+  LogOut,
+  User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { WalletManager } from "./WalletManager";
+import { cn } from "@/lib/utils";
 
-const Header = () => {
+interface HeaderProps {
+  className?: string;
+}
+
+const Header: React.FC<HeaderProps> = ({ className }) => {
   const location = useLocation();
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isMobile = isTouchDevice();
 
   const isInstructorPath =
     location.pathname.includes("/creator-dashboard") ||
     location.pathname.includes("/instructor") ||
     location.pathname.includes("/create-pattern");
 
+  const handleMenuItemClick = () => {
+    setIsMenuOpen(false);
+  };
+
   return (
-    <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+    <header
+      className={cn(
+        "w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50",
+        className
+      )}
+    >
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link
           to="/"
-          className="flex items-center gap-2 text-xl font-bold text-primary hover:opacity-80 transition-opacity"
+          className={cn(
+            "flex items-center gap-2 font-bold text-primary hover:opacity-80 transition-opacity",
+            isMobile ? "text-lg" : "text-xl"
+          )}
         >
-          <div className="p-1.5 rounded bg-primary/10">
-            <Sparkles className="w-5 h-5" />
+          <div
+            className={cn("rounded bg-primary/10", isMobile ? "p-1" : "p-1.5")}
+          >
+            <Sparkles className={cn(isMobile ? "w-4 h-4" : "w-5 h-5")} />
           </div>
-          Imperfect Breath
+          <span className={cn(isMobile && "truncate")}>Imperfect Breath</span>
         </Link>
 
-        <div className="flex items-center gap-4">
-          {/* Core Navigation - Enhanced Desktop Experience */}
-          <div className="hidden md:flex items-center gap-2">
-            <Link to="/session">
+        {/* Responsive Navigation */}
+        {isMobile ? (
+          /* Mobile Menu */
+          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <SheetTrigger asChild>
               <Button
-                variant={location.pathname === "/session" ? "default" : "ghost"}
+                variant="ghost"
                 size="sm"
-                className="flex items-center gap-2"
+                className="h-9 w-9 p-0"
+                aria-label="Open menu"
               >
-                <Play className="w-4 h-4" />
-                Practice
+                <Menu className="h-5 w-5" />
               </Button>
-            </Link>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <div className="flex flex-col h-full">
+                {/* Header */}
+                <div className="flex items-center gap-3 pb-4 border-b">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold">Imperfect Breath</h2>
+                    {user && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-            {/* Desktop Social Creation */}
-            <Link to="/create-post">
-              <Button
-                variant={location.pathname === "/create-post" ? "default" : "ghost"}
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Share
-              </Button>
-            </Link>
+                {/* Navigation Items */}
+                <nav className="flex-1 py-4 space-y-2">
+                  {user ? (
+                    <>
+                      <Link
+                        to="/profile"
+                        onClick={handleMenuItemClick}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <User className="h-5 w-5" />
+                        <span>Profile</span>
+                      </Link>
+                      <Link
+                        to="/ai-settings"
+                        onClick={handleMenuItemClick}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <Settings className="h-5 w-5" />
+                        <span>AI Settings</span>
+                      </Link>
+                      <Link
+                        to="/instructor-onboarding"
+                        onClick={handleMenuItemClick}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <DollarSign className="h-5 w-5" />
+                        <span>Start Teaching</span>
+                      </Link>
+                    </>
+                  ) : (
+                    <Link
+                      to="/auth"
+                      onClick={handleMenuItemClick}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <User className="h-5 w-5" />
+                      <span>Sign In</span>
+                    </Link>
+                  )}
+                </nav>
 
-            {/* Enhanced Marketplace for Desktop */}
-            {user && (
-              <Link to="/marketplace">
+                {/* Sync Status */}
+                <div className="border-t pt-4 space-y-3">
+                  <div className="px-3">
+                    <OfflineIndicator showDetails />
+                  </div>
+                </div>
+
+                {/* Wallet & Actions */}
+                <div className="border-t pt-4 space-y-3">
+                  <div className="px-3">
+                    <WalletManager />
+                  </div>
+
+                  {user && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        logout();
+                        handleMenuItemClick();
+                      }}
+                      className="w-full justify-start gap-3 text-destructive hover:text-destructive"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Sign Out
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        ) : (
+          /* Desktop Navigation */
+          <div className="flex items-center gap-4">
+            {/* Core Navigation - Enhanced Desktop Experience */}
+            <div className="flex items-center gap-2">
+              <Link to="/session">
                 <Button
                   variant={
-                    location.pathname === "/marketplace" ? "default" : "ghost"
+                    location.pathname === "/session" ? "default" : "ghost"
                   }
                   size="sm"
                   className="flex items-center gap-2"
                 >
-                  <Heart className="w-4 h-4" />
-                  Patterns
+                  <Play className="w-4 h-4" />
+                  Practice
                 </Button>
               </Link>
-            )}
 
-            {/* Desktop Progress/Analytics */}
-            {user && (
-              <Link to="/progress">
+              {/* Desktop Social Creation */}
+              <Link to="/create-post">
                 <Button
-                  variant={location.pathname === "/progress" ? "default" : "ghost"}
+                  variant={
+                    location.pathname === "/create-post" ? "default" : "ghost"
+                  }
                   size="sm"
                   className="flex items-center gap-2"
                 >
-                  <BarChart3 className="w-4 h-4" />
-                  Progress
+                  <Plus className="w-4 h-4" />
+                  Share
                 </Button>
               </Link>
-            )}
-          </div>
 
-          {/* Creator Section - Only for creators */}
-          {profile?.role === "creator" && (
-            <div className="hidden md:flex items-center gap-2 pl-4 border-l border-border">
-              <Link to="/creator-dashboard">
-                <Button
-                  variant={isInstructorPath ? "default" : "ghost"}
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  Creator Hub
-                </Button>
-              </Link>
-            </div>
-          )}
-
-          {/* Right Side - Minimal */}
-          <div className="flex items-center gap-2">
-            {/* Only show wallet manager when needed - not prominently displayed */}
-            <div className="hidden">
-              <WalletManager />
-            </div>
-
-            {/* Simple user menu */}
-            {user ? (
-              <Link to="/profile">
-                <Button variant="ghost" size="sm">
-                  Profile
-                </Button>
-              </Link>
-            ) : (
-              /* Only show instructor CTA if not on homepage */
-              location.pathname !== "/" && (
-                <Link to="/instructor-onboarding">
+              {/* Enhanced Marketplace for Desktop */}
+              {user && (
+                <Link to="/marketplace">
                   <Button
+                    variant={
+                      location.pathname === "/marketplace" ? "default" : "ghost"
+                    }
                     size="sm"
-                    variant="outline"
                     className="flex items-center gap-2"
                   >
                     <Heart className="w-4 h-4" />
-                    Teach
+                    Patterns
                   </Button>
                 </Link>
-              )
+              )}
+
+              {/* Desktop Progress/Analytics */}
+              {user && (
+                <Link to="/progress">
+                  <Button
+                    variant={
+                      location.pathname === "/progress" ? "default" : "ghost"
+                    }
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Progress
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            {/* Creator Section - Only for creators */}
+            {profile?.role === "creator" && (
+              <div className="flex items-center gap-2 pl-4 border-l border-border">
+                <Link to="/creator-dashboard">
+                  <Button
+                    variant={isInstructorPath ? "default" : "ghost"}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="w-4 h-4" />
+                    Creator Hub
+                  </Button>
+                </Link>
+              </div>
             )}
+
+            {/* Right Side - Minimal */}
+            <div className="flex items-center gap-2">
+              {/* Only show wallet manager when needed - not prominently displayed */}
+              <div className="hidden">
+                <WalletManager />
+              </div>
+
+              {/* Simple user menu */}
+              {user ? (
+                <Link to="/profile">
+                  <Button variant="ghost" size="sm">
+                    Profile
+                  </Button>
+                </Link>
+              ) : (
+                /* Only show instructor CTA if not on homepage */
+                location.pathname !== "/" && (
+                  <Link to="/instructor-onboarding">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Heart className="w-4 h-4" />
+                      Teach
+                    </Button>
+                  </Link>
+                )
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </nav>
     </header>
   );
 };
 
 export default Header;
+export { Header };
+export type { HeaderProps };

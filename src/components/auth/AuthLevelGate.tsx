@@ -34,9 +34,6 @@ const FEATURE_DESCRIPTIONS: Record<string, string> = {
   "social-posting": "Share your breathing journey",
   "social-following": "Follow other practitioners",
   "community-features": "Join the wellness community",
-  "ip-registration": "Protect your pattern IP",
-  "royalty-earning": "Earn from pattern usage",
-  licensing: "License your patterns",
 };
 
 const BLOCKCHAIN_UTILITIES = {
@@ -59,12 +56,6 @@ const BLOCKCHAIN_UTILITIES = {
       "Follow practitioners",
       "Community discussions",
     ],
-  },
-  story: {
-    name: "Story Protocol",
-    icon: "🛡️",
-    purpose: "IP rights and creator monetization",
-    features: ["Protect pattern IP", "Earn royalties", "License patterns"],
   },
 };
 
@@ -136,9 +127,6 @@ export const AuthLevelGate: React.FC<AuthLevelGateProps> = ({
       requirements.push(BLOCKCHAIN_UTILITIES.lens);
     }
 
-    if (["ip-registration", "royalty-earning", "licensing"].includes(feature)) {
-      requirements.push(BLOCKCHAIN_UTILITIES.story);
-    }
 
     return requirements;
   };

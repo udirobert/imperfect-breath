@@ -172,62 +172,7 @@ export interface WalletConnection {
   balance?: string;
 }
 
-// IP Registration Types
-export interface IPRegistration {
-  ipHash: string;
-  transactionHash: string;
-  creator: string;
-  title: string;
-  description: string;
-  contentHash: string;
-  timestamp: string;
-  verified: boolean;
-  royaltyPercent: number;
-  licensingTerms: LicenseTerms[];
-}
 
-export interface IPMetadata {
-  title: string;
-  description: string;
-  creator: string;
-  createdAt: string;
-  contentType: "breathing-pattern";
-  attributes: {
-    category: string;
-    difficulty: string;
-    duration: number;
-    phases: unknown[];
-  };
-  version: string;
-}
-
-// Licensing Types
-export interface LicenseTerms {
-  id: string;
-  type: "personal" | "commercial" | "exclusive";
-  price: number;
-  currency: "ETH" | "USDC" | "GHO";
-  duration?: number;
-  attributionRequired: boolean;
-  derivativeWorks: boolean;
-  commercialUse: boolean;
-  royaltyPercent: number;
-  maxUsers?: number;
-  uri?: string;
-  defaultMintingFee?: bigint;
-}
-
-export interface LicenseAgreement {
-  id: string;
-  patternId: string;
-  licenseeId: string;
-  licensorId: string;
-  terms: LicenseTerms;
-  transactionHash: string;
-  purchaseDate: string;
-  expiryDate?: string;
-  status: "active" | "expired" | "revoked";
-  usageCount: number;
 }
 
 // Transaction Types
@@ -262,16 +207,6 @@ export interface EarningsReport {
   };
 }
 
-export interface RevenueTransaction {
-  id: string;
-  patternId: string;
-  licenseId: string;
-  amount: number;
-  currency: string;
-  date: string;
-  type: "license" | "royalty";
-  buyer: string;
-}
 
 export interface RevenueAnalytics {
   patternId: string;
@@ -339,11 +274,6 @@ export interface BlockchainConfig {
     projectId: string;
     apiKey: string;
     environment: "staging" | "production";
-  };
-  storyProtocol?: {
-    apiKey: string;
-    chainId: number;
-    contractAddress: string;
   };
   connectKit: {
     projectId: string;

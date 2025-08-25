@@ -19,7 +19,6 @@ export interface CustomPattern {
   mediaContent?: Json;
   licensingInfo?: Json;
   ipAssetId?: string;
-  storyProtocolRegistered?: boolean;
   licenseTermsId?: string;
 }
 

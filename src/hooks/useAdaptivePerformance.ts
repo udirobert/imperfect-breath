@@ -1,5 +1,6 @@
 // Let me create a clean version of the essential parts
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { isTouchDevice } from '../utils/mobile-detection';
 
 export interface PerformanceProfile {
   enableBatterySaver: boolean;
@@ -14,6 +15,11 @@ export interface DeviceCapabilities {
   maxTextureSize: number;
 }
 
+/**
+ * Unified adaptive performance hook that provides device capabilities and mobile detection
+ * CONSOLIDATES: Multiple mobile detection hooks into single source of truth
+ * PERFORMANT: Caches detection results to avoid repeated calculations
+ */
 const useAdaptivePerformance = () => {
   const [profile, setProfile] = useState<PerformanceProfile>({
     enableBatterySaver: false,
@@ -32,10 +38,10 @@ const useAdaptivePerformance = () => {
   const [isLowPowerMode, setIsLowPowerMode] = useState<boolean>(false);
   const [networkStatus, setNetworkStatus] = useState<'online' | 'offline' | 'slow'>('online');
 
-  // Initialize capabilities
+  // Initialize capabilities using centralized mobile detection
   useEffect(() => {
     const detectCapabilities = () => {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+      const isMobile = isTouchDevice(); // Use centralized detection
       const isLowEnd = navigator.hardwareConcurrency <= 2 || (navigator as any).deviceMemory <= 2;
 
       setCapabilities({

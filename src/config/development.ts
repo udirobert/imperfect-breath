@@ -54,7 +54,6 @@ export const developmentConfig = {
     enableCamera: true,
     enableAIAnalysis: true,
     enableSocialFeatures: false,
-    enableIPRegistration: false,
     enableTrialSystem: true,
   },
 };
@@ -111,7 +110,6 @@ export const getConfig = () => {
       enableCamera: true,
       enableAIAnalysis: true,
       enableSocialFeatures: true,
-      enableIPRegistration: true,
       enableTrialSystem: true,
     },
   };

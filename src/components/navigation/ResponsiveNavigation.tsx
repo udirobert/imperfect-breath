@@ -1,6 +1,5 @@
 import React from "react";
 import { isTouchDevice } from "@/utils/mobile-detection";
-import { MobileHeader } from "./MobileHeader";
 import { BottomTabBar } from "./BottomTabBar";
 import Header from "@/components/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -10,9 +9,10 @@ interface ResponsiveNavigationProps {
 }
 
 /**
- * Responsive navigation wrapper that switches between desktop and mobile layouts
- * - Desktop: Traditional header navigation
- * - Mobile: Simplified header + bottom tab bar
+ * Responsive navigation wrapper that provides unified layout for desktop and mobile
+ * - Unified Header: Automatically adapts to mobile/desktop
+ * - Mobile: Bottom tab bar for navigation
+ * - Desktop: Traditional layout
  */
 export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
   children,
@@ -21,8 +21,8 @@ export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
 
   return (
     <div className="min-h-screen w-full bg-calm-gradient flex flex-col">
-      {/* Header - Mobile or Desktop */}
-      {isMobile ? <MobileHeader /> : <Header />}
+      {/* Unified Header - Responsive */}
+      <Header />
 
       {/* Main Content */}
       <main

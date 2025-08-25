@@ -10,21 +10,17 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "debug:prod": "node scripts/debug-production.js",
-
     "flow:setup": "scripts/setup/setup-environment.sh",
     "flow:validate": "./validate-env.sh",
     "deploy:testnet": "scripts/deployment/deploy-testnet.sh",
     "ai:deploy": "./scripts/deploy-zen-agent.sh",
     "ai:test": "cd eliza-agent-temp && node test-zen-simple.js",
     "ai:start": "cd eliza-agent-temp && ./start-zen.sh",
-
-
     "lens:v3-only": "echo 'Lens V3-only implementation active'",
     "verify:blockchain": "node scripts/verify-blockchain-connections.js",
     "verify:lens": "node scripts/verify-blockchain-connections.js --network=lens",
     "verify:flow": "node scripts/verify-blockchain-connections.js --network=flow",
     "verify:api": "node scripts/verify-blockchain-connections.js --api-only",
-    "fix:types": "node scripts/fix-type-errors.js",
     "lens:dev": "npm run dev"
   },
   "dependencies": {
@@ -125,7 +121,6 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
     "globals": "^15.9.0",
-
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.11",
     "terser": "^5.43.1",

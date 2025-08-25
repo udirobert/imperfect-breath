@@ -14,34 +14,12 @@ export interface MediaContent {
   thumbnail?: string;
 }
 
-export interface LicenseSettings {
-  price: number;
+export interface PatternAccess {
+  type: "free" | "premium";
+  price?: number; // Only for premium patterns
   currency: "ETH" | "USDC";
-  derivativeWorks: boolean;
-  attributionRequired: boolean;
-  commercialUse: boolean;
-  royaltyPercent: number;
 }
 
-export interface StoryProtocolMetadata {
-  ipId?: string; // The ID of the IP asset on Story Protocol
-  registrationTxHash?: string; // Transaction hash of IP registration
-  licenseTerms?: {
-    commercialUse: boolean;
-    derivativeWorks: boolean;
-    attributionRequired: boolean;
-    royaltyPercent: number;
-  };
-  isRegistered: boolean; // Whether this pattern is registered on Story Protocol
-}
-
-// Methods for Story Protocol integration
-export interface StoryProtocolMethods {
-  register: () => Promise<StoryProtocolMetadata>;
-  setLicenseTerms: (terms: Record<string, unknown>) => Promise<boolean>;
-  checkRegistrationStatus: () => Promise<boolean>;
-  getLicenseTerms: () => Promise<Record<string, unknown>>;
-}
 
 export interface BenefitClaim {
   id: string;
@@ -82,13 +60,9 @@ export interface EnhancedCustomPattern extends CustomPattern {
   instructorCredentials: string[];
   instructorAvatar?: string;
 
-  // Licensing
-  licenseSettings: LicenseSettings;
+  // Access Control
+  access: PatternAccess;
 
-  // Story Protocol integration
-  ipId?: string; // The ID of the IP asset on Story Protocol
-  storyProtocol?: StoryProtocolMetadata;
-  blockchainMethods?: StoryProtocolMethods;
 
   // Advanced features
   hasProgressTracking?: boolean;
@@ -106,13 +80,9 @@ export const defaultBenefit: BenefitClaim = {
   evidenceLevel: "anecdotal",
 };
 
-export const defaultLicense: LicenseSettings = {
-  price: 0,
+export const defaultAccess: PatternAccess = {
+  type: "free",
   currency: "ETH",
-  derivativeWorks: false,
-  attributionRequired: true,
-  commercialUse: false,
-  royaltyPercent: 10,
 };
 
 // Utility function to convert CustomPattern to EnhancedCustomPattern
@@ -129,14 +99,8 @@ export const enhancePattern = (
     secondaryBenefits: [],
     instructorName: pattern.creator, // This should be fetched from a user profile in a real app
     instructorCredentials: [],
-    licenseSettings:
-      (pattern.licensingInfo as unknown as LicenseSettings) || defaultLicense,
+    access: defaultAccess,
 
-    // Story Protocol defaults
-    ipId: undefined,
-    storyProtocol: {
-      isRegistered: false,
-    },
 
     // Default advanced features to false
     hasProgressTracking: false,

@@ -16,7 +16,7 @@ Custom plugin with 5 core actions:
 - **Create Pattern**: Generate personalized breathing patterns
 - **Analyze Session**: Provide feedback on breathing sessions
 - **Mint NFT**: Convert patterns to blockchain assets
-- **Register IP**: Protect patterns with Story Protocol
+- **Share Social**: Share patterns on Lens Protocol
 - **Recommend**: Suggest optimal patterns for users
 
 ## 🚀 Integration Options
@@ -97,7 +97,6 @@ GOOGLE_GEMINI_API_KEY=your_gemini_key
 
 # Blockchain Integration
 FLOW_PRIVATE_KEY=your_flow_key
-STORY_PRIVATE_KEY=your_story_key
 LENS_API_KEY=your_lens_key
 
 # Vision System
@@ -113,9 +112,9 @@ ENABLE_VISION_COACHING=true
 const flowClient = new EnhancedFlowClient();
 const result = await flowClient.mintBreathingNFT(pattern);
 
-// Replace simulateIPRegistration with:
-const storyClient = new StoryBreathingClient();
-const result = await storyClient.registerIP(pattern);
+// Replace simulateSocialShare with:
+const lensClient = new LensClient();
+const result = await lensClient.sharePattern(pattern);
 ```
 
 ## 🎯 Next Steps

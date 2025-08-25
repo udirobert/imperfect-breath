@@ -56,8 +56,8 @@ import { PatternRecommendationEngine } from "../lib/ai/recommendations";
 import { PatternDetailsModal } from "../components/marketplace/PatternDetailsModal";
 import {
   EnhancedCustomPattern,
-  defaultLicense,
-  LicenseSettings,
+  defaultAccess,
+  PatternAccess,
   MediaContent,
 } from "../types/patterns";
 
@@ -180,8 +180,8 @@ const EnhancedMarketplace = () => {
                   patternReviews.length
                 : 0;
             const instructor = instructorMap.get(p.creator)!;
-            const licenseSettings =
-              (p.licensingInfo as unknown as LicenseSettings) || defaultLicense;
+            const access =
+              (p.licensingInfo as unknown as PatternAccess) || defaultAccess;
 
             return {
               ...p,
@@ -194,7 +194,7 @@ const EnhancedMarketplace = () => {
               instructorBio: instructor.bio,
               instructorCredentials: instructor.specializations,
               instructorAvatar: instructor.avatar,
-              licenseSettings,
+              access,
               hasProgressTracking: false,
               hasAIFeedback: false,
               customInstructions: "",
@@ -205,7 +205,7 @@ const EnhancedMarketplace = () => {
               reviews: patternReviews.length,
               sessions: 0,
               favorites: 0,
-              isFree: !licenseSettings.price || licenseSettings.price === 0,
+              isFree: access.type === "free",
               featured: false,
               trending: false,
               new: false,
@@ -258,7 +258,7 @@ const EnhancedMarketplace = () => {
               instructorBio: aiInstructor.bio,
               instructorCredentials: aiInstructor.specializations,
               instructorAvatar: aiInstructor.avatar,
-              licenseSettings: defaultLicense,
+              access: defaultAccess,
               hasProgressTracking: false,
               hasAIFeedback: false,
               customInstructions: "",
@@ -329,9 +329,9 @@ const EnhancedMarketplace = () => {
       case "rating":
         return b.rating - a.rating;
       case "price-low":
-        return a.licenseSettings.price - b.licenseSettings.price;
+        return (a.access.price || 0) - (b.access.price || 0);
       case "price-high":
-        return b.licenseSettings.price - a.licenseSettings.price;
+        return (b.access.price || 0) - (a.access.price || 0);
       case "popular":
         return b.sessions - a.sessions;
       default:
@@ -434,8 +434,8 @@ const EnhancedMarketplace = () => {
                   <Badge className="bg-green-600">FREE</Badge>
                 ) : (
                   <div className="text-lg font-bold">
-                    {pattern.licenseSettings.price}{" "}
-                    {pattern.licenseSettings.currency}
+                    {pattern.access.price}{" "}
+                    {pattern.access.currency}
                   </div>
                 )}
               </div>

@@ -52,7 +52,6 @@ export interface PatternStats {
   // IP & Blockchain
   ipRegistered: boolean;
   ipAssetId?: string;
-  storyProtocolHash?: string;
 
   // Success metrics
   completionRate: number;

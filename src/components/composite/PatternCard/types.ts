@@ -25,7 +25,7 @@ export interface UnifiedPattern extends Partial<EnhancedCustomPattern> {
   sessionCount?: number;
   instructorName?: string;
   instructorAvatar?: string;
-  licenseSettings?: {
+  access: {
     commercialUse?: boolean;
     price?: number;
   };

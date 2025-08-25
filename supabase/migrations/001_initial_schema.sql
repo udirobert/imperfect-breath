@@ -1,5 +1,5 @@
 -- Imperfect Breath Database Schema
--- Multichain architecture supporting Flow, Lens, and Story Protocol
+-- Multichain architecture supporting Flow and Lens
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -12,7 +12,6 @@ CREATE TABLE users (
   -- Multichain addresses
   flow_address TEXT UNIQUE,
   lens_profile_id TEXT,
-  ethereum_address TEXT, -- For Story Protocol
   
   -- Profile information
   username TEXT UNIQUE,
@@ -32,7 +31,7 @@ CREATE TABLE users (
   last_active_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
   -- Constraints
-  CONSTRAINT valid_preferred_chain CHECK (preferred_chain IN ('flow', 'lens', 'story'))
+  CONSTRAINT valid_preferred_chain CHECK (preferred_chain IN ('flow', 'lens'))
 );
 
 -- Breathing patterns table
@@ -58,7 +57,6 @@ CREATE TABLE breathing_patterns (
   -- Blockchain data
   flow_nft_id BIGINT,
   lens_publication_id TEXT,
-  story_ip_id TEXT,
   
   -- Marketplace
   is_public BOOLEAN DEFAULT true,
@@ -171,7 +169,6 @@ CREATE TABLE creator_earnings (
   
   -- Blockchain data
   flow_transaction_id TEXT,
-  ethereum_transaction_id TEXT, -- For Story Protocol royalties
   
   -- Payout status
   status TEXT DEFAULT 'pending', -- 'pending', 'confirmed', 'paid'
@@ -183,28 +180,6 @@ CREATE TABLE creator_earnings (
   CONSTRAINT valid_status CHECK (status IN ('pending', 'confirmed', 'paid', 'failed'))
 );
 
--- IP licensing table (Story Protocol integration)
-CREATE TABLE ip_licenses (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  
-  pattern_id UUID REFERENCES breathing_patterns(id) ON DELETE CASCADE,
-  story_ip_id TEXT NOT NULL,
-  
-  -- License terms
-  commercial_use BOOLEAN DEFAULT false,
-  derivatives_allowed BOOLEAN DEFAULT false,
-  attribution_required BOOLEAN DEFAULT true,
-  royalty_percentage DECIMAL(5, 2) DEFAULT 10.00,
-  
-  -- License metadata
-  license_type TEXT DEFAULT 'standard',
-  terms_url TEXT,
-  
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  CONSTRAINT valid_royalty_percentage CHECK (royalty_percentage BETWEEN 0 AND 100)
-);
 
 -- Community challenges and events
 CREATE TABLE community_challenges (

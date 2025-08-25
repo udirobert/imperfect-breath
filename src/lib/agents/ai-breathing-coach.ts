@@ -24,7 +24,6 @@ export interface BreathingCoachResponse {
 export interface CoachAction {
   type:
     | "mint_nft"
-    | "register_ip"
     | "share_social"
     | "create_pattern"
     | "analyze_session";
@@ -99,7 +98,6 @@ export interface MessageIntent {
     | "create_pattern"
     | "analyze_session"
     | "mint_nft"
-    | "register_ip"
     | "share_social"
     | "general_guidance";
   confidence: number;
@@ -165,8 +163,6 @@ export class AIBreathingCoach {
           return await this.handleAnalyzeSession(message, userId, intent);
         case "mint_nft":
           return await this.handleMintNFT(message, userId, intent);
-        case "register_ip":
-          return await this.handleRegisterIP(message, userId, intent);
         case "share_social":
           return await this.handleShareSocial(message, userId, intent);
         default:
@@ -245,7 +241,6 @@ export class AIBreathingCoach {
 
       const capabilities = [
         "mint_breathing_nft",
-        "register_intellectual_property",
         "automated_social_sharing",
         "pattern_recommendations",
       ];
@@ -323,7 +318,7 @@ export class AIBreathingCoach {
       lowerMessage.includes("ip")
     ) {
       return {
-        type: "register_ip",
+        type: "mint_nft",
         confidence: 0.9,
         extractedData: {},
       };
@@ -415,27 +410,6 @@ export class AIBreathingCoach {
     };
   }
 
-  private async handleRegisterIP(
-    message: string,
-    userId: string,
-    intent: MessageIntent,
-  ): Promise<BreathingCoachResponse> {
-    return {
-      message:
-        "I can help you register your custom breathing pattern as intellectual property on Story Protocol.",
-      actions: [
-        {
-          type: "register_ip",
-          label: "Register Pattern IP",
-          data: { userId },
-        },
-      ],
-      followUp: [
-        "Which pattern would you like to register?",
-        "Would you like to set licensing terms?",
-      ],
-    };
-  }
 
   private async handleShareSocial(
     message: string,
@@ -701,7 +675,6 @@ export class AIBreathingCoach {
   private getOperationFunctionName(operationType: string): string {
     const functionMap: Record<string, string> = {
       mint: "mintBreathingPattern",
-      register: "registerIP",
       share: "logSocialShare",
     };
     return functionMap[operationType] || "defaultOperation";
@@ -710,7 +683,6 @@ export class AIBreathingCoach {
   private getOperationDescription(operationType: string): string {
     const descriptions: Record<string, string> = {
       mint: "Mint breathing achievement NFT",
-      register: "Register breathing pattern IP",
       share: "Share progress on social media",
     };
     return descriptions[operationType] || "Unknown operation";

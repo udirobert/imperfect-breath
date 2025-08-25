@@ -53,10 +53,10 @@ import {
 import {
   EnhancedCustomPattern,
   MediaContent,
-  LicenseSettings,
+  PatternAccess,
   BenefitClaim,
   defaultBenefit,
-  defaultLicense,
+  defaultAccess,
 } from "../../types/patterns";
 import { v4 as uuidv4 } from "uuid";
 
@@ -101,7 +101,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
     instructorBio: existingPattern?.instructorBio || "",
     instructorCredentials: existingPattern?.instructorCredentials || [],
 
-    licenseSettings: existingPattern?.licenseSettings || defaultLicense,
+    access: existingPattern?.access || defaultAccess,
 
     hasProgressTracking: existingPattern?.hasProgressTracking || true,
     hasAIFeedback: existingPattern?.hasAIFeedback || true,
@@ -269,7 +269,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
           <TabsTrigger value="phases">Phases</TabsTrigger>
           <TabsTrigger value="media">Media</TabsTrigger>
           <TabsTrigger value="benefits">Benefits</TabsTrigger>
-          <TabsTrigger value="licensing">Licensing</TabsTrigger>
+          <TabsTrigger value="access">Access & Pricing</TabsTrigger>
         </TabsList>
 
         {/* Basics Tab */}
@@ -925,187 +925,115 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
           </Card>
         </TabsContent>
 
-        {/* Licensing Tab */}
-        <TabsContent value="licensing" className="space-y-6">
+        {/* Access & Pricing Tab */}
+        <TabsContent value="access" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                Licensing & Monetization
+                Access & Pricing
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">
-                      Commercial Licensing
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Allow others to license your pattern
-                    </p>
+                <div>
+                  <Label className="text-base font-medium">Pattern Access</Label>
+                  <div className="mt-3 space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="free"
+                        name="access-type"
+                        checked={pattern.access.type === "free"}
+                        onChange={() =>
+                          setPattern((prev) => ({
+                            ...prev,
+                            access: { ...prev.access, type: "free" },
+                          }))
+                        }
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="free" className="flex-1">
+                        <div>
+                          <div className="font-medium">Free Pattern</div>
+                          <div className="text-sm text-muted-foreground">
+                            Anyone can access and practice this pattern
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="premium"
+                        name="access-type"
+                        checked={pattern.access.type === "premium"}
+                        onChange={() =>
+                          setPattern((prev) => ({
+                            ...prev,
+                            access: { ...prev.access, type: "premium" },
+                          }))
+                        }
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="premium" className="flex-1">
+                        <div>
+                          <div className="font-medium">Premium Pattern</div>
+                          <div className="text-sm text-muted-foreground">
+                            Users must purchase to access this pattern
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
                   </div>
-                  <Switch
-                    checked={pattern.licenseSettings.commercialUse}
-                    onCheckedChange={(checked) =>
-                      setPattern((prev) => ({
-                        ...prev,
-                        licenseSettings: {
-                          ...prev.licenseSettings,
-                          commercialUse: checked,
-                        },
-                      }))
-                    }
-                  />
                 </div>
 
-                {pattern.licenseSettings.commercialUse && (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>License Price</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input
-                            type="number"
-                            step="0.001"
-                            value={pattern.licenseSettings.price}
-                            onChange={(e) =>
-                              setPattern((prev) => ({
-                                ...prev,
-                                licenseSettings: {
-                                  ...prev.licenseSettings,
-                                  price: parseFloat(e.target.value) || 0,
-                                },
-                              }))
-                            }
-                            placeholder="0.01"
-                          />
-                          <Select
-                            value={pattern.licenseSettings.currency}
-                            onValueChange={(value: "ETH" | "USDC") =>
-                              setPattern((prev) => ({
-                                ...prev,
-                                licenseSettings: {
-                                  ...prev.licenseSettings,
-                                  currency: value,
-                                },
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ETH">ETH</SelectItem>
-                              <SelectItem value="USDC">USDC</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label>Royalty Percentage</Label>
-                        <div className="mt-1">
-                          <Slider
-                            value={[pattern.licenseSettings.royaltyPercent]}
-                            onValueChange={(value) =>
-                              setPattern((prev) => ({
-                                ...prev,
-                                licenseSettings: {
-                                  ...prev.licenseSettings,
-                                  royaltyPercent: value[0],
-                                },
-                              }))
-                            }
-                            max={25}
-                            min={0}
-                            step={1}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between text-sm text-muted-foreground mt-1">
-                            <span>0%</span>
-                            <span className="font-medium">
-                              {pattern.licenseSettings.royaltyPercent}%
-                            </span>
-                            <span>25%</span>
-                          </div>
-                        </div>
+                {pattern.access.type === "premium" && (
+                  <div className="space-y-4 p-4 bg-muted rounded-lg">
+                    <div>
+                      <Label>Price</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={pattern.access.price || 0}
+                          onChange={(e) =>
+                            setPattern((prev) => ({
+                              ...prev,
+                              access: {
+                                ...prev.access,
+                                price: parseFloat(e.target.value) || 0,
+                              },
+                            }))
+                          }
+                          placeholder="0.00"
+                        />
+                        <Select
+                          value={pattern.access.currency}
+                          onValueChange={(value: "ETH" | "USDC") =>
+                            setPattern((prev) => ({
+                              ...prev,
+                              access: { ...prev.access, currency: value },
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ETH">ETH</SelectItem>
+                            <SelectItem value="USDC">USDC</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">
-                        License Terms
-                      </Label>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label>Allow Derivatives</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Others can modify your pattern
-                            </p>
-                          </div>
-                          <Switch
-                            checked={pattern.licenseSettings.derivativeWorks}
-                            onCheckedChange={(checked) =>
-                              setPattern((prev) => ({
-                                ...prev,
-                                licenseSettings: {
-                                  ...prev.licenseSettings,
-                                  derivativeWorks: checked,
-                                },
-                              }))
-                            }
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label>Require Attribution</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Credit you as the original creator
-                            </p>
-                          </div>
-                          <Switch
-                            checked={
-                              pattern.licenseSettings.attributionRequired
-                            }
-                            onCheckedChange={(checked) =>
-                              setPattern((prev) => ({
-                                ...prev,
-                                licenseSettings: {
-                                  ...prev.licenseSettings,
-                                  attributionRequired: checked,
-                                },
-                              }))
-                            }
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Label>Commercial Use by Licensees</Label>
-                            <p className="text-sm text-muted-foreground">
-                              Allow commercial use of your pattern
-                            </p>
-                          </div>
-                          <Switch
-                            checked={pattern.licenseSettings.commercialUse}
-                            onCheckedChange={(checked) =>
-                              setPattern((prev) => ({
-                                ...prev,
-                                licenseSettings: {
-                                  ...prev.licenseSettings,
-                                  commercialUse: checked,
-                                },
-                              }))
-                            }
-                          />
-                        </div>
-                      </div>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      💡 Premium patterns create NFTs on Flow blockchain when purchased, giving users permanent ownership.
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </CardContent>

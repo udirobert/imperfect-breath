@@ -209,10 +209,10 @@ export const PatternCard: React.FC<PatternCardProps> = ({
               </Badge>
             )}
 
-            {config.showPricing && pattern.licenseSettings?.commercialUse && (
+            {config.showPricing && pattern.access?.type === "premium" && (
               <div className="flex items-center gap-1 text-primary font-medium">
                 <DollarSign className="h-4 w-4" />
-                {pattern.licenseSettings.price} USDC
+                {pattern.access.price} {pattern.access.currency}
               </div>
             )}
 
@@ -223,7 +223,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
             )}
 
             {config.showPricing &&
-              !pattern.licenseSettings?.commercialUse &&
+              pattern.access?.type === "free" &&
               !pattern.price && <Badge variant="secondary">Free</Badge>}
           </div>
         </div>
@@ -435,7 +435,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
                 sessions
               </span>
             </div>
-            {pattern.licenseSettings?.commercialUse && (
+            {pattern.access?.type === "premium" && (
               <div className="flex items-center gap-1">
                 <Crown className="h-3 w-3" />
                 <span>Premium</span>

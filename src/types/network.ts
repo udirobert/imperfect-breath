@@ -23,7 +23,6 @@ export interface NetworkState {
 
 export interface BlockchainNetworks {
   flow: NetworkConfig;
-  story: NetworkConfig;
   lens: NetworkConfig;
 }
 
@@ -35,15 +34,6 @@ export const BLOCKCHAIN_NETWORKS: BlockchainNetworks = {
     explorerUrl: 'https://testnet.flowscan.org',
     contractAddress: '0xf8d6e0586b0a20c7',
     apiUrl: 'https://rest-testnet.onflow.org/v1',
-    isTestnet: true
-  },
-  story: {
-    name: 'Story Aeneid Testnet',
-    chainId: 80002,
-    rpcUrl: 'https://rpc-testnet.story.xyz',
-    explorerUrl: 'https://explorer-testnet.story.xyz',
-    contractAddress: '0x09Fd5da2BCF1F2C37AAd3b48F84E0F2F27211534',
-    apiUrl: 'https://api-testnet.story.xyz',
     isTestnet: true
   },
   lens: {

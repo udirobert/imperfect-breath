@@ -6,7 +6,7 @@
 import { Plugin, Action, Evaluator, Provider, Runtime, Message, Callback } from '@elizaos/core';
 
 /**
- * Note: This plugin references blockchain services (Flow, Lens, Story Protocol)
+ * Note: This plugin references blockchain services (Flow, Lens)
  * in its response text, but the actual blockchain interactions would be
  * implemented in the consuming application. The blockchain clients would
  * be used at that point.
@@ -135,7 +135,7 @@ Would you like me to:
 🎯 Guide you through a practice session?
 💎 Mint this as an NFT on Flow blockchain?
 🌐 Share it with the wellness community on Lens?
-🛡️ Register it as your IP on Story Protocol?`;
+🌐 Share it on Lens Protocol?`;
 
       if (callback) {
         callback({
@@ -300,7 +300,7 @@ const mintBreathingNFTAction: Action = {
 💰 List it for sale on the marketplace
 🎁 Gift it to friends or students
 🌐 Share it on Lens Protocol for social proof
-🛡️ Register it as IP on Story Protocol for licensing
+🌐 Share it on Lens Protocol for community engagement
 📊 Track its usage and earn royalties
 
 Your breathing pattern is now a true digital asset that you own forever! Want me to help you with the next steps? ✨`;

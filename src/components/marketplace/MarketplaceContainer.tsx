@@ -86,8 +86,7 @@ export const MarketplaceContainer: React.FC<MarketplaceContainerProps> = ({
           comparison = a.duration - b.duration;
           break;
         case "price":
-          comparison =
-            (a.licenseSettings.price || 0) - (b.licenseSettings.price || 0);
+          comparison = (a.access.price || 0) - (b.access.price || 0);
           break;
         case "rating":
           // Use properties available in EnhancedCustomPattern for rating comparison

@@ -47,7 +47,7 @@ const CreatePattern = () => {
         patternToSave
       );
 
-      // For now, we'll skip the Story Protocol integration to focus on core functionality
+      // Focus on core functionality - blockchain integration available separately
 
       toast({
         title: isEditing ? "Pattern Updated" : "Pattern Created",
@@ -184,7 +184,7 @@ const CreatePattern = () => {
                 <div>
                   <h4 className="font-semibold mb-2">Monetization</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Register IP to protect your unique patterns</li>
+                    
                     <li>• Set appropriate licensing terms</li>
                     <li>• Create clear, descriptive names</li>
                     <li>• Include detailed usage instructions</li>

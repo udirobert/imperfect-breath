@@ -57,11 +57,10 @@ export const PurchaseFlow: React.FC<PurchaseFlowProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { address } = useAccount();
-  // Story Protocol functionality removed
 
   // Initialize blockchain methods if not already present
   useEffect(() => {
-    // Story Protocol methods removed - using simplified flow
+    // Using simplified flow for pattern licensing
   }, [pattern]);
 
   const handlePurchase = async () => {

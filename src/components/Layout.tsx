@@ -1,16 +1,18 @@
+import React from "react";
+import { ResponsiveNavigation } from "./navigation/ResponsiveNavigation";
 
-import React from 'react';
-import Header from './Header';
+interface LayoutProps {
+  children: React.ReactNode;
+}
 
-const Layout = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <div className="min-h-screen w-full bg-calm-gradient flex flex-col">
-      <Header />
-      <main className="flex-grow flex flex-col items-center justify-center p-4">
-        {children}
-      </main>
-    </div>
-  );
+/**
+ * Basic layout component with responsive navigation
+ * @deprecated Use ResponsiveNavigation directly for new components
+ */
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  return <ResponsiveNavigation>{children}</ResponsiveNavigation>;
 };
 
 export default Layout;
+export { Layout };
+export type { LayoutProps };
