@@ -3,62 +3,42 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
-// MODULAR: Extract chunking logic for better composability
+// CONSERVATIVE CHUNKING: Only chunk libraries that are guaranteed safe
 const getChunkName = (id: string): string | undefined => {
-  // NEVER chunk React - it must stay in main bundle
-  if (id.includes('react') || id.includes('scheduler')) {
-    return undefined;
+  // CRITICAL: Absolutely never chunk React or any React ecosystem packages
+  // React, React DOM, JSX runtime, scheduler must all stay in main bundle
+  if (id.includes('react') || 
+      id.includes('scheduler') || 
+      id.includes('jsx') ||
+      id.includes('React') ||
+      id.includes('@types/react')) {
+    return undefined; // Force into main bundle
   }
   
-  // Crypto/Web3 libraries - these were causing the React import issues
-  if (id.includes('@wagmi') || id.includes('viem') || id.includes('wagmi') || id.includes('connectkit')) {
-    return 'vendor-crypto';
-  }
-  
-  // Radix UI components
-  if (id.includes('@radix-ui')) {
-    return 'vendor-ui';
-  }
-  
-  // State management
-  if (id.includes('zustand')) {
-    return 'vendor-state';
-  }
-  
-  // TensorFlow core and backends
-  if (id.includes('@tensorflow/tfjs') && !id.includes('models')) {
+  // Only chunk libraries that we know are completely independent of React
+  // TensorFlow libraries - these are safe as they don't use React
+  if (id.includes('@tensorflow/tfjs-core') || 
+      id.includes('@tensorflow/tfjs-backend') ||
+      id.includes('@tensorflow/tfjs-converter')) {
     return 'tensorflow-core';
   }
   
-  // TensorFlow models (separate for lazy loading)
-  if (id.includes('@tensorflow-models') || id.includes('@vladmandic/face-api')) {
+  // TensorFlow models - safe to chunk
+  if (id.includes('@tensorflow-models')) {
     return 'tensorflow-models';
   }
   
-  // AI/ML libraries (now handled by Hetzner server)
-  // Removed: @anthropic-ai, @google/generative-ai, openai
-  
-  // Lens Protocol
-  if (id.includes('@lens-protocol') || id.includes('@lens-chain')) {
-    return 'vendor-lens';
-  }
-  
-  // Flow blockchain - exclude from vendor chunk to avoid reference errors
-  // if (id.includes('@onflow')) {
-  //   return 'vendor-flow';
-  // }
-  
-  // Utility libraries
-  if (id.includes('date-fns') || id.includes('uuid') || id.includes('@tanstack/react-query') || id.includes('lodash')) {
+  // Utility libraries that don't depend on React
+  if (id.includes('date-fns') || 
+      id.includes('uuid') || 
+      id.includes('lodash')) {
     return 'vendor-utils';
   }
   
-  // Other vendor packages (but not React - React stays in main bundle)
-  if (id.includes('node_modules') && !id.includes('react') && !id.includes('scheduler')) {
-    return 'vendor-misc';
-  }
+  // For everything else, be extremely conservative
+  // Only chunk if we're absolutely certain it's safe
   
-  return undefined;
+  return undefined; // Keep everything else in main bundle
 };
 
 // https://vitejs.dev/config/
@@ -127,37 +107,50 @@ export default defineConfig(({ mode }) => {
 
       // Common build settings
       assetsInlineLimit: 4096,
-      chunkSizeWarningLimit: 1500, // Set a reasonable limit for chunks
+      chunkSizeWarningLimit: 10000, // Increase limit to prevent automatic splitting
       
       // Target modern browsers for better optimization
       target: 'esnext',
 
       // Rollup options for build optimization
       rollupOptions: {
-        // Ensure React is externalized properly
-        external: (id) => {
-          // Don't externalize React - keep it bundled
-          return false;
-        },
+        // Ensure nothing gets externalized - everything should be bundled
+        external: [],
         output: {
-          manualChunks: (id) => {
-            // Don't chunk React at all - it should stay in main bundle
-            if (id.includes('react') || id.includes('scheduler')) {
-              return undefined; // Keep in main bundle
-            }
-            
-            // Apply our other chunking rules but never chunk React
-            const chunkName = getChunkName(id);
-            if (chunkName) {
-              return chunkName;
-            }
-            
-            // Default behavior for other node_modules (but React is already excluded)
-            if (id.includes('node_modules')) {
-              return 'vendor-misc';
-            }
-            
-            return undefined;
+          // Force everything into a single vendor chunk
+          manualChunks: {
+            // Put all vendor dependencies in one chunk
+            vendor: [
+              'react',
+              'react-dom',
+              'react-dom/client',
+              'react/jsx-runtime',
+              'react-router-dom',
+              '@radix-ui/react-accordion',
+              '@radix-ui/react-alert-dialog',
+              '@radix-ui/react-avatar',
+              '@radix-ui/react-button',
+              '@radix-ui/react-checkbox',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-label',
+              '@radix-ui/react-popover',
+              '@radix-ui/react-select',
+              '@radix-ui/react-separator',
+              '@radix-ui/react-slider',
+              '@radix-ui/react-slot',
+              '@radix-ui/react-switch',
+              '@radix-ui/react-tabs',
+              '@radix-ui/react-toast',
+              '@radix-ui/react-tooltip',
+              'zustand',
+              '@tanstack/react-query',
+              'date-fns',
+              'uuid',
+              'clsx',
+              'class-variance-authority',
+              'tailwind-merge'
+            ]
           },
           
           // Configure chunk file naming
@@ -183,11 +176,11 @@ export default defineConfig(({ mode }) => {
             return `assets/[name]-[hash][extname]`;
           },
           
-          // Ensure proper globals for React
-          globals: {
-            'react': 'React',
-            'react-dom': 'ReactDOM'
-          }
+          // Remove globals as we want everything bundled
+          // globals: {
+          //   'react': 'React',
+          //   'react-dom': 'ReactDOM'
+          // }
         },
       },
 
@@ -231,9 +224,9 @@ export default defineConfig(({ mode }) => {
       open: true,
     },
 
-    // React-specific optimizations
+    // React-specific optimizations - ensure React is always in main bundle
     optimizeDeps: {
-      // Force React to be included in dependency optimization
+      // Force React and related dependencies to be properly optimized
       force: true,
       include: [
         "react",
@@ -241,8 +234,8 @@ export default defineConfig(({ mode }) => {
         "react-dom/client",
         "react/jsx-runtime",
         "react-router-dom",
+        "scheduler", // React scheduler should also be optimized
         "zustand",
-        // AGGRESSIVE CONSOLIDATION: Removed TensorFlow deps (now using Hetzner server)
         "@tanstack/react-query"
       ],
       // Exclude optional dependencies that may not be available

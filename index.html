@@ -74,28 +74,36 @@
                 // Check for React initialization errors
                 if (event.message && (
                     event.message.includes("Cannot read properties of undefined") ||
+                    event.message.includes("createContext") ||
                     event.message.includes("ReactCurrentOwner") ||
-                    event.message.includes("react-jsx-runtime")
+                    event.message.includes("react-jsx-runtime") ||
+                    event.message.includes("React is not defined")
                 )) {
-                    console.error('React initialization error detected. Attempting recovery...');
+                    console.error('Critical React loading error detected:', event.message);
                     
-                    // Clear the root element
+                    // Clear the root element and show a more informative error
                     const rootElement = document.getElementById('root');
                     if (rootElement) {
                         rootElement.innerHTML = `
-                            <div style="font-family: sans-serif; padding: 20px; text-align: center;">
-                                <h2>Application Error</h2>
-                                <p>There was a problem initializing the application. Attempting to recover...</p>
-                                <div style="margin-top: 20px; font-size: 0.8em; color: #666;">
-                                    Error: ${event.message}
+                            <div style="font-family: 'Manrope', sans-serif; padding: 20px; text-align: center; background: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                <div style="max-width: 500px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <div style="width: 60px; height: 60px; background: #fee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #dc2626; font-size: 24px;">⚠</div>
+                                    <h2 style="margin: 0 0 16px 0; color: #111; font-size: 24px; font-weight: 700;">Loading Error</h2>
+                                    <p style="margin: 0 0 20px 0; color: #555; line-height: 1.5;">The application encountered a critical loading error. This is typically resolved by clearing your browser cache.</p>
+                                    <div style="display: flex; gap: 12px; flex-direction: column;">
+                                        <button onclick="location.reload(true)" style="background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit;">Reload Page</button>
+                                        <button onclick="if(confirm('This will clear cache and reload. Continue?')){caches.keys().then(names => Promise.all(names.map(name => caches.delete(name)))).then(() => location.reload(true))}" style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit;">Clear Cache & Reload</button>
+                                    </div>
+                                    <details style="margin-top: 20px; text-align: left;">
+                                        <summary style="color: #6b7280; cursor: pointer; font-size: 14px;">Technical Details</summary>
+                                        <pre style="background: #f3f4f6; padding: 12px; border-radius: 6px; font-size: 12px; overflow: auto; margin-top: 8px; color: #374151;">${event.message}</pre>
+                                    </details>
                                 </div>
                             </div>
                         `;
                         
-                        // Try to reload the application after a brief delay
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 3000);
+                        // Don't auto-reload - let user choose the action
+                        return;
                     }
                 }
                 
