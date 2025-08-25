@@ -128,9 +128,11 @@ npm run dev
 
 ```bash
 # Development
-npm run dev          # Frontend only (recommended)
-npm run dev:server   # Backend AI server
-npm run dev:full     # Both frontend + backend
+npm run dev          # Start frontend development server
+
+# Production
+npm run build        # Build for production
+npm run preview      # Preview production build
 
 # Testing
 npm test            # Run all tests

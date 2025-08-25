@@ -195,8 +195,7 @@ const AISettings = () => {
       <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold">AI Analysis Settings</h1>
         <p className="text-muted-foreground">
-          Configure AI providers to get personalized insights on your breathing
-          sessions
+          AI analysis is handled by our Hetzner server. No API keys needed!
         </p>
       </div>
 

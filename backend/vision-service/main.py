@@ -42,9 +42,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:4556",
-        "https://*.netlify.app",  # Netlify deployments
+        "http://localhost:4556",        # Local development frontend
+        "https://*.netlify.app",        # Netlify deployments
         "https://imperfectbreath.com",  # Production domain
     ],
     allow_credentials=True,

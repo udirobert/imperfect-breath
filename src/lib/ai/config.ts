@@ -14,24 +14,24 @@ export const AI_PROVIDERS: AIProvider[] = [
   {
     id: "openai",
     name: "OpenAI GPT",
-    description: "Advanced AI analysis with GPT-4 (via Hetzner server)",
-    requiresApiKey: false, // API keys managed on server
+    description: "Advanced AI analysis (processed on Hetzner server)",
+    requiresApiKey: false, // All processing on server
     apiKeyPlaceholder: "",
     website: "",
   },
   {
     id: "anthropic",
     name: "Anthropic Claude",
-    description: "Thoughtful AI insights with Claude (via Hetzner server)",
-    requiresApiKey: false, // API keys managed on server
+    description: "Thoughtful AI insights (processed on Hetzner server)",
+    requiresApiKey: false, // All processing on server
     apiKeyPlaceholder: "",
     website: "",
   },
   {
     id: "google",
     name: "Google Gemini",
-    description: "Google's multimodal AI analysis (via Hetzner server)",
-    requiresApiKey: false, // API keys managed on server
+    description: "Google's multimodal AI (processed on Hetzner server)",
+    requiresApiKey: false, // All processing on server
     apiKeyPlaceholder: "",
     website: "",
   },
@@ -126,8 +126,8 @@ export const AI_CONFIG = {
 
 export type SecureAIProvider = keyof typeof AI_CONFIG.providers;
 
-// API keys are now managed on the Hetzner server
-// Frontend only needs basic provider information
+// All AI processing happens on the Hetzner server
+// Frontend sends session data and receives analysis results
 export class AIConfigManager {
   static getConfiguredProviders(): AIProvider[] {
     // All providers are available through the Hetzner server
@@ -139,7 +139,8 @@ export class AIConfigManager {
   }
 
   static clearAllKeys(): void {
-    TieredStorageManager.clearAllAPIKeys();
+    // Legacy method - no longer needed with server-based AI
+    console.warn('AI keys are managed on server - no local keys to clear');
   }
 
   /**
