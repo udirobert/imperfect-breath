@@ -17,7 +17,6 @@ import { ResponsiveSocialCreate } from "@/components/social/ResponsiveSocialCrea
 import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
 
 // Large pages - lazy load these to reduce initial bundle size
-const AISettings = React.lazy(() => import("@/pages/AISettings"));
 const Progress = React.lazy(() => import("@/pages/Progress"));
 const Results = React.lazy(() => import("@/pages/Results"));
 const EnhancedMarketplace = React.lazy(
@@ -71,7 +70,6 @@ function App() {
               path="/instructor-onboarding"
               element={<InstructorOnboarding />}
             />
-            <Route path="/ai-settings" element={<AISettings />} />
           </Route>
 
           {/* Routes without Header */}

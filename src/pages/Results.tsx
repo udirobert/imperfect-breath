@@ -119,13 +119,21 @@ const Results = () => {
         let visionData = sessionStorage.getItem(cacheKey);
 
         if (!visionData) {
-          const visionSummary = await fetch(`${import.meta.env.VITE_HETZNER_SERVICE_URL || 'http://localhost:8001'}/api/vision/sessions/${sessionData.visionSessionId}/summary`);
+          const visionSummary = await fetch(
+            `${
+              import.meta.env.VITE_HETZNER_SERVICE_URL ||
+              "http://localhost:8001"
+            }/api/vision/sessions/${sessionData.visionSessionId}/summary`
+          );
 
           if (visionSummary.ok) {
             visionData = await visionSummary.text();
             // Cache for 5 minutes
             sessionStorage.setItem(cacheKey, visionData);
-            sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+            sessionStorage.setItem(
+              `${cacheKey}_timestamp`,
+              Date.now().toString()
+            );
           }
         } else {
           // Check cache expiry (5 minutes)
@@ -134,11 +142,19 @@ const Results = () => {
             sessionStorage.removeItem(cacheKey);
             sessionStorage.removeItem(`${cacheKey}_timestamp`);
             // Refetch
-            const visionSummary = await fetch(`${import.meta.env.VITE_HETZNER_SERVICE_URL || 'http://localhost:8001'}/api/vision/sessions/${sessionData.visionSessionId}/summary`);
+            const visionSummary = await fetch(
+              `${
+                import.meta.env.VITE_HETZNER_SERVICE_URL ||
+                "http://localhost:8001"
+              }/api/vision/sessions/${sessionData.visionSessionId}/summary`
+            );
             if (visionSummary.ok) {
               visionData = await visionSummary.text();
               sessionStorage.setItem(cacheKey, visionData);
-              sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+              sessionStorage.setItem(
+                `${cacheKey}_timestamp`,
+                Date.now().toString()
+              );
             }
           }
         }
@@ -149,8 +165,12 @@ const Results = () => {
           // Map vision metrics to AI analysis format (DRY: Single source of truth)
           enhancedSessionData = {
             ...enhancedSessionData,
-            restlessnessScore: Math.round((1 - parsedVisionData.avg_movement_level) * 100),
-            bpm: parsedVisionData.avg_breathing_rate || enhancedSessionData.breathHoldTime,
+            restlessnessScore: Math.round(
+              (1 - parsedVisionData.avg_movement_level) * 100
+            ),
+            bpm:
+              parsedVisionData.avg_breathing_rate ||
+              enhancedSessionData.breathHoldTime,
             landmarks: parsedVisionData.total_frames,
             // Add vision-specific data for AI analysis
             visionMetrics: {
@@ -159,14 +179,20 @@ const Results = () => {
               movementLevel: parsedVisionData.avg_movement_level,
               stillnessPercentage: parsedVisionData.stillness_percentage,
               consistencyScore: parsedVisionData.consistency_score,
-            }
+            },
           };
 
-          console.log('Enhanced session data with vision metrics:', enhancedSessionData);
+          console.log(
+            "Enhanced session data with vision metrics:",
+            enhancedSessionData
+          );
         }
       } catch (error) {
-        console.warn('Failed to fetch vision data, using session data only:', error);
-        toast.warning('Using session data only - vision metrics unavailable');
+        console.warn(
+          "Failed to fetch vision data, using session data only:",
+          error
+        );
+        toast.warning("Using session data only - vision metrics unavailable");
       }
     }
 
@@ -826,12 +852,6 @@ Check out Imperfect Breath!`;
                     <Brain className="mr-2 h-4 w-4" />
                     Get AI Analysis
                   </Button>
-                  <Link to="/ai-settings">
-                    <Button variant="outline">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Configure AI
-                    </Button>
-                  </Link>
                 </div>
                 {AIConfigManager.getConfiguredProviders().length === 0 && (
                   <Alert>

@@ -110,14 +110,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                         <span>Profile</span>
                       </Link>
                       <Link
-                        to="/ai-settings"
-                        onClick={handleMenuItemClick}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
-                      >
-                        <Settings className="h-5 w-5" />
-                        <span>AI Settings</span>
-                      </Link>
-                      <Link
                         to="/instructor-onboarding"
                         onClick={handleMenuItemClick}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
