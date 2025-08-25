@@ -25,9 +25,9 @@ COPY . .
 # Expose port
 EXPOSE 8001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8001/api/health/vision')"
+# Health check - using correct port and endpoint, with longer interval to reduce spam
+HEALTHCHECK --interval=120s --timeout=10s --start-period=30s --retries=2 \
+    CMD python -c "import requests; requests.head('http://localhost:8001/health', timeout=5)"
 
 # Run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

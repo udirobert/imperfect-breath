@@ -69,7 +69,8 @@ class ServiceRegistry {
   private healthStatus: Map<string, boolean> = new Map();
   private failureCounts: Map<string, number> = new Map();
   private lastHealthCheck: Map<string, number> = new Map();
-  private readonly HEALTH_CHECK_INTERVAL = 60000; // 1 minute
+  private pendingHealthChecks: Map<string, Promise<boolean>> = new Map(); // Prevent concurrent health checks
+  private readonly HEALTH_CHECK_INTERVAL = 600000; // 10 minutes - reasonable for all environments
 
   constructor() {
     this.initializeServices();
@@ -143,6 +144,7 @@ class ServiceRegistry {
     }
 
     // Lens Protocol (Optional - register if enabled)
+    // Note: Lens API doesn't provide a health check endpoint, so we disable health checks
     const lensEnabled = import.meta.env.VITE_ENABLE_LENS_INTEGRATION === 'true';
     const lensEnvironment = import.meta.env.VITE_LENS_ENVIRONMENT;
     if (lensEnabled && lensEnvironment) {
@@ -153,7 +155,7 @@ class ServiceRegistry {
       this.registerService({
         name: 'lens',
         baseUrl: lensApiUrl,
-        healthCheck: '/ping', // More reliable health check endpoint
+        healthCheck: '', // Lens API doesn't provide health check endpoints
         timeout: 10000,
         retries: 2,
         requiresAuth: false,
@@ -163,7 +165,7 @@ class ServiceRegistry {
 
   registerService(service: ServiceEndpoint) {
     this.services.set(service.name, service);
-    this.healthStatus.set(service.name, false);
+    this.healthStatus.set(service.name, false); // Start with unknown status, require real check
     
     // Debug logging in development
     if (import.meta.env.DEV) {
@@ -175,12 +177,8 @@ class ServiceRegistry {
     const service = this.services.get(name);
     if (!service) return null;
 
-    // Check if we need to run health check
-    const lastCheck = this.lastHealthCheck.get(name) || 0;
-    if (Date.now() - lastCheck > this.HEALTH_CHECK_INTERVAL) {
-      await this.checkServiceHealth(name);
-    }
-
+    // PERFORMANT: No automatic health checks - only on explicit request
+    // This prevents spam and follows manual-only health check principle
     return service;
   }
 
@@ -188,9 +186,36 @@ class ServiceRegistry {
     const service = this.services.get(serviceName);
     if (!service) return false;
 
+    // Skip health check for services without health check endpoints (e.g., Lens Protocol)
+    if (!service.healthCheck) {
+      this.healthStatus.set(serviceName, true); // Assume healthy since no health check available
+      this.lastHealthCheck.set(serviceName, Date.now());
+      return true;
+    }
+
+    // Check if there's already a pending health check for this service
+    const existingCheck = this.pendingHealthChecks.get(serviceName);
+    if (existingCheck) {
+      return existingCheck;
+    }
+
+    // Create a new health check promise
+    const healthCheckPromise = this.performHealthCheck(serviceName, service);
+    this.pendingHealthChecks.set(serviceName, healthCheckPromise);
+
+    try {
+      const result = await healthCheckPromise;
+      return result;
+    } finally {
+      // Always remove the pending check when done
+      this.pendingHealthChecks.delete(serviceName);
+    }
+  }
+
+  private async performHealthCheck(serviceName: string, service: ServiceEndpoint): Promise<boolean> {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout for health checks
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for health checks
       
       // Use GET for external services, HEAD for local services
       const method = service.baseUrl.includes('localhost') ? 'HEAD' : 'GET';
@@ -443,14 +468,14 @@ export class UnifiedAPIClient {
   }
 
   /**
-   * Health Check for all services
+   * Health Check for all services - Manual only (no automatic polling)
    */
   async getSystemHealth(): Promise<Record<string, boolean>> {
     const registeredServices = this.serviceRegistry.getRegisteredServices();
     
-    // Set a 5-second timeout for the entire health check operation
+    // Set a reasonable 10-second timeout for the entire health check operation
     const timeoutPromise = new Promise<Record<string, boolean>>((_, reject) => {
-      setTimeout(() => reject(new Error('System health check timeout')), 5000);
+      setTimeout(() => reject(new Error('System health check timeout')), 10000);
     });
     
     const healthCheckPromise = (async () => {
@@ -459,7 +484,7 @@ export class UnifiedAPIClient {
           // Individual service timeout of 2 seconds
           const servicePromise = this.serviceRegistry.checkServiceHealth(service);
           const timeoutPromise = new Promise<boolean>((_, reject) => 
-            setTimeout(() => reject(new Error('Service timeout')), 2000)
+            setTimeout(() => reject(new Error('Service timeout')), 3000)
           );
           
           return await Promise.race([servicePromise, timeoutPromise]);
@@ -649,14 +674,11 @@ export class UnifiedAPIClient {
   }
 
   /**
-   * ORCHESTRATION: Priority queue processing
+   * ORCHESTRATION: Priority queue processing - Manual only
    */
   private async startRequestQueueProcessor() {
-    setInterval(() => {
-      if (!this.isProcessingQueue && this.requestQueue.length > 0) {
-        this.processRequestQueue();
-      }
-    }, 100);
+    // PREVENT BLOAT: No automatic intervals - process queue on demand only
+    // Queue will be processed when requests are made
   }
 
   private async processRequestQueue() {

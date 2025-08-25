@@ -572,6 +572,7 @@ async def get_session_summary(session_id: str):
     return summary
 
 @app.get("/api/health/vision")
+@app.head("/api/health/vision")
 async def health_check():
     """Health check endpoint"""
     return {
@@ -606,8 +607,9 @@ async def ai_analysis(request: AIAnalysisRequest):
     return await process_ai_analysis(request)
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
+@app.head("/health")
+async def health_check_main():
+    """Main health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": time.time(),
@@ -617,6 +619,12 @@ async def health_check():
         }
     }
 
+@app.get("/ping")
+@app.head("/ping")
+async def ping():
+    """Simple ping endpoint for health checks"""
+    return {"status": "ok", "timestamp": time.time()}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

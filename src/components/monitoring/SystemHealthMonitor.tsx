@@ -55,7 +55,7 @@ export const SystemHealthMonitor: React.FC<SystemHealthProps> = ({
   compact = false,
   onHealthChange,
   showServiceRegistry = true,
-  autoRefreshInterval = 60000,
+  autoRefreshInterval = 86400000, // 24 hours - effectively disabled
 }) => {
   const [serviceHealth, setServiceHealth] = useState<ServiceHealth[]>([]);
   const [serviceRegistry, setServiceRegistry] =
@@ -166,9 +166,9 @@ export const SystemHealthMonitor: React.FC<SystemHealthProps> = ({
   // Helper functions
   const getServiceEndpoint = (serviceName: string): string => {
     const endpoints: Record<string, string> = {
-      ai: config.services.ai.url.replace(/^https?:\/\//, ''),
-      social: config.services.social.url.replace(/^https?:\/\//, ''),
-      vision: config.services.vision.url.replace(/^https?:\/\//, ''),
+      ai: config.services.ai.url.replace(/^https?:\/\//, ""),
+      social: config.services.social.url.replace(/^https?:\/\//, ""),
+      vision: config.services.vision.url.replace(/^https?:\/\//, ""),
       flow: "rest-testnet.onflow.org",
       lens: "api-v2.lens.dev",
     };
@@ -187,16 +187,13 @@ export const SystemHealthMonitor: React.FC<SystemHealthProps> = ({
     return versions[serviceName] || "unknown";
   };
 
-  // Auto-refresh health status
   useEffect(() => {
     if (!shouldShow) return;
 
-    checkSystemHealth();
-
-    const interval = setInterval(checkSystemHealth, autoRefreshInterval);
-
-    return () => clearInterval(interval);
-  }, [shouldShow, autoRefreshInterval, checkSystemHealth]);
+    // MANUAL ONLY: No automatic health checks - prevents spam
+    // Users must click refresh button to check health
+    // This follows PREVENT BLOAT and PERFORMANT principles
+  }, [shouldShow]);
 
   if (!shouldShow) {
     return null;
@@ -513,37 +510,45 @@ export const useSystemHealth = () => {
   const [isHealthy, setIsHealthy] = useState(true);
 
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        // Use unified API client for real health checks
-        const healthStatus = await api.health();
-        setHealth(healthStatus);
+    // MANUAL ONLY: No automatic health checks on mount
+    // Set default unhealthy state - components must explicitly check health
+    setHealth({
+      ai: false,
+      vision: false,
+      social: false,
+      flow: false,
+      lens: false,
+    });
+    setIsHealthy(false);
 
-        // Check if all critical services are healthy
-        const criticalServices = ["ai", "social"]; // Services critical for basic functionality
-        const criticalHealthy = criticalServices.every(
-          (service) => healthStatus[service]
-        );
-        setIsHealthy(criticalHealthy);
-      } catch (error) {
-        console.error("Health check failed:", error);
-        setIsHealthy(false);
-        // Set all services as unhealthy on error
-        setHealth({
-          ai: false,
-          vision: false,
-          social: false,
-          flow: false,
-          lens: false,
-        });
-      }
-    };
+    // NO automatic interval - health checks are now manual only
+    // Components can call checkHealth() manually when needed
+  }, []);
 
-    checkHealth();
+  // MODULAR: Expose manual health check function
+  const checkHealthManually = useCallback(async () => {
+    try {
+      const healthStatus = await api.health();
+      setHealth(healthStatus);
 
-    const interval = setInterval(checkHealth, 30000); // Check every 30 seconds
-
-    return () => clearInterval(interval);
+      const criticalServices = ["ai", "social"];
+      const criticalHealthy = criticalServices.every(
+        (service) => healthStatus[service]
+      );
+      setIsHealthy(criticalHealthy);
+      return healthStatus;
+    } catch (error) {
+      console.error("Health check failed:", error);
+      setIsHealthy(false);
+      setHealth({
+        ai: false,
+        vision: false,
+        social: false,
+        flow: false,
+        lens: false,
+      });
+      throw error;
+    }
   }, []);
 
   return {
@@ -552,6 +557,7 @@ export const useSystemHealth = () => {
     hasVisionService: health.vision || false,
     hasFlowService: health.flow || false,
     hasLensService: health.lens || false,
+    checkHealth: checkHealthManually, // CLEAN: Explicit manual health check
   };
 };
 

@@ -122,7 +122,7 @@ const Results = () => {
           const visionSummary = await fetch(
             `${
               import.meta.env.VITE_HETZNER_SERVICE_URL ||
-              "http://localhost:8001"
+              "http://localhost:8000"
             }/api/vision/sessions/${sessionData.visionSessionId}/summary`
           );
 
