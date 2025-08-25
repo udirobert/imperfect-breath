@@ -176,7 +176,7 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
           }
 
           // Breathing phase animation
-          let baseRadius = 60;
+          const baseRadius = 60;
           let breathingScale = 1;
 
           if (breathPhase === "inhale") {

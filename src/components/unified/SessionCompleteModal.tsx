@@ -18,7 +18,7 @@ import {
   Award,
   CheckCircle
 } from 'lucide-react';
-import type { BreathingSessionData } from '@/services/LensService';
+import type { BreathingSession } from '@/lib/lens/types';
 
 interface SessionData {
   patternName: string;
@@ -73,13 +73,12 @@ export const SessionCompleteModal: React.FC<SessionCompleteModalProps> = ({
     console.log('Session shared to Lens:', txHash);
   };
 
-  const lensSessionData: BreathingSessionData = {
+  const lensSessionData: BreathingSession = {
     patternName: sessionData.patternName,
     duration: sessionData.duration,
     score: sessionData.score,
     cycles: sessionData.cycles,
     breathHoldTime: sessionData.breathHoldTime,
-    flowNFTId: sessionData.flowNFTId,
   };
 
   return (

@@ -80,12 +80,12 @@ export const CommentList = ({ publicationId }: CommentListProps) => {
           content: comment.content,
           author: {
             id: comment.author.id,
-            username: comment.author.handle || "anonymous",
-            displayName: comment.author.displayName || "Unknown User",
-            avatar: comment.author.avatar,
+            username: comment.author.username?.fullHandle || "anonymous",
+            displayName: comment.author.metadata?.name || "Unknown User",
+            avatar: comment.author.metadata?.picture,
           },
-          createdAt: comment.createdAt,
-          likes: comment.stats?.likes || 0,
+          createdAt: comment.timestamp,
+          likes: comment.stats?.reactions || 0,
           isLiked: false, // We'll need to track this separately
         }));
       } catch (error) {

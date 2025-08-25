@@ -30,6 +30,7 @@ import {
   TrendingUp,
   Loader2,
 } from "lucide-react";
+import { formatTime } from "../../../lib/utils/formatters";
 
 import type { SessionControlsProps } from "./types";
 import {
@@ -90,11 +91,22 @@ export const SessionControls: React.FC<SessionControlsProps> = ({
     }
   }, [sessionState, onPlay, onPause, onReset]);
 
-  // Format time display
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  // Using consolidated formatters from utils
+  
+  // Type-safe access to session data
+  const getSessionValue = (key: string, defaultValue: any = 0): any => {
+    return (sessionState as any)?.[key] ?? defaultValue;
+  };
+
+  // Type-safe access to phase data
+  const getPhaseValue = (phase: any, key: string): string => {
+    const phaseMap: Record<string, string> = {
+      inhale: phase?.inhale || '4',
+      hold: phase?.hold || '0', 
+      exhale: phase?.exhale || '4',
+      pause: phase?.pause || '0'
+    };
+    return phaseMap[key] || '0';
   };
 
   // Render primary controls
@@ -194,7 +206,7 @@ export const SessionControls: React.FC<SessionControlsProps> = ({
       <div className="flex items-center gap-2">
         <Activity
           className={`w-4 h-4 ${
-            PHASE_COLORS[metrics.currentPhase] || "text-gray-500"
+            PHASE_COLORS[metrics.currentPhase as keyof typeof PHASE_COLORS] || "text-gray-500"
           }`}
         />
         <Badge variant="outline" className="capitalize">

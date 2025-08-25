@@ -37,7 +37,7 @@ import {
   Timer,
   Focus,
   Eye,
-  Compare,
+  GitCompare,
   Bookmark,
   Share2
 } from "lucide-react";
@@ -94,7 +94,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
   const currentHour = new Date().getHours();
   const recommendationContext: RecommendationContext = {
     timeOfDay: currentHour,
-    sessionHistory: history.map(h => h.patternName),
+    sessionHistory: history.map(h => h.pattern_name),
     userLevel: history.length < 5 ? "beginner" : history.length < 20 ? "intermediate" : "advanced",
     sessionType: "enhanced",
     isFirstSession: history.length === 0,
@@ -106,7 +106,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
 
   // Filter and sort recommendations
   const filteredRecommendations = useMemo(() => {
-    let filtered = allRecommendations.filter(rec => {
+    const filtered = allRecommendations.filter(rec => {
       const pattern = BREATHING_PATTERNS[rec.patternId];
       if (!pattern) return false;
 
@@ -226,7 +226,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
   };
 
   const getPatternPopularity = (patternId: string): number => {
-    return history.filter(h => h.patternName === patternId).length;
+    return history.filter(h => h.pattern_name === patternId).length;
   };
 
   const handlePatternToggle = (patternId: string) => {
@@ -340,7 +340,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
                 <option value="all">All Durations</option>
                 <option value="short">Short (≤8s)</option>
                 <option value="medium">Medium (9-16s)</option>
-                <option value="long">Long (>16s)</option>
+                <option value="long">Long (&gt;16s)</option>
               </select>
             </div>
           </div>
@@ -411,7 +411,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
                             handlePatternToggle(rec.patternId);
                           }}
                         >
-                          {isSelected ? <CheckCircle className="h-3 w-3" /> : <Compare className="h-3 w-3" />}
+                          {isSelected ? <CheckCircle className="h-3 w-3" /> : <GitCompare className="h-3 w-3" />}
                         </Button>
                       </div>
                     </div>
@@ -426,7 +426,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
                       <div className="text-center p-3 bg-green-50 rounded-lg">
                         <Target className="h-4 w-4 mx-auto mb-1 text-green-600" />
                         <p className="text-xs text-green-600 font-medium">
-                          {rec.expectedBenefit}
+                          {rec.bestFor.join(", ")}
                         </p>
                       </div>
                     </div>
@@ -460,7 +460,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
           {filteredRecommendations.length === 0 && (
             <Card>
               <CardContent className="text-center py-12">
-                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                                <GitCompare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="font-medium mb-2">No patterns found</h3>
                 <p className="text-sm text-muted-foreground">
                   Try adjusting your search or filters to find more patterns.
@@ -474,7 +474,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
           {selectedPatterns.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
-                <Compare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <GitCompare className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="font-medium mb-2">No patterns selected</h3>
                 <p className="text-sm text-muted-foreground">
                   Select patterns from the recommendations tab to compare them here.
@@ -546,7 +546,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
                               <span className="text-xs text-muted-foreground ml-1">times</span>
                             </td>
                             <td className="text-center p-2">
-                              <p className="text-xs">{rec.expectedBenefit}</p>
+                              <p className="text-xs">{rec.bestFor.join(", ")}</p>
                             </td>
                           </tr>
                         );
@@ -622,7 +622,7 @@ export const DesktopSmartRecommendations: React.FC<DesktopSmartRecommendationsPr
                   <div className="space-y-2">
                     {Object.entries(
                       history.reduce((acc, h) => {
-                        acc[h.patternName] = (acc[h.patternName] || 0) + 1;
+                        acc[h.pattern_name] = (acc[h.pattern_name] || 0) + 1;
                         return acc;
                       }, {} as Record<string, number>)
                     )

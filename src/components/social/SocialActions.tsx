@@ -21,6 +21,7 @@ import { Input } from "../../components/ui/input";
 import { useToast } from "../../hooks/use-toast";
 import { apiClient } from "../../lib/api/unified-client";
 import type { CustomPattern } from "../../lib/patternStorage";
+import { formatCount, formatTimeAgo } from "../../lib/utils/formatters";
 
 interface SocialActionsProps {
   pattern: CustomPattern & {
@@ -194,25 +195,7 @@ export const SocialActions: React.FC<SocialActionsProps> = ({
     }
   };
 
-  const formatCount = (count: number) => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return count.toString();
-  };
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    );
-
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    return date.toLocaleDateString();
-  };
+  // Using consolidated formatters from utils
 
   const buttonSize = compact ? "sm" : "default";
   const iconSize = compact ? "h-3 w-3" : "h-4 w-4";

@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEnhancedSession } from "@/hooks/useEnhancedSession";
-import { useMobileSessionInitialization } from "@/hooks/useSessionInitialization";
+import { useSession } from "@/hooks/useSession";
+
 import { mapPatternForAnimation } from "@/lib/session/pattern-mapper";
 import BreathingAnimation from "@/components/BreathingAnimation";
 import { PreparationPhase } from "./PreparationPhase";
@@ -33,25 +33,34 @@ export const MobileBreathingInterface: React.FC<
 > = ({ onEndSession, patternName = "Breathing Session" }) => {
   const isMobile = useIsMobile();
 
-  // Use shared session initialization hook
-  const { isInitializing, initializationError, isReady } =
-    useMobileSessionInitialization(BREATHING_PATTERNS.box);
-
   const {
-    state,
+    phase,
+    metrics,
+    config,
     isActive,
     isPaused,
-    isAudioEnabled,
-    canUseCamera,
-    cameraStream,
+    isComplete,
+    audioEnabled: isAudioEnabled,
+    visionMetrics,
+    visionActive,
+    initialize,
     start,
     pause,
     resume,
-    stop,
     complete,
+    reset,
     toggleAudio,
+    requestCamera,
     getSessionDuration,
-  } = useEnhancedSession();
+    getCompletionPercentage,
+    cameraStream,
+    cameraPermissionGranted: canUseCamera,
+  } = useSession();
+
+  // Mock initialization state for now
+  const isInitializing = false;
+  const initializationError = null;
+  const isReady = true;
 
   const [showPreparation, setShowPreparation] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,8 +72,8 @@ export const MobileBreathingInterface: React.FC<
 
   // Calculate progress based on session duration (simplified)
   const progress =
-    state.sessionData.duration > 0
-      ? Math.min((state.sessionData.duration / 300) * 100, 100)
+    metrics.duration > 0
+      ? Math.min((metrics.duration / 300) * 100, 100)
       : 0; // 5 min max
 
   const handlePlayPause = async () => {
@@ -132,10 +141,10 @@ export const MobileBreathingInterface: React.FC<
         {/* Breathing Animation - with pattern info */}
         <div className="flex items-center justify-center">
           <BreathingAnimation
-            phase={state.sessionData.currentPhase as BreathingPhaseName}
+            phase={metrics.currentPhase as BreathingPhaseName}
             pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
             isActive={isActive}
-            phaseProgress={state.sessionData.phaseProgress}
+            phaseProgress={metrics.phaseProgress || 0}
           />
         </div>
 
@@ -144,7 +153,7 @@ export const MobileBreathingInterface: React.FC<
           <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">
             <p className="text-xs text-muted-foreground">Cycles</p>
             <p className="text-sm font-semibold">
-              {state.sessionData.cycleCount}
+              {metrics.cycleCount || 0}
             </p>
           </div>
           <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">

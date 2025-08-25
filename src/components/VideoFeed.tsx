@@ -7,6 +7,8 @@ interface VideoFeedProps {
   landmarks?: Keypoint[];
   trackingStatus?: TrackingStatus;
   className?: string;
+  showRestlessnessScore?: boolean;
+  restlessnessScore?: number;
 }
 
 const VideoFeed = ({
@@ -15,7 +17,26 @@ const VideoFeed = ({
   landmarks = [],
   trackingStatus = "IDLE",
   className = "",
+  showRestlessnessScore = false,
+  restlessnessScore = 0,
 }: VideoFeedProps) => {
+  // PERFORMANT: Log only when stream connection changes
+  const lastStreamState = React.useRef<boolean>(false);
+
+  React.useEffect(() => {
+    if (videoRef.current) {
+      const hasStream = !!videoRef.current.srcObject;
+
+      if (hasStream !== lastStreamState.current) {
+        console.log('📺 Video stream connection changed:', {
+          hasStream,
+          trackingStatus,
+          videoSize: `${videoRef.current.videoWidth}x${videoRef.current.videoHeight}`
+        });
+        lastStreamState.current = hasStream;
+      }
+    }
+  }, [videoRef.current?.srcObject, trackingStatus]);
   // Style for the video element
   const videoStyle: React.CSSProperties = {
     width: "100%",
@@ -95,6 +116,23 @@ const VideoFeed = ({
 
       {/* Status indicator */}
       <div style={getStatusStyle()}>{trackingStatus}</div>
+
+      {/* MODULAR: Restlessness score overlay */}
+      {showRestlessnessScore && isActive && (
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          background: 'rgba(0, 0, 0, 0.7)',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          fontSize: '14px',
+          fontWeight: '500',
+        }}>
+          Restlessness: {restlessnessScore.toFixed(1)}
+        </div>
+      )}
     </div>
   );
 };

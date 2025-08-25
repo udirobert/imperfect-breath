@@ -32,6 +32,7 @@ import { BreathingSessionPost } from "@/components/social/BreathingSessionPost";
 import { SocialActions } from "@/components/social/SocialActions";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { formatTime } from "@/lib/utils/formatters";
 
 interface CommunityStats {
   totalSessions: number;
@@ -61,7 +62,7 @@ const CommunityFeed: React.FC = () => {
     timeline,
     isLoadingTimeline,
     timelineError,
-    loadContent,
+    loadTimeline,
   } = useLens();
   const posts = timeline;
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,9 +87,9 @@ const CommunityFeed: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      loadContent();
+      loadTimeline();
     }
-  }, [isAuthenticated, loadContent]);
+  }, [isAuthenticated, loadTimeline]);
 
   const handleConnect = async () => {
     try {
@@ -107,26 +108,19 @@ const CommunityFeed: React.FC = () => {
     const matchesSearch =
       searchQuery === "" ||
       post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (post.author.name || post.author.handle)
+      (post.author.metadata?.name || post.author.username?.localName || post.author.username?.fullHandle || 'Unknown')
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
 
     const matchesFilter =
       selectedFilter === "all" ||
-      (selectedFilter === "trending" && (post.stats.reactions || 0) > 10) ||
+      (selectedFilter === "trending" && (post.stats?.reactions || 0) > 10) ||
       (selectedFilter === "challenges" && post.content.includes("#"));
 
     return matchesSearch && matchesFilter;
   });
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.round(seconds % 60);
-    if (mins > 0) {
-      return `${mins}m ${secs}s`;
-    }
-    return `${secs}s`;
-  };
+  // Using consolidated formatters from utils
 
   if (!isConnected) {
     return (
@@ -265,16 +259,16 @@ const CommunityFeed: React.FC = () => {
                   <div className="flex items-start gap-4">
                     <Avatar>
                       <AvatarFallback>
-                        {post.author.name?.[0] || "U"}
+                        {post.author.metadata?.name?.[0] || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-medium">
-                          {post.author.name || "Anonymous"}
+                          {post.author.metadata?.name || "Anonymous"}
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          @{post.author.handle}
+                          @{post.author.username?.localName || "unknown"}
                         </span>
                         <span className="text-sm text-muted-foreground">•</span>
                         <span className="text-sm text-muted-foreground">
@@ -285,15 +279,15 @@ const CommunityFeed: React.FC = () => {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <Button variant="ghost" size="sm" className="h-8 px-2">
                           <Heart className="w-4 h-4 mr-1" />
-                          {post.stats.reactions || 0}
+                          {post.stats?.reactions || 0}
                         </Button>
                         <Button variant="ghost" size="sm" className="h-8 px-2">
                           <MessageCircle className="w-4 h-4 mr-1" />
-                          {post.stats.comments || 0}
+                          {post.stats?.comments || 0}
                         </Button>
                         <Button variant="ghost" size="sm" className="h-8 px-2">
                           <Share className="w-4 h-4 mr-1" />
-                          {post.stats.reposts || 0}
+                          {post.stats?.reposts || 0}
                         </Button>
                       </div>
                     </div>

@@ -9,9 +9,10 @@
  */
 
 import { config } from '../../config/environment';
-import { withRetry } from '../utils/retry-utils';
+import { withRetry } from '../network/retry-policy';
 import { NetworkError, AppError } from '../errors/error-types';
 import { supabase } from '../../integrations/supabase/client';
+import { API_ENDPOINTS } from '../../config/api-endpoints';
 
 export interface APIResponse<T = any> {
   success: boolean;
@@ -86,7 +87,7 @@ class ServiceRegistry {
     this.registerService({
       name: 'ai',
       baseUrl: config.services.ai.url,
-      healthCheck: '/health',
+      healthCheck: API_ENDPOINTS.ai.health,
       timeout: config.services.ai.timeout,
       retries: config.services.ai.retries,
       requiresAuth: false,
@@ -96,7 +97,7 @@ class ServiceRegistry {
     this.registerService({
       name: 'social',
       baseUrl: config.services.social.url,
-      healthCheck: '/health',
+      healthCheck: API_ENDPOINTS.social.health,
       timeout: config.services.social.timeout,
       retries: config.services.social.retries,
       requiresAuth: false,
@@ -111,7 +112,7 @@ class ServiceRegistry {
         this.registerService({
           name: 'vision',
           baseUrl: config.services.vision.url,
-          healthCheck: '/health',
+          healthCheck: API_ENDPOINTS.vision.health,
           timeout: config.services.vision.timeout,
           retries: config.services.vision.retries,
           requiresAuth: false,
@@ -121,7 +122,7 @@ class ServiceRegistry {
         this.registerService({
           name: 'vision',
           baseUrl: config.services.ai.url,
-          healthCheck: '/health',
+          healthCheck: API_ENDPOINTS.ai.health,
           timeout: config.services.vision.timeout,
           retries: config.services.vision.retries,
           requiresAuth: false,
@@ -136,7 +137,7 @@ class ServiceRegistry {
       this.registerService({
         name: 'flow',
         baseUrl: flowAccessNode,
-        healthCheck: '/v1/blocks?height=sealed', // Correct Flow REST API endpoint
+        healthCheck: API_ENDPOINTS.flow.health,
         timeout: 20000,
         retries: 5,
         requiresAuth: false,
@@ -398,7 +399,7 @@ export class UnifiedAPIClient {
         analysis_type: 'session'
       };
 
-      return await this.request('ai', '/api/ai-analysis', {
+      return await this.request('ai', API_ENDPOINTS.ai.analysis, {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
@@ -409,10 +410,10 @@ export class UnifiedAPIClient {
       return {
         success: true,
         data: {
-          overallScore: 75,
+          analysis: 'Great session! Your breathing practice shows good consistency.',
           suggestions: ['Continue practicing regularly', 'Focus on consistency'],
+          score: { overall: 75, focus: 70, consistency: 80, progress: 75 },
           nextSteps: ['Practice daily', 'Try longer sessions'],
-          encouragement: 'Great session! Keep up the good work.',
         },
         metadata: {
           provider: 'fallback',
@@ -420,6 +421,98 @@ export class UnifiedAPIClient {
         },
       };
     }
+  }
+
+  /**
+   * Generate AI-powered breathing patterns
+   */
+  async generatePattern(provider: string, sessionData: any): Promise<APIResponse> {
+    try {
+      const requestBody = {
+        provider,
+        session_data: sessionData,
+        analysis_type: 'pattern'
+      };
+
+      return await this.request('ai', API_ENDPOINTS.ai.analysis, {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+    } catch (error) {
+      console.warn('Pattern generation failed, using fallback:', error);
+      
+      // Return fallback pattern
+      return {
+        success: true,
+        data: {
+          name: "Calming 4-7-8 Breath",
+          description: "A relaxing breathing pattern that helps reduce stress and promote calmness",
+          phases: [
+            {
+              type: "inhale",
+              duration: 4,
+              instruction: "Breathe in slowly through your nose"
+            },
+            {
+              type: "hold",
+              duration: 7,
+              instruction: "Hold your breath gently"
+            },
+            {
+              type: "exhale",
+              duration: 8,
+              instruction: "Exhale completely through your mouth"
+            }
+          ],
+          reasoning: "This 4-7-8 pattern is excellent for relaxation and stress relief. The longer exhale helps activate your parasympathetic nervous system."
+        },
+        metadata: {
+          provider: 'fallback',
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }
+  }
+
+  /**
+   * Test AI provider connection
+   */
+  async testAIConnection(provider: string): Promise<boolean> {
+    try {
+      const testData = {
+        pattern: "Box Breathing",
+        duration: 60,
+        averageBpm: 12,
+        consistencyScore: 80,
+        restlessnessScore: 20,
+        breathHoldDuration: 4
+      };
+
+      const response = await this.analyzeSession(provider, testData);
+      return response.success;
+    } catch (error) {
+      console.error(`Connection test failed for ${provider}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get available AI providers
+   */
+  getAvailableAIProviders(): string[] {
+    return ['google', 'openai', 'anthropic'];
+  }
+
+  /**
+   * Get AI provider information
+   */
+  getAIProviderInfo(provider: string) {
+    const providers = {
+      google: { name: 'Google Gemini', model: 'gemini-1.5-flash', enabled: true },
+      openai: { name: 'OpenAI GPT-4', model: 'gpt-4o-mini', enabled: true },
+      anthropic: { name: 'Anthropic Claude', model: 'claude-3-haiku-20240307', enabled: true }
+    };
+    return providers[provider as keyof typeof providers];
   }
 
   /**
@@ -437,7 +530,7 @@ export class UnifiedAPIClient {
       };
     }
 
-    return this.request('vision', '/api/vision/process', {
+    return this.request('vision', API_ENDPOINTS.vision.process, {
       method: 'POST',
       body: JSON.stringify({ session_id: sessionId, ...frameData }),
     });
@@ -447,7 +540,7 @@ export class UnifiedAPIClient {
    * Social/Lens Integration
    */
   async shareBreathingSession(sessionData: any): Promise<APIResponse> {
-    return this.request('social', '/api/social/share', {
+    return this.request('social', API_ENDPOINTS.social.share, {
       method: 'POST',
       body: JSON.stringify({
         type: 'BREATHING_SESSION',
@@ -461,7 +554,7 @@ export class UnifiedAPIClient {
    * Flow Blockchain Operations
    */
   async mintPattern(patternData: any): Promise<APIResponse> {
-    return this.request('flow', '/api/flow/mint-pattern', {
+    return this.request('flow', API_ENDPOINTS.flow.mintPattern, {
       method: 'POST',
       body: JSON.stringify(patternData),
     });
@@ -735,7 +828,7 @@ export class UnifiedAPIClient {
         {
           id: 'ai-analysis',
           serviceName: 'ai',
-          endpoint: '/api/ai-analysis',
+          endpoint: API_ENDPOINTS.ai.analysis,
           options: {
             method: 'POST',
             body: JSON.stringify({ provider: 'openai', sessionData, analysisType: 'session' })
@@ -764,7 +857,7 @@ export class UnifiedAPIClient {
       batch.requests.push({
         id: 'vision-analysis',
         serviceName: 'vision',
-        endpoint: '/api/vision/analyze-session',
+        endpoint: API_ENDPOINTS.vision.analyzeSession,
         options: {
           method: 'POST',
           body: JSON.stringify({ sessionId: sessionData.sessionId, frameData: sessionData.frames })
@@ -841,6 +934,10 @@ export const apiClient = UnifiedAPIClient.getInstance();
 export const api = {
   ai: {
     analyzeSession: (provider: string, data: any) => apiClient.analyzeSession(provider, data),
+    generatePattern: (provider: string, data: any) => apiClient.generatePattern(provider, data),
+    testConnection: (provider: string) => apiClient.testAIConnection(provider),
+    getProviders: () => apiClient.getAvailableAIProviders(),
+    getProviderInfo: (provider: string) => apiClient.getAIProviderInfo(provider),
   },
   vision: {
     process: (sessionId: string, data: any) => apiClient.processVision(sessionId, data),

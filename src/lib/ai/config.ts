@@ -1,4 +1,6 @@
 // AI Configuration and API Key Management
+import { TieredStorageManager } from '../crypto/tiered-storage';
+
 export interface AIProvider {
   id: string;
   name: string;
@@ -99,7 +101,7 @@ export interface SecureAIResponse {
 
 export const AI_CONFIG = {
   // Hetzner server API endpoint for AI requests
-  apiEndpoint: '/api/ai-analysis',
+  apiEndpoint: '/api/ai-analysis', // TODO: Update to use API_ENDPOINTS.ai.analysis
 
   providers: {
     google: {

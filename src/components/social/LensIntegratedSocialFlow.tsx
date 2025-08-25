@@ -27,20 +27,7 @@ import {
 import { useLens } from "../../hooks/useLens";
 import { BreathingSessionPost } from "./BreathingSessionPost";
 import { toast } from "sonner";
-import { useShareSession, type SessionData as ShareSessionData } from "../../lib/sharing";
-
-interface SessionData {
-  patternName?: string;
-  duration?: number;
-  score?: number;
-  breathHoldTime?: number;
-  restlessnessScore?: number;
-  bpm?: number;
-  consistencyScore?: number;
-  cycles?: number;
-  insights?: string[];
-  flowNFTId?: string;
-}
+import { useShareSession, type SessionData, type ShareableSessionData } from "../../lib/sharing";
 
 interface LensIntegratedSocialFlowProps {
   phase: "completion" | "sharing" | "celebration" | "active";
@@ -97,12 +84,12 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
       const sessionForSharing = {
         id: `session-${Date.now()}`,
         patternName: sessionData.patternName || "Breathing Session",
-        duration: sessionData.duration || 0,
-        score: sessionData.score || 0,
+        duration: (sessionData as ShareableSessionData).sessionDuration || 0,
+        score: (sessionData as ShareableSessionData).score || 0,
         timestamp: new Date().toISOString(),
-        breathHoldTime: sessionData.breathHoldTime || 0,
-        insights: sessionData.insights || [],
-        flowNFTId: sessionData.flowNFTId,
+        breathHoldTime: (sessionData as ShareableSessionData).breathHoldTime || 0,
+        insights: (sessionData as ShareableSessionData).insights || [],
+        flowNFTId: (sessionData as ShareableSessionData).flowNFTId,
       };
 
       const result = await shareBreathingSession(sessionForSharing);
@@ -176,7 +163,7 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
 
   // Render session summary
   const renderSessionSummary = () => {
-    const duration = Math.round((sessionData.duration || 0) / 60);
+    const duration = Math.round((sessionData.sessionDuration || 0) / 60);
     const qualityScore = getQualityScore();
 
     return (
@@ -204,10 +191,10 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
               <span>{sessionData.patternName || "Custom Pattern"}</span>
             </div>
 
-            {sessionData.cycles && (
+            {(sessionData as ShareableSessionData).cycles && (
               <div className="flex items-center gap-2">
                 <Repeat className="h-4 w-4 text-muted-foreground" />
-                <span>{sessionData.cycles} cycles</span>
+                <span>{(sessionData as ShareableSessionData).cycles} cycles</span>
               </div>
             )}
 
@@ -219,12 +206,12 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
             )}
           </div>
 
-          {sessionData.flowNFTId && (
+          {(sessionData as ShareableSessionData).flowNFTId && (
             <>
               <Separator />
               <div className="text-center">
                 <Badge variant="secondary" className="text-xs">
-                  Flow NFT: {sessionData.flowNFTId}
+                  Flow NFT: {(sessionData as ShareableSessionData).flowNFTId}
                 </Badge>
               </div>
             </>

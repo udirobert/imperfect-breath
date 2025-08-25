@@ -37,8 +37,6 @@ export const WalletManager = () => {
 
   const {
     isAuthenticated,
-    isLoading,
-    error,
     authenticate,
     logout,
     currentAccount: session,
@@ -49,6 +47,7 @@ export const WalletManager = () => {
     useAuth();
 
   const [isFlowSetupLoading, setIsFlowSetupLoading] = useState(false);
+  const [isLensAuthenticating, setIsLensAuthenticating] = useState(false);
 
   useEffect(() => {
     // If Flow user is logged in, ensure their account is set up for NFTs
@@ -121,6 +120,18 @@ export const WalletManager = () => {
       toast.success(`${label} address copied to clipboard`);
     } catch (error) {
       toast.error("Failed to copy address");
+    }
+  };
+
+  // Handle Lens login
+  const handleLensLogin = async () => {
+    try {
+      setIsLensAuthenticating(true);
+      await authenticate();
+    } catch (error) {
+      toast.error("Failed to connect to Lens");
+    } finally {
+      setIsLensAuthenticating(false);
     }
   };
 
@@ -204,7 +215,7 @@ export const WalletManager = () => {
               variant="outline"
               size="sm"
               className="flex items-center space-x-2"
-              disabled={isLoading}
+              disabled={isFlowSetupLoading}
             >
               <div className="flex items-center space-x-2">
                 <Avatar className="w-4 h-4">
@@ -258,7 +269,7 @@ export const WalletManager = () => {
             <DropdownMenuItem
               onClick={handleLensDisconnect}
               className="flex items-center space-x-2 text-red-600"
-              disabled={isLoading}
+              disabled={isFlowSetupLoading}
             >
               <LogOut className="w-4 h-4" />
               <span>Disconnect</span>
@@ -267,15 +278,15 @@ export const WalletManager = () => {
         </DropdownMenu>
       ) : (
         <Button
+          onClick={handleLensLogin}
           variant="outline"
           size="sm"
-          onClick={authenticate}
-          disabled={isLoading}
+          disabled={isLensAuthenticating}
           className="flex items-center space-x-2"
         >
           <Users className="w-4 h-4" />
           <span>Lens (social)</span>
-          {isLoading && (
+          {isLensAuthenticating && (
             <div className="w-3 h-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           )}
         </Button>
@@ -296,13 +307,6 @@ export const WalletManager = () => {
         </div>
       )}
 
-      {/* Error Display */}
-      {error && (
-        <div className="flex items-center space-x-1 text-red-600">
-          <AlertCircle className="w-4 h-4" />
-          <span className="text-xs">Connection Error</span>
-        </div>
-      )}
-    </div>
+      </div>
   );
 };

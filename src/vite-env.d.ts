@@ -6,6 +6,6 @@ interface ImportMeta {
     readonly DEV: boolean;
     readonly MODE: string;
     readonly VITE_APP_ENV?: string;
-    [key: string]: any;
+    [key: string]: string | boolean | undefined;
   }
 }

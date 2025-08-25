@@ -44,6 +44,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { Shield, ShieldCheck } from "lucide-react";
+import { formatDuration } from "../../lib/utils/formatters";
 
 const reviewService = new ReviewService();
 
@@ -120,10 +121,7 @@ export const PatternDetailsModal: React.FC<PatternDetailsModalProps> = ({
   const CategoryIcon =
     categoryIcons[pattern.category as keyof typeof categoryIcons] || Heart;
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes} min`;
-  };
+  // Using consolidated formatDuration from utils
 
   const getInstructorInitials = (name: string) => {
     return name

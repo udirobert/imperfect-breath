@@ -16,7 +16,7 @@ export const CommentForm = ({
 }: CommentFormProps) => {
   const [commentText, setCommentText] = useState("");
   const { address } = useAccount();
-  const { isAuthenticated, authenticate, isAuthenticating, commentOnPost } =
+  const { isAuthenticated, authenticate, isAuthenticating, createComment } =
     useLens();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,7 +40,7 @@ export const CommentForm = ({
       toast.info("Posting comment...");
 
       // Use the Lens Client to post a comment
-      const result = await commentOnPost(publicationId, commentText);
+      const result = await createComment(publicationId, commentText);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to post comment");
@@ -48,7 +48,7 @@ export const CommentForm = ({
 
       setCommentText("");
       onCommentPosted?.(
-        result.transactionHash || result.postId || "comment-posted",
+        result.hash || result.id || "comment-posted",
       );
       toast.success("Comment posted successfully!");
     } catch (error) {

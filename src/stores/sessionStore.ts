@@ -54,6 +54,7 @@ export interface SessionState {
     stillness: number;
     presence: number;
     posture: number;
+    restlessnessScore?: number;
     faceLandmarks?: Array<{ x: number; y: number; z?: number }>;
   } | null;
   
@@ -254,7 +255,8 @@ export const useSessionStore = create<SessionState & SessionActions>()(
         if (currentMetrics && 
             currentMetrics.stillness === metrics?.stillness &&
             currentMetrics.presence === metrics?.presence &&
-            currentMetrics.posture === metrics?.posture) {
+            currentMetrics.posture === metrics?.posture &&
+            currentMetrics.restlessnessScore === metrics?.restlessnessScore) {
           return state; // No change, don't trigger re-render
         }
         return { visionMetrics: metrics };

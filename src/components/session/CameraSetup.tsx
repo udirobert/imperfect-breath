@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useEnhancedSession } from "@/hooks/useEnhancedSession";
+import { useSession } from "@/hooks/useSession";
 import { TrackingStatus, Keypoint } from "@/hooks/visionTypes";
 import { Loader2, Camera } from "lucide-react";
 
@@ -19,7 +19,7 @@ export const CameraSetup = ({
   trackingStatus,
   initializeCamera,
 }: CameraSetupProps) => {
-  const { start, isReady: sessionReady, state } = useEnhancedSession();
+  const { start, cameraPermissionGranted: sessionReady } = useSession();
   const [cameraRequested, setCameraRequested] = useState(false);
   const isReady = trackingStatus === "TRACKING";
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;

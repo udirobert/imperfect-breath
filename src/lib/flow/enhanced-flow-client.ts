@@ -12,13 +12,14 @@ import { BaseFlowClient } from './clients/base-client';
 import { connectionManager, ManagedConnection } from '../network/connection-manager';
 import { websocketRetry, RetryPredicates } from '../network/retry-policy';
 import { ErrorFactory, NetworkError } from '../errors/error-types';
-import { handleError } from '../../lib/utils/error-utils';
+import { handleError } from '../errors/error-types';
 import { startTimer } from '../../lib/utils/performance-utils';
 import { getCache } from '../../lib/utils/cache-utils';
+import { EVMBatchCall, BatchTransactionResult } from './types';
 
 export interface EnhancedFlowConfig {
   // Base Flow configuration
-  network: string;
+  network: 'testnet' | 'mainnet' | 'emulator';
   accessNode: string;
   discoveryWallet: string;
   contractAddress: string;
@@ -36,14 +37,16 @@ export interface EnhancedFlowConfig {
 /**
  * Enhanced Flow Client with resilient connections
  */
-export class EnhancedFlowClient extends BaseFlowClient {
+export class EnhancedFlowClient {
   private static enhancedInstance: EnhancedFlowClient | null = null;
   private wsConnection: ManagedConnection | null = null;
   private enhancedConfig: EnhancedFlowConfig | null = null;
   private eventSubscriptions = new Map<string, Set<(event: any) => void>>();
 
+  private baseClient: BaseFlowClient;
+  
   private constructor() {
-    super();
+    this.baseClient = BaseFlowClient.getInstance();
   }
 
   /**
@@ -69,12 +72,12 @@ export class EnhancedFlowClient extends BaseFlowClient {
   async initialize(flowConfig?: Partial<EnhancedFlowConfig>): Promise<void> {
     // Build config from environment defaults and overrides
     const baseConfig = {
-      network: config.flow?.network || 'testnet',
+      network: 'testnet' as 'testnet' | 'mainnet' | 'emulator',
       accessNode: config.flow?.accessNode || 'https://access-testnet.onflow.org',
       discoveryWallet: config.flow?.discoveryWallet || 'https://fcl-discovery.onflow.org/testnet/authn',
       contractAddress: config.flow?.contractAddress || '0xImperfectBreath',
-      flowTokenAddress: config.flow?.flowTokenAddress || '0x1654653399040a61',
-      fungibleTokenAddress: config.flow?.fungibleTokenAddress || '0x9a0766d93b6608b7',
+      flowTokenAddress: config.flow?.flowToken || '0x1654653399040a61',
+      fungibleTokenAddress: config.flow?.fungibleToken || '0x9a0766d93b6608b7',
     };
 
     this.enhancedConfig = {
@@ -88,7 +91,7 @@ export class EnhancedFlowClient extends BaseFlowClient {
     };
 
     // Initialize base client
-    await super.initialize(this.enhancedConfig);
+    await this.baseClient.initialize(this.enhancedConfig);
 
     // Setup WebSocket connection if enabled
     if (this.enhancedConfig.enableConnectionPooling) {
@@ -237,9 +240,9 @@ export class EnhancedFlowClient extends BaseFlowClient {
     try {
       // Convert calls to the format expected by Cadence
       const cadenceCalls = calls.map((call) => [
-        { key: "to", value: call.address },
-        { key: "data", value: encodeFunctionCall(call) },
-        { key: "gasLimit", value: String(call.gas || 100000) },
+        { key: "to", value: call.to },
+        { key: "data", value: call.data },
+        { key: "gasLimit", value: String(call.gasLimit || 100000) },
         { key: "value", value: String(call.value || 0) },
       ]);
 
@@ -301,25 +304,25 @@ export class EnhancedFlowClient extends BaseFlowClient {
       const result = await fcl.tx(txId).onceSealed();
 
       // Parse EVM transaction results from events
-      const evmResults = parseEVMResults(result.events);
+      const evmResults = this.parseEVMResults(result.events);
 
       const duration = endTimer();
       console.log(`Batched transaction completed in ${duration.toFixed(2)}ms`);
 
       return {
-        isPending: false,
         isError: result.status !== 4, // 4 = sealed
         txId,
         results: evmResults,
+        totalGasUsed: evmResults.reduce((total, r) => total + r.gasUsed, 0),
       };
     } catch (error) {
       endTimer(); // Record time even on error
       const appError = handleError("execute batched transactions", error);
       return {
-        isPending: false,
         isError: true,
         txId: "",
         results: [],
+        totalGasUsed: 0,
       };
     }
   }
@@ -338,34 +341,21 @@ export class EnhancedFlowClient extends BaseFlowClient {
     }>,
   ): Promise<BatchTransactionResult> {
     const calls: EVMBatchCall[] = patterns.map((pattern) => ({
-      address: config.flow.contractAddress,
-      abi: [
-        {
-          inputs: [
-            { name: "to", type: "address" },
-            { name: "name", type: "string" },
-            { name: "description", type: "string" },
-            { name: "inhale", type: "uint256" },
-            { name: "hold", type: "uint256" },
-            { name: "exhale", type: "uint256" },
-            { name: "rest", type: "uint256" },
-          ],
-          name: "mintBreathingPattern",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-      ],
-      functionName: "mintBreathingPattern",
-      args: [
-        "{{USER_ADDRESS}}", // Will be replaced with actual user address
-        pattern.name,
-        pattern.description,
-        pattern.inhale,
-        pattern.hold,
-        pattern.exhale,
-        pattern.rest,
-      ],
+      to: config.flow.contractAddress,
+       data: this.encodeFunctionCall({
+         functionName: "mintBreathingPattern",
+         args: [
+           "{{USER_ADDRESS}}", // Will be replaced with actual user address
+           pattern.name,
+           pattern.description,
+           pattern.inhale,
+           pattern.hold,
+           pattern.exhale,
+           pattern.rest,
+         ],
+       }),
+       gasLimit: 100000,
+       value: "0",
     }));
 
     return this.executeBatchedTransactions(calls);
@@ -532,7 +522,28 @@ export class EnhancedFlowClient extends BaseFlowClient {
     }
   }
 
-  // Removed helper methods that were moved to batch-transactions.ts
+  /**
+   * Parse EVM results from Flow transaction events
+   */
+  private parseEVMResults(events: any[]): any[] {
+    return events
+      .filter(event => event.type.includes('EVM'))
+      .map(event => ({
+        success: event.data?.status === 'successful',
+        gasUsed: parseInt(event.data?.gasUsed || '0'),
+        returnData: event.data?.returnData || '',
+        error: event.data?.errorMessage || null,
+      }));
+  }
+
+  /**
+   * Encode function call data
+   */
+  private encodeFunctionCall(call: { functionName: string; args: any[] }): string {
+    // Simple encoding for demo - in production use proper ABI encoding
+    const encoded = `${call.functionName}(${call.args.join(',')})`;
+    return Buffer.from(encoded).toString('hex');
+  }
 }
 
 export default EnhancedFlowClient;

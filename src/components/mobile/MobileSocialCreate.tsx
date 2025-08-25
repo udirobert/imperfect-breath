@@ -58,9 +58,9 @@ export const MobileSocialCreate: React.FC<MobileSocialCreateProps> = ({
   // Calculate user stats
   const stats: SessionStats = {
     totalSessions: history.length,
-    totalMinutes: history.reduce((acc, h) => acc + (h.duration || 5), 0),
+    totalMinutes: history.reduce((acc, h) => acc + (h.session_duration || 5), 0),
     currentStreak: Math.min(history.length, 7), // Simplified streak calculation
-    favoritePattern: history.length > 0 ? history[0].patternName : "Box Breathing",
+    favoritePattern: history.length > 0 ? history[0].pattern_name : "Box Breathing",
     lastSessionScore: 85,
     weeklyGoalProgress: Math.min((history.length / 7) * 100, 100),
     ...prefilledStats

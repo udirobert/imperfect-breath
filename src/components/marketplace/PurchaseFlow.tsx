@@ -84,24 +84,24 @@ export const PurchaseFlow: React.FC<PurchaseFlowProps> = ({
       }
 
       // Ensure blockchain methods are available
-      if (!pattern.blockchainMethods) {
+      if (!(pattern as any).blockchainMethods) {
         throw new Error("Blockchain methods not initialized");
       }
 
       // 1. Register the pattern as IP if it doesn't have an ipId yet
-      if (!pattern.ipId) {
+      if (!(pattern as any).ipId) {
         // Register the IP using our blockchain methods
-        const metadata = await pattern.blockchainMethods.register();
+        const metadata = await (pattern as any).blockchainMethods.register();
         console.log("Successfully registered IP asset:", metadata.ipId);
       }
 
       // 2. Set the licensing terms based on the selected license
-      await pattern.blockchainMethods.setLicenseTerms(licenseOption.terms);
+      await (pattern as any).blockchainMethods.setLicenseTerms(licenseOption.terms);
 
       console.log("Successfully set license terms for pattern");
 
       // 3. Generate a license ID (in a real implementation, this would come from the blockchain)
-      const licenseId = `license_${pattern.ipId}_${Date.now()}`;
+      const licenseId = `license_${(pattern as any).ipId || 'unknown'}_${Date.now()}`;
 
       setIsSuccess(true);
       setTimeout(() => onPurchaseComplete(licenseId), 2000);

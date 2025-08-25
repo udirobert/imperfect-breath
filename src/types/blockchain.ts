@@ -172,9 +172,6 @@ export interface WalletConnection {
   balance?: string;
 }
 
-
-}
-
 // Transaction Types
 export interface Transaction {
   hash: string;
@@ -192,6 +189,17 @@ export interface WithdrawalTransaction extends Transaction {
   amount: number;
   currency: string;
   withdrawalAddress: string;
+}
+
+export interface RevenueTransaction {
+  id: string;
+  amount: number;
+  currency: string;
+  type: "personal" | "commercial" | "exclusive";
+  patternId: string;
+  buyerAddress: string;
+  timestamp: string;
+  transactionHash: string;
 }
 
 // Revenue Types

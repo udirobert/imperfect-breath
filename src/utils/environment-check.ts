@@ -19,8 +19,8 @@ export function checkReactEnvironment() {
 
   // Check for React and ReactDOM availability using dynamic property access
   const globalObj = typeof window !== 'undefined' ? window : global;
-  const hasReact = !!(globalObj as any).React;
-  const hasReactDOM = !!(globalObj as any).ReactDOM;
+  const hasReact = !!(globalObj as Record<string, unknown>).React;
+  const hasReactDOM = !!(globalObj as Record<string, unknown>).ReactDOM;
 
   if (!hasReact) {
     console.warn('React is not defined globally - this could cause issues');
@@ -59,8 +59,8 @@ export function checkWalletEnvironment() {
   // Check for multiple providers
   const providers = [];
   if (window.ethereum) providers.push('window.ethereum');
-  if ((window as any).web3?.currentProvider) providers.push('window.web3.currentProvider');
-  if ((window as any).__originalEthereum) providers.push('__originalEthereum (backup)');
+  if (((window as unknown as Record<string, unknown>).web3 as any)?.currentProvider) providers.push('window.web3.currentProvider');
+  if ((window as unknown as Record<string, unknown>).__originalEthereum) providers.push('__originalEthereum (backup)');
   
   if (providers.length > 1) {
     console.log(`Multiple wallet providers detected: ${providers.join(', ')}`);

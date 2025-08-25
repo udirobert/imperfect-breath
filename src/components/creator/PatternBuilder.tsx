@@ -13,7 +13,7 @@ import {
   BreathingPhase,
   CustomBreathingPhase,
 } from "../../lib/breathingPatterns";
-import { useEnhancedSession } from "../../hooks/useEnhancedSession";
+import { useSession } from "../../hooks/useSession";
 import { CustomPattern } from "../../lib/patternStorage";
 
 interface PatternBuilderProps {
@@ -42,7 +42,7 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
     creator: existingPattern?.creator || "user-id-placeholder",
   });
 
-  const { isActive, start, stop } = useEnhancedSession();
+  const { isActive, start, complete } = useSession();
 
   const calculateDuration = useCallback(() => {
     const totalDuration = pattern.phases.reduce(
@@ -99,7 +99,7 @@ const PatternBuilder: React.FC<PatternBuilderProps> = ({
 
   const handlePreview = () => {
     if (isActive) {
-      stop();
+      complete();
     } else {
       start();
     }

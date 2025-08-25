@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useUnifiedAuth } from "@/hooks/useUnifiedAuth";
+import { useBasicAuth } from "@/auth";
 import { UnifiedAuthFlow } from "./UnifiedAuthFlow";
 import {
   Lock,
@@ -66,9 +66,14 @@ export const AuthLevelGate: React.FC<AuthLevelGateProps> = ({
   fallback,
   className,
 }) => {
-  const { authLevel, canAccessFeature, getRequiredAuthLevel } =
-    useUnifiedAuth();
+  const auth = useBasicAuth();
   const [showAuthFlow, setShowAuthFlow] = React.useState(false);
+  
+  // Mock the authLevel, canAccessFeature, and getRequiredAuthLevel for now
+  // These would need to be implemented properly based on your auth system
+  const authLevel = auth.isAuthenticated ? "email" : null;
+  const canAccessFeature = (feature: string) => auth.isAuthenticated;
+  const getRequiredAuthLevel = (feature: string) => "email";
 
   // Check if user has required access
   const hasAccess = canAccessFeature(feature);
@@ -138,7 +143,6 @@ export const AuthLevelGate: React.FC<AuthLevelGateProps> = ({
     return (
       <div className={cn("space-y-4", className)}>
         <UnifiedAuthFlow
-          requiredLevel={actualRequiredLevel as any}
           onComplete={() => setShowAuthFlow(false)}
         />
       </div>

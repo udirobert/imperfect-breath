@@ -98,7 +98,8 @@ export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isMobile, isTablet } = useAdaptivePerformance();
+  const { capabilities } = useAdaptivePerformance();
+  const isMobile = capabilities.isMobile;
 
   /**
    * Handle mode selection
@@ -116,12 +117,12 @@ export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({
    * Get recommended mode based on device and capabilities
    */
   const getRecommendedMode = (): string => {
-    if (mobileOpt.state.isMobile) {
+    if (isMobile) {
       return "mobile";
     }
 
     // Check camera availability
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
       return "enhanced";
     }
 
@@ -140,10 +141,10 @@ export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({
       case "enhanced":
       case "advanced":
         return !!(
-          navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+          navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function'
         );
       case "mobile":
-        return mobileOpt.state.isMobile || mobileOpt.state.isTablet;
+        return isMobile;
       default:
         return true;
     }
@@ -276,12 +277,10 @@ export const SessionModeSelector: React.FC<SessionModeSelectorProps> = ({
             <Gauge className="h-4 w-4" />
             <span>
               Device:{" "}
-              {mobileOpt.state.isMobile
+              {isMobile
                 ? "Mobile"
-                : mobileOpt.state.isTablet
-                ? "Tablet"
                 : "Desktop"}{" "}
-              • Camera: {navigator.mediaDevices ? "Available" : "Not Available"}{" "}
+              • Camera: {navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function' ? "Available" : "Not Available"}{" "}
               • Recommended:{" "}
               {SESSION_MODES.find((m) => m.id === recommendedMode)?.name}
             </span>

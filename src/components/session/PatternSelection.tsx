@@ -12,6 +12,7 @@ import {
   Moon,
   Focus,
 } from "lucide-react";
+import { formatDuration } from "@/lib/utils/formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,21 +68,33 @@ interface PatternWithStats extends CustomPattern {
 
 // Convert built-in patterns to CustomPattern format
 const getBuiltInPatterns = (): PatternWithStats[] => {
-  return Object.values(BREATHING_PATTERNS).map((pattern) => ({
-    id: pattern.key,
+  return Object.entries(BREATHING_PATTERNS).map(([key, pattern]) => ({
+    id: key,
     name: pattern.name,
-    description: `A ${pattern.name.toLowerCase()} breathing pattern with ${
-      pattern.cycles === Infinity ? "continuous" : pattern.cycles
-    } cycles.`,
-    phases: pattern.phases,
-    category: "stress" as const,
-    difficulty: "beginner" as const,
-    duration:
-      pattern.phases.reduce((sum, phase) => sum + phase.duration, 0) / 1000,
+    description: pattern.description,
+    phases: [
+      { name: "inhale" as const, duration: pattern.inhale * 1000 },
+      { name: "hold" as const, duration: pattern.hold * 1000 },
+      { name: "exhale" as const, duration: pattern.exhale * 1000 },
+      { name: "hold_after_exhale" as const, duration: pattern.hold_after_exhale * 1000 },
+    ],
+    category: "stress",
+    difficulty: "beginner",
+    duration: pattern.inhale + pattern.hold + pattern.exhale + pattern.hold_after_exhale,
     creator: "Built-in",
     rating: 4.5 + Math.random() * 0.5,
     usageCount: Math.floor(Math.random() * 1000),
-    featured: pattern.key === "box" || pattern.key === "wimHof",
+    featured: key === "box",
+    tags: [],
+    targetAudience: [],
+    primaryBenefits: [],
+    secondaryBenefits: [],
+    instructorName: "Built-in Instructor",
+    instructorCredentials: ["Certified Breathing Coach"],
+    access: {
+      type: "free",
+      currency: "ETH",
+    },
   }));
 };
 
@@ -184,14 +197,7 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
     onPatternSelect(pattern);
   };
 
-  const formatDuration = (duration: number) => {
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    }
-    return `${seconds}s`;
-  };
+  // Using consolidated formatters from utils
 
   const PatternCard = ({ pattern }: { pattern: PatternWithStats }) => {
     const isRecommended = recommendations.includes(pattern.id);

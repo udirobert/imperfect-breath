@@ -65,17 +65,17 @@ python main.py  # API server on port 8000
 npm run dev  # Frontend on port 4556
 
 # Configure frontend to use local backend API
-echo "VITE_HETZNER_SERVICE_URL=http://localhost:8000" > .env.local
+echo "VITE_HETZNER_SERVICE_URL=http://localhost:8001" > .env.local
 ```
 
 **Test Backend APIs:**
 
 ```bash
 # Test API health endpoint
-curl http://localhost:8000/api/health
+curl http://localhost:8001/api/health
 
 # Test AI analysis API endpoint
-curl -X POST http://localhost:8000/api/ai-analysis \
+curl -X POST http://localhost:8001/api/ai-analysis \
   -H "Content-Type: application/json" \
   -d '{"session_data": {"duration": 300}}'
 
@@ -151,7 +151,7 @@ npm install
 
 **AI features not working:**
 
-- Check if backend is running: `curl http://localhost:8000/api/health`
+- Check if backend is running: `curl http://localhost:8001/api/health`
 - Verify API keys in `.env` file
 
 ## 📝 Environment Setup (Optional)
@@ -173,7 +173,7 @@ VITE_SUPABASE_URL=your_url
 VITE_SUPABASE_ANON_KEY=your_key
 
 # Backend (if running locally)
-VITE_HETZNER_SERVICE_URL=http://localhost:8000
+VITE_HETZNER_SERVICE_URL=http://
 ```
 
 ## 🚀 Quick Test Checklist

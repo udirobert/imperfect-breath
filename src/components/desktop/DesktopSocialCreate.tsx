@@ -46,7 +46,10 @@ import {
   AtSign,
   Link2,
   BarChart,
-  Settings2
+  Settings2,
+  Timer,
+  AlertTriangle,
+  Info
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSessionHistory } from "../../hooks/useSessionHistory";
@@ -95,10 +98,10 @@ export const DesktopSocialCreate: React.FC<DesktopSocialCreateProps> = ({
   // Calculate user stats (DRY: reuse mobile logic)
   const stats: SessionStats = {
     totalSessions: history.length,
-    totalMinutes: Math.round(history.reduce((sum, session) => sum + (session.duration || 0), 0) / 60),
+    totalMinutes: Math.round(history.reduce((sum, session) => sum + (session.session_duration || 0), 0) / 60),
     currentStreak: calculateStreak(),
     favoritePattern: getMostUsedPattern(),
-    lastSessionScore: history[0]?.score || 0,
+    lastSessionScore: history[0]?.quality_score || 0,
     weeklyGoalProgress: calculateWeeklyProgress(),
     ...prefilledStats
   };
@@ -107,11 +110,11 @@ export const DesktopSocialCreate: React.FC<DesktopSocialCreateProps> = ({
     const today = new Date().toDateString();
     let streak = 0;
     const sortedHistory = [...history].sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     
     for (let i = 0; i < sortedHistory.length; i++) {
-      const sessionDate = new Date(sortedHistory[i].timestamp).toDateString();
+      const sessionDate = new Date(sortedHistory[i].created_at).toDateString();
       const expectedDate = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toDateString();
       if (sessionDate === expectedDate) {
         streak++;
@@ -124,7 +127,7 @@ export const DesktopSocialCreate: React.FC<DesktopSocialCreateProps> = ({
 
   function getMostUsedPattern(): string {
     const patternCounts = history.reduce((counts, session) => {
-      const pattern = session.patternName || "Box Breathing";
+      const pattern = session.pattern_name || "Box Breathing";
       counts[pattern] = (counts[pattern] || 0) + 1;
       return counts;
     }, {} as Record<string, number>);
@@ -135,7 +138,7 @@ export const DesktopSocialCreate: React.FC<DesktopSocialCreateProps> = ({
   function calculateWeeklyProgress(): number {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const weekSessions = history.filter(session => 
-      new Date(session.timestamp).getTime() > weekAgo
+      new Date(session.created_at).getTime() > weekAgo
     );
     return Math.min(100, (weekSessions.length / 7) * 100);
   }

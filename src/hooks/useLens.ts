@@ -65,7 +65,7 @@ export interface UseLensReturn {
   preferences: UserPreferences;
 
   // Core actions
-  authenticate: (address: string) => Promise<SocialActionResult>;
+  authenticate: (address?: string) => Promise<SocialActionResult>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<SocialActionResult>;
 
@@ -196,8 +196,12 @@ export const useLens = (): UseLensReturn => {
           },
         });
 
-        if (!challengeResponse.success || !challengeResponse.result) {
-          throw new Error("Failed to get authentication challenge");
+        if (!challengeResponse.success) {
+          throw new Error(challengeResponse.error || "Failed to get authentication challenge");
+        }
+
+        if (!challengeResponse.result) {
+          throw new Error("No challenge result returned");
         }
 
         // Sign challenge
@@ -207,7 +211,7 @@ export const useLens = (): UseLensReturn => {
 
         // Authenticate
         const authResult = await lensAPI.authenticate({
-          challengeId: challengeResponse.result.id,
+          challengeId: challengeResponse.result!.id,
           signature,
           accountOwner: {
             app: import.meta.env.VITE_LENS_APP_ADDRESS || "imperfect-breath",
@@ -216,16 +220,24 @@ export const useLens = (): UseLensReturn => {
           },
         });
 
-        if (!authResult.success || !authResult.result) {
-          throw new Error("Authentication failed");
+        if (!authResult.success) {
+          throw new Error(authResult.error || "Authentication failed");
         }
 
-        // Store session
-        const tokens: LensAuthTokens = {
-          accessToken: authResult.result.accessToken,
-          refreshToken: authResult.result.refreshToken,
-          expiresAt: authResult.result.expiresAt,
-        };
+        if (!authResult.result) {
+          throw new Error("No authentication result returned");
+        }
+
+        const { accessToken, refreshToken, expiresAt } = authResult.result;
+
+        // Store tokens
+        localStorage.setItem("lens-access-token", accessToken);
+        localStorage.setItem("lens-refresh-token", refreshToken);
+        localStorage.setItem("lens-expires-at", expiresAt);
+
+        // Update state
+        setAccessToken(accessToken);
+        setExpiresAt(expiresAt);
 
         await setSession(tokens);
         setAuthTokens(tokens);

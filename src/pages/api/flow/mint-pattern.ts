@@ -1,7 +1,7 @@
 // Using more generic types to avoid import errors
 import NFTClient from '../../../lib/flow/clients/nft-client';
-import { handleApiError, createError } from '../../../lib/utils/error-utils';
-import { supabase } from '../../../lib/supabase';
+import { handleApiError, createError } from '../../../lib/errors/error-types';
+import { supabase } from '../../../integrations/supabase/client';
 import type { BreathingPatternAttributes, NFTMetadata, RoyaltyInfo } from '../../../lib/flow/types';
 
 /**

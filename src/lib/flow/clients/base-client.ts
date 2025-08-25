@@ -13,7 +13,7 @@ import type {
   TransactionStatus,
   FlowError
 } from '../types';
-import { handleError } from '../../../lib/utils/error-utils';
+import { handleError } from '../../errors/error-types';
 import { startTimer, timed } from '../../../lib/utils/performance-utils';
 import { getCache } from '../../../lib/utils/cache-utils';
 

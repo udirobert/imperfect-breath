@@ -38,6 +38,7 @@ export enum RecoveryStrategy {
   RETRY = 'retry',
   REFRESH = 'refresh',
   RECONNECT = 'reconnect',
+  RESTART = 'restart',
   FALLBACK = 'fallback',
   USER_ACTION = 'user_action',
   IGNORE = 'ignore',
@@ -55,7 +56,7 @@ export interface ErrorInfo {
   severity: ErrorSeverity;
   recovery: RecoveryStrategy;
   timestamp: number;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   stack?: string;
   userMessage: string;
   actionLabel?: string;
@@ -71,7 +72,7 @@ export class AppError extends Error {
   public readonly severity: ErrorSeverity;
   public readonly recovery: RecoveryStrategy;
   public readonly timestamp: number;
-  public readonly context: Record<string, any>;
+  public readonly context: Record<string, unknown>;
   public readonly userMessage: string;
   public readonly actionLabel?: string;
   public readonly action?: () => void | Promise<void>;
@@ -81,7 +82,7 @@ export class AppError extends Error {
     category: ErrorCategory,
     severity: ErrorSeverity = ErrorSeverity.MEDIUM,
     recovery: RecoveryStrategy = RecoveryStrategy.USER_ACTION,
-    context: Record<string, any> = {},
+    context: Record<string, unknown> = {},
     userMessage?: string,
     actionLabel?: string,
     action?: () => void | Promise<void>
@@ -144,7 +145,7 @@ export class AppError extends Error {
 export class NetworkError extends AppError {
   constructor(
     message: string,
-    context: Record<string, any> = {},
+    context: Record<string, unknown> = {},
     recovery: RecoveryStrategy = RecoveryStrategy.RETRY
   ) {
     super(
@@ -166,7 +167,7 @@ export class NetworkError extends AppError {
 export class CameraError extends AppError {
   constructor(
     message: string,
-    context: Record<string, any> = {},
+    context: Record<string, unknown> = {},
     recovery: RecoveryStrategy = RecoveryStrategy.USER_ACTION
   ) {
     const userMessage = message.includes('NotAllowedError')
@@ -194,7 +195,7 @@ export class CameraError extends AppError {
 export class WalletError extends AppError {
   constructor(
     message: string,
-    context: Record<string, any> = {},
+    context: Record<string, unknown> = {},
     recovery: RecoveryStrategy = RecoveryStrategy.RETRY
   ) {
     const userMessage = message.includes('rejected')
@@ -222,7 +223,7 @@ export class WalletError extends AppError {
 export class SessionError extends AppError {
   constructor(
     message: string,
-    context: Record<string, any> = {},
+    context: Record<string, unknown> = {},
     recovery: RecoveryStrategy = RecoveryStrategy.RESTART
   ) {
     super(
@@ -244,7 +245,7 @@ export class SessionError extends AppError {
 export class AuthError extends AppError {
   constructor(
     message: string,
-    context: Record<string, any> = {},
+    context: Record<string, unknown> = {},
     recovery: RecoveryStrategy = RecoveryStrategy.USER_ACTION
   ) {
     super(
@@ -266,7 +267,7 @@ export class AuthError extends AppError {
 export class AIError extends AppError {
   constructor(
     message: string,
-    context: Record<string, any> = {},
+    context: Record<string, unknown> = {},
     recovery: RecoveryStrategy = RecoveryStrategy.FALLBACK
   ) {
     super(
@@ -288,7 +289,7 @@ export class ValidationError extends AppError {
   constructor(
     message: string,
     field?: string,
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ) {
     super(
       message,
@@ -308,7 +309,7 @@ export class ValidationError extends AppError {
 export class CriticalError extends AppError {
   constructor(
     message: string,
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ) {
     super(
       message,
@@ -325,10 +326,109 @@ export class CriticalError extends AppError {
 }
 
 /**
+ * Utility functions for error handling
+ */
+
+/**
+ * Create an error with a specific code and context
+ */
+export function createError(
+  code: string,
+  message: string,
+  context?: Record<string, unknown>
+): AppError {
+  return new AppError(
+    message,
+    ErrorCategory.UNKNOWN,
+    ErrorSeverity.MEDIUM,
+    RecoveryStrategy.USER_ACTION,
+    context
+  );
+}
+
+/**
+ * Handle an error by wrapping it with additional context
+ * 
+ * @param operation The operation that was being performed
+ * @param error The original error
+ * @returns A new error with additional context
+ */
+export function handleError(operation: string, error: unknown): Error {
+  if (error instanceof AppError) {
+    return error;
+  }
+  
+  if (error instanceof Error) {
+    const message = `Error during ${operation}: ${error.message}`;
+    console.error(message, error);
+    return new AppError(
+      message,
+      ErrorCategory.UNKNOWN,
+      ErrorSeverity.MEDIUM,
+      RecoveryStrategy.USER_ACTION,
+      { originalError: error.message }
+    );
+  }
+  
+  const message = `Unknown error during ${operation}`;
+  console.error(message, error);
+  return new AppError(
+    message,
+    ErrorCategory.UNKNOWN,
+    ErrorSeverity.MEDIUM,
+    RecoveryStrategy.USER_ACTION,
+    { originalError: String(error) }
+  );
+}
+
+/**
+ * Handle API errors with proper response formatting
+ *
+ * @param res The response object
+ * @param error The error that occurred
+ * @param operation Description of the operation that failed
+ * @returns Response with appropriate status code and error details
+ */
+export function handleApiError(res: { status: (code: number) => { json: (data: any) => any } }, error: unknown, operation: string): unknown {
+  console.error(`API Error - ${operation}:`, error);
+  
+  // Default to 500 Internal Server Error
+  let statusCode = 500;
+  let errorMessage = `Error during ${operation}`;
+  let errorCode = 'INTERNAL_SERVER_ERROR';
+  
+  if (error instanceof AppError) {
+    // Map error categories to HTTP status codes
+    errorCode = error.category.toUpperCase();
+    errorMessage = error.message;
+    
+    if (error.category === ErrorCategory.AUTHENTICATION) {
+      statusCode = 401;
+    } else if (error.category === ErrorCategory.AUTHORIZATION) {
+      statusCode = 403;
+    } else if (error.category === ErrorCategory.VALIDATION) {
+      statusCode = 400;
+    } else if (error.category === ErrorCategory.NETWORK) {
+      statusCode = 503;
+    }
+  } else if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+  
+  return res.status(statusCode).json({
+    success: false,
+    error: {
+      code: errorCode,
+      message: errorMessage
+    }
+  });
+}
+
+/**
  * Error factory for creating typed errors from generic errors
  */
 export class ErrorFactory {
-  static fromError(error: Error, category?: ErrorCategory, context?: Record<string, any>): AppError {
+  static fromError(error: Error, category?: ErrorCategory, context?: Record<string, unknown>): AppError {
     if (error instanceof AppError) {
       return error;
     }
@@ -347,15 +447,15 @@ export class ErrorFactory {
     );
   }
 
-  static fromNetworkError(error: Error, context?: Record<string, any>): NetworkError {
+  static fromNetworkError(error: Error, context?: Record<string, unknown>): NetworkError {
     return new NetworkError(error.message, { originalError: error.name, ...context });
   }
 
-  static fromCameraError(error: Error, context?: Record<string, any>): CameraError {
+  static fromCameraError(error: Error, context?: Record<string, unknown>): CameraError {
     return new CameraError(error.message, { originalError: error.name, ...context });
   }
 
-  static fromWalletError(error: Error, context?: Record<string, any>): WalletError {
+  static fromWalletError(error: Error, context?: Record<string, unknown>): WalletError {
     return new WalletError(error.message, { originalError: error.name, ...context });
   }
 

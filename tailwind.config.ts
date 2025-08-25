@@ -1,5 +1,7 @@
 
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
+import tailwindcssAnimationDelay from "tailwindcss-animation-delay";
 
 export default {
 	darkMode: ["class"],
@@ -93,5 +95,5 @@ export default {
       }
 		}
 	},
-	plugins: [require("tailwindcss-animate"), require('tailwindcss-animation-delay')],
+	plugins: [tailwindcssAnimate, tailwindcssAnimationDelay],
 } satisfies Config;

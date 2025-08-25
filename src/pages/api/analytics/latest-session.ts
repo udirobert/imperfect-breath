@@ -1,5 +1,5 @@
-import { createError, handleApiError } from '../../../lib/utils/error-utils';
-import { supabase } from '../../../lib/supabase';
+import { createError, handleApiError } from '../../../lib/errors/error-types';
+import { supabase } from '../../../integrations/supabase/client';
 
 /**
  * API route for retrieving the latest breathing session data for a user

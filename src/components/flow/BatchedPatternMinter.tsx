@@ -179,15 +179,20 @@ export const BatchedPatternMinter: React.FC = () => {
       // Convert patterns to the format expected by batchMintPatterns
       const formattedPatterns = patternsToMint.map((pattern) => ({
         attributes: {
-          inhaleSeconds: pattern.inhale,
-          holdSeconds: pattern.hold,
-          exhaleSeconds: pattern.exhale,
-          restSeconds: pattern.rest,
+          inhale: pattern.inhale,
+          hold: pattern.hold,
+          exhale: pattern.exhale,
+          rest: pattern.rest,
+          difficulty: "intermediate" as "beginner" | "intermediate" | "advanced",
+          category: "breathing",
+          tags: ["breathing", "meditation"],
+          totalCycles: 1,
+          estimatedDuration: pattern.inhale + pattern.hold + pattern.exhale + pattern.rest,
         },
         metadata: {
           name: pattern.name,
           description: pattern.description,
-          image: "https://example.com/placeholder.png", // Placeholder image URL
+          image: "https://example.com/placeholder.png",
           attributes: [
             { trait_type: "Type", value: "Breathing Pattern" },
             { trait_type: "Inhale", value: pattern.inhale.toString() },
@@ -196,6 +201,7 @@ export const BatchedPatternMinter: React.FC = () => {
             { trait_type: "Rest", value: pattern.rest.toString() },
           ],
         },
+        recipient: "", // This will be filled by the hook
       }));
 
       // Execute the batch mint operation

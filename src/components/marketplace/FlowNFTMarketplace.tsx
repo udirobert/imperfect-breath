@@ -29,6 +29,7 @@ import {
 import { useFlow } from "../../hooks/useFlow";
 import { useLens } from "../../hooks/useLens";
 import type { BreathingPatternNFT } from "../../lib/flow/types";
+import type { BreathingSession } from "../../lib/lens/types";
 
 interface MarketplaceFilters {
   category: string;
@@ -62,7 +63,7 @@ export const FlowNFTMarketplace: React.FC = () => {
 
   const {
     isAuthenticated: lensAuthenticated,
-    shareBreathingPattern,
+    shareBreathingSession,
     isPosting,
   } = useLens();
 
@@ -259,7 +260,7 @@ export const FlowNFTMarketplace: React.FC = () => {
       } catch (error) {
         console.error("Purchase failed:", error);
         toast.error("Purchase failed");
-      }
+      } 
     },
     [flowState.isConnected, connectFlow],
   );
@@ -268,27 +269,23 @@ export const FlowNFTMarketplace: React.FC = () => {
   const handleShareToLens = useCallback(
     async (nft: FlowNFTWithMetadata) => {
       try {
-        const pattern = {
+        const session: BreathingSession = {
           id: nft.id,
-          name: nft.name,
-          description: nft.description,
-          category: nft.attributes.category,
-          difficulty: nft.attributes.difficulty,
+          patternName: nft.name,
           duration: nft.attributes.estimatedDuration,
-          creator: nft.owner,
-          phases: [],
-          tags: nft.attributes.tags || [],
-          targetAudience: ["general"],
+          breathHoldTime: nft.attributes.hold,
+          restlessnessScore: 0, // No restlessness score available in this context
+          timestamp: new Date().toISOString(),
         };
 
-        await shareBreathingPattern(pattern);
+        await shareBreathingSession(session);
         toast.success("Shared to Lens Protocol!");
       } catch (error) {
         console.error("Lens sharing failed:", error);
         toast.error("Failed to share to Lens");
       }
     },
-    [shareBreathingPattern],
+    [shareBreathingSession],
   );
 
   // Load NFTs on mount and connection changes

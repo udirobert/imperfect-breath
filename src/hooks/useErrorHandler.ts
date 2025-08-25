@@ -195,9 +195,7 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     errorReporter.reportError(error, context);
   }, []);
 
-  /**
-   * Wrap async function with error handling
-   */
+  /**\n   * Wrap async function with error handling\n   */
   const wrapAsync = useCallback(<T extends any[], R>(
     fn: (...args: T) => Promise<R>
   ) => {

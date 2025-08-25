@@ -12,15 +12,15 @@ export const FollowButton = ({
   address,
   isFollowed = false,
 }: FollowButtonProps) => {
-  const { followProfile, unfollowProfile, isLoading } = useLens();
+  const { followUser, unfollowUser, isFollowing } = useLens();
   const [userIsFollowed, setUserIsFollowed] = useState(isFollowed);
 
   const handleFollow = async () => {
     if (!userIsFollowed) {
-      await followProfile(address);
+      await followUser(address);
       setUserIsFollowed(true);
     } else {
-      await unfollowProfile(address);
+      await unfollowUser(address);
       setUserIsFollowed(false);
     }
   };
@@ -28,11 +28,11 @@ export const FollowButton = ({
   return (
     <Button
       onClick={handleFollow}
-      disabled={isLoading}
+      disabled={isFollowing}
       size="sm"
       variant={userIsFollowed ? "outline" : "default"}
     >
-      {isLoading ? (
+      {isFollowing ? (
         "Processing..."
       ) : userIsFollowed ? (
         <>

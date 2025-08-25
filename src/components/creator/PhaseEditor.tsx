@@ -25,12 +25,13 @@ import {
   Timer,
   AlertCircle,
 } from "lucide-react";
-import type { BreathingPhase } from "../../lib/breathingPatterns";
+import type { CustomBreathingPhase } from "../../lib/breathingPatterns";
+import { formatDuration } from "../../lib/utils/formatters";
 
 interface PhaseEditorProps {
-  phases: BreathingPhase[];
-  onChange: (phases: BreathingPhase[]) => void;
-  onPreview?: (phases: BreathingPhase[]) => void;
+  phases: CustomBreathingPhase[];
+  onChange: (phases: CustomBreathingPhase[]) => void;
+  onPreview?: (phases: CustomBreathingPhase[]) => void;
   errors?: Record<string, string>;
 }
 
@@ -42,7 +43,7 @@ export const PhaseEditor: React.FC<PhaseEditorProps> = ({
 }) => {
   const [previewPhase, setPreviewPhase] = useState<number | null>(null);
 
-  const updatePhase = (index: number, updates: Partial<BreathingPhase>) => {
+  const updatePhase = (index: number, updates: Partial<CustomBreathingPhase>) => {
     const newPhases = phases.map((phase, i) =>
       i === index ? { ...phase, ...updates } : phase
     );
@@ -50,11 +51,10 @@ export const PhaseEditor: React.FC<PhaseEditorProps> = ({
   };
 
   const addPhase = () => {
-    const newPhase: BreathingPhase = {
-      name: "New Phase",
-      duration: 4,
+    const newPhase: CustomBreathingPhase = {
+      name: "inhale",
+      duration: 4000,
       text: "Enter instruction here",
-      instruction: "Enter instruction here",
     };
     onChange([...phases, newPhase]);
   };
@@ -67,9 +67,9 @@ export const PhaseEditor: React.FC<PhaseEditorProps> = ({
 
   const duplicatePhase = (index: number) => {
     const phaseToDuplicate = phases[index];
-    const duplicatedPhase = {
+    const duplicatedPhase: CustomBreathingPhase = {
       ...phaseToDuplicate,
-      name: `${phaseToDuplicate.name} (Copy)`,
+      name: phaseToDuplicate.name,
     };
     const newPhases = [...phases];
     newPhases.splice(index + 1, 0, duplicatedPhase);
@@ -87,16 +87,10 @@ export const PhaseEditor: React.FC<PhaseEditorProps> = ({
   };
 
   const getTotalDuration = () => {
-    return phases.reduce((total, phase) => total + phase.duration, 0);
+    return phases.reduce((total, phase) => total + (phase.duration || 0), 0);
   };
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return minutes > 0
-      ? `${minutes}m ${remainingSeconds}s`
-      : `${remainingSeconds}s`;
-  };
+  // Using consolidated formatters from utils
 
   const handlePreviewPhase = (index: number) => {
     if (previewPhase === index) {
@@ -189,7 +183,7 @@ export const PhaseEditor: React.FC<PhaseEditorProps> = ({
                                   id={`phase-name-${index}`}
                                   value={phase.name}
                                   onChange={(e) =>
-                                    updatePhase(index, { name: e.target.value })
+                                    updatePhase(index, { name: e.target.value as any })
                                   }
                                   placeholder="e.g., Inhale"
                                 />
@@ -218,11 +212,10 @@ export const PhaseEditor: React.FC<PhaseEditorProps> = ({
                               </Label>
                               <Textarea
                                 id={`phase-instruction-${index}`}
-                                value={phase.instruction || phase.text}
+                                value={phase.text || ""}
                                 onChange={(e) =>
                                   updatePhase(index, {
-                                    instruction: e.target.value,
-                                    text: e.target.value, // Keep both in sync
+                                    text: e.target.value,
                                   })
                                 }
                                 placeholder="Describe what the user should do during this phase..."

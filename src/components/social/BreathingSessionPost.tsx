@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { useLens } from "../../hooks/useLens";
 import type { BreathingSession } from "../../lib/lens";
+import type { SessionData, ShareableSessionData } from "../../lib/sharing";
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -123,10 +124,19 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
   const handleTwitterShare = () => {
     const challengeHashtags = getSelectedChallengeHashtags();
       
-    shareOnTwitter(sessionData, { 
+    // Convert BreathingSession to SessionData
+    const sessionDataForSharing: SessionData = {
+      patternName: sessionData.patternName,
+      sessionDuration: sessionData.duration,
+      breathHoldTime: sessionData.breathHoldTime || 0,
+      restlessnessScore: sessionData.restlessnessScore || 0,
+      timestamp: sessionData.timestamp,
+    };
+
+    shareOnTwitter(sessionDataForSharing, { 
       tone: 'mindful',
       customHashtags: challengeHashtags.length > 0 ? 
-        ["#Mindfulness", "#Wellness", "#BreathingPractice", "#InnerPeace", ...challengeHashtags] : 
+        ["#Mindfulness", "#Wellness", "#BreathingPractice", "#InnerPeace", ...challengeHashtags.filter((tag): tag is string => tag !== undefined)] : 
         undefined
     });
     onPublished?.("twitter-share");
@@ -134,7 +144,20 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
 
   // Handle native sharing
   const handleNativeShare = async () => {
-    const success = await shareNative(sessionData, { tone: 'mindful' });
+    // Convert BreathingSession to ShareableSessionData
+    const shareableSessionData: ShareableSessionData = {
+      patternName: sessionData.patternName,
+      sessionDuration: sessionData.duration,
+      breathHoldTime: sessionData.breathHoldTime || 0,
+      restlessnessScore: sessionData.restlessnessScore || 0,
+      timestamp: sessionData.timestamp,
+      score: sessionData.score,
+      cycles: sessionData.cycles,
+      insights: sessionData.insights,
+      flowNFTId: sessionData.nftId,
+    };
+
+    const success = await shareNative(shareableSessionData, { tone: 'mindful' });
     if (success) {
       onPublished?.("native-share");
     } else {
@@ -146,7 +169,20 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
   // Handle copy to clipboard
   const handleCopyToClipboard = async () => {
     try {
-      await copyToClipboard(sessionData, { tone: 'mindful' });
+      // Convert BreathingSession to ShareableSessionData
+      const shareableSessionData: ShareableSessionData = {
+        patternName: sessionData.patternName,
+        sessionDuration: sessionData.duration,
+        breathHoldTime: sessionData.breathHoldTime || 0,
+        restlessnessScore: sessionData.restlessnessScore || 0,
+        timestamp: sessionData.timestamp,
+        score: sessionData.score,
+        cycles: sessionData.cycles,
+        insights: sessionData.insights,
+        flowNFTId: sessionData.nftId,
+      };
+
+      await copyToClipboard(shareableSessionData, { tone: 'mindful' });
       onPublished?.("clipboard-copy");
     } catch (error) {
       // Error already handled in utility

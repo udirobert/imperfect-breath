@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useComment } from "../hooks/useComment";
 import { useLens } from "../hooks/useLens";
 import {
   Dialog,
@@ -20,8 +19,7 @@ interface CommentButtonProps {
 export const CommentButton = ({ publicationId }: CommentButtonProps) => {
   const [open, setOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const { isAuthenticated, authenticate } = useLens();
-  const { comment, isCommenting, commentError } = useComment();
+  const { isAuthenticated, authenticate, createComment, isPosting } = useLens();
 
   const handleOpenComment = async () => {
     if (!isAuthenticated) {
@@ -43,7 +41,7 @@ export const CommentButton = ({ publicationId }: CommentButtonProps) => {
     }
 
     try {
-      await comment(publicationId, commentText);
+      await createComment(publicationId, commentText);
       setCommentText("");
       setOpen(false);
       toast.success("Comment submitted successfully!");
@@ -55,9 +53,14 @@ export const CommentButton = ({ publicationId }: CommentButtonProps) => {
 
   return (
     <>
-      <Button onClick={handleOpenComment} variant="ghost" size="sm">
+      <Button 
+        onClick={handleOpenComment} 
+        variant="ghost" 
+        size="sm"
+        disabled={isPosting}
+      >
         <MessageSquare className="w-4 h-4 mr-2" />
-        Comment
+        {isPosting ? "Commenting..." : "Comment"}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -80,9 +83,16 @@ export const CommentButton = ({ publicationId }: CommentButtonProps) => {
             </Button>
             <Button
               onClick={handleSubmitComment}
-              disabled={isCommenting || !commentText.trim()}
+              disabled={isPosting || !commentText.trim()}
             >
-              {isCommenting ? "Submitting..." : "Submit Comment"}
+              {isPosting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Posting...
+                </>
+              ) : (
+                "Post Comment"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

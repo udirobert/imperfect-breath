@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth, UserRole } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
+import type { UserRole } from "@/types/blockchain";
 
 interface ProtectedRouteProps {
   requiredRole: UserRole;

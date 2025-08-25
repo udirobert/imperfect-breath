@@ -1,15 +1,6 @@
 import { useState, useCallback } from 'react';
-import { SecureAIClient } from '../lib/ai/secure-client';
-import type { SecureAIProvider, AIAnalysisResponse } from '../lib/ai/config';
-
-interface SessionData {
-  pattern: string;
-  duration: number;
-  averageBpm: number;
-  consistencyScore: number;
-  restlessnessScore: number;
-  breathHoldDuration: number;
-}
+import { api } from '../lib/api/unified-client';
+import type { SecureAIProvider, AIAnalysisResponse, SessionData } from '../lib/ai/config';
 
 interface SecureAIAnalysisResult extends AIAnalysisResponse {
   provider: string;
@@ -26,23 +17,27 @@ export const useSecureAIAnalysis = () => {
     sessionData: SessionData
   ): Promise<SecureAIAnalysisResult> => {
     try {
-      const result = await SecureAIClient.analyzeSession(provider, {
-        pattern: sessionData.pattern,
-        duration: sessionData.duration,
-        averageBpm: sessionData.averageBpm,
-        consistencyScore: sessionData.consistencyScore,
+      const response = await api.ai.analyzeSession(provider, {
+        pattern: sessionData.patternName,
+        duration: sessionData.sessionDuration,
+        averageBpm: sessionData.bpm,
+        consistencyScore: sessionData.visionMetrics?.consistencyScore,
         restlessnessScore: sessionData.restlessnessScore,
-        breathHoldDuration: sessionData.breathHoldDuration
+        breathHoldDuration: sessionData.breathHoldTime
       });
 
+      if (!response.success) {
+        throw new Error(response.error || 'Analysis failed');
+      }
+
       return {
-        ...result,
-        provider: SecureAIClient.getProviderInfo(provider).name
+        ...response.data,
+        provider: api.ai.getProviderInfo(provider)?.name || provider
       };
     } catch (error) {
       console.error(`${provider} analysis failed:`, error);
       return {
-        provider: SecureAIClient.getProviderInfo(provider).name,
+        provider: api.ai.getProviderInfo(provider)?.name || provider,
         analysis: 'Analysis failed - using fallback response',
         suggestions: ['Continue practicing regularly', 'Focus on consistency'],
         score: { overall: 0, focus: 0, consistency: 0, progress: 0 },
@@ -86,12 +81,12 @@ export const useSecureAIAnalysis = () => {
   const testConnections = useCallback(async () => {
     const providers: SecureAIProvider[] = ['google', 'openai', 'anthropic'];
     const results = await Promise.allSettled(
-      providers.map(provider => SecureAIClient.testConnection(provider))
+      providers.map(provider => api.ai.testConnection(provider))
     );
     
     return providers.map((provider, index) => ({
       provider,
-      name: SecureAIClient.getProviderInfo(provider).name,
+      name: api.ai.getProviderInfo(provider)?.name || provider,
       connected: results[index].status === 'fulfilled' && 
                  (results[index] as PromiseFulfilledResult<boolean>).value
     }));
@@ -102,12 +97,18 @@ export const useSecureAIAnalysis = () => {
     sessionData: Partial<SessionData> & { experienceLevel?: string }
   ) => {
     try {
-      return await SecureAIClient.generatePattern(provider, {
-        consistencyScore: sessionData.consistencyScore,
+      const response = await api.ai.generatePattern(provider, {
+        consistencyScore: sessionData.visionMetrics?.consistencyScore,
         restlessnessScore: sessionData.restlessnessScore,
-        averageBpm: sessionData.averageBpm,
+        averageBpm: sessionData.bpm,
         experienceLevel: sessionData.experienceLevel || 'beginner'
       });
+
+      if (!response.success) {
+        throw new Error(response.error || 'Pattern generation failed');
+      }
+
+      return response.data;
     } catch (error) {
       console.error(`Pattern generation failed for ${provider}:`, error);
       throw error;

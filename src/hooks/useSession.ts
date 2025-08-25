@@ -238,10 +238,10 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
   useEffect(() => {
     if (enableVision && vision?.state.metrics) {
-      const { stillness, presence, posture, faceLandmarks } = vision.state.metrics;
+      const { stillness, presence, posture, restlessnessScore, faceLandmarks } = vision.state.metrics;
       
       // Create a hash to detect actual changes in metrics
-      const metricsHash = JSON.stringify({ stillness, presence, posture });
+      const metricsHash = JSON.stringify({ stillness, presence, posture, restlessnessScore });
       
       // Only update if metrics actually changed
       if (metricsHash !== previousVisionMetricsRef.current) {
@@ -251,11 +251,12 @@ export const useSession = (options: UseSessionOptions = {}) => {
           stillness,
           presence,
           posture,
+          restlessnessScore,
           faceLandmarks,
         });
       }
     }
-  }, [enableVision, vision?.state.metrics?.stillness, vision?.state.metrics?.presence, vision?.state.metrics?.posture, updateVisionMetrics]);
+  }, [enableVision, vision?.state.metrics?.stillness, vision?.state.metrics?.presence, vision?.state.metrics?.posture, vision?.state.metrics?.restlessnessScore, updateVisionMetrics]);
 
   // ========================================================================
   // CLEANUP - Proper resource management

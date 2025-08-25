@@ -173,7 +173,13 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
     const customPattern: CustomPattern = {
       id: pattern.id,
       name: pattern.name,
-      category: pattern.userBenefit,
+      description: `A ${pattern.name.toLowerCase()} breathing pattern for ${pattern.userBenefit}.`,
+      category: pattern.userBenefit === "sleep" || pattern.userBenefit === "focus" || pattern.userBenefit === "performance" || pattern.userBenefit === "stress" || pattern.userBenefit === "energy" 
+        ? pattern.userBenefit 
+        : "stress", // default to stress if not a valid category
+      difficulty: "beginner",
+      duration: pattern.inhale + pattern.hold + pattern.exhale + pattern.hold_after_exhale,
+      creator: "user", // This should be replaced with the actual user ID
       phases: [
         { name: 'inhale', duration: pattern.inhale * 1000 },
         { name: 'hold', duration: pattern.hold * 1000 },

@@ -225,7 +225,7 @@ export const DesktopAdaptiveSessionFlow: React.FC<
                 <h1 className="text-2xl font-bold">{getTimeBasedGreeting()}</h1>
                 <p className="text-muted-foreground">
                   {user
-                    ? `Welcome back, ${user.name}`
+                    ? `Welcome back, ${user.profile?.name}`
                     : "Choose your breathing goal to get started"}
                 </p>
               </div>
@@ -480,7 +480,7 @@ export const DesktopAdaptiveSessionFlow: React.FC<
                               </div>
                               <div className="flex items-center gap-1">
                                 <Target className="h-3 w-3" />
-                                <span>{rec.expectedBenefit}</span>
+                                <span>{rec.reason}</span>
                               </div>
                             </div>
                           </CardContent>
@@ -574,7 +574,7 @@ export const DesktopAdaptiveSessionFlow: React.FC<
                     <span className="font-medium">
                       {
                         history.filter((h) => {
-                          const sessionDate = new Date(h.timestamp);
+                          const sessionDate = new Date(h.created_at);
                           const weekAgo = new Date();
                           weekAgo.setDate(weekAgo.getDate() - 7);
                           return sessionDate > weekAgo;
@@ -587,10 +587,14 @@ export const DesktopAdaptiveSessionFlow: React.FC<
                       Favorite Pattern
                     </span>
                     <span className="font-medium">
-                      {history.reduce((acc, h) => {
-                        acc[h.patternName] = (acc[h.patternName] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)}
+                      {(() => {
+                        const patternCounts = history.reduce((acc, h) => {
+                          acc[h.pattern_name] = (acc[h.pattern_name] || 0) + 1;
+                          return acc;
+                        }, {} as Record<string, number>);
+                        const mostUsedPattern = Object.entries(patternCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || "None";
+                        return mostUsedPattern;
+                      })()}
                     </span>
                   </div>
                 </div>

@@ -141,12 +141,12 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
       inhale: "Breathe in slowly through your nose",
       exhale: "Breathe out slowly through your mouth",
       hold: "Hold your breath gently",
-      rest: "Natural pause - breathe normally",
+      hold_after_exhale: "Natural pause - breathe normally",
     };
 
     const newPhase: CustomBreathingPhase = {
       name: type,
-      duration: type === "hold" ? 7000 : type === "rest" ? 2000 : 4000,
+      duration: type === "hold" ? 7000 : type === "hold_after_exhale" ? 2000 : 4000,
       text: phaseTexts[type] || "Follow your breath",
     };
 
@@ -560,7 +560,7 @@ const EnhancedPatternBuilder: React.FC<EnhancedPatternBuilderProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => addPhase("rest")}
+                    onClick={() => addPhase("hold_after_exhale")}
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Rest

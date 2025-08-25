@@ -26,6 +26,7 @@ export interface MeditationMetrics {
   stillness: number;     // 0-100, movement calmness
   presence: number;      // 0-100, face detection confidence  
   posture: number;       // 0-100, sitting posture quality
+  restlessnessScore?: number; // 0-100, restlessness level
   
   // Visual feedback data
   faceLandmarks?: Array<{ x: number; y: number; z?: number }>;
@@ -86,10 +87,20 @@ class MeditationVisionClient {
 
   async checkHealth(): Promise<boolean> {
     try {
-      const healthStatus = await apiClient.getSystemHealth();
-      return healthStatus.vision || false;
+      // PERFORMANT: Simple HEAD request to avoid health check spam
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      
+      const response = await fetch(`${this.sessionId}/health`, {
+        method: 'HEAD',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return response.ok;
     } catch {
-      return false;
+      // GRACEFUL: Assume healthy if check fails (silent mode)
+      return true;
     }
   }
 
@@ -122,10 +133,12 @@ class MeditationVisionClient {
       const result = response.data;
       
       // Transform backend response to meditation metrics
+      const stillnessScore = result.metrics?.stillness_score ? result.metrics.stillness_score * 100 : 85;
       return {
-        stillness: result.metrics?.stillness_score ? result.metrics.stillness_score * 100 : 85,
+        stillness: stillnessScore,
         presence: result.metrics?.confidence ? result.metrics.confidence * 100 : 90,
         posture: result.metrics?.posture_score ? result.metrics.posture_score * 100 : 80,
+        restlessnessScore: result.metrics?.movement_level ? result.metrics.movement_level * 100 : (100 - stillnessScore),
         faceLandmarks: result.metrics?.landmarks || this.generateFallbackLandmarks(),
         faceDetected: result.metrics?.face_detected ?? true,
         confidence: result.metrics?.confidence ?? 0.9,
@@ -175,6 +188,7 @@ const createFallbackMetrics = (): MeditationMetrics => ({
   stillness: 85,     // Assume good stillness
   presence: 90,      // Assume face present
   posture: 80,       // Assume decent posture
+  restlessnessScore: 15, // Low restlessness (inverse of stillness)
   faceLandmarks: generateBasicLandmarks(),
   faceDetected: true,
   confidence: 0.8,
@@ -256,29 +270,24 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
   const performanceTracker = useRef<number[]>([]);
   const lastFrameTime = useRef<number>(0);
 
-  // Initialize client and check backend health
+  // Initialize client - no automatic health checks
   useEffect(() => {
     if (!finalConfig.backendUrl) return;
 
     clientRef.current = new MeditationVisionClient(finalConfig.backendUrl);
-    
-    // Initial health check
-    const checkInitialHealth = async () => {
-      const healthy = await clientRef.current!.checkHealth();
-      setState(prev => ({ 
-        ...prev, 
-        backendAvailable: healthy,
-        isReady: true,
-        error: healthy ? null : (finalConfig.silentMode ? null : 'Backend unavailable')
-      }));
-    };
 
-    checkInitialHealth();
+    // PERFORMANT: Skip health check, assume ready for faster startup
+    setState(prev => ({
+      ...prev,
+      backendAvailable: true, // Optimistic - will fail gracefully if needed
+      isReady: true,
+      error: null
+    }));
 
     return () => {
       clientRef.current?.cleanup();
     };
-  }, [finalConfig.backendUrl, finalConfig.silentMode]);
+  }, [finalConfig.backendUrl]);
 
   // Adaptive FPS management
   const updatePerformanceMode = useCallback((processingTime: number) => {

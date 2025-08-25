@@ -424,7 +424,7 @@ const mintPatternNFTAction: Action = {
       
       try {
         // Make actual API call to Flow blockchain service
-        const response = await fetch('/api/flow/mint-pattern', {
+        const response = await fetch('/api/flow/mint-pattern', { // TODO: Update to use API_ENDPOINTS.flow.mintPattern
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

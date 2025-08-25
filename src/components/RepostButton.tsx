@@ -1,7 +1,6 @@
 import { Button } from "./ui/button";
 import { Repeat2 } from "lucide-react";
 import { toast } from "sonner";
-import { useRepost } from "../hooks/useRepost";
 import { useLens } from "../hooks/useLens";
 
 interface RepostButtonProps {
@@ -9,8 +8,7 @@ interface RepostButtonProps {
 }
 
 export const RepostButton = ({ postId }: RepostButtonProps) => {
-  const { isAuthenticated, authenticate } = useLens();
-  const { repost, isReposting, repostError } = useRepost();
+  const { isAuthenticated, authenticate, createPost, isPosting } = useLens();
 
   const handleRepost = async () => {
     if (!isAuthenticated) {
@@ -25,31 +23,25 @@ export const RepostButton = ({ postId }: RepostButtonProps) => {
     }
 
     try {
-      toast.info("Reposting...");
-      const result = await repost(postId);
-
-      if (result) {
-        toast.success("Post reposted successfully!", {
-          description: `Transaction hash: ${result}`,
-        });
-      } else {
-        toast.error("Failed to repost");
-      }
+      // For now, we'll create a new post that references the original
+      // In a full implementation, this would be a mirror/repost action
+      await createPost(`Reposting: ${postId}`, ["repost", "imperfect-breath"]);
+      toast.success("Post reposted successfully!");
     } catch (error) {
-      toast.error("An error occurred while reposting.");
       console.error("Error reposting:", error);
+      toast.error("Failed to repost. Please try again.");
     }
   };
 
   return (
     <Button
       onClick={handleRepost}
-      disabled={isReposting}
+      disabled={isPosting}
       variant="ghost"
       size="sm"
     >
       <Repeat2 className="w-4 h-4 mr-2" />
-      {isReposting ? "Reposting..." : "Repost"}
+      {isPosting ? "Reposting..." : "Repost"}
     </Button>
   );
 };

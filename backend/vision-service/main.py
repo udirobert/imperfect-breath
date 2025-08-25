@@ -27,15 +27,136 @@ import os
 import json
 import hashlib
 import httpx
+from pathlib import Path
+import urllib.request
+from contextlib import asynccontextmanager
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# Production Configuration
+CONFIG = {
+    "models_dir": Path("/app/models"),
+    "max_concurrent_sessions": int(os.getenv("MAX_CONCURRENT_SESSIONS", "10")),
+    "model_download_on_start": os.getenv("MODEL_DOWNLOAD_ON_START", "true").lower() == "true",
+    "session_timeout": 300,  # 5 minutes
+    "max_image_size": 1920,
+    "jpeg_quality": 85
+}
+
+# MediaPipe model URLs for production deployment
+MODEL_URLS = {
+    "face_detection": "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
+    "face_landmarks": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+    "pose_estimation": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task"
+}
+
+# Production Model Manager
+class ModelManager:
+    """Manages MediaPipe models with efficient loading and caching"""
+    
+    def __init__(self):
+        self.face_detector = None
+        self.face_landmarker = None
+        self.pose_landmarker = None
+        self.models_loaded = False
+        
+    async def download_models(self):
+        """Download models to local storage"""
+        CONFIG["models_dir"].mkdir(exist_ok=True)
+        
+        for model_name, url in MODEL_URLS.items():
+            model_path = CONFIG["models_dir"] / f"{model_name}.tflite"
+            if not model_path.exists():
+                logger.info(f"Downloading {model_name} model...")
+                try:
+                    urllib.request.urlretrieve(url, model_path)
+                    logger.info(f"Downloaded {model_name} to {model_path}")
+                except Exception as e:
+                    logger.error(f"Failed to download {model_name}: {e}")
+                    raise
+                    
+    def load_models(self):
+        """Load MediaPipe models"""
+        try:
+            # Face Detection
+            face_detection_path = CONFIG["models_dir"] / "face_detection.tflite"
+            if face_detection_path.exists():
+                self.face_detector = mp.solutions.face_detection.FaceDetection(
+                    model_selection=0,  # Short range model
+                    min_detection_confidence=0.5
+                )
+            
+            # Face Landmarks
+            face_landmarks_path = CONFIG["models_dir"] / "face_landmarks.task"
+            if face_landmarks_path.exists():
+                base_options = mp.tasks.BaseOptions(
+                    model_asset_path=str(face_landmarks_path)
+                )
+                options = mp.tasks.vision.FaceLandmarkerOptions(
+                    base_options=base_options,
+                    output_face_blendshapes=False,
+                    output_facial_transformation_matrixes=False,
+                    num_faces=1
+                )
+                self.face_landmarker = mp.tasks.vision.FaceLandmarker.create_from_options(options)
+            
+            # Pose Estimation  
+            pose_path = CONFIG["models_dir"] / "pose_estimation.task"
+            if pose_path.exists():
+                base_options = mp.tasks.BaseOptions(
+                    model_asset_path=str(pose_path)
+                )
+                options = mp.tasks.vision.PoseLandmarkerOptions(
+                    base_options=base_options,
+                    output_segmentation_masks=False,
+                    num_poses=1
+                )
+                self.pose_landmarker = mp.tasks.vision.PoseLandmarker.create_from_options(options)
+            
+            self.models_loaded = True
+            logger.info("All MediaPipe models loaded successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to load models: {e}")
+            raise
+
+# Global model manager
+model_manager: Optional[ModelManager] = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan management"""
+    global model_manager
+    
+    # Startup
+    logger.info("Starting Unified Backend Service...")
+    model_manager = ModelManager()
+    
+    if CONFIG["model_download_on_start"]:
+        try:
+            await model_manager.download_models()
+            model_manager.load_models()
+        except Exception as e:
+            logger.error(f"Failed to initialize models: {e}")
+    
+    # Start background tasks
+    asyncio.create_task(cleanup_inactive_sessions())
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down Unified Backend Service...")
 
 app = FastAPI(
     title="Unified Backend Service",
     description="Server-grade vision processing and AI analysis for breathing sessions",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS configuration
@@ -448,6 +569,32 @@ class VisionProcessor:
 # Global processor instance
 vision_processor = VisionProcessor()
 
+# Background task for session cleanup
+async def cleanup_inactive_sessions():
+    """Background task to clean up inactive sessions"""
+    while True:
+        try:
+            current_time = time.time()
+            inactive_sessions = []
+            
+            # Check VisionProcessor sessions
+            if 'vision_processor' in globals() and hasattr(vision_processor, 'sessions'):
+                for session_id, session in vision_processor.sessions.items():
+                    if current_time - session.created_at > CONFIG["session_timeout"]:
+                        inactive_sessions.append(session_id)
+                
+                for session_id in inactive_sessions:
+                    if session_id in vision_processor.sessions:
+                        logger.info(f"Cleaning up inactive session: {session_id}")
+                        del vision_processor.sessions[session_id]
+            
+            # Clean up every 60 seconds
+            await asyncio.sleep(60)
+            
+        except Exception as e:
+            logger.error(f"Error in cleanup task: {e}")
+            await asyncio.sleep(60)
+
 # AI Analysis Configuration and Functions
 AI_CONFIG = {
     "models": {
@@ -591,13 +738,43 @@ async def cleanup_session(session_id: str):
     else:
         return {"success": False, "message": "Session not found"}
 
+@app.post("/vision/stop/{session_id}")
+async def stop_session(session_id: str):
+    """Stop a vision session (production endpoint)"""
+    if session_id in vision_processor.sessions:
+        # Mark session as stopped but don't delete immediately
+        session = vision_processor.sessions[session_id]
+        logger.info(f"Session {session_id} stopped")
+        return {"message": f"Session {session_id} stopped", "session_id": session_id}
+    else:
+        raise HTTPException(status_code=404, detail="Session not found")
+
 @app.get("/api/vision/sessions")
 async def list_sessions():
     """List active sessions (for debugging)"""
+    current_time = time.time()
+    sessions_info = []
+    
+    for session_id, session in vision_processor.sessions.items():
+        sessions_info.append({
+            "session_id": session_id,
+            "created_at": session.created_at,
+            "duration": current_time - session.created_at,
+            "frame_count": len(session.landmark_history),
+            "is_active": (current_time - session.created_at) < CONFIG["session_timeout"]
+        })
+    
     return {
+        "sessions": sessions_info,
         "active_sessions": list(vision_processor.sessions.keys()),
-        "session_count": len(vision_processor.sessions)
+        "session_count": len(vision_processor.sessions),
+        "active_count": len([s for s in sessions_info if s["is_active"]])
     }
+
+@app.get("/vision/sessions")
+async def list_sessions_production():
+    """List all active sessions (production endpoint)"""
+    return await list_sessions()
 
 # AI Analysis Endpoints
 @app.post("/api/ai-analysis", response_model=AIAnalysisResponse)
@@ -627,4 +804,4 @@ async def ping():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

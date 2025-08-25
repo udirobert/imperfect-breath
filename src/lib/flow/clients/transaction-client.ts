@@ -11,7 +11,7 @@ import type {
   FlowTransactionResult,
   TransactionStatus
 } from '../types';
-import { handleError } from '../../../lib/utils/error-utils';
+import { handleError } from '../../errors/error-types';
 import { startTimer, timed } from '../../../lib/utils/performance-utils';
 import { SimpleCache } from '../../../lib/utils/cache-utils';
 
@@ -314,9 +314,9 @@ export class TransactionClient {
       }
       
       // Extract results from event data
-      const eventData = batchCompletedEvent.data;
-      const totalGasUsed = parseInt(eventData.totalGasUsed, 10);
-      const resultsList = eventData.results || [];
+      const eventData: Record<string, unknown> = batchCompletedEvent.data as Record<string, unknown>;
+      const totalGasUsed = parseInt(eventData.totalGasUsed as string, 10);
+      const resultsList = (eventData.results as any[]) || [];
       
       // Format results
       const results: CallOutcome[] = resultsList.map((res: any, index: number) => ({

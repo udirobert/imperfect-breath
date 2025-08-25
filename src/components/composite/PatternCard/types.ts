@@ -10,12 +10,12 @@ export type PatternCardVariant = "marketplace" | "social" | "library" | "mobile"
 export type PatternCardSize = "compact" | "standard" | "expanded";
 
 // Unified pattern type that combines all possible pattern properties
-export interface UnifiedPattern extends Partial<EnhancedCustomPattern> {
+export interface UnifiedPattern {
   // Core required properties
   id: string;
   name: string;
   description: string;
-  category: string;
+  category?: "sleep" | "focus" | "performance" | "stress" | "energy" | string;
   difficulty: string;
   duration: number;
   creator: string;
@@ -25,7 +25,7 @@ export interface UnifiedPattern extends Partial<EnhancedCustomPattern> {
   sessionCount?: number;
   instructorName?: string;
   instructorAvatar?: string;
-  access: {
+  access?: {
     commercialUse?: boolean;
     price?: number;
   };

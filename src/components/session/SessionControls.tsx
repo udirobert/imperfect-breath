@@ -1,7 +1,7 @@
 import React from "react";
 import { Pause, Play, StopCircle, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEnhancedSession } from "@/hooks/useEnhancedSession";
+import { useSession } from "@/hooks/useSession";
 
 type SessionControlsProps = {
   onEndSession?: () => void;
@@ -9,15 +9,14 @@ type SessionControlsProps = {
 
 export const SessionControls = ({ onEndSession }: SessionControlsProps) => {
   const {
-    state,
     isActive,
     isPaused,
-    isAudioEnabled,
+    audioEnabled: isAudioEnabled,
     pause,
     resume,
-    stop,
+    complete: stop,
     toggleAudio,
-  } = useEnhancedSession();
+  } = useSession();
 
   const handlePlayPause = () => {
     if (isActive) {

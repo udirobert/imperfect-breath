@@ -1,4 +1,5 @@
 import { apiClient } from './unified-client';
+import { API_ENDPOINTS } from '../../config/api-endpoints';
 
 /**
  * Interface for social post data
@@ -44,7 +45,7 @@ export interface TrendingPattern {
 export async function getTimeline(
   address: string,
 ): Promise<{ items: SocialPost[] }> {
-  const response = await apiClient.request('social', '/api/social/timeline', {
+  const response = await apiClient.request('social', API_ENDPOINTS.social.timeline, {
     method: 'POST',
     body: JSON.stringify({ address }),
   });
@@ -60,7 +61,7 @@ export async function getTimeline(
  * Fetches trending patterns from Lens Protocol
  */
 export async function getTrendingPatterns(): Promise<TrendingPattern[]> {
-  const response = await apiClient.request('social', '/api/patterns/trending', {
+  const response = await apiClient.request('social', API_ENDPOINTS.social.trending, {
     method: 'GET',
   });
   
@@ -83,7 +84,7 @@ export async function reactToPost(
   publicationId: string,
   remove: boolean,
 ): Promise<boolean> {
-  const response = await apiClient.request('social', '/api/social/react', {
+  const response = await apiClient.request('social', API_ENDPOINTS.social.react, {
     method: 'POST',
     body: JSON.stringify({
       publicationId,
@@ -105,7 +106,7 @@ export async function reactToPost(
 export async function followAccount(
   address: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const response = await apiClient.request('social', '/api/social/follow', {
+  const response = await apiClient.request('social', API_ENDPOINTS.social.follow, {
     method: 'POST',
     body: JSON.stringify({ targetAddress: address }),
   });

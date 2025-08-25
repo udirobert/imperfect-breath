@@ -100,7 +100,7 @@ export class AIBreathingCoach {
     
     // Primary intent detection
     let primary = 'general_guidance';
-    let blockchainActions: string[] = [];
+    const blockchainActions: string[] = [];
     let confidence = 0.7;
     
     if (text.includes('create') && (text.includes('pattern') || text.includes('breathing'))) {
@@ -358,7 +358,7 @@ export class AIBreathingCoach {
     
     const text = message.toLowerCase();
     let category: BreathingPattern['category'] = 'custom';
-    let difficulty = userContext.preferences.difficulty || 'beginner';
+    const difficulty = userContext.preferences.difficulty || 'beginner';
     
     if (text.includes('stress') || text.includes('anxiety')) category = 'stress-relief';
     else if (text.includes('focus') || text.includes('work')) category = 'focus';

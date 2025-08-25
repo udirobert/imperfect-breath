@@ -97,12 +97,12 @@ if (missingOptionalVars.length > 0) {
 export const config: EnvironmentConfig = {
   services: {
     ai: {
-      url: import.meta.env.VITE_HETZNER_SERVICE_URL || import.meta.env.VITE_VISION_SERVICE_URL || 'http://localhost:8000',
+      url: import.meta.env.VITE_HETZNER_SERVICE_URL || import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8001',
       timeout: parseInt(import.meta.env.VITE_AI_TIMEOUT || '30000'),
       retries: parseInt(import.meta.env.VITE_AI_RETRIES || '3'),
     },
     vision: {
-      url: import.meta.env.VITE_HETZNER_SERVICE_URL || import.meta.env.VITE_VISION_SERVICE_URL || 'http://localhost:8000',
+      url: import.meta.env.VITE_HETZNER_SERVICE_URL || import.meta.env.VITE_VISION_SERVICE_URL || 'http://localhost:8001',
       timeout: parseInt(import.meta.env.VITE_VISION_TIMEOUT || '10000'),
       retries: parseInt(import.meta.env.VITE_VISION_RETRIES || '2'),
     },

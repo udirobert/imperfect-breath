@@ -5,6 +5,7 @@
 
 import { toast } from "sonner";
 import { SessionData } from "../ai/config"; // DRY: Use unified SessionData interface
+import { formatDuration, calculateQualityScore } from '../utils/formatters';
 
 // Sharing-specific extensions
 export interface ShareableSessionData extends SessionData {
@@ -51,7 +52,8 @@ export class ShareTextGenerator {
       tone = 'mindful'
     } = options;
 
-    const duration = Math.round((sessionData.duration || 0) / 60);
+    const sessionDuration = sessionData.sessionDuration || 300;
+    const duration = Math.round(sessionDuration / 60);
     const score = sessionData.restlessnessScore !== undefined 
       ? Math.max(0, 100 - sessionData.restlessnessScore)
       : sessionData.score || 0;
@@ -82,8 +84,9 @@ export class ShareTextGenerator {
     return parts.join("\n");
   }
 
-  static generateLensText(sessionData: SessionData, options: ShareOptions = {}): string {
-    const duration = Math.round((sessionData.duration || 0) / 60);
+  static generateLensText(sessionData: ShareableSessionData, options: ShareOptions = {}): string {
+    const sessionDuration = sessionData.sessionDuration || 300;
+    const duration = Math.round(sessionDuration / 60);
     const score = sessionData.restlessnessScore !== undefined 
       ? Math.max(0, 100 - sessionData.restlessnessScore)
       : sessionData.score || 0;
@@ -105,7 +108,7 @@ ${sessionData.breathHoldTime ? `💨 Breath Hold: ${sessionData.breathHoldTime}s
  * Platform-specific sharing handlers
  */
 export class SocialShareManager {
-  static async shareOnTwitter(sessionData: SessionData, options: ShareOptions = {}): Promise<void> {
+  static async shareOnTwitter(sessionData: ShareableSessionData, options: ShareOptions = {}): Promise<void> {
     const text = ShareTextGenerator.generateTwitterText(sessionData, options);
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     
@@ -116,7 +119,7 @@ export class SocialShareManager {
     });
   }
 
-  static async shareNative(sessionData: SessionData, options: ShareOptions = {}): Promise<boolean> {
+  static async shareNative(sessionData: ShareableSessionData, options: ShareOptions = {}): Promise<boolean> {
     if (!navigator.share) {
       return false;
     }
@@ -140,7 +143,7 @@ export class SocialShareManager {
     }
   }
 
-  static async copyToClipboard(sessionData: SessionData, options: ShareOptions = {}): Promise<void> {
+  static async copyToClipboard(sessionData: ShareableSessionData, options: ShareOptions = {}): Promise<void> {
     try {
       const text = ShareTextGenerator.generateTwitterText(sessionData, options);
       await navigator.clipboard.writeText(text);
@@ -160,38 +163,26 @@ export class SocialShareManager {
  */
 export class SessionDataUtils {
   static validateSessionData(sessionData: SessionData): boolean {
-    return !!(sessionData.patternName && sessionData.duration && sessionData.duration > 0);
+    const duration = sessionData.sessionDuration || 0;
+    return !!(sessionData.patternName && duration > 0);
   }
 
-  static formatDuration(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.round(seconds % 60);
-    
-    if (mins > 0) {
-      return `${mins}m ${secs}s`;
-    }
-    return `${secs}s`;
-  }
-
-  static calculateQualityScore(sessionData: SessionData): number {
-    if (sessionData.restlessnessScore !== undefined) {
-      return Math.max(0, 100 - sessionData.restlessnessScore);  
-    }
-    return sessionData.score || 75;
-  }
+  // Using consolidated formatters from utils
+  static formatDuration = formatDuration;
+  static calculateQualityScore = calculateQualityScore;
 }
 
 /**
  * Convenience hooks for sharing functionality
  */
 export const useShareSession = () => {
-  const shareOnTwitter = (sessionData: SessionData, options?: ShareOptions) => 
+  const shareOnTwitter = (sessionData: ShareableSessionData, options?: ShareOptions) => 
     SocialShareManager.shareOnTwitter(sessionData, options);
 
-  const shareNative = (sessionData: SessionData, options?: ShareOptions) =>
+  const shareNative = (sessionData: ShareableSessionData, options?: ShareOptions) =>
     SocialShareManager.shareNative(sessionData, options);
 
-  const copyToClipboard = (sessionData: SessionData, options?: ShareOptions) =>
+  const copyToClipboard = (sessionData: ShareableSessionData, options?: ShareOptions) =>
     SocialShareManager.copyToClipboard(sessionData, options);
 
   const hasNativeShare = typeof navigator !== "undefined" && "share" in navigator;
@@ -206,3 +197,6 @@ export const useShareSession = () => {
     calculateScore: SessionDataUtils.calculateQualityScore
   };
 };
+
+// Export SessionData for external use
+export type { SessionData };

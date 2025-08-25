@@ -44,6 +44,7 @@ const useSessionCompletion = () => {
       sessionType?: string;
       cameraUsed?: boolean;
       aiUsed?: boolean;
+      visionSessionId?: string;
     }) => {
       const {
         pattern,
@@ -108,22 +109,45 @@ export const SessionModeWrapper: React.FC = () => {
     return <Navigate to="/session" replace />;
   }
 
-  // Get pattern from location state or localStorage, fallback to box
+  // CLEAN: Get pattern from URL search params, location state, or localStorage
   const initialPattern = useMemo(() => {
-    // Try navigation state first
-    if (location.state?.previewPattern) return location.state.previewPattern;
+    console.log('🔍 Pattern resolution debug:', {
+      fullURL: window.location.href,
+      search: location.search,
+      availablePatterns: Object.keys(BREATHING_PATTERNS)
+    });
 
-    // Try localStorage
+    // 1. Try URL search params first (e.g., ?pattern=wim_hof)
+    const searchParams = new URLSearchParams(location.search);
+    const patternParam = searchParams.get('pattern');
+    console.log('🔍 Pattern param from URL:', patternParam);
+
+    if (patternParam && BREATHING_PATTERNS[patternParam]) {
+      console.log('📋 Using pattern from URL:', patternParam);
+      return BREATHING_PATTERNS[patternParam];
+    }
+
+    // 2. Try navigation state
+    if (location.state?.previewPattern) {
+      console.log('📋 Using pattern from navigation state');
+      return location.state.previewPattern;
+    }
+
+    // 3. Try localStorage
     try {
       const stored = localStorage.getItem("selectedPattern");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        console.log('📋 Using pattern from localStorage');
+        return JSON.parse(stored);
+      }
     } catch {
       // Silent fail for localStorage issues
     }
 
-    // Fallback to default
+    // 4. Fallback to default
+    console.log('📋 Using default box pattern');
     return BREATHING_PATTERNS.box;
-  }, [location.state?.previewPattern]);
+  }, [location.search, location.state?.previewPattern]);
 
   // Session completion handler
   const handleSessionComplete = useSessionCompletion();
@@ -162,6 +186,8 @@ export const SessionModeWrapper: React.FC = () => {
         benefits: initialPattern.benefits,
       },
       autoStart: false,
+      // CLEAN: Default session durations based on mode
+      maxCycles: mode === "enhanced" ? 15 : mode === "mobile" ? 8 : 10,
     }),
     [initialPattern, mode]
   );

@@ -54,6 +54,8 @@ export const SessionRouter: React.FC<SessionRouterProps> = ({
       benefits: pattern.benefits,
     },
     autoStart: false,
+    // PERFORMANT: Default session durations
+    maxCycles: mode === "enhanced" ? 15 : 10, // Enhanced mode gets longer sessions
   };
 
   return (

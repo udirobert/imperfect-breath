@@ -2,14 +2,14 @@
  * Custom error classes for social media interactions
  */
 
-import { AppError } from "./error-utils";
+import { AppError, ErrorCategory, ErrorSeverity, RecoveryStrategy } from "../errors/error-types";
 
 /**
  * Error thrown when a social operation fails due to authentication issues
  */
 export class SocialAuthError extends AppError {
   constructor(message: string) {
-    super("SOCIAL_AUTH_ERROR", message);
+    super(message, ErrorCategory.AUTHENTICATION, ErrorSeverity.MEDIUM, RecoveryStrategy.USER_ACTION);
     this.name = "SocialAuthError";
     Object.setPrototypeOf(this, SocialAuthError.prototype);
   }
@@ -20,7 +20,7 @@ export class SocialAuthError extends AppError {
  */
 export class SocialRateLimitError extends AppError {
   constructor(message: string) {
-    super("SOCIAL_RATE_LIMIT_ERROR", message);
+    super(message, ErrorCategory.NETWORK, ErrorSeverity.LOW, RecoveryStrategy.RETRY);
     this.name = "SocialRateLimitError";
     Object.setPrototypeOf(this, SocialRateLimitError.prototype);
   }
@@ -31,7 +31,7 @@ export class SocialRateLimitError extends AppError {
  */
 export class SocialContentError extends AppError {
   constructor(message: string) {
-    super("SOCIAL_CONTENT_ERROR", message);
+    super(message, ErrorCategory.VALIDATION, ErrorSeverity.LOW, RecoveryStrategy.USER_ACTION);
     this.name = "SocialContentError";
     Object.setPrototypeOf(this, SocialContentError.prototype);
   }
@@ -42,7 +42,7 @@ export class SocialContentError extends AppError {
  */
 export class SocialPermissionError extends AppError {
   constructor(message: string) {
-    super("SOCIAL_PERMISSION_ERROR", message);
+    super(message, ErrorCategory.AUTHORIZATION, ErrorSeverity.MEDIUM, RecoveryStrategy.USER_ACTION);
     this.name = "SocialPermissionError";
     Object.setPrototypeOf(this, SocialPermissionError.prototype);
   }

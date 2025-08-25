@@ -420,6 +420,106 @@ export const RetryUtils = {
   },
 };
 
+// Simple retry interface for backward compatibility
+export interface SimpleRetryOptions {
+  maxAttempts: number;
+  initialDelayMs: number;
+  maxDelayMs?: number;
+  backoffFactor?: number;
+  retryableErrors?: Array<string | RegExp>;
+  onRetry?: (attempt: number, error: Error, delayMs: number) => void;
+}
+
+/**
+ * Simple retry function with exponential backoff (consolidated from retry-utils.ts)
+ */
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  options: Partial<SimpleRetryOptions> = {}
+): Promise<T> {
+  const config: SimpleRetryOptions = {
+    maxAttempts: 3,
+    initialDelayMs: 500,
+    maxDelayMs: 10000,
+    backoffFactor: 2,
+    retryableErrors: [
+      'network error',
+      'timeout',
+      'ECONNRESET',
+      'ETIMEDOUT',
+      'ECONNREFUSED',
+      'fetch failed',
+      'rate limit',
+      '429',
+      '500',
+      '502',
+      '503',
+      '504',
+      /^The network connection was lost/,
+      /^timeout of .* exceeded$/
+    ],
+    ...options
+  };
+
+  const isRetryableError = (error: Error): boolean => {
+    if (!config.retryableErrors) return true;
+    
+    const errorMessage = error.message.toLowerCase();
+    const errorCode = (error as any).code || '';
+    
+    return config.retryableErrors.some(pattern => {
+      if (typeof pattern === 'string') {
+        return errorMessage.includes(pattern.toLowerCase()) || errorCode === pattern;
+      }
+      return pattern.test(errorMessage) || pattern.test(errorCode);
+    });
+  };
+
+  const calculateBackoff = (attempt: number): number => {
+    const delay = config.initialDelayMs * Math.pow(config.backoffFactor || 2, attempt - 1);
+    return Math.min(delay, config.maxDelayMs || 10000);
+  };
+
+  const sleep = (ms: number): Promise<void> => 
+    new Promise(resolve => setTimeout(resolve, ms));
+
+  for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const isLastAttempt = attempt === config.maxAttempts;
+      const shouldRetry = error instanceof Error && isRetryableError(error);
+
+      if (isLastAttempt || !shouldRetry) {
+        throw error;
+      }
+
+      const delayMs = calculateBackoff(attempt);
+      config.onRetry?.(attempt, error as Error, delayMs);
+      await sleep(delayMs);
+    }
+  }
+
+  throw new Error('Retry logic error: should not reach here');
+}
+
+/**
+ * Decorator for retryable methods (consolidated from retry-utils.ts)
+ */
+export function retryable(options: Partial<SimpleRetryOptions> = {}) {
+  return function <T extends (...args: any[]) => Promise<any>>(
+    target: any,
+    propertyKey: string,
+    descriptor: TypedPropertyDescriptor<T>
+  ) {
+    const originalMethod = descriptor.value!;
+    descriptor.value = (async function (this: any, ...args: any[]) {
+      return withRetry(() => originalMethod.apply(this, args), options);
+    }) as T;
+    return descriptor;
+  };
+}
+
 // Export singleton instances for common use cases
 export const networkRetry = RetryUtils.forNetwork();
 export const websocketRetry = RetryUtils.forWebSocket();

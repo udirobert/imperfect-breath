@@ -64,7 +64,7 @@ import {
 import { PatternStorageService } from "../lib/patternStorage";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/use-toast";
-import { useUnifiedAuth } from "../hooks/useUnifiedAuth";
+import { useFullAuth } from "@/auth";
 import { usePatternCreation } from "../hooks/usePatternCreation";
 import {
   BlockchainSelector,
@@ -127,7 +127,7 @@ interface PatternStats {
 
 // Import APIs for real data
 import { getCreatorPatterns, getCreatorStats } from "../lib/api/creatorService";
-import { handleError } from "../lib/utils/error-utils";
+import { handleError } from "../lib/errors/error-types";
 
 const categoryIcons = {
   stress: Heart,
@@ -159,7 +159,7 @@ const EnhancedCreatorDashboard = () => {
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const unifiedAuth = useUnifiedAuth();
+  const unifiedAuth = useFullAuth();
   const { getAvailableBlockchains, getRecommendedBlockchain } =
     usePatternCreation();
 
@@ -800,13 +800,13 @@ const EnhancedCreatorDashboard = () => {
 
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="text-sm text-muted-foreground">
-              {unifiedAuth.flow.connected &&
+              {unifiedAuth.hasFlowAccount &&
                 selectedBlockchain === "flow" &&
                 "✨ Flow is optimized for NFT creation with low fees"}
-              {unifiedAuth.lens.connected &&
+              {unifiedAuth.hasLensProfile &&
                 selectedBlockchain === "lens" &&
                 "🌟 Lens enables social sharing and community features"}
-              {unifiedAuth.walletConnected &&
+              {unifiedAuth.hasWallet &&
                 ["ethereum", "arbitrum", "base"].includes(selectedBlockchain) &&
                 "⚡ EVM chains offer broad ecosystem compatibility"}
             </div>

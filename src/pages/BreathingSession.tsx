@@ -203,6 +203,8 @@ const BreathingSession: React.FC = () => {
         benefits: initialPattern.benefits,
       },
       autoStart: false,
+      // PERFORMANT: Default session durations
+      maxCycles: useEnhancedVision ? 15 : 10,
     }),
     [initialPattern, useEnhancedVision]
   );

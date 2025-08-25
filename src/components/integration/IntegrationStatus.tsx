@@ -153,7 +153,7 @@ export const IntegrationStatus: React.FC = () => {
   ) => {
     switch (status) {
       case "connected":
-        return <Badge variant="success">Connected</Badge>;
+        return <Badge variant="default">Connected</Badge>;
       case "disconnected":
         return (
           <Badge variant={required ? "destructive" : "secondary"}>
@@ -228,9 +228,9 @@ export const IntegrationStatus: React.FC = () => {
             <Badge
               variant={
                 overallHealth === "good"
-                  ? "success"
+                  ? "default"
                   : overallHealth === "partial"
-                  ? "warning"
+                  ? "secondary"
                   : "destructive"
               }
             >

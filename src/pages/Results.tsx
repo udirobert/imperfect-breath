@@ -34,22 +34,17 @@ import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
 import { useSessionHistory } from "../hooks/useSessionHistory";
 import { useSecureAIAnalysis } from "../hooks/useSecureAIAnalysis";
 import { AI_PROVIDERS, AIConfigManager, SessionData } from "../lib/ai/config";
+import { API_ENDPOINTS, createEndpoint } from "../config/api-endpoints";
 import { toast } from "sonner";
 import { useAuth } from "../hooks/useAuth";
 import { useLens } from "../hooks/useLens";
+import { formatTime } from "../lib/utils/formatters";
 
 import { EnhancedCustomPattern } from "../types/patterns";
 import { BreathingSessionPost } from "../components/social/BreathingSessionPost";
 import { SessionCompleteModal } from "../components/unified/SessionCompleteModal";
 
-const formatTime = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  if (mins > 0) {
-    return `${mins}m ${secs}s`;
-  }
-  return `${secs}s`;
-};
+// Using consolidated formatTime from utils
 
 const Results = () => {
   const location = useLocation();
@@ -122,8 +117,8 @@ const Results = () => {
           const visionSummary = await fetch(
             `${
               import.meta.env.VITE_HETZNER_SERVICE_URL ||
-              "http://localhost:8000"
-            }/api/vision/sessions/${sessionData.visionSessionId}/summary`
+              "http://localhost:8001"
+            }${createEndpoint.visionSessionSummary(sessionData.visionSessionId)}`
           );
 
           if (visionSummary.ok) {
@@ -146,7 +141,7 @@ const Results = () => {
               `${
                 import.meta.env.VITE_HETZNER_SERVICE_URL ||
                 "http://localhost:8001"
-              }/api/vision/sessions/${sessionData.visionSessionId}/summary`
+              }${createEndpoint.visionSessionSummary(sessionData.visionSessionId)}`
             );
             if (visionSummary.ok) {
               visionData = await visionSummary.text();
@@ -200,11 +195,7 @@ const Results = () => {
     await analyzeSession(enhancedSessionData);
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  // Using consolidated formatTime from utils
 
   const getScoreBadgeVariant = (score: number) => {
     if (score >= 80) return "default";

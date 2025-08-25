@@ -37,6 +37,7 @@ import {
   Share2,
   Bookmark,
 } from "lucide-react";
+import { formatDuration, formatCount } from "../../../lib/utils/formatters";
 
 import { SocialActions } from "../../social/SocialActions";
 import type { PatternCardProps } from "./types";
@@ -94,17 +95,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
   const iconName = CATEGORY_ICONS[categoryKey] || "Heart";
   const CategoryIcon = ICON_MAP[iconName as keyof typeof ICON_MAP] || Heart;
 
-  // Utility functions
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes} min`;
-  };
-
-  const formatCount = (count: number) => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return count.toString();
-  };
+  // Using consolidated formatters from utils
 
   const formatPrice = (price: number, currency: string) => {
     return `${price.toFixed(4)} ${currency}`;

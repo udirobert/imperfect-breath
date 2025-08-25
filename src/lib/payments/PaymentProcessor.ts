@@ -6,7 +6,7 @@
  * - Lens Protocol: Social tipping and creator support
  */
 
-import { useUnifiedAuth } from "@/hooks/useUnifiedAuth";
+import { useBasicAuth } from "@/auth";
 
 export interface BlockchainPaymentRequest {
   amount: number;

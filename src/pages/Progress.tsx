@@ -7,13 +7,9 @@ import { format, parseISO } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Star, Clock, Activity, Zap, HeartPulse } from 'lucide-react';
+import { formatTime } from '@/lib/utils/formatters';
 
-const formatTime = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  if (mins > 0) return `${mins}m ${secs}s`;
-  return `${secs}s`;
-};
+// Using consolidated formatters from utils
 
 const Progress = () => {
   const { history, streak, totalMinutes, longestBreathHold, averageRestlessness, preferredPattern } = useSessionHistory();
