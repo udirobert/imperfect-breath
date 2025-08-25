@@ -117,40 +117,14 @@ export default defineConfig(({ mode }) => {
         // Ensure nothing gets externalized - everything should be bundled
         external: [],
         output: {
-          // Force everything into a single vendor chunk
-          manualChunks: {
-            // Put all vendor dependencies in one chunk
-            vendor: [
-              'react',
-              'react-dom',
-              'react-dom/client',
-              'react/jsx-runtime',
-              'react-router-dom',
-              '@radix-ui/react-accordion',
-              '@radix-ui/react-alert-dialog',
-              '@radix-ui/react-avatar',
-              '@radix-ui/react-button',
-              '@radix-ui/react-checkbox',
-              '@radix-ui/react-dialog',
-              '@radix-ui/react-dropdown-menu',
-              '@radix-ui/react-label',
-              '@radix-ui/react-popover',
-              '@radix-ui/react-select',
-              '@radix-ui/react-separator',
-              '@radix-ui/react-slider',
-              '@radix-ui/react-slot',
-              '@radix-ui/react-switch',
-              '@radix-ui/react-tabs',
-              '@radix-ui/react-toast',
-              '@radix-ui/react-tooltip',
-              'zustand',
-              '@tanstack/react-query',
-              'date-fns',
-              'uuid',
-              'clsx',
-              'class-variance-authority',
-              'tailwind-merge'
-            ]
+          // Simpler approach: use function-based chunking to ensure React stays with vendor deps
+          manualChunks(id) {
+            // Keep React and all node_modules together in vendor chunk
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+            // Everything else goes to the main chunk
+            return undefined;
           },
           
           // Configure chunk file naming
