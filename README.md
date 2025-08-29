@@ -48,6 +48,20 @@ npm run dev
 - ✅ Local progress tracking
 - ✅ PWA offline support
 
+### 🎯 Enable Face Mesh (Optional)
+
+For real-time face landmark tracking during breathing sessions:
+
+```bash
+# Start the vision service backend
+cd backend/vision-service
+MODEL_DOWNLOAD_ON_START=false python3 main.py
+
+# Keep running in background, then refresh frontend
+```
+
+**Face mesh will now appear over your face during sessions!**
+
 > **📖 Need detailed setup?** See **[Technical Guide](docs/TECHNICAL_GUIDE.md)** for comprehensive development instructions.
 
 ### Progressive Enhancement

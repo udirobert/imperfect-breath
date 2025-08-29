@@ -78,11 +78,11 @@ export interface VisionState {
 // ============================================================================
 
 class MeditationVisionClient {
-  private sessionId: string;
+  private baseUrl: string;
   private abortController: AbortController | null = null;
 
-  constructor(sessionId: string) {
-    this.sessionId = sessionId;
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
   }
 
   async checkHealth(): Promise<boolean> {
@@ -90,12 +90,12 @@ class MeditationVisionClient {
       // PERFORMANT: Simple HEAD request to avoid health check spam
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
-      
-      const response = await fetch(`${this.sessionId}/health`, {
+
+      const response = await fetch(`${this.baseUrl}/health`, {
         method: 'HEAD',
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
       return response.ok;
     } catch {
@@ -105,6 +105,7 @@ class MeditationVisionClient {
   }
 
   async processFrame(
+    sessionId: string,
     imageData: string, 
     features: Record<string, boolean>
   ): Promise<MeditationMetrics> {
@@ -115,7 +116,7 @@ class MeditationVisionClient {
     this.abortController = new AbortController();
     
     try {
-      const response = await apiClient.processVision(this.sessionId, {
+      const response = await apiClient.processVision(sessionId, {
         image_data: imageData,
         timestamp: Date.now(),
         options: {
@@ -228,7 +229,7 @@ const DEFAULT_CONFIG: VisionConfig = {
     analyzePosture: true,
     trackMovement: false,
   },
-  silentMode: true,
+  silentMode: false, // Enable logging for debugging facemesh issues
   gracefulDegradation: true,
 };
 
@@ -269,6 +270,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
   const processingInterval = useRef<NodeJS.Timeout>();
   const performanceTracker = useRef<number[]>([]);
   const lastFrameTime = useRef<number>(0);
+  const isActiveRef = useRef<boolean>(false); // Track active state without stale closures
 
   // Initialize client - no automatic health checks
   useEffect(() => {
@@ -326,14 +328,13 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
 
   // Frame processing with graceful failure
   const processFrame = useCallback(async () => {
-    // Use current state values directly rather than depending on them
-    const currentState = state;
-    if (!currentState.isActive || !videoRef.current) return;
+    // Use ref for active state to avoid stale closure issues
+    if (!isActiveRef.current || !videoRef.current) return;
 
     // FPS limiting
     const now = Date.now();
     const timeSinceLastFrame = now - lastFrameTime.current;
-    const targetFrameTime = 1000 / currentState.currentFPS;
+    const targetFrameTime = 1000 / finalConfig.targetFPS!;
     
     if (timeSinceLastFrame < targetFrameTime) return;
     
@@ -356,10 +357,11 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       
       let metrics: MeditationMetrics;
       
-      if (currentState.backendAvailable && clientRef.current) {
+      if (state.backendAvailable && clientRef.current) {
         // Try backend processing
         try {
           metrics = await clientRef.current.processFrame(
+            finalConfig.sessionId,
             imageData,
             finalConfig.features || {}
           );
@@ -409,15 +411,16 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     if (state.isActive) return;
 
     videoRef.current = videoElement;
-    
-    setState(prev => ({ 
-      ...prev, 
+    isActiveRef.current = true; // Update ref immediately
+
+    setState(prev => ({
+      ...prev,
       isActive: true,
       error: null
     }));
 
-    // Start processing loop - use current state value directly
-    const interval = Math.floor(1000 / state.currentFPS);
+    // Start processing loop - use final config FPS to avoid stale state
+    const interval = Math.floor(1000 / finalConfig.targetFPS!);
     processingInterval.current = setInterval(processFrame, interval);
     
     // Provide immediate feedback
@@ -430,8 +433,10 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
 
   // Stop processing
   const stop = useCallback(() => {
-    setState(prev => ({ 
-      ...prev, 
+    isActiveRef.current = false; // Update ref immediately
+
+    setState(prev => ({
+      ...prev,
       isActive: false,
       metrics: null,
       error: null

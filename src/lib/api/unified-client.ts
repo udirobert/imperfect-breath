@@ -103,31 +103,27 @@ class ServiceRegistry {
       requiresAuth: false,
     });
 
-    // Vision Processing Service (Optional - with fallback to AI service)
-    const visionEnabled = import.meta.env.VITE_ENABLE_VISION_PROCESSING === 'true';
-
-    if (visionEnabled) {
-      if (config.services.vision.url !== config.services.ai.url) {
-        // Register standalone vision service if configured differently
-        this.registerService({
-          name: 'vision',
-          baseUrl: config.services.vision.url,
-          healthCheck: API_ENDPOINTS.vision.health,
-          timeout: config.services.vision.timeout,
-          retries: config.services.vision.retries,
-          requiresAuth: false,
-        });
-      } else {
-        // Use AI service as vision service (integrated mode)
-        this.registerService({
-          name: 'vision',
-          baseUrl: config.services.ai.url,
-          healthCheck: API_ENDPOINTS.ai.health,
-          timeout: config.services.vision.timeout,
-          retries: config.services.vision.retries,
-          requiresAuth: false,
-        });
-      }
+    // Vision Processing Service - Always register for development
+    if (config.services.vision.url !== config.services.ai.url) {
+      // Register standalone vision service if configured differently
+      this.registerService({
+        name: 'vision',
+        baseUrl: config.services.vision.url,
+        healthCheck: API_ENDPOINTS.vision.health,
+        timeout: config.services.vision.timeout,
+        retries: config.services.vision.retries,
+        requiresAuth: false,
+      });
+    } else {
+      // Use AI service as vision service (integrated mode)
+      this.registerService({
+        name: 'vision',
+        baseUrl: config.services.ai.url,
+        healthCheck: API_ENDPOINTS.ai.health,
+        timeout: config.services.vision.timeout,
+        retries: config.services.vision.retries,
+        requiresAuth: false,
+      });
     }
 
     // Flow Blockchain (Optional - register if enabled)

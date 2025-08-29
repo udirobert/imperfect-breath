@@ -149,6 +149,27 @@ npm install
 - Try different browsers
 - Ensure good lighting
 
+**Face mesh not appearing:**
+
+```bash
+# 1. Start vision backend service
+cd backend/vision-service
+MODEL_DOWNLOAD_ON_START=false python3 main.py
+
+# 2. Check backend health
+curl -I http://localhost:8001/api/health/vision
+
+# 3. Look for console errors about 404s on /api/health
+# 4. Refresh frontend after starting backend
+```
+
+**Common facemesh issues:**
+
+- ❌ **404 errors on `/api/health`** → Vision service not running
+- ❌ **No face landmarks** → Backend not connected, using fallback mode  
+- ❌ **"Position face here" message** → Face not detected by MediaPipe
+- ✅ **Green dots on face** → Working correctly!
+
 **AI features not working:**
 
 - Check if backend is running: `curl http://localhost:8001/api/health`

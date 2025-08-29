@@ -13,7 +13,7 @@ export const API_ENDPOINTS = {
   // AI Analysis Service
   ai: {
     analysis: '/api/ai-analysis',
-    health: '/api/health',
+    health: '/health',
   },
 
   // Vision Processing Service

@@ -240,28 +240,28 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   const [showRestlessnessScore, setShowRestlessnessScore] = useState(true);
 
   // PERFORMANT: Debug state tracking
-  const debugKeyRef = useRef<string>('');
+  const debugKeyRef = useRef<string>("");
 
   // Enhanced session management with adaptive performance
   const visionEnabled = modeConfig.enableVision && !isLowEndDevice;
 
   // CLEAN: Log only once when component mounts
   React.useEffect(() => {
-    console.log('🔍 Vision enablement debug:', {
+    console.log("🔍 Vision enablement debug:", {
       modeConfigEnableVision: modeConfig.enableVision,
       isLowEndDevice,
       finalVisionEnabled: visionEnabled,
-      configMode: config.mode
+      configMode: config.mode,
     });
 
     // MODULAR: Direct backend health check
-    fetch('http://localhost:8001/health')
-      .then(res => res.json())
-      .then(health => {
-        console.log('🏥 Backend health check:', health);
+    fetch("http://localhost:8001/health")
+      .then((res) => res.json())
+      .then((health) => {
+        console.log("🏥 Backend health check:", health);
       })
-      .catch(err => {
-        console.error('❌ Backend health check failed:', err);
+      .catch((err) => {
+        console.error("❌ Backend health check failed:", err);
       });
   }, []); // Empty dependency array - run only once
 
@@ -295,7 +295,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         console.log("🧘 Initializing meditation session:", {
           patternName: config.pattern.name,
           phases: config.pattern.phases,
-          mode: config.mode
+          mode: config.mode,
         });
 
         // Convert MeditationSessionConfig to SessionConfig for the store
@@ -325,8 +325,8 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   }, [config, modeConfig]);
 
   // Vision session ID for unified data flow (DRY principle)
-  const visionSessionId = useMemo(() =>
-    `session_${user?.id || "anonymous"}_${Date.now()}`,
+  const visionSessionId = useMemo(
+    () => `session_${user?.id || "anonymous"}_${Date.now()}`,
     [user?.id]
   );
 
@@ -344,10 +344,11 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // CLEAN: Calculate session duration with sensible defaults
   const sessionDuration = useMemo(() => {
-    const cycleDuration = (config.pattern.phases.inhale || 4) +
-                         (config.pattern.phases.hold || 0) +
-                         (config.pattern.phases.exhale || 4) +
-                         (config.pattern.phases.pause || 0);
+    const cycleDuration =
+      (config.pattern.phases.inhale || 4) +
+      (config.pattern.phases.hold || 0) +
+      (config.pattern.phases.exhale || 4) +
+      (config.pattern.phases.pause || 0);
 
     // Default durations based on authentication and mode
     const defaultCycles = user ? 15 : 5; // Authenticated users get longer sessions
@@ -358,7 +359,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       cycleDuration,
       maxCycles,
       totalMinutes,
-      isAuthenticated: !!user
+      isAuthenticated: !!user,
     };
   }, [config.pattern.phases, config.maxCycles, user]);
 
@@ -383,13 +384,14 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // CLEAN: Pattern description helper
   const getPatternDescription = (pattern: any) => {
     const { name, phases } = pattern;
-    const totalTime = phases.inhale + (phases.hold || 0) + phases.exhale + (phases.pause || 0);
+    const totalTime =
+      phases.inhale + (phases.hold || 0) + phases.exhale + (phases.pause || 0);
 
-    if (name.toLowerCase().includes('box')) {
+    if (name.toLowerCase().includes("box")) {
       return `Equal timing creates a balanced, calming rhythm (${totalTime}s per cycle)`;
-    } else if (name.toLowerCase().includes('4-7-8')) {
+    } else if (name.toLowerCase().includes("4-7-8")) {
       return `Extended exhale promotes deep relaxation (${totalTime}s per cycle)`;
-    } else if (name.toLowerCase().includes('wim hof')) {
+    } else if (name.toLowerCase().includes("wim hof")) {
       return `Energizing pattern for focus and vitality (${totalTime}s per cycle)`;
     } else if (phases.exhale > phases.inhale) {
       return `Longer exhale helps activate your relaxation response (${totalTime}s per cycle)`;
@@ -404,26 +406,30 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   const getPatternTip = (pattern: any) => {
     const { name, phases } = pattern;
 
-    if (name.toLowerCase().includes('box')) {
-      return 'Keep each phase equal - like drawing a square with your breath';
-    } else if (name.toLowerCase().includes('4-7-8')) {
-      return 'Focus on the long exhale - let tension melt away';
-    } else if (name.toLowerCase().includes('wim hof')) {
-      return 'Breathe fully but naturally - no forcing needed';
+    if (name.toLowerCase().includes("box")) {
+      return "Keep each phase equal - like drawing a square with your breath";
+    } else if (name.toLowerCase().includes("4-7-8")) {
+      return "Focus on the long exhale - let tension melt away";
+    } else if (name.toLowerCase().includes("wim hof")) {
+      return "Breathe fully but naturally - no forcing needed";
     } else if (phases.hold > 0) {
-      return 'Hold gently - like pausing between waves';
+      return "Hold gently - like pausing between waves";
     } else {
-      return 'Follow the rhythm - let your body find its flow';
+      return "Follow the rhythm - let your body find its flow";
     }
   };
 
   // DRY: Unified tracking status logic
   const getTrackingStatus = () => {
-    const status = !cameraPermissionGranted ? "IDLE" :
-                   !stream ? "INITIALIZING" :
-                   !isVideoReady ? "INITIALIZING" :
-                   vision?.state.error ? "ERROR" :
-                   "TRACKING";
+    const status = !cameraPermissionGranted
+      ? "IDLE"
+      : !stream
+      ? "INITIALIZING"
+      : !isVideoReady
+      ? "INITIALIZING"
+      : vision?.state.error
+      ? "ERROR"
+      : "TRACKING";
 
     return status;
   };
@@ -446,7 +452,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     };
 
     return (
-      <div className={`transition-all duration-1000 ease-in-out ${getVideoSize()}`}>
+      <div
+        className={`transition-all duration-1000 ease-in-out ${getVideoSize()}`}
+      >
         <VideoFeed
           videoRef={videoRef}
           isActive={currentPhase === "active"}
@@ -463,15 +471,18 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
               { x: 0.5, y: 0.8 }, // Chin
             ];
 
-            // AGGRESSIVE CONSOLIDATION: Always show test landmarks when face mesh is on for debugging
-            const landmarks = showFaceMesh && currentPhase === "active"
-              ? testLandmarks // Force test landmarks to verify overlay system works
-              : [];
+            // AGGRESSIVE CONSOLIDATION: Show test landmarks when face mesh is on for debugging
+            // Allow landmarks in both "ready" and "active" phases for testing
+            const landmarks =
+              showFaceMesh &&
+              (currentPhase === "active" || currentPhase === "ready")
+                ? testLandmarks // Force test landmarks to verify overlay system works
+                : [];
 
             // CLEAN: Log face mesh debug only when state changes
             const debugKey = `${showFaceMesh}-${currentPhase}-${realLandmarks.length}`;
             if (showFaceMesh && debugKey !== debugKeyRef.current) {
-              console.log('🎯 Face mesh debug:', {
+              console.log("🎯 Face mesh debug:", {
                 showFaceMesh,
                 currentPhase,
                 isActivePhase: currentPhase === "active",
@@ -482,13 +493,13 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                 usingTestLandmarks: realLandmarks.length === 0,
                 finalLandmarkCount: landmarks.length,
                 visionHookState: vision?.state,
-                visionHookMetrics: vision?.state?.metrics
+                visionHookMetrics: vision?.state?.metrics,
               });
               debugKeyRef.current = debugKey;
             }
 
             if (currentPhase === "active" && showFaceMesh) {
-              console.log('🎯 Face mesh debug:', {
+              console.log("🎯 Face mesh debug:", {
                 showFaceMesh,
                 currentPhase,
                 hasVisionMetrics: !!session.visionMetrics,
@@ -498,12 +509,14 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                 visionState: vision?.state,
                 visionIsActive: vision?.state.isActive,
                 visionError: vision?.state.error,
-                backendAvailable: vision?.state.backendAvailable
+                backendAvailable: vision?.state.backendAvailable,
               });
             }
             return landmarks;
           })()}
-          showRestlessnessScore={showRestlessnessScore && currentPhase === "active"}
+          showRestlessnessScore={
+            showRestlessnessScore && currentPhase === "active"
+          }
           restlessnessScore={session.visionMetrics?.restlessnessScore || 0}
           className="w-full h-full object-cover"
         />
@@ -522,8 +535,13 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // CLEAN: Ensure stream is connected to video element when phase changes
   useEffect(() => {
-    if (currentPhase === "active" && stream && videoRef.current && !videoRef.current.srcObject) {
-      console.log('🔄 Reconnecting stream for active session...');
+    if (
+      (currentPhase === "active" || currentPhase === "ready") &&
+      stream &&
+      videoRef.current &&
+      !videoRef.current.srcObject
+    ) {
+      console.log("🔄 Connecting stream for session phase:", currentPhase);
       videoRef.current.srcObject = stream;
       videoRef.current.play().catch(console.warn);
     }
@@ -532,11 +550,11 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // PERFORMANT: Retry stream connection with better debugging
   useEffect(() => {
     if (stream && cameraPermissionGranted && !streamConnectedRef.current) {
-      console.log('🔍 Starting stream connection attempts...', {
+      console.log("🔍 Starting stream connection attempts...", {
         hasStream: !!stream,
         streamActive: stream.active,
         videoTracks: stream.getVideoTracks().length,
-        cameraPermissionGranted
+        cameraPermissionGranted,
       });
 
       let retryCount = 0;
@@ -545,48 +563,75 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       const tryConnection = () => {
         console.log(`🔄 Connection attempt ${retryCount + 1}/${maxRetries}`, {
           hasVideoElement: !!videoRef.current,
-          streamConnected: streamConnectedRef.current
+          streamConnected: streamConnectedRef.current,
         });
 
         if (videoRef.current && !streamConnectedRef.current) {
-          console.log('🔗 Connecting stream to video element...');
+          console.log("🔗 Connecting stream to video element...");
 
           videoRef.current.srcObject = stream;
-          videoRef.current.play().then(() => {
-            console.log('✅ Video playing successfully');
-            setIsVideoReady(true);
-          }).catch((error) => {
-            console.warn('⚠️ Video play failed:', error);
-            setIsVideoReady(true); // Mark ready anyway
-          });
+          videoRef.current
+            .play()
+            .then(() => {
+              console.log("✅ Video playing successfully");
+              setIsVideoReady(true);
+            })
+            .catch((error) => {
+              console.warn("⚠️ Video play failed:", error);
+              setIsVideoReady(true); // Mark ready anyway
+            });
 
           streamConnectedRef.current = true;
 
-          // Start vision processing if enabled
-          if (vision && featuresEnabled.vision && !vision.state.isActive) {
-            console.log('👁️ Starting vision processing...', {
+          // Start vision processing if enabled - only after video element is ready
+          if (
+            vision &&
+            featuresEnabled.vision &&
+            !vision.state.isActive &&
+            videoRef.current &&
+            videoRef.current.srcObject
+          ) {
+            console.log("👁️ Starting vision processing...", {
               hasVision: !!vision,
               visionEnabled: featuresEnabled.vision,
               visionIsActive: vision.state.isActive,
-              backendAvailable: vision.state.backendAvailable
+              backendAvailable: vision.state.backendAvailable,
+              videoHasStream: !!videoRef.current.srcObject,
             });
 
-            vision.start(videoRef.current).then(() => {
-              console.log('✅ Vision processing started successfully');
+            vision
+              .start(videoRef.current)
+              .then(() => {
+                console.log("✅ Vision processing started successfully");
 
-              // CLEAN: Check if backend is actually processing frames after a delay
-              setTimeout(() => {
-                console.log('🔍 Vision processing status check:', {
-                  isActive: vision.state.isActive,
-                  hasMetrics: !!vision.state.metrics,
-                  metrics: vision.state.metrics,
-                  backendAvailable: vision.state.backendAvailable,
-                  error: vision.state.error
-                });
-              }, 3000); // Check after 3 seconds
-            }).catch((error) => {
-              console.error('❌ Vision processing failed to start:', error);
-            });
+                // CLEAN: Check if backend is actually processing frames after a delay
+                setTimeout(() => {
+                  console.log("🔍 Vision processing status check:", {
+                    isActive: vision.state.isActive,
+                    hasMetrics: !!vision.state.metrics,
+                    metrics: vision.state.metrics,
+                    backendAvailable: vision.state.backendAvailable,
+                    error: vision.state.error,
+                  });
+                }, 3000); // Check after 3 seconds
+              })
+              .catch((error) => {
+                console.error("❌ Vision processing failed to start:", error);
+              });
+          } else if (
+            vision &&
+            featuresEnabled.vision &&
+            !vision.state.isActive
+          ) {
+            console.log(
+              "⏳ Vision processing delayed - waiting for video stream...",
+              {
+                hasVideoElement: !!videoRef.current,
+                videoHasStream: videoRef.current
+                  ? !!videoRef.current.srcObject
+                  : false,
+              }
+            );
           }
 
           return true; // Success
@@ -602,7 +647,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
           if (tryConnection() || retryCount >= maxRetries) {
             clearInterval(retryInterval);
             if (retryCount >= maxRetries && !streamConnectedRef.current) {
-              console.warn('⚠️ Max retries reached, video element never became available');
+              console.warn(
+                "⚠️ Max retries reached, video element never became available"
+              );
             }
           }
         }, 500);
@@ -643,7 +690,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       setCameraPermissionGranted(true);
 
       // PERFORMANT: Stream will be connected when video element is ready
-      console.log('✅ Camera stream ready, waiting for video element...');
+      console.log("✅ Camera stream ready, waiting for video element...");
 
       setLoadingState((prev) => ({ ...prev, camera: false, message: "" }));
     } catch (error) {
@@ -683,11 +730,25 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     }
 
     // PERFORMANT: Start vision processing early during preparation if camera is ready
-    if (featuresEnabled.vision && cameraPermissionGranted && stream && videoRef.current && vision && !vision.state.isActive) {
-      console.log('🚀 Starting vision processing early during preparation...');
+    if (
+      featuresEnabled.vision &&
+      cameraPermissionGranted &&
+      stream &&
+      videoRef.current &&
+      vision &&
+      !vision.state.isActive
+    ) {
+      console.log("🚀 Starting vision processing early during preparation...");
       vision.start(videoRef.current).catch(console.warn);
     }
-  }, [featuresEnabled.camera, featuresEnabled.vision, cameraPermissionGranted, requestCameraPermission, stream, vision]);
+  }, [
+    featuresEnabled.camera,
+    featuresEnabled.vision,
+    cameraPermissionGranted,
+    requestCameraPermission,
+    stream,
+    vision,
+  ]);
 
   // Preparation timer countdown - PERFORMANT: Stable dependencies
   const cameraReadyRef = useRef(false);
@@ -695,19 +756,20 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // Update camera ready status
   useEffect(() => {
     const wasReady = cameraReadyRef.current;
-    cameraReadyRef.current = !featuresEnabled.camera || (cameraPermissionGranted && isVideoReady);
+    cameraReadyRef.current =
+      !featuresEnabled.camera || (cameraPermissionGranted && isVideoReady);
 
     if (!wasReady && cameraReadyRef.current) {
-      console.log('✅ Camera is now ready!', {
+      console.log("✅ Camera is now ready!", {
         cameraEnabled: featuresEnabled.camera,
         permissionGranted: cameraPermissionGranted,
-        videoReady: isVideoReady
+        videoReady: isVideoReady,
       });
     } else if (!cameraReadyRef.current) {
-      console.log('⏳ Camera not ready:', {
+      console.log("⏳ Camera not ready:", {
         cameraEnabled: featuresEnabled.camera,
         permissionGranted: cameraPermissionGranted,
-        videoReady: isVideoReady
+        videoReady: isVideoReady,
       });
     }
   }, [featuresEnabled.camera, cameraPermissionGranted, isVideoReady]);
@@ -715,19 +777,54 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // DRY: Monitor session metrics updates
   useEffect(() => {
     if (session.visionMetrics) {
-      console.log('📊 Session metrics updated:', {
+      console.log("📊 Session metrics updated:", {
         hasMetrics: !!session.visionMetrics,
         faceLandmarks: session.visionMetrics.faceLandmarks?.length || 0,
         restlessnessScore: session.visionMetrics.restlessnessScore,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
   }, [session.visionMetrics]);
 
+  // ENSURE: Vision processing starts when reaching "ready" phase
+  useEffect(() => {
+    if (
+      currentPhase === "ready" &&
+      vision &&
+      featuresEnabled.vision &&
+      !vision.state.isActive &&
+      videoRef.current &&
+      videoRef.current.srcObject &&
+      cameraPermissionGranted
+    ) {
+      console.log("🎯 Starting vision processing for ready phase...", {
+        currentPhase,
+        visionIsActive: vision.state.isActive,
+        videoHasStream: !!videoRef.current.srcObject,
+        cameraPermissionGranted,
+      });
+
+      vision
+        .start(videoRef.current)
+        .then(() => {
+          console.log("✅ Vision processing started for ready phase");
+        })
+        .catch((error) => {
+          console.error("❌ Vision processing failed for ready phase:", error);
+        });
+    }
+  }, [
+    currentPhase,
+    vision,
+    featuresEnabled.vision,
+    videoRef,
+    cameraPermissionGranted,
+  ]);
+
   useEffect(() => {
     if (currentPhase === "preparation" && preparationTimer > 0) {
       const timer = setTimeout(() => {
-        setPreparationTimer(prev => prev - 1);
+        setPreparationTimer((prev) => prev - 1);
       }, 1000);
       return () => clearTimeout(timer);
     } else if (currentPhase === "preparation" && preparationTimer === 0) {
@@ -736,7 +833,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         setCurrentPhase("ready");
       } else {
         // Give a bit more time for camera setup - but only once
-        console.log('⏳ Camera not ready, extending preparation...');
+        console.log("⏳ Camera not ready, extending preparation...");
         setPreparationTimer(3);
       }
     }
@@ -842,7 +939,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
           <div className="bg-blue-50 rounded-lg p-3 mt-4">
             <p className="text-sm text-blue-700 font-medium">
               Duration: {sessionDuration.totalMinutes} minutes
-              <span className="text-blue-600 ml-2">({sessionDuration.maxCycles} cycles)</span>
+              <span className="text-blue-600 ml-2">
+                ({sessionDuration.maxCycles} cycles)
+              </span>
             </p>
             {!sessionDuration.isAuthenticated && (
               <p className="text-xs text-blue-600 mt-1">
@@ -937,7 +1036,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
         <div className="text-3xl font-bold text-white">{preparationTimer}</div>
       </div>
-      <h2 className="text-2xl font-light text-gray-800">Preparing Your Session</h2>
+      <h2 className="text-2xl font-light text-gray-800">
+        Preparing Your Session
+      </h2>
       <div className="space-y-4 max-w-md mx-auto">
         <p className="text-sm font-medium text-gray-700 text-center">
           Take this moment to settle into your body...
@@ -955,21 +1056,21 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
               <div
                 className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 opacity-20 animate-pulse"
                 style={{
-                  animation: `breathe ${sessionDuration.cycleDuration}s infinite ease-in-out`
+                  animation: `breathe ${sessionDuration.cycleDuration}s infinite ease-in-out`,
                 }}
               ></div>
               <div
                 className="absolute inset-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 opacity-40 animate-pulse"
                 style={{
                   animation: `breathe ${sessionDuration.cycleDuration}s infinite ease-in-out`,
-                  animationDelay: '0.2s'
+                  animationDelay: "0.2s",
                 }}
               ></div>
               <div
                 className="absolute inset-4 rounded-full bg-blue-600 animate-pulse"
                 style={{
                   animation: `breathe ${sessionDuration.cycleDuration}s infinite ease-in-out`,
-                  animationDelay: '0.4s'
+                  animationDelay: "0.4s",
                 }}
               ></div>
             </div>
@@ -1004,20 +1105,22 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         </div>
 
         <div className="bg-blue-50 rounded-lg p-3">
-          <h4 className="text-xs font-medium text-blue-800 mb-2">Quick Setup:</h4>
+          <h4 className="text-xs font-medium text-blue-800 mb-2">
+            Quick Setup:
+          </h4>
           <ul className="text-xs text-blue-700 space-y-1">
             <li>• Find a comfortable seated position</li>
             <li>• Ensure you won't be disturbed</li>
             <li>• {getPatternTip(config.pattern)}</li>
-            {featuresEnabled.camera && <li>• Position yourself in the camera view</li>}
+            {featuresEnabled.camera && (
+              <li>• Position yourself in the camera view</li>
+            )}
           </ul>
         </div>
       </div>
 
       {/* CLEAN: Unified video component */}
-      <div className="mt-6">
-        {renderUnifiedVideo()}
-      </div>
+      <div className="mt-6">{renderUnifiedVideo()}</div>
     </div>
   );
 
@@ -1104,7 +1207,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
               <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-100">
                 <VideoFeed
                   videoRef={videoRef}
-                  isActive={session.isActive}
+                  isActive={
+                    currentPhase === "active" || currentPhase === "ready"
+                  }
                   trackingStatus={getTrackingStatus()}
                   landmarks={session.visionMetrics?.faceLandmarks || []}
                   className="w-full h-full object-cover"
@@ -1208,18 +1313,24 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowFaceMesh(!showFaceMesh)}
-                    className={`text-xs ${showFaceMesh ? 'bg-blue-50 text-blue-700' : ''}`}
+                    className={`text-xs ${
+                      showFaceMesh ? "bg-blue-50 text-blue-700" : ""
+                    }`}
                   >
-                    Face Mesh: {showFaceMesh ? 'ON' : 'OFF'}
+                    Face Mesh: {showFaceMesh ? "ON" : "OFF"}
                   </Button>
 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowRestlessnessScore(!showRestlessnessScore)}
-                    className={`text-xs ${showRestlessnessScore ? 'bg-green-50 text-green-700' : ''}`}
+                    onClick={() =>
+                      setShowRestlessnessScore(!showRestlessnessScore)
+                    }
+                    className={`text-xs ${
+                      showRestlessnessScore ? "bg-green-50 text-green-700" : ""
+                    }`}
                   >
-                    Restlessness: {showRestlessnessScore ? 'ON' : 'OFF'}
+                    Restlessness: {showRestlessnessScore ? "ON" : "OFF"}
                   </Button>
                 </>
               )}
@@ -1350,15 +1461,16 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                 <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Play className="h-8 w-8 text-white" />
                 </div>
-                <h2 className="text-2xl font-light text-gray-800">Ready to Begin</h2>
+                <h2 className="text-2xl font-light text-gray-800">
+                  Ready to Begin
+                </h2>
                 <p className="text-gray-600 max-w-md mx-auto">
-                  Everything is set up. When you're ready, click below to start your {sessionDuration.totalMinutes}-minute session.
+                  Everything is set up. When you're ready, click below to start
+                  your {sessionDuration.totalMinutes}-minute session.
                 </p>
 
                 {/* PERFORMANT: Smooth video transition - grows from preparation size */}
-                <div className="my-6">
-                  {renderUnifiedVideo()}
-                </div>
+                <div className="my-6">{renderUnifiedVideo()}</div>
 
                 <Button
                   onClick={handleStartSession}
