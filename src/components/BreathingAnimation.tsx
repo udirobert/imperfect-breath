@@ -35,6 +35,8 @@ interface BreathingAnimationProps {
     confidence?: number;
   };
   cycleCount?: number;
+  emotionalState?: "calm" | "focused" | "energized" | "peaceful";
+  sessionQuality?: number;
 }
 
 const BreathingAnimation = React.memo<BreathingAnimationProps>(
@@ -49,8 +51,20 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
     compactMode = false,
     overlayMetrics,
     cycleCount = 0,
+    emotionalState = "calm",
+    sessionQuality = 75,
   }) => {
     const phaseConfig = useMemo(() => getPhaseConfig(phase), [phase]);
+    
+    // ENHANCEMENT: Emotional color adaptation (DRY principle)
+    const emotionalColors = useMemo(() => ({
+      calm: { primary: "from-blue-400 to-blue-600", shadow: "shadow-blue-200/50" },
+      focused: { primary: "from-purple-400 to-purple-600", shadow: "shadow-purple-200/50" },
+      energized: { primary: "from-orange-400 to-red-500", shadow: "shadow-orange-200/50" },
+      peaceful: { primary: "from-green-400 to-emerald-500", shadow: "shadow-green-200/50" }
+    }), []);
+    
+    const currentColors = emotionalColors[emotionalState];
 
     const instruction = useMemo(() => {
       if (phase === "countdown" && countdownValue !== undefined) {
@@ -147,8 +161,8 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
             : phase === "hold" || phase === "hold_after_exhale"
             ? "transition-all duration-500 ease-in-out"
             : "transition-all duration-1000 ease-in-out",
-          // Subtle shadow for depth when active
-          isActive && "shadow-lg shadow-blue-200/50"
+          // ENHANCED: Emotional shadow adaptation
+          isActive && `shadow-lg ${currentColors.shadow}`
         )}
         style={{
           width: circleSize,
@@ -215,7 +229,7 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
         <MainCircle />
         <CenterContent />
 
-        {/* Micro-celebration for milestones */}
+        {/* ENHANCED: Micro-celebration with haptic feedback */}
         {isActive &&
           cycleCount > 0 &&
           cycleCount % 5 === 0 &&
@@ -224,14 +238,39 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
             <Badge
               className={cn(
                 "absolute -top-12 left-1/2 -translate-x-1/2",
-                "bg-green-100 text-green-700 border-green-200",
-                "animate-fade-in transition-opacity duration-1000"
+                "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200",
+                "animate-bounce shadow-lg cursor-pointer",
+                "transition-all duration-1000 hover:scale-105"
               )}
               variant="secondary"
+              onClick={() => {
+                // PERFORMANT: Haptic feedback for mobile
+                if ('vibrate' in navigator) {
+                  navigator.vibrate([50, 100, 50]);
+                }
+              }}
             >
-              {cycleCount} breaths! ✨
+              {cycleCount} breaths! *
             </Badge>
           )}
+        
+        {/* ENHANCEMENT: Quality-based particles (MODULAR) */}
+        {isActive && sessionQuality > 80 && (
+          <div className="absolute inset-0 pointer-events-none">
+            {Array.from({ length: Math.floor(sessionQuality / 20) }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-60"
+                style={{
+                  left: `${20 + Math.random() * 60}%`,
+                  top: `${20 + Math.random() * 60}%`,
+                  animationDelay: `${i * 200}ms`,
+                  animationDuration: "2s"
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
   }

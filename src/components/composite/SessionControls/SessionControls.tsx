@@ -92,7 +92,7 @@ export const SessionControls: React.FC<SessionControlsProps> = ({
   }, [sessionState, onPlay, onPause, onReset]);
 
   // Using consolidated formatters from utils
-  
+
   // Type-safe access to session data
   const getSessionValue = (key: string, defaultValue: any = 0): any => {
     return (sessionState as any)?.[key] ?? defaultValue;
@@ -101,12 +101,12 @@ export const SessionControls: React.FC<SessionControlsProps> = ({
   // Type-safe access to phase data
   const getPhaseValue = (phase: any, key: string): string => {
     const phaseMap: Record<string, string> = {
-      inhale: phase?.inhale || '4',
-      hold: phase?.hold || '0', 
-      exhale: phase?.exhale || '4',
-      pause: phase?.pause || '0'
+      inhale: phase?.inhale || "4",
+      hold: phase?.hold || "0",
+      exhale: phase?.exhale || "4",
+      pause: phase?.pause || "0",
     };
-    return phaseMap[key] || '0';
+    return phaseMap[key] || "0";
   };
 
   // Render primary controls
@@ -171,17 +171,90 @@ export const SessionControls: React.FC<SessionControlsProps> = ({
     );
   };
 
-  // Render progress display
+  // ENHANCEMENT: Enhanced progress display with quality scoring (MODULAR)
   const renderProgress = () => {
     if (!config.showProgress || !metrics) return null;
+
+    const stillnessScore = metrics.stillnessScore || 0;
+    const breathingRate = metrics.breathingRate || 0;
+    const qualityScore =
+      stillnessScore > 0
+        ? stillnessScore
+        : breathingRate > 0
+        ? Math.min(breathingRate * 10, 100)
+        : 0;
+    const showQuality = showAdvancedControls && qualityScore > 0;
 
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
           <span>Progress</span>
-          <span>{Math.round(metrics.progress)}%</span>
+          <div className="flex items-center gap-2">
+            <span>{Math.round(metrics.progress)}%</span>
+            {showQuality && (
+              <Badge
+                variant="outline"
+                className={`text-xs ${
+                  qualityScore >= 80
+                    ? "border-green-500 text-green-700"
+                    : qualityScore >= 60
+                    ? "border-blue-500 text-blue-700"
+                    : qualityScore >= 40
+                    ? "border-yellow-500 text-yellow-700"
+                    : "border-red-500 text-red-700"
+                }`}
+              >
+                {qualityScore >= 80
+                  ? "★"
+                  : qualityScore >= 60
+                  ? "●"
+                  : qualityScore >= 40
+                  ? "○"
+                  : "⚠"}
+                {Math.round(qualityScore)}
+              </Badge>
+            )}
+          </div>
         </div>
         <Progress value={metrics.progress} className="w-full" />
+
+        {/* ENHANCEMENT: Quality metrics breakdown (PERFORMANT) */}
+        {showQuality && (
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {metrics.stillnessScore && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Stillness</span>
+                <span
+                  className={
+                    metrics.stillnessScore >= 70
+                      ? "text-green-600"
+                      : metrics.stillnessScore >= 50
+                      ? "text-blue-600"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {Math.round(metrics.stillnessScore)}%
+                </span>
+              </div>
+            )}
+            {breathingRate > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Rate</span>
+                <span
+                  className={
+                    breathingRate >= 7
+                      ? "text-green-600"
+                      : breathingRate >= 5
+                      ? "text-blue-600"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {breathingRate}/min
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -206,7 +279,8 @@ export const SessionControls: React.FC<SessionControlsProps> = ({
       <div className="flex items-center gap-2">
         <Activity
           className={`w-4 h-4 ${
-            PHASE_COLORS[metrics.currentPhase as keyof typeof PHASE_COLORS] || "text-gray-500"
+            PHASE_COLORS[metrics.currentPhase as keyof typeof PHASE_COLORS] ||
+            "text-gray-500"
           }`}
         />
         <Badge variant="outline" className="capitalize">

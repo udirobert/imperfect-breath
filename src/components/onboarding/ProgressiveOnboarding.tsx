@@ -22,6 +22,7 @@ interface OnboardingStep {
   action: string;
   completed: boolean;
   optional?: boolean;
+  emotionalState?: "calm" | "focused" | "energized" | "peaceful";
 }
 
 interface ProgressiveOnboardingProps {
@@ -37,25 +38,116 @@ export const ProgressiveOnboarding: React.FC<ProgressiveOnboardingProps> = ({
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
 
+  // ENHANCEMENT: Haptic feedback for step completion (PERFORMANT)
+  const triggerStepHaptic = () => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate([30, 50, 30]);
+    }
+  };
+
   // Check if user has completed first session
-  const hasCompletedSession = localStorage.getItem("hasCompletedSession") === "true";
+  const hasCompletedSession =
+    localStorage.getItem("hasCompletedSession") === "true";
+
+  // ENHANCEMENT: Personality detection for adaptive onboarding (MODULAR)
+  const getPersonalityBasedContent = (
+    stepId: string,
+    emotionalState?: "calm" | "focused" | "energized" | "peaceful"
+  ) => {
+    const personalityMap = {
+      calm: {
+        practice: {
+          title: "Begin Your Peaceful Journey",
+          description:
+            "Experience gentle, guided breathing in a serene environment",
+          tone: "soothing",
+        },
+        signup: {
+          title: "Preserve Your Inner Peace",
+          description: "Save your progress and continue your mindful journey",
+          tone: "gentle",
+        },
+      },
+      focused: {
+        practice: {
+          title: "Sharpen Your Focus",
+          description:
+            "Use structured breathing to enhance concentration and clarity",
+          tone: "precise",
+        },
+        signup: {
+          title: "Track Your Progress",
+          description: "Monitor your breathing practice and achieve your goals",
+          tone: "methodical",
+        },
+      },
+      energized: {
+        practice: {
+          title: "Ignite Your Energy",
+          description:
+            "Dynamic breathing patterns to boost vitality and motivation",
+          tone: "vibrant",
+        },
+        signup: {
+          title: "Fuel Your Journey",
+          description: "Keep the momentum going with personalized tracking",
+          tone: "dynamic",
+        },
+      },
+      peaceful: {
+        practice: {
+          title: "Find Your Center",
+          description: "Deep breathing for ultimate relaxation and tranquility",
+          tone: "serene",
+        },
+        signup: {
+          title: "Maintain Your Harmony",
+          description: "Continue your path to inner peace with guided practice",
+          tone: "harmonious",
+        },
+      },
+    };
+
+    const defaultContent = {
+      practice: {
+        title: "Try Your First Session",
+        description:
+          "Experience 5 minutes of guided breathing - no signup required",
+        tone: "neutral",
+      },
+      signup: {
+        title: "Save Your Progress",
+        description: "Create an account to track your breathing journey",
+        tone: "neutral",
+      },
+    };
+
+    return emotionalState &&
+      personalityMap[emotionalState]?.[
+        stepId as keyof typeof personalityMap.calm
+      ]
+      ? personalityMap[emotionalState][
+          stepId as keyof typeof personalityMap.calm
+        ]
+      : defaultContent[stepId as keyof typeof defaultContent];
+  };
 
   const steps: OnboardingStep[] = [
     {
       id: "practice",
-      title: "Try Your First Session",
-      description: "Experience 5 minutes of guided breathing - no signup required",
+      ...getPersonalityBasedContent("practice", "calm"),
       icon: Play,
       action: "Start Practice",
       completed: hasCompletedSession,
+      emotionalState: "calm",
     },
     {
       id: "signup",
-      title: "Save Your Progress",
-      description: "Create an account to track your breathing journey",
+      ...getPersonalityBasedContent("signup", "focused"),
       icon: Mail,
       action: isAuthenticated ? "✓ Signed In" : "Sign Up",
       completed: isAuthenticated,
+      emotionalState: "focused",
     },
     {
       id: "social",
@@ -65,24 +157,27 @@ export const ProgressiveOnboarding: React.FC<ProgressiveOnboardingProps> = ({
       action: "Explore Community",
       completed: false,
       optional: true,
+      emotionalState: "peaceful",
     },
     {
       id: "create",
       title: "Become a Creator",
-      description: "Design custom patterns and earn from your wellness expertise",
+      description:
+        "Design custom patterns and earn from your wellness expertise",
       icon: Palette,
       action: "Start Creating",
       completed: false,
       optional: true,
+      emotionalState: "energized",
     },
   ];
 
-  const completedSteps = steps.filter(step => step.completed).length;
+  const completedSteps = steps.filter((step) => step.completed).length;
   const progress = (completedSteps / steps.length) * 100;
 
   // Auto-advance to next incomplete step
   useEffect(() => {
-    const nextIncompleteStep = steps.findIndex(step => !step.completed);
+    const nextIncompleteStep = steps.findIndex((step) => !step.completed);
     if (nextIncompleteStep !== -1) {
       setCurrentStep(nextIncompleteStep);
     }
@@ -137,15 +232,13 @@ export const ProgressiveOnboarding: React.FC<ProgressiveOnboardingProps> = ({
               className: "h-6 w-6 text-primary",
             })}
           </div>
-          <CardTitle className="text-xl">
-            {steps[currentStep]?.title}
-          </CardTitle>
+          <CardTitle className="text-xl">{steps[currentStep]?.title}</CardTitle>
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-muted-foreground">
             {steps[currentStep]?.description}
           </p>
-          
+
           <div className="space-y-3">
             <Button
               onClick={() => handleStepAction(steps[currentStep])}
@@ -167,11 +260,7 @@ export const ProgressiveOnboarding: React.FC<ProgressiveOnboardingProps> = ({
             </Button>
 
             {steps[currentStep]?.optional && (
-              <Button
-                variant="ghost"
-                onClick={handleSkip}
-                className="w-full"
-              >
+              <Button variant="ghost" onClick={handleSkip} className="w-full">
                 Skip for now
               </Button>
             )}
@@ -205,7 +294,7 @@ export const ProgressiveOnboarding: React.FC<ProgressiveOnboardingProps> = ({
               )}
             >
               {step.completed ? (
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className="h-4 w-4" onClick={triggerStepHaptic} />
               ) : (
                 React.createElement(step.icon, { className: "h-4 w-4" })
               )}

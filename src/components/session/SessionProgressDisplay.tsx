@@ -14,6 +14,11 @@ interface SessionProgressDisplayProps {
   cycleCount: number;
   progressPercentage: number;
   className?: string;
+  // ENHANCEMENT: Quality scoring props
+  qualityScore?: number;
+  stillnessScore?: number;
+  consistencyScore?: number;
+  showQualityMetrics?: boolean;
 }
 
 export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
@@ -24,7 +29,34 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
       cycleCount,
       progressPercentage,
       className = "",
+      qualityScore,
+      stillnessScore,
+      consistencyScore,
+      showQualityMetrics = false,
     }) => {
+      // ENHANCEMENT: Quality scoring calculations (PERFORMANT)
+      const getQualityColor = (score?: number) => {
+        if (!score) return "text-muted-foreground";
+        if (score >= 80) return "text-green-600";
+        if (score >= 60) return "text-blue-600";
+        if (score >= 40) return "text-yellow-600";
+        return "text-red-600";
+      };
+
+      const getQualityLabel = (score?: number) => {
+        if (!score) return "Calculating...";
+        if (score >= 80) return "Excellent";
+        if (score >= 60) return "Good";
+        if (score >= 40) return "Fair";
+        return "Needs Focus";
+      };
+
+      const overallQuality =
+        qualityScore ||
+        (stillnessScore && consistencyScore
+          ? Math.round((stillnessScore + consistencyScore) / 2)
+          : undefined);
+
       return (
         <div className={`space-y-4 ${className}`}>
           {/* Session Header - compact */}
@@ -33,6 +65,21 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
             <p className="text-3xl font-mono font-bold text-primary">
               {duration}
             </p>
+            {/* ENHANCEMENT: Overall quality indicator */}
+            {showQualityMetrics && overallQuality && (
+              <div className="mt-2">
+                <p
+                  className={`text-sm font-medium ${getQualityColor(
+                    overallQuality
+                  )}`}
+                >
+                  {getQualityLabel(overallQuality)} Session
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Quality Score: {overallQuality}/100
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Progress Indicator */}
@@ -43,6 +90,38 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
               <span>{Math.round(progressPercentage)}%</span>
             </div>
           </div>
+
+          {/* ENHANCEMENT: Quality metrics display (MODULAR) */}
+          {showQualityMetrics && (stillnessScore || consistencyScore) && (
+            <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
+              {stillnessScore && (
+                <div className="text-center">
+                  <div
+                    className={`text-lg font-bold ${getQualityColor(
+                      stillnessScore
+                    )}`}
+                  >
+                    {Math.round(stillnessScore)}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">Stillness</div>
+                </div>
+              )}
+              {consistencyScore && (
+                <div className="text-center">
+                  <div
+                    className={`text-lg font-bold ${getQualityColor(
+                      consistencyScore
+                    )}`}
+                  >
+                    {Math.round(consistencyScore)}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Consistency
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }

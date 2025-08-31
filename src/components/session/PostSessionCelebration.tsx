@@ -1,6 +1,6 @@
 /**
  * Post-Session Celebration - Smart Pattern Unlock & Progression
- * 
+ *
  * ENHANCEMENT FIRST: Enhances existing session completion with adaptive next steps
  * CLEAN: Separates celebration logic from session mechanics
  * MODULAR: Reusable across different session types
@@ -12,19 +12,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Progress } from "../ui/progress";
-import { 
-  Trophy, 
-  Heart, 
-  Brain, 
-  Zap, 
-  Sparkles, 
+import {
+  Trophy,
+  Heart,
+  Brain,
+  Zap,
+  Sparkles,
   ArrowRight,
   Clock,
   Target,
   Unlock,
   Star,
   Calendar,
-  Users
+  Users,
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "../../lib/breathingPatterns";
 import { useFirstTimeUser } from "../../hooks/useFirstTimeUser";
@@ -49,11 +49,13 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
   metrics,
   onContinue,
   onExplorePatterns,
-  onClose
+  onClose,
 }) => {
   const navigate = useNavigate();
   const { markSessionCompleted, isFirstTime } = useFirstTimeUser();
-  const [celebrationStep, setCelebrationStep] = useState<"impact" | "unlock" | "next">("impact");
+  const [celebrationStep, setCelebrationStep] = useState<
+    "impact" | "unlock" | "next"
+  >("impact");
 
   useEffect(() => {
     // Mark session as completed for first-time user tracking
@@ -64,34 +66,37 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
     if (metrics.score >= 80) {
       return {
         title: "Outstanding! 🎉",
-        message: "You just activated your parasympathetic nervous system - your body's natural relaxation response. You should feel noticeably calmer and more focused.",
+        message:
+          "You just activated your parasympathetic nervous system - your body's natural relaxation response. You should feel noticeably calmer and more focused.",
         color: "text-green-600",
         bgColor: "bg-green-50",
-        borderColor: "border-green-200"
+        borderColor: "border-green-200",
       };
     }
     if (metrics.score >= 60) {
       return {
         title: "Excellent work! 👏",
-        message: "You completed a full breathing session. Even imperfect practice brings real benefits - your stress hormones are already decreasing.",
-        color: "text-blue-600", 
+        message:
+          "You completed a full breathing session. Even imperfect practice brings real benefits - your stress hormones are already decreasing.",
+        color: "text-blue-600",
         bgColor: "bg-blue-50",
-        borderColor: "border-blue-200"
+        borderColor: "border-blue-200",
       };
     }
     return {
       title: "You did it! 💪",
-      message: "Every breath counts. You just took a powerful step toward better stress management and mental clarity.",
+      message:
+        "Every breath counts. You just took a powerful step toward better stress management and mental clarity.",
       color: "text-purple-600",
-      bgColor: "bg-purple-50", 
-      borderColor: "border-purple-200"
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-200",
     };
   };
 
   const getSmartRecommendations = () => {
     const hour = new Date().getHours();
     const isFirstSession = metrics.isFirstSession || isFirstTime;
-    
+
     if (isFirstSession) {
       // First session - encourage immediate repetition or gentle exploration
       return [
@@ -102,23 +107,24 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           icon: Heart,
           action: () => onContinue?.(),
           priority: "high",
-          timeToValue: "Right now"
+          timeToValue: "Right now",
         },
         {
           id: "explore",
-          title: "Unlock More Patterns", 
-          description: "You've proven breathing works - explore 6+ more techniques",
+          title: "Unlock More Patterns",
+          description:
+            "You've proven breathing works - explore 6+ more techniques",
           icon: Unlock,
           action: () => onExplorePatterns?.(),
           priority: "medium",
-          timeToValue: "2 minutes"
-        }
+          timeToValue: "2 minutes",
+        },
       ];
     }
 
     // Returning user - time-based and goal-based recommendations
     const recommendations = [];
-    
+
     if (hour >= 6 && hour < 12) {
       recommendations.push({
         id: "energy",
@@ -127,7 +133,7 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
         icon: Zap,
         action: () => navigate("/patterns?goal=energy"),
         priority: "high",
-        timeToValue: "3 minutes"
+        timeToValue: "3 minutes",
       });
     } else if (hour >= 17) {
       recommendations.push({
@@ -136,8 +142,8 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
         description: "Transition to relaxation patterns for better sleep",
         icon: Brain,
         action: () => navigate("/patterns?goal=sleep"),
-        priority: "high", 
-        timeToValue: "5 minutes"
+        priority: "high",
+        timeToValue: "5 minutes",
       });
     }
 
@@ -148,7 +154,7 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
       icon: Star,
       action: () => navigate("/session/enhanced"),
       priority: "medium",
-      timeToValue: "1 minute"
+      timeToValue: "1 minute",
     });
 
     return recommendations;
@@ -158,9 +164,20 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
   const recommendations = getSmartRecommendations();
   const duration = Math.round(metrics.duration / 60);
 
+  // ENHANCEMENT: Haptic feedback for step transitions (PERFORMANT)
+  const triggerStepHaptic = () => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate([50, 100, 50]);
+    }
+  };
+
   const handleNext = () => {
+    triggerStepHaptic(); // Add haptic feedback for step transitions
+
     if (celebrationStep === "impact") {
-      setCelebrationStep(metrics.sessionType === "classic" && isFirstTime ? "unlock" : "next");
+      setCelebrationStep(
+        metrics.sessionType === "classic" && isFirstTime ? "unlock" : "next"
+      );
     } else if (celebrationStep === "unlock") {
       setCelebrationStep("next");
     }
@@ -202,7 +219,7 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           <Card>
             <CardContent className="p-4 text-center">
               <Heart className="h-6 w-6 text-red-500 mx-auto mb-2" />
-              <div className="text-xl font-bold">{metrics.cycles || 'N/A'}</div>
+              <div className="text-xl font-bold">{metrics.cycles || "N/A"}</div>
               <div className="text-sm text-muted-foreground">Cycles</div>
             </CardContent>
           </Card>
@@ -255,23 +272,32 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
             You've Unlocked More Patterns!
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            You've proven that breathing works for you. Now explore our complete library of scientifically-backed patterns designed for different goals.
+            You've proven that breathing works for you. Now explore our complete
+            library of scientifically-backed patterns designed for different
+            goals.
           </p>
         </div>
 
         {/* Pattern preview grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {Object.values(BREATHING_PATTERNS).slice(1, 7).map((pattern, index) => (
-            <Card key={pattern.id} className="hover:shadow-md transition-all cursor-pointer">
-              <CardContent className="p-4 text-center">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center mx-auto mb-2">
-                  <Sparkles className="h-4 w-4 text-purple-600" />
-                </div>
-                <h4 className="font-medium text-sm mb-1">{pattern.name}</h4>
-                <p className="text-xs text-muted-foreground">{pattern.benefits[0]}</p>
-              </CardContent>
-            </Card>
-          ))}
+          {Object.values(BREATHING_PATTERNS)
+            .slice(1, 7)
+            .map((pattern, index) => (
+              <Card
+                key={pattern.id}
+                className="hover:shadow-md transition-all cursor-pointer"
+              >
+                <CardContent className="p-4 text-center">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center mx-auto mb-2">
+                    <Sparkles className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <h4 className="font-medium text-sm mb-1">{pattern.name}</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {pattern.benefits[0]}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
         </div>
 
         <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
@@ -280,12 +306,16 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
             <span className="font-medium text-green-800">Research shows:</span>
           </div>
           <p className="text-green-700 text-sm">
-            Regular breathing practice can reduce anxiety by up to 60% and improve sleep quality by 40%. You're on the right path!
+            Regular breathing practice can reduce anxiety by up to 60% and
+            improve sleep quality by 40%. You're on the right path!
           </p>
         </div>
 
         <div className="flex gap-3">
-          <Button onClick={() => onExplorePatterns?.()} className="flex-1 bg-purple-600 hover:bg-purple-700">
+          <Button
+            onClick={() => onExplorePatterns?.()}
+            className="flex-1 bg-purple-600 hover:bg-purple-700"
+          >
             <Sparkles className="h-4 w-4 mr-2" />
             Explore All Patterns
           </Button>
@@ -304,7 +334,8 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
         <div className="text-center">
           <h3 className="text-2xl font-bold mb-2">Keep the Momentum Going!</h3>
           <p className="text-muted-foreground">
-            You've proven breathing works for you. Here's how to build on this success:
+            You've proven breathing works for you. Here's how to build on this
+            success:
           </p>
         </div>
 
@@ -312,28 +343,44 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           {recommendations.map((rec) => {
             const Icon = rec.icon;
             const isPriority = rec.priority === "high";
-            
+
             return (
-              <Card 
-                key={rec.id} 
+              <Card
+                key={rec.id}
                 className={`cursor-pointer hover:shadow-lg transition-all ${
-                  isPriority ? "border-2 border-green-300 bg-green-50" : "border-2 border-gray-200"
+                  isPriority
+                    ? "border-2 border-green-300 bg-green-50"
+                    : "border-2 border-gray-200"
                 }`}
                 onClick={rec.action}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isPriority ? "bg-green-100" : "bg-gray-100"
-                      }`}>
-                        <Icon className={`h-5 w-5 ${isPriority ? "text-green-600" : "text-gray-600"}`} />
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isPriority ? "bg-green-100" : "bg-gray-100"
+                        }`}
+                      >
+                        <Icon
+                          className={`h-5 w-5 ${
+                            isPriority ? "text-green-600" : "text-gray-600"
+                          }`}
+                        />
                       </div>
                       <div>
-                        <h4 className={`font-semibold ${isPriority ? "text-green-800" : "text-gray-800"}`}>
+                        <h4
+                          className={`font-semibold ${
+                            isPriority ? "text-green-800" : "text-gray-800"
+                          }`}
+                        >
                           {rec.title}
                         </h4>
-                        <p className={`text-sm ${isPriority ? "text-green-700" : "text-gray-600"}`}>
+                        <p
+                          className={`text-sm ${
+                            isPriority ? "text-green-700" : "text-gray-600"
+                          }`}
+                        >
                           {rec.description}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -341,7 +388,11 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
                         </p>
                       </div>
                     </div>
-                    <ArrowRight className={`h-5 w-5 ${isPriority ? "text-green-600" : "text-gray-400"}`} />
+                    <ArrowRight
+                      className={`h-5 w-5 ${
+                        isPriority ? "text-green-600" : "text-gray-400"
+                      }`}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -353,7 +404,10 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           <Button onClick={onClose} variant="outline" className="flex-1">
             Close
           </Button>
-          <Button onClick={() => recommendations[0]?.action()} className="flex-1 bg-green-600 hover:bg-green-700">
+          <Button
+            onClick={() => recommendations[0]?.action()}
+            className="flex-1 bg-green-600 hover:bg-green-700"
+          >
             {recommendations[0]?.title || "Continue"}
           </Button>
         </div>
