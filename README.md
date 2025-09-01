@@ -34,19 +34,29 @@ git clone https://github.com/your-username/imperfect-breath.git
 cd imperfect-breath
 npm install
 
-# 2. Start development server
+# 2. Start the backend service (optional, for full AI & vision features)
+cd backend/vision-service
+pip install -r requirements.txt
+MODEL_DOWNLOAD_ON_START=false python3 main.py &
+cd ../..
+
+# 3. Start development server
 npm run dev
 
-# 3. Open http://localhost:4556 and start breathing!
+# 4. Open http://localhost:4556 and start breathing!
 ```
 
 **That's it!** The app works immediately with:
 
 - ✅ Complete breathing pattern library (20+ patterns)
-- ✅ AI coaching with Zen agent
-- ✅ Computer vision feedback (camera optional)
 - ✅ Local progress tracking
 - ✅ PWA offline support
+
+**With backend running:**
+
+- 🤖 AI coaching with Zen agent
+- 📹 Real-time computer vision feedback
+- 📊 Advanced session analysis
 
 ### 🎯 Enable Face Mesh (Optional)
 
@@ -157,17 +167,6 @@ npm run lint        # Code quality checks
 npm run build       # Create production build
 npm run preview     # Test production locally
 ```
-
-> **📋 Recent Improvements**: The codebase has been systematically cleaned up following **ENHANCEMENT FIRST** principles:
->
-> - ✅ **Removed deprecated scripts** - Eliminated unused development tools
-> - ✅ **Consolidated components** - Unified Header, Layout, and mobile components
-> - ✅ **Cleaned legacy types** - Removed redundant blockchain type definitions
-> - ✅ **Removed test/demo code** - Eliminated development-only components from production
-> - ✅ **Optimized build config** - Simplified Vite configuration for better maintainability
-> - ✅ **Unified mobile detection** - Single source of truth for responsive behavior
->
-> This cleanup improved code quality from 7/10 to 9/10 while maintaining all user functionality.
 
 ## 🌟 Getting Started as a User
 

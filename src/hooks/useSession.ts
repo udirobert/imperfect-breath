@@ -34,6 +34,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
   // Store actions
   const {
     initializeSession,
+    setSessionReady,
     startSession,
     pauseSession,
     resumeSession,
@@ -84,14 +85,23 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
   const requestCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 15, max: 30 }
-        }
-      });
+      console.log('📷 Requesting camera access...');
       
+      // Add timeout to prevent indefinite hanging
+      const stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 15, max: 30 }
+          }
+        }),
+        new Promise<MediaStream>((_, reject) => 
+          setTimeout(() => reject(new Error('Camera access timeout - please check permissions and try again')), 10000)
+        )
+      ]);
+      
+      console.log('✅ Camera access granted');
       setCameraStream(stream);
       setCameraPermission(true);
       
@@ -103,9 +113,25 @@ export const useSession = (options: UseSessionOptions = {}) => {
       
       return stream;
     } catch (error) {
-      console.warn('Camera access denied:', error);
+      console.warn('❌ Camera access failed:', error);
       setCameraPermission(false);
-      setError('Camera access was denied. Continuing without camera tracking.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Camera access was denied. Continuing without camera tracking.';
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'Camera access denied. Please allow camera permissions in your browser settings.';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No camera found. Please connect a camera and try again.';
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = 'Camera is already in use by another application.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Camera access timed out. Please check permissions and try again.';
+        }
+      }
+      
+      setError(errorMessage);
       return null;
     }
   }, [enableVision, vision, setCameraStream, setCameraPermission, setVisionActive, setError]);
@@ -173,6 +199,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
       await requestCamera();
     }
     
+    // Set session as ready after initialization
+    setSessionReady();
+    
     // Auto-start if enabled
     if (autoStart) {
       setTimeout(() => {
@@ -180,10 +209,12 @@ export const useSession = (options: UseSessionOptions = {}) => {
         start();
       }, 1000);
     }
-  }, [initializeSession, requestCamera, autoStart]);
+  }, [initializeSession, requestCamera, setSessionReady, autoStart]);
 
   const start = useCallback(() => {
-    if (!config) {
+    // Check if session is properly initialized by checking the store directly
+    const currentState = useSessionStore.getState();
+    if (!currentState.config) {
       setError('Session not properly initialized');
       return;
     }
@@ -192,7 +223,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     
     // Start breathing phase cycle
     startBreathingCycle();
-  }, [config, startSession, setError, startBreathingCycle]);
+  }, [startSession, setError, startBreathingCycle]);
 
   const pause = useCallback(() => {
     pauseSession();

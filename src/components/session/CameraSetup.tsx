@@ -1,8 +1,8 @@
-import React, { Suspense, lazy, useState } from "react";
+import React, { Suspense, lazy, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/useSession";
 import { TrackingStatus, Keypoint } from "@/hooks/visionTypes";
-import { Loader2, Camera } from "lucide-react";
+import { Loader2, Camera, AlertCircle } from "lucide-react";
 
 const VideoFeed = lazy(() => import("@/components/VideoFeed"));
 
@@ -19,14 +19,52 @@ export const CameraSetup = ({
   trackingStatus,
   initializeCamera,
 }: CameraSetupProps) => {
-  const { start, cameraPermissionGranted: sessionReady } = useSession();
+  const { start, cameraPermissionGranted, phase, config, cameraStream } = useSession();
   const [cameraRequested, setCameraRequested] = useState(false);
-  const isReady = trackingStatus === "TRACKING";
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraInitialized, setCameraInitialized] = useState(false);
+  
+  // Simplified logic: camera is ready if we have a stream and no errors
+  const isCameraReady = !!cameraStream && !cameraError && cameraInitialized;
+  const isReady = trackingStatus === "TRACKING" || isCameraReady;
   const needsCameraSetup = trackingStatus === "IDLE" && !cameraRequested;
+  const isInitializing = cameraRequested && !isCameraReady && !cameraError;
+  
+  // Session is ready if we have a config and either camera is ready or we can skip camera
+  const sessionReady = !!config && (isCameraReady || cameraError || phase === 'ready');
+
+  // Timeout for initialization to prevent infinite loading
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isInitializing) {
+      timeoutId = setTimeout(() => {
+        setCameraError("Camera initialization is taking longer than expected. You can skip camera setup to continue.");
+      }, 10000); // 10 second timeout
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isInitializing]);
 
   const handleRequestCamera = async () => {
-    setCameraRequested(true);
-    await initializeCamera();
+    try {
+      setCameraRequested(true);
+      setCameraError(null);
+      setCameraInitialized(false);
+      await initializeCamera();
+      // If we get here without error, camera is initialized
+      setCameraInitialized(true);
+    } catch (error) {
+      console.error("Camera initialization failed:", error);
+      setCameraError(
+        error instanceof Error 
+          ? error.message 
+          : "Failed to initialize camera. Please check permissions and try again."
+      );
+      setCameraInitialized(false);
+    }
   };
 
   const handleStartSession = async () => {
@@ -68,6 +106,13 @@ export const CameraSetup = ({
         </Suspense>
       </div>
 
+      {cameraError && (
+        <div className="mt-4 p-3 bg-destructive/20 text-destructive rounded-md max-w-md flex items-center">
+          <AlertCircle className="w-5 h-5 mr-2" />
+          <span>{cameraError}</span>
+        </div>
+      )}
+
       <div className="mt-8 text-center">
         {needsCameraSetup ? (
           <Button onClick={handleRequestCamera} size="lg" className="w-48">
@@ -78,16 +123,17 @@ export const CameraSetup = ({
           <Button
             onClick={handleStartSession}
             size="lg"
-            disabled={!isReady || !sessionReady}
+            disabled={!isReady && !cameraError && isInitializing}
             className="w-48"
           >
-            {(!isReady || !sessionReady) && (
+            {(isInitializing && !cameraError) && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            {isReady && sessionReady ? "Start Session" : "Initializing..."}
+            {isReady && sessionReady ? "Start Session" : 
+             cameraError ? "Continue Without Camera" : "Initializing..."}
           </Button>
         )}
-        {!isReady && cameraRequested && (
+        {(!isReady && cameraRequested) && (
           <p className="text-sm text-muted-foreground mt-4">
             Having trouble? You can{" "}
             <Button

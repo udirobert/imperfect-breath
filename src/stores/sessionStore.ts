@@ -15,7 +15,7 @@ import { BreathingPattern } from '../lib/breathingPatterns';
 // TYPES - Clean, meditation-focused state structure
 // ============================================================================
 
-export type SessionPhase = 'setup' | 'preparation' | 'active' | 'paused' | 'complete';
+export type SessionPhase = 'setup' | 'preparation' | 'ready' | 'active' | 'paused' | 'complete';
 export type BreathPhase = 'inhale' | 'hold' | 'exhale' | 'pause';
 export type SessionMode = 'basic' | 'enhanced';
 
@@ -73,6 +73,7 @@ export interface SessionState {
 export interface SessionActions {
   // Session lifecycle
   initializeSession: (config: SessionConfig) => void;
+  setSessionReady: () => void;
   startSession: () => void;
   pauseSession: () => void;
   resumeSession: () => void;
@@ -146,6 +147,13 @@ export const useSessionStore = create<SessionState & SessionActions>()(
         metrics: { ...initialMetrics, startTime: Date.now() },
         error: null,
         warnings: [],
+      });
+    },
+
+    setSessionReady: () => {
+      set({
+        phase: 'ready',
+        error: null,
       });
     },
 

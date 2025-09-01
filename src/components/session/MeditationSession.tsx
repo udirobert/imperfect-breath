@@ -53,12 +53,17 @@ import {
 // Core imports
 import BreathingAnimation from "../BreathingAnimation";
 import { FaceMeshOverlay } from "../vision/FaceMeshOverlay";
-import VideoFeed from "../VideoFeed";
 import { GentleErrorBoundary } from "../meditation/GentleErrorBoundary";
 import { CalmLoading } from "../meditation/CalmLoading";
 import { PreparationPhase } from "./PreparationPhase";
 import { PerformanceMonitor } from "../vision/PerformanceMonitor";
 import { MobileBreathingControls } from "../mobile/MobileBreathingControls";
+import { CameraSetup } from "./CameraSetup";
+import { BenefitAwarePreparation } from "./BenefitAwarePreparation";
+import { SessionProgressDisplay } from "./SessionProgressDisplay";
+import { PostSessionCelebration } from "./PostSessionCelebration";
+import { SessionControls } from "./SessionControls";
+import { MobileBreathingInterface } from "./MobileBreathingInterface";
 
 // Unified hooks
 import { useSession } from "../../hooks/useSession";
@@ -67,6 +72,7 @@ import useAdaptivePerformance, {
   useIsMobile,
 } from "../../hooks/useAdaptivePerformance";
 import { useAuth } from "../../hooks/useAuth";
+import { TrackingStatus } from "../../hooks/visionTypes";
 
 // Patterns and utilities
 import {
@@ -223,16 +229,13 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     message: "",
   });
 
-  // Camera and video refs
-  const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
+  // Camera and video refs - now managed by CameraSetup component
   const [videoRef] = useState<React.RefObject<HTMLVideoElement>>(
     React.createRef()
   );
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
   // CLEAN: Preparation phase state
   const [currentPhase, setCurrentPhase] = useState<SessionPhase>("setup");
-  const [preparationTimer, setPreparationTimer] = useState(0);
   const [isVideoReady, setIsVideoReady] = useState(false);
 
   // MODULAR: User-controllable overlay preferences
@@ -250,6 +253,17 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // Enhanced session management with adaptive performance
   const visionEnabled = modeConfig.enableVision && !isLowEndDevice;
+
+  // Memoize vision config to prevent recreation on every render
+  const visionConfig = useMemo(
+    () => ({
+      sessionId: `session_${Date.now()}`,
+      targetFPS: 2,
+      silentMode: false,
+      gracefulDegradation: true,
+    }),
+    []
+  ); // Empty deps - only create once
 
   // CLEAN: Log only once when component mounts
   React.useEffect(() => {
@@ -276,6 +290,15 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     enableVision: true, // CLEAN: Force enable for debugging
     targetFPS: 2, // Default FPS for vision processing
   });
+
+  // Vision processing hook - only enable when needed
+  const vision = useMeditationVision(visionEnabled ? visionConfig : undefined);
+
+  // Memoize landmarks to prevent infinite re-renders
+  const landmarks = useMemo(
+    () => vision?.state.metrics?.faceLandmarks || [],
+    [vision?.state.metrics?.faceLandmarks]
+  );
 
   // Track initialization to prevent infinite re-renders
   const isInitializedRef = useRef(false);
@@ -318,12 +341,20 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
             hold: config.pattern.phases.hold || 0,
             exhale: config.pattern.phases.exhale,
             hold_after_exhale: config.pattern.phases?.pause || 0,
+            benefits: config.pattern.benefits || [
+              "Improved focus",
+              "Reduced stress",
+              "Better breathing control",
+            ],
           },
+          enableCamera: modeConfig.enableCamera,
+          enableAudio: modeConfig.enableAudio,
+          enableAI: modeConfig.enableVision, // Map vision to AI feature
         };
 
         // Initialize the session store
-        // Note: This would need to be connected to your actual session store
         console.log("Session config prepared:", sessionConfig);
+        session.initialize(sessionConfig);
       }
     }
   }, [config, modeConfig]);
@@ -403,6 +434,14 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // Apply encouragement during active session
   useEffect(() => {
     if (currentPhase === "active" && session.isActive) {
+      console.log("📊 Session metrics:", {
+        isActive: session.isActive,
+        duration: session.getSessionDuration?.(),
+        cycleCount: session.metrics?.cycleCount,
+        currentPhase: session.metrics?.currentPhase,
+        completion: session.getCompletionPercentage?.(),
+      });
+
       const encouragement = getAdaptiveEncouragement();
       if (encouragement) {
         // Trigger haptic feedback for celebrations
@@ -414,10 +453,64 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         console.log("🌟 Adaptive encouragement:", encouragement);
       }
     }
-  }, [currentPhase, session.isActive, getAdaptiveEncouragement]);
+  }, [
+    currentPhase,
+    session.isActive,
+    session.metrics,
+    session.getSessionDuration,
+    session.getCompletionPercentage,
+    getAdaptiveEncouragement,
+  ]);
+
+  // Transition to active phase when session starts
+  useEffect(() => {
+    if (session.isActive && currentPhase === "preparation") {
+      console.log("✅ Session is active, transitioning to active phase");
+      setCurrentPhase("active");
+    }
+  }, [session.isActive, currentPhase]);
+
+  // Start vision processing when session becomes active and video is ready
+  useEffect(() => {
+    if (
+      currentPhase === "active" &&
+      visionEnabled &&
+      videoRef.current &&
+      vision &&
+      !vision.state.isActive &&
+      isVideoReady // Only start when video is actually ready
+    ) {
+      console.log("Starting vision processing for active session");
+      vision.start(videoRef.current);
+    }
+  }, [currentPhase, visionEnabled, vision, isVideoReady]);
+
+  // Cleanup vision processing when component unmounts
+  const visionRef = useRef(vision);
+  visionRef.current = vision;
+
+  useEffect(() => {
+    return () => {
+      if (visionRef.current) {
+        visionRef.current.stop();
+      }
+    };
+  }, []); // Empty dependency array - only run on unmount
+
+  // Camera initialization is now handled by CameraSetup component
 
   // Rest of the component implementation would continue...
   // (The full implementation is quite long, so I'll focus on the key enhancement)
+
+  // Use mobile-optimized interface on mobile devices
+  if (isMobile && modeConfig.enableMobileOptimizations) {
+    return (
+      <MobileBreathingInterface
+        onEndSession={onSessionExit}
+        patternName={config.pattern.name}
+      />
+    );
+  }
 
   return (
     <GentleErrorBoundary
@@ -440,30 +533,140 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
             {currentPhase === "setup" && (
-              <div className="text-center space-y-6">
-                <h2 className="text-2xl font-light text-gray-800">
-                  {config.pattern.name} Session
-                </h2>
-                <p className="text-gray-600">
-                  Adaptive encouragement enabled for personalized guidance
-                </p>
-                <Button onClick={() => setCurrentPhase("preparation")}>
-                  Begin Session
-                </Button>
-              </div>
+              <BenefitAwarePreparation
+                patternName={config.pattern.name}
+                pattern={config.pattern}
+                onStart={async () => {
+                  console.log("🚀 Starting session directly...");
+
+                  // If camera is needed, initialize it silently in background
+                  if (modeConfig.enableCamera) {
+                    try {
+                      console.log("📹 Initializing camera in background...");
+                      const stream = await session.requestCamera();
+
+                      if (stream && videoRef.current) {
+                        const video = videoRef.current;
+                        video.srcObject = stream;
+                        video.muted = true;
+                        video.autoplay = true;
+                        video.playsInline = true;
+                        setIsVideoReady(true);
+
+                        // Start vision processing if available
+                        if (vision) {
+                          try {
+                            await vision.start(video);
+                            console.log("✅ Vision processing started");
+                          } catch (err) {
+                            console.warn(
+                              "⚠️ Vision start failed, continuing without:",
+                              err
+                            );
+                          }
+                        }
+                      }
+                    } catch (error) {
+                      console.warn(
+                        "⚠️ Camera initialization failed, continuing without:",
+                        error
+                      );
+                    }
+                  }
+
+                  // Start the session regardless of camera status
+                  console.log("🎯 Starting session...");
+                  session.start();
+                  console.log(
+                    "✅ Session started, transitioning to active phase"
+                  );
+                  setCurrentPhase("active");
+                }}
+                onCancel={onSessionExit}
+                showBenefitEducation={true}
+              />
             )}
 
             {currentPhase === "active" && (
-              <div className="text-center space-y-6">
-                <h2 className="text-2xl font-light text-gray-800">
-                  Session Active
-                </h2>
-                <p className="text-gray-600">
-                  Adaptive encouragement will provide personalized guidance
-                  based on your performance
-                </p>
-                <div className="flex gap-4 justify-center">
+              <div className="space-y-6">
+                {/* Rich Progress Display */}
+                <SessionProgressDisplay
+                  patternName={config.pattern.name}
+                  duration={
+                    session.getSessionDuration
+                      ? session.getSessionDuration()
+                      : "00:00"
+                  }
+                  cycleCount={session.metrics?.cycleCount || 0}
+                  progressPercentage={
+                    session.getCompletionPercentage
+                      ? session.getCompletionPercentage()
+                      : 0
+                  }
+                  qualityScore={vision?.state.metrics?.stillness}
+                  stillnessScore={vision?.state.metrics?.stillness}
+                  showQualityMetrics={modeConfig.enableVision}
+                />
+
+                {/* Camera Feed - only show if camera is enabled and available */}
+                {modeConfig.enableCamera && session.cameraStream && (
+                  <div className="flex justify-center mb-4">
+                    <div className="w-64 h-48 md:w-96 md:h-72 rounded-lg overflow-hidden shadow-md border-2 border-primary/20 relative">
+                      <video
+                        ref={videoRef}
+                        className="w-full h-full object-cover"
+                        muted
+                        autoPlay
+                        playsInline
+                      />
+                      {/* Face landmarks overlay */}
+                      {landmarks.length > 0 && (
+                        <div className="absolute inset-0 pointer-events-none">
+                          {landmarks.slice(0, 10).map((point, index) => (
+                            <div
+                              key={index}
+                              className="absolute w-2 h-2 rounded-full bg-green-400 opacity-80"
+                              style={{
+                                left: `${point.x * 100}%`,
+                                top: `${point.y * 100}%`,
+                                transform: "translate(-50%, -50%)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {/* Vision status indicator */}
+                      <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        {vision?.state.isActive
+                          ? "Vision Active"
+                          : "Vision Starting"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Breathing Animation */}
+                <div className="flex justify-center">
+                  <BreathingAnimation
+                    phase={
+                      (session.metrics?.currentPhase === "pause"
+                        ? "hold_after_exhale"
+                        : session.metrics?.currentPhase) || "inhale"
+                    }
+                    pattern={config.pattern}
+                    isActive={session.isActive}
+                  />
+                </div>
+
+                {/* Session Controls */}
+                <SessionControls
+                  onEndSession={() => setCurrentPhase("complete")}
+                />
+
+                {/* Adaptive Encouragement Toggle */}
+                <div className="flex justify-center">
                   <Button
+                    variant="outline"
                     onClick={() =>
                       setAdaptiveEncouragementEnabled(
                         !adaptiveEncouragementEnabled
@@ -473,24 +676,34 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                     {adaptiveEncouragementEnabled ? "Disable" : "Enable"}{" "}
                     Adaptive Encouragement
                   </Button>
-                  <Button onClick={() => setCurrentPhase("complete")}>
-                    End Session
-                  </Button>
                 </div>
               </div>
             )}
 
             {currentPhase === "complete" && (
-              <div className="text-center space-y-6">
-                <h2 className="text-2xl font-light text-gray-800">
-                  Session Complete
-                </h2>
-                <p className="text-gray-600">
-                  Great work! Your adaptive encouragement streak:{" "}
-                  {encouragementStreak}
-                </p>
-                <Button onClick={onSessionExit}>Return to Menu</Button>
-              </div>
+              <PostSessionCelebration
+                metrics={{
+                  patternName: config.pattern.name,
+                  duration: 0, // Would be populated from actual session duration
+                  score: session.visionMetrics?.stillness || 85,
+                  cycles: 0, // Would be populated from actual cycle count
+                  sessionType:
+                    config.mode === "classic" ? "classic" : "enhanced",
+                  isFirstSession: false, // Would be determined from user history
+                }}
+                onContinue={() => setCurrentPhase("setup")}
+                onExplorePatterns={() => {
+                  // Would navigate to patterns page
+                  console.log("Navigate to patterns");
+                }}
+                onClose={() => {
+                  // Stop vision processing before exiting
+                  if (vision) {
+                    vision.stop();
+                  }
+                  onSessionExit?.();
+                }}
+              />
             )}
           </CardContent>
         </Card>

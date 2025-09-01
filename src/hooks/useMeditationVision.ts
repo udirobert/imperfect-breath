@@ -271,6 +271,15 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
   const performanceTracker = useRef<number[]>([]);
   const lastFrameTime = useRef<number>(0);
   const isActiveRef = useRef<boolean>(false); // Track active state without stale closures
+  const isUnmountedRef = useRef<boolean>(false); // Prevent state updates during unmount
+
+  // Track component unmount to prevent state updates during cleanup
+  useEffect(() => {
+    isUnmountedRef.current = false;
+    return () => {
+      isUnmountedRef.current = true;
+    };
+  }, []);
 
   // Initialize client - no automatic health checks
   useEffect(() => {
@@ -279,12 +288,14 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     clientRef.current = new MeditationVisionClient(finalConfig.backendUrl);
 
     // PERFORMANT: Skip health check, assume ready for faster startup
-    setState(prev => ({
-      ...prev,
-      backendAvailable: true, // Optimistic - will fail gracefully if needed
-      isReady: true,
-      error: null
-    }));
+    if (!isUnmountedRef.current) {
+      setState(prev => ({
+        ...prev,
+        backendAvailable: true, // Optimistic - will fail gracefully if needed
+        isReady: true,
+        error: null
+      }));
+    }
 
     return () => {
       clientRef.current?.cleanup();
@@ -319,11 +330,13 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       newFPS = finalConfig.targetFPS || 2;
     }
     
-    setState(prev => ({
-      ...prev,
-      performanceMode: newMode,
-      currentFPS: newFPS,
-    }));
+    if (!isUnmountedRef.current) {
+      setState(prev => ({
+        ...prev,
+        performanceMode: newMode,
+        currentFPS: newFPS,
+      }));
+    }
   }, [finalConfig.enableAdaptiveFPS, finalConfig.targetFPS]);
 
   // Frame processing with graceful failure
@@ -371,7 +384,9 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
             console.warn('Backend processing failed, using fallback:', backendError);
           }
           
-          setState(prev => ({ ...prev, backendAvailable: false }));
+          if (!isUnmountedRef.current) {
+            setState(prev => ({ ...prev, backendAvailable: false }));
+          }
           metrics = createFallbackMetrics();
         }
       } else {
@@ -382,7 +397,9 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       const processingTime = performance.now() - startTime;
       updatePerformanceMode(processingTime);
       
-      setState(prev => ({ ...prev, metrics, error: null }));
+      if (!isUnmountedRef.current) {
+        setState(prev => ({ ...prev, metrics, error: null }));
+      }
       
     } catch (error) {
       // Silent failure in meditation mode
@@ -392,11 +409,13 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       
       if (finalConfig.gracefulDegradation) {
         // Provide fallback metrics to keep UI working
-        setState(prev => ({ 
-          ...prev, 
-          metrics: createFallbackMetrics(),
-          error: finalConfig.silentMode ? null : 'Using fallback vision'
-        }));
+        if (!isUnmountedRef.current) {
+          setState(prev => ({
+            ...prev,
+            metrics: createFallbackMetrics(),
+            error: finalConfig.silentMode ? null : 'Using fallback vision'
+          }));
+        }
       }
     }
   }, [
@@ -413,21 +432,25 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     videoRef.current = videoElement;
     isActiveRef.current = true; // Update ref immediately
 
-    setState(prev => ({
-      ...prev,
-      isActive: true,
-      error: null
-    }));
+    if (!isUnmountedRef.current) {
+      setState(prev => ({
+        ...prev,
+        isActive: true,
+        error: null
+      }));
+    }
 
     // Start processing loop - use final config FPS to avoid stale state
     const interval = Math.floor(1000 / finalConfig.targetFPS!);
     processingInterval.current = setInterval(processFrame, interval);
     
     // Provide immediate feedback
-    setState(prev => ({ 
-      ...prev, 
-      metrics: createFallbackMetrics()
-    }));
+    if (!isUnmountedRef.current) {
+      setState(prev => ({
+        ...prev,
+        metrics: createFallbackMetrics()
+      }));
+    }
     
   }, [processFrame]); // Remove state dependencies
 
@@ -435,12 +458,14 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
   const stop = useCallback(() => {
     isActiveRef.current = false; // Update ref immediately
 
-    setState(prev => ({
-      ...prev,
-      isActive: false,
-      metrics: null,
-      error: null
-    }));
+    if (!isUnmountedRef.current) {
+      setState(prev => ({
+        ...prev,
+        isActive: false,
+        metrics: null,
+        error: null
+      }));
+    }
 
     if (processingInterval.current) {
       clearInterval(processingInterval.current);
@@ -453,13 +478,15 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
 
   // Reset (for session restart)
   const reset = useCallback(() => {
-    setState(prev => ({ 
-      ...prev, 
-      metrics: null,
-      error: null,
-      performanceMode: 'optimal',
-      currentFPS: finalConfig.targetFPS || 2,
-    }));
+    if (!isUnmountedRef.current) {
+      setState(prev => ({
+        ...prev,
+        metrics: null,
+        error: null,
+        performanceMode: 'optimal',
+        currentFPS: finalConfig.targetFPS || 2,
+      }));
+    }
     
     performanceTracker.current = [];
   }, [finalConfig.targetFPS]);
