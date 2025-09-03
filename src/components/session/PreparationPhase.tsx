@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
+import { Badge } from "../ui/badge";
 import BreathingAnimation from "../BreathingAnimation";
 import { cn } from "../../lib/utils";
+import {
+  Heart,
+  Focus,
+  Brain,
+  Moon,
+  Zap,
+  Sparkles,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+} from "lucide-react";
 
 interface PreparationPhaseProps {
   patternName: string;
@@ -26,6 +39,7 @@ export const PreparationPhase: React.FC<PreparationPhaseProps> = ({
   pattern,
   onStart,
   onCancel,
+  showBenefits = false,
 }) => {
   const [preparationStep, setPreparationStep] = useState<
     "benefits" | "intro" | "countdown" | "ready"
@@ -259,5 +273,4 @@ const BENEFIT_ICONS: Record<string, React.ElementType> = {
   'anxiety reduction': Heart,
   'immune system boost': Zap,
   'cold tolerance': Zap
-};
 };
