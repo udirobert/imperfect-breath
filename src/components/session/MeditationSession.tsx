@@ -88,6 +88,7 @@ export type SessionMode = "classic" | "enhanced" | "advanced" | "mobile";
 export type SessionPhase =
   | "setup"
   | "preparation"
+  | "camera_setup"
   | "ready"
   | "active"
   | "paused"
@@ -462,7 +463,10 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // Transition to active phase when session starts
   useEffect(() => {
-    if (session.isActive && currentPhase === "preparation") {
+    if (
+      session.isActive &&
+      (currentPhase === "preparation" || currentPhase === "camera_setup")
+    ) {
       console.log("✅ Session is active, transitioning to active phase");
       setCurrentPhase("active");
     }
@@ -472,7 +476,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   useEffect(() => {
     const startVisionProcessing = async () => {
       if (
-        currentPhase === "active" &&
+        (currentPhase === "active" || currentPhase === "camera_setup") &&
         visionEnabled &&
         videoRef.current &&
         vision &&
@@ -481,7 +485,10 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         videoRef.current.readyState >= 2 // HAVE_CURRENT_DATA
       ) {
         try {
-          console.log("🔍 Starting vision processing with video readyState:", videoRef.current.readyState);
+          console.log(
+            "🔍 Starting vision processing with video readyState:",
+            videoRef.current.readyState
+          );
           await vision.start(videoRef.current);
           console.log("✅ Vision processing started successfully");
         } catch (err) {
@@ -490,9 +497,15 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         }
       }
     };
-    
+
     startVisionProcessing();
-  }, [currentPhase, visionEnabled, vision, isVideoReady, videoRef.current?.readyState]);
+  }, [
+    currentPhase,
+    visionEnabled,
+    vision,
+    isVideoReady,
+    videoRef.current?.readyState,
+  ]);
 
   // Cleanup vision processing when component unmounts
   const visionRef = useRef(vision);
@@ -546,93 +559,30 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                 patternName={config.pattern.name}
                 pattern={config.pattern}
                 showBenefits={true}
-                onStart={async () => {
-                  console.log("🚀 Starting session with bulletproof initialization...");
-                  
-                  // Bulletproof camera initialization
+                onStart={() => {
+                  console.log(
+                    "🎯 Preparation complete, moving to camera setup..."
+                  );
                   if (modeConfig.enableCamera) {
-                    setLoadingState(prev => ({ ...prev, camera: true, message: "Initializing camera..." }));
-                    
-                    try {
-                      console.log("📹 Requesting camera access with timeout...");
-                      
-                      // Request camera with timeout protection
-                      const stream = await Promise.race([
-                        session.requestCamera(),
-                        new Promise<null>((_, reject) => 
-                          setTimeout(() => reject(new Error('Camera access timeout - please check permissions')), 10000)
-                        )
-                      ]);
-                      
-                      if (stream && videoRef.current) {
-                        const video = videoRef.current;
-                        video.srcObject = stream;
-                        video.muted = true;
-                        video.autoplay = true;
-                        video.playsInline = true;
-                        setCameraStream(stream);
-                        
-                        // Wait for video metadata to load before proceeding
-                        await new Promise<void>((resolve, reject) => {
-                          const timeout = setTimeout(() => {
-                            reject(new Error('Video metadata load timeout'));
-                          }, 5000);
-                          
-                          const onLoadedMetadata = () => {
-                            clearTimeout(timeout);
-                            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-                            video.removeEventListener('error', onError);
-                            resolve();
-                          };
-                          
-                          const onError = () => {
-                            clearTimeout(timeout);
-                            video.removeEventListener('loadedmetadata', onLoadedMetadata);
-                            video.removeEventListener('error', onError);
-                            reject(new Error('Video load error'));
-                          };
-                          
-                          video.addEventListener('loadedmetadata', onLoadedMetadata);
-                          video.addEventListener('error', onError);
-                        });
-                        
-                        // Ensure video is actually playing
-                        try {
-                          await video.play();
-                          console.log("✅ Video is playing, readyState:", video.readyState);
-                        } catch (playError) {
-                          console.warn("⚠️ Video play failed, but continuing:", playError);
-                        }
-                        
-                        setIsVideoReady(true);
-                        setLoadingState(prev => ({ ...prev, camera: false, message: "" }));
-                        console.log("✅ Camera initialization complete");
-                        
-                      } else {
-                        throw new Error('Camera stream or video element unavailable');
-                      }
-                      
-                    } catch (error) {
-                      console.error('❌ Camera initialization failed:', error);
-                      setLoadingState(prev => ({ 
-                        ...prev, 
-                        camera: false, 
-                        message: error instanceof Error ? error.message : "Camera setup failed - continuing without camera"
-                      }));
-                      
-                      // Continue without camera - graceful degradation
-                      setIsVideoReady(false);
-                      setCameraStream(null);
-                    }
+                    setCurrentPhase("camera_setup");
+                  } else {
+                    // Skip camera setup for classic mode
+                    console.log("🎯 Starting breathing session (no camera)...");
+                    session.start();
+                    setCurrentPhase("active");
                   }
-
-                  // Start the session regardless of camera status
-                  console.log("🎯 Starting breathing session...");
-                  session.start();
-                  console.log("✅ Session started, transitioning to active phase");
-                  setCurrentPhase("active");
                 }}
                 onCancel={onSessionExit}
+              />
+            )}
+
+            {currentPhase === "camera_setup" && (
+              <CameraSetup
+                videoRef={videoRef}
+                landmarks={landmarks}
+                trackingStatus={
+                  vision?.state.isActive ? "TRACKING" : "INITIALIZING"
+                }
               />
             )}
 
@@ -675,7 +625,11 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                         isActive={vision?.state.isActive || false}
                         confidence={vision?.state.metrics?.confidence || 0}
                         postureScore={vision?.state.metrics?.posture || 0}
-                        movementLevel={vision?.state.metrics?.restlessnessScore ? vision?.state.metrics?.restlessnessScore / 100 : 0}
+                        movementLevel={
+                          vision?.state.metrics?.restlessnessScore
+                            ? vision?.state.metrics?.restlessnessScore / 100
+                            : 0
+                        }
                       />
                       {/* Vision status indicator */}
                       <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
@@ -707,41 +661,46 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                     const sessionDuration = session.getSessionDuration?.() || 0;
                     const cycleCount = session.metrics?.cycleCount || 0;
                     const visionData = vision?.state.metrics;
-                    
+
                     const metrics: SessionMetrics = {
-                      duration: typeof sessionDuration === 'string' ? 
-                        parseInt(sessionDuration.split(':')[0]) * 60 + parseInt(sessionDuration.split(':')[1]) : 
-                        sessionDuration,
+                      duration:
+                        typeof sessionDuration === "string"
+                          ? parseInt(sessionDuration.split(":")[0]) * 60 +
+                            parseInt(sessionDuration.split(":")[1])
+                          : sessionDuration,
                       cycleCount,
                       breathHoldTime: 0, // Could be calculated from pattern
                       stillnessScore: visionData?.stillness,
                       cameraUsed: !!cameraStream,
-                      sessionType: config.mode === "classic" ? "classic" : "enhanced",
+                      sessionType:
+                        config.mode === "classic" ? "classic" : "enhanced",
                       visionSessionId: visionConfig.sessionId,
-                      visionMetrics: visionData ? {
-                        averageStillness: visionData.stillness,
-                        faceDetectionRate: visionData.presence,
-                        postureScore: visionData.posture,
-                      } : undefined,
+                      visionMetrics: visionData
+                        ? {
+                            averageStillness: visionData.stillness,
+                            faceDetectionRate: visionData.presence,
+                            postureScore: visionData.posture,
+                          }
+                        : undefined,
                     };
-                    
+
                     // Stop vision processing before completing
                     if (vision) {
                       vision.stop();
                     }
-                    
+
                     // Stop camera stream
                     if (cameraStream) {
-                      cameraStream.getTracks().forEach(track => track.stop());
+                      cameraStream.getTracks().forEach((track) => track.stop());
                       setCameraStream(null);
                     }
-                    
+
                     // Complete session in store
                     session.complete();
-                    
+
                     // Transition to completion phase
                     setCurrentPhase("complete");
-                    
+
                     // Call completion callback with real metrics
                     onSessionComplete?.(metrics);
                   }}
