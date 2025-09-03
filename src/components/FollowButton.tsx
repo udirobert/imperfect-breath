@@ -1,50 +1,5 @@
-import { useLens } from "../hooks/useLens";
-import { Button } from "./ui/button";
-import { Plus, X } from "lucide-react";
-import { useState } from "react";
+// DEPRECATED: This component has been consolidated into src/components/social/SocialButton.tsx
+// Use the new unified SocialButton component instead
+// This file will be removed in the next cleanup phase
 
-interface FollowButtonProps {
-  address: string;
-  isFollowed?: boolean;
-}
-
-export const FollowButton = ({
-  address,
-  isFollowed = false,
-}: FollowButtonProps) => {
-  const { followUser, unfollowUser, isFollowing } = useLens();
-  const [userIsFollowed, setUserIsFollowed] = useState(isFollowed);
-
-  const handleFollow = async () => {
-    if (!userIsFollowed) {
-      await followUser(address);
-      setUserIsFollowed(true);
-    } else {
-      await unfollowUser(address);
-      setUserIsFollowed(false);
-    }
-  };
-
-  return (
-    <Button
-      onClick={handleFollow}
-      disabled={isFollowing}
-      size="sm"
-      variant={userIsFollowed ? "outline" : "default"}
-    >
-      {isFollowing ? (
-        "Processing..."
-      ) : userIsFollowed ? (
-        <>
-          <X className="w-4 h-4 mr-2" />
-          Unfollow
-        </>
-      ) : (
-        <>
-          <Plus className="w-4 h-4 mr-2" />
-          Follow
-        </>
-      )}
-    </Button>
-  );
-};
+export { FollowButton } from './social/SocialButton';

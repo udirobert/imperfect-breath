@@ -8,7 +8,7 @@ import {
 } from "../components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Skeleton } from "../components/ui/skeleton";
-import { FollowButton } from "../components/FollowButton";
+import { FollowButton } from "../components/social/SocialButton";
 
 const UserProfilePage = () => {
   const { user, profile, loading: authLoading } = useAuth();

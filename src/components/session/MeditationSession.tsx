@@ -59,7 +59,6 @@ import { PreparationPhase } from "./PreparationPhase";
 import { PerformanceMonitor } from "../vision/PerformanceMonitor";
 import { MobileBreathingControls } from "../mobile/MobileBreathingControls";
 import { CameraSetup } from "./CameraSetup";
-import { BenefitAwarePreparation } from "./BenefitAwarePreparation";
 import { SessionProgressDisplay } from "./SessionProgressDisplay";
 import { PostSessionCelebration } from "./PostSessionCelebration";
 import { SessionControls } from "./SessionControls";
@@ -533,9 +532,10 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
             {currentPhase === "setup" && (
-              <BenefitAwarePreparation
+              <PreparationPhase
                 patternName={config.pattern.name}
                 pattern={config.pattern}
+                showBenefits={true}
                 onStart={async () => {
                   console.log("🚀 Starting session directly...");
 
@@ -583,7 +583,6 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                   setCurrentPhase("active");
                 }}
                 onCancel={onSessionExit}
-                showBenefitEducation={true}
               />
             )}
 
@@ -620,21 +619,14 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                         playsInline
                       />
                       {/* Face landmarks overlay */}
-                      {landmarks.length > 0 && (
-                        <div className="absolute inset-0 pointer-events-none">
-                          {landmarks.slice(0, 10).map((point, index) => (
-                            <div
-                              key={index}
-                              className="absolute w-2 h-2 rounded-full bg-green-400 opacity-80"
-                              style={{
-                                left: `${point.x * 100}%`,
-                                top: `${point.y * 100}%`,
-                                transform: "translate(-50%, -50%)",
-                              }}
-                            />
-                          ))}
-                        </div>
-                      )}
+                      <FaceMeshOverlay
+                        videoElement={videoRef.current}
+                        landmarks={landmarks}
+                        isActive={vision?.state.isActive || false}
+                        confidence={vision?.state.metrics?.confidence || 0}
+                        postureScore={vision?.state.metrics?.posture || 0}
+                        movementLevel={vision?.state.metrics?.restlessnessScore ? vision?.state.metrics?.restlessnessScore / 100 : 0}
+                      />
                       {/* Vision status indicator */}
                       <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
                         {vision?.state.isActive

@@ -13,9 +13,12 @@ interface PreparationPhaseProps {
       exhale: number;
       pause?: number;
     };
+    benefits?: string[];
+    description?: string;
   };
   onStart: () => void;
   onCancel?: () => void;
+  showBenefits?: boolean;
 }
 
 export const PreparationPhase: React.FC<PreparationPhaseProps> = ({
@@ -25,8 +28,8 @@ export const PreparationPhase: React.FC<PreparationPhaseProps> = ({
   onCancel,
 }) => {
   const [preparationStep, setPreparationStep] = useState<
-    "intro" | "countdown" | "ready"
-  >("intro");
+    "benefits" | "intro" | "countdown" | "ready"
+  >(showBenefits ? "benefits" : "intro");
   const [countdown, setCountdown] = useState(5);
   const [isCountingDown, setIsCountingDown] = useState(false);
 
@@ -46,6 +49,10 @@ export const PreparationPhase: React.FC<PreparationPhaseProps> = ({
     }
   }, [preparationStep, countdown, isCountingDown, onStart]);
 
+  const handleProceedToIntro = () => {
+    setPreparationStep("intro");
+  };
+
   const handleBeginPreparation = () => {
     setPreparationStep("countdown");
     setIsCountingDown(true);
@@ -55,10 +62,76 @@ export const PreparationPhase: React.FC<PreparationPhaseProps> = ({
     onStart();
   };
 
+  if (preparationStep === "benefits") {
+    return (
+      <div className="flex-grow flex flex-col items-center justify-center p-6 space-y-8 animate-fade-in">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 mb-4">
+            <Sparkles className="w-8 h-8 text-primary" />
+          </div>
+          
+          <h2 className="text-2xl font-bold text-primary">
+            {patternName} Benefits
+          </h2>
+          
+          <p className="text-muted-foreground leading-relaxed">
+            {pattern.description || 'A powerful breathing technique for wellness'}
+          </p>
+        </div>
+
+        {/* Benefits grid */}
+        <div className="grid grid-cols-1 gap-3 w-full max-w-sm">
+          {(pattern.benefits || ['Stress reduction', 'Improved focus']).map((benefit, index) => {
+            const IconComponent = BENEFIT_ICONS[benefit.toLowerCase()] || Heart;
+            return (
+              <Card key={index} className="border border-green-200/50 bg-gradient-to-r from-green-50 to-blue-50">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <IconComponent className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span className="font-medium text-green-800">{benefit}</span>
+                  <CheckCircle className="h-4 w-4 text-green-500 ml-auto" />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Time to benefit */}
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>Benefits start in 30-60 seconds</span>
+          </div>
+          <Badge variant="outline" className="bg-white/80">
+            No experience needed
+          </Badge>
+        </div>
+
+        {/* Action */}
+        <div className="space-y-3">
+          <Button
+            onClick={handleProceedToIntro}
+            size="lg"
+            className="w-48 rounded-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white shadow-lg transition-all duration-300"
+          >
+            I'm Ready to Try This
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+          <Button
+            onClick={handleSkipPreparation}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-primary transition-colors"
+          >
+            Skip to Session
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (preparationStep === "intro") {
     return (
       <div className="flex-grow flex flex-col items-center justify-center p-6 text-center space-y-8 animate-fade-in">
-        {/* Gentle introduction */}
         <div className="space-y-4 max-w-md">
           <h2 className="text-2xl font-light text-primary">
             Prepare for {patternName}
@@ -165,4 +238,26 @@ export const PreparationPhase: React.FC<PreparationPhaseProps> = ({
   }
 
   return null;
+}
+
+const BENEFIT_ICONS: Record<string, React.ElementType> = {
+  'stress reduction': Heart,
+  'improved focus': Focus,
+  'mental clarity': Brain,
+  'anxiety relief': Heart,
+  'better sleep': Moon,
+  'relaxation': Heart,
+  'energy increase': Zap,
+  'energy boost': Zap,
+  'increased alertness': Zap,
+  'morning activation': Zap,
+  'improved sleep quality': Moon,
+  'reduced insomnia': Moon,
+  'evening relaxation': Moon,
+  'meditation support': Brain,
+  'present moment awareness': Brain,
+  'anxiety reduction': Heart,
+  'immune system boost': Zap,
+  'cold tolerance': Zap
+};
 };
