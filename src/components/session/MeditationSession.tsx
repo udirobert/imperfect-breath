@@ -241,6 +241,41 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   const [showFaceMesh, setShowFaceMesh] = useState(true);
   const [showRestlessnessScore, setShowRestlessnessScore] = useState(true);
 
+  // Monitor video element for readiness
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleVideoReady = () => {
+      console.log("🎥 Video element ready, readyState:", video.readyState);
+      if (video.readyState >= 2) {
+        // HAVE_CURRENT_DATA
+        setIsVideoReady(true);
+      }
+    };
+
+    const handleVideoError = (error: Event) => {
+      console.error("❌ Video element error:", error);
+      setIsVideoReady(false);
+    };
+
+    // Listen for video ready events
+    video.addEventListener("loadedmetadata", handleVideoReady);
+    video.addEventListener("canplay", handleVideoReady);
+    video.addEventListener("error", handleVideoError);
+
+    // Check initial state
+    if (video.readyState >= 2) {
+      setIsVideoReady(true);
+    }
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleVideoReady);
+      video.removeEventListener("canplay", handleVideoReady);
+      video.removeEventListener("error", handleVideoError);
+    };
+  }, [session.cameraStream]); // Re-run when camera stream changes
+
   // ENHANCEMENT: Adaptive encouragement timing (PERFORMANT)
   const [lastEncouragementTime, setLastEncouragementTime] = useState(0);
   const [encouragementStreak, setEncouragementStreak] = useState(0);
@@ -475,25 +510,54 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // Synchronized vision processing startup with proper checks
   useEffect(() => {
     const startVisionProcessing = async () => {
+      // Enhanced conditions with better logging
+      const conditions = {
+        correctPhase:
+          currentPhase === "active" || currentPhase === "camera_setup",
+        visionEnabled,
+        hasVideoElement: !!videoRef.current,
+        hasVisionHook: !!vision,
+        visionNotActive: vision && !vision.state.isActive,
+        videoReady: isVideoReady,
+        videoReadyState: videoRef.current?.readyState >= 2,
+        hasCameraStream: !!session.cameraStream,
+      };
+
+      console.log("🔍 Vision startup conditions check:", conditions);
+
       if (
-        (currentPhase === "active" || currentPhase === "camera_setup") &&
-        visionEnabled &&
-        videoRef.current &&
-        vision &&
-        !vision.state.isActive &&
-        isVideoReady &&
-        videoRef.current.readyState >= 2 // HAVE_CURRENT_DATA
+        conditions.correctPhase &&
+        conditions.visionEnabled &&
+        conditions.hasVideoElement &&
+        conditions.hasVisionHook &&
+        conditions.visionNotActive &&
+        conditions.videoReady &&
+        conditions.videoReadyState &&
+        conditions.hasCameraStream
       ) {
         try {
           console.log(
             "🔍 Starting vision processing with video readyState:",
-            videoRef.current.readyState
+            videoRef.current?.readyState
           );
-          await vision.start(videoRef.current);
-          console.log("✅ Vision processing started successfully");
+          await vision.start(videoRef.current!);
+          console.log(
+            "✅ Vision processing started successfully - Facemesh should now be active"
+          );
         } catch (err) {
           console.warn("⚠️ Vision start failed, continuing without:", err);
           // Vision hook handles graceful degradation internally
+        }
+      } else {
+        const missingConditions = Object.entries(conditions)
+          .filter(([_, value]) => !value)
+          .map(([key]) => key);
+
+        if (missingConditions.length > 0) {
+          console.log(
+            "🔍 Vision startup waiting for:",
+            missingConditions.join(", ")
+          );
         }
       }
     };
@@ -505,6 +569,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     vision,
     isVideoReady,
     videoRef.current?.readyState,
+    session.cameraStream, // Added dependency to retry when camera becomes available
   ]);
 
   // Cleanup vision processing when component unmounts

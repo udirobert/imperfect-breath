@@ -87,12 +87,12 @@ class MeditationVisionClient {
 
   async checkHealth(): Promise<boolean> {
     try {
-      // PERFORMANT: Simple HEAD request to avoid health check spam
+      // PERFORMANT: Use GET instead of HEAD to avoid 405 errors with FastAPI
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000);
 
       const response = await fetch(`${this.baseUrl}/health`, {
-        method: 'HEAD',
+        method: 'GET',
         signal: controller.signal
       });
 
@@ -221,7 +221,7 @@ const generateBasicLandmarks = (): Array<{ x: number; y: number; z?: number }> =
 
 const DEFAULT_CONFIG: VisionConfig = {
   sessionId: '',
-  backendUrl: 'http://localhost:8001',
+  backendUrl: 'http://localhost:8001', // Backend actually runs on 8001
   targetFPS: 2,
   enableAdaptiveFPS: true,
   features: {
