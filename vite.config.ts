@@ -120,44 +120,48 @@ export default defineConfig(({ mode }) => {
         // Ensure nothing gets externalized - everything should be bundled
         external: [],
         output: {
-          // Simpler approach: use function-based chunking to ensure React stays with vendor deps
-          manualChunks(id) {
-            // Keep React and all node_modules together in vendor chunk
-            if (id.includes('node_modules')) {
-              return 'vendor';
-            }
-            // Everything else goes to the main chunk
-            return undefined;
+          // Simplified chunking strategy to prevent module loading issues
+          manualChunks: {
+            // Keep React ecosystem together in vendor chunk
+            vendor: [
+              'react',
+              'react-dom',
+              'react-dom/client',
+              'react/jsx-runtime',
+              'react-router-dom',
+              'scheduler'
+            ],
+            // UI libraries in separate chunk
+            ui: [
+              '@radix-ui/react-slot',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              'class-variance-authority',
+              'clsx',
+              'tailwind-merge'
+            ]
           },
           
-          // Configure chunk file naming
-          chunkFileNames: (chunkInfo) => {
-            const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
-            return `js/[name]-[hash].js`;
-          },
+          // Configure chunk file naming with better cache busting
+          chunkFileNames: 'js/[name]-[hash:8].js',
+          entryFileNames: 'js/[name]-[hash:8].js',
           
           // Configure asset file naming
           assetFileNames: (assetInfo) => {
             if (!assetInfo.name) {
-              return `assets/[name]-[hash][extname]`;
+              return 'assets/[name]-[hash:8][extname]';
             }
             
             const info = assetInfo.name.split('.');
             const ext = info[info.length - 1];
             if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
-              return `img/[name]-[hash][extname]`;
+              return 'img/[name]-[hash:8][extname]';
             }
             if (/css/i.test(ext)) {
-              return `css/[name]-[hash][extname]`;
+              return 'css/[name]-[hash:8][extname]';
             }
-            return `assets/[name]-[hash][extname]`;
+            return 'assets/[name]-[hash:8][extname]';
           },
-          
-          // Remove globals as we want everything bundled
-          // globals: {
-          //   'react': 'React',
-          //   'react-dom': 'ReactDOM'
-          // }
         },
       },
 
