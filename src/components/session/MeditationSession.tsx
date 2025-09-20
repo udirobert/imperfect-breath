@@ -287,11 +287,15 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       });
   }, []); // Empty dependency array - run only once
 
-  const session = useSession({
+  // Memoize session options to prevent useSession hook from being recreated during phase transitions
+  const sessionOptions = useMemo(() => ({
     autoStart: config.autoStart,
     enableVision: true, // CLEAN: Force enable for debugging
     targetFPS: 2, // Default FPS for vision processing
-  });
+    videoElement: videoRef,
+  }), [config.autoStart, videoRef]);
+
+  const session = useSession(sessionOptions);
 
   // Vision processing hook - only enable when needed
   const vision = useMeditationVision(visionEnabled ? visionConfig : undefined);
@@ -488,6 +492,51 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       }
     }
   }, [currentPhase, session.cameraStream]);
+
+  // Attach camera stream to video element when camera is granted
+  useEffect(() => {
+    if (session.cameraStream && videoRef.current && !videoRef.current.srcObject) {
+      console.log("📹 MeditationSession: Attaching camera stream to video element");
+      const video = videoRef.current;
+
+      // Set stream and video properties
+      video.srcObject = session.cameraStream;
+      video.muted = true;
+      video.autoplay = true;
+      video.playsInline = true;
+
+      // Ensure video is playing with retry mechanism
+      const playVideo = async (retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            await video.play();
+            console.log('✅ MeditationSession: Video is playing, readyState:', video.readyState);
+            return;
+          } catch (playError) {
+            console.warn(`⚠️ MeditationSession: Video play attempt ${i + 1} failed:`, playError);
+            if (i < retries - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
+        }
+        console.warn('⚠️ MeditationSession: All video play attempts failed');
+      };
+
+      playVideo();
+
+      // Set video element styling
+      video.style.display = 'block';
+      video.style.visibility = 'visible';
+      video.style.opacity = '1';
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.position = 'absolute';
+      video.style.top = '0';
+      video.style.left = '0';
+      video.style.zIndex = '1';
+      console.log('✅ MeditationSession: Video element configured');
+    }
+  }, [session.cameraStream]);
 
   // Synchronized vision processing startup with proper checks
   useEffect(() => {

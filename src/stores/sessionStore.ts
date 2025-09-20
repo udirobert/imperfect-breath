@@ -42,12 +42,12 @@ export interface SessionState {
   phase: SessionPhase;
   config: SessionConfig | null;
   metrics: SessionMetrics;
-  
+
   // Media state
   cameraStream: MediaStream | null;
   cameraPermissionGranted: boolean;
   audioEnabled: boolean;
-  
+
   // Vision processing state
   visionActive: boolean;
   visionMetrics: {
@@ -57,11 +57,11 @@ export interface SessionState {
     restlessnessScore?: number;
     faceLandmarks?: Array<{ x: number; y: number; z?: number }>;
   } | null;
-  
+
   // Error and warning state
   error: string | null;
   warnings: string[];
-  
+
   // Performance state
   performanceMode: 'optimal' | 'balanced' | 'minimal';
 }
@@ -79,28 +79,28 @@ export interface SessionActions {
   resumeSession: () => void;
   completeSession: () => void;
   resetSession: () => void;
-  
+
   // Phase management
   updateBreathPhase: (phase: BreathPhase, progress: number) => void;
   incrementCycle: () => void;
-  
+
   // Media management
   setCameraStream: (stream: MediaStream | null) => void;
   setCameraPermission: (granted: boolean) => void;
   toggleAudio: () => void;
-  
+
   // Vision processing
   setVisionActive: (active: boolean) => void;
   updateVisionMetrics: (metrics: SessionState['visionMetrics']) => void;
-  
+
   // Error handling
   setError: (error: string | null) => void;
   addWarning: (warning: string) => void;
   clearWarnings: () => void;
-  
+
   // Performance
   setPerformanceMode: (mode: SessionState['performanceMode']) => void;
-  
+
   // Utilities
   getSessionDuration: () => string;
   getCompletionPercentage: () => number;
@@ -192,11 +192,12 @@ export const useSessionStore = create<SessionState & SessionActions>()(
 
     resetSession: () => {
       const { cameraStream } = get();
-      // Cleanup camera stream
+      // Only cleanup camera stream on actual reset, not during phase transitions
       if (cameraStream) {
+        console.log('🛑 SessionStore: Stopping camera stream on session reset');
         cameraStream.getTracks().forEach(track => track.stop());
       }
-      
+
       set({
         ...initialState,
         // Preserve camera permission for better UX
@@ -207,17 +208,17 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     // Phase management
     updateBreathPhase: (phase, progress) => {
       set((state) => {
-        const currentDuration = state.metrics.startTime ? 
-          Math.floor((Date.now() - state.metrics.startTime) / 1000) : 
+        const currentDuration = state.metrics.startTime ?
+          Math.floor((Date.now() - state.metrics.startTime) / 1000) :
           state.metrics.duration;
-        
+
         // Only update if values actually changed
-        if (state.metrics.currentPhase === phase && 
-            Math.abs(state.metrics.phaseProgress - progress) < 1 &&
-            state.metrics.duration === currentDuration) {
+        if (state.metrics.currentPhase === phase &&
+          Math.abs(state.metrics.phaseProgress - progress) < 1 &&
+          state.metrics.duration === currentDuration) {
           return state; // No significant change
         }
-        
+
         return {
           metrics: {
             ...state.metrics,
@@ -260,11 +261,11 @@ export const useSessionStore = create<SessionState & SessionActions>()(
       set((state) => {
         // Only update if metrics actually changed
         const currentMetrics = state.visionMetrics;
-        if (currentMetrics && 
-            currentMetrics.stillness === metrics?.stillness &&
-            currentMetrics.presence === metrics?.presence &&
-            currentMetrics.posture === metrics?.posture &&
-            currentMetrics.restlessnessScore === metrics?.restlessnessScore) {
+        if (currentMetrics &&
+          currentMetrics.stillness === metrics?.stillness &&
+          currentMetrics.presence === metrics?.presence &&
+          currentMetrics.posture === metrics?.posture &&
+          currentMetrics.restlessnessScore === metrics?.restlessnessScore) {
           return state; // No change, don't trigger re-render
         }
         return { visionMetrics: metrics };
@@ -303,7 +304,7 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     getCompletionPercentage: () => {
       const { metrics, config } = get();
       if (!config) return 0;
-      
+
       // Estimate completion based on typical 5-minute session
       const targetDuration = 300; // 5 minutes
       return Math.min((metrics.duration / targetDuration) * 100, 100);
@@ -320,28 +321,28 @@ export const sessionSelectors = {
   isActive: () => useSessionStore((state) => state.phase === 'active'),
   isPaused: () => useSessionStore((state) => state.phase === 'paused'),
   isComplete: () => useSessionStore((state) => state.phase === 'complete'),
-  
+
   // Session info
   currentMode: () => useSessionStore((state) => state.config?.mode || 'basic'),
   currentPattern: () => useSessionStore((state) => state.config?.pattern),
-  
+
   // Media state
   hasCameraStream: () => useSessionStore((state) => !!state.cameraStream),
-  canUseCamera: () => useSessionStore((state) => 
+  canUseCamera: () => useSessionStore((state) =>
     state.cameraPermissionGranted && !!state.cameraStream
   ),
-  
+
   // Vision state
   hasVisionMetrics: () => useSessionStore((state) => !!state.visionMetrics),
-  visionReady: () => useSessionStore((state) => 
+  visionReady: () => useSessionStore((state) =>
     state.visionActive && !!state.visionMetrics
   ),
-  
+
   // Performance state
-  isOptimalPerformance: () => useSessionStore((state) => 
+  isOptimalPerformance: () => useSessionStore((state) =>
     state.performanceMode === 'optimal'
   ),
-  
+
   // Error state
   hasError: () => useSessionStore((state) => !!state.error),
   hasWarnings: () => useSessionStore((state) => state.warnings.length > 0),

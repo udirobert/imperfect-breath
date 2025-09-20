@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/useSession";
+import { useMeditationVision } from "@/hooks/useMeditationVision";
 import { TrackingStatus, Keypoint } from "@/hooks/visionTypes";
 import { Loader2, Camera, AlertCircle } from "lucide-react";
 
@@ -18,8 +19,18 @@ export const CameraSetup = ({
   trackingStatus,
 }: CameraSetupProps) => {
   // CLEAN: Single source of truth - all camera state from useSession hook
-  const { start, cameraStream, cameraPermissionGranted, requestCamera } =
-    useSession();
+  const { start, cameraStream, cameraPermissionGranted, requestCamera, visionActive } =
+    useSession({ videoElement: videoRef });
+
+  // Initialize vision system for camera tracking
+  const vision = useMeditationVision(
+    visionActive ? {
+      sessionId: `session_${Date.now()}`,
+      targetFPS: 2,
+      silentMode: true,
+      gracefulDegradation: true,
+    } : undefined
+  );
 
   // DRY: Use session hook's camera state directly
   const isCameraReady = !!cameraStream && cameraPermissionGranted;
@@ -37,6 +48,15 @@ export const CameraSetup = ({
     // This would need to be passed from session or handled differently
     // For now, we'll manage local error state
   }, []);
+
+  // Cleanup vision system on unmount
+  React.useEffect(() => {
+    return () => {
+      if (vision) {
+        vision.stop();
+      }
+    };
+  }, [vision]);
 
   const handleRequestCamera = async () => {
     try {
@@ -92,19 +112,74 @@ export const CameraSetup = ({
           video.addEventListener("error", onError);
         });
 
-        // Ensure video is playing
-        try {
-          await video.play();
-          console.log(
-            "✅ CameraSetup: Video is playing, readyState:",
-            video.readyState
-          );
-        } catch (playError) {
-          console.warn("⚠️ CameraSetup: Video play failed:", playError);
-          // Don't fail the entire setup if play fails
-        }
+        // Ensure video is playing with retry mechanism
+        const playVideo = async (retries = 3) => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              await video.play();
+              console.log(
+                "✅ CameraSetup: Video is playing, readyState:",
+                video.readyState
+              );
+              return;
+            } catch (playError) {
+              console.warn(`⚠️ CameraSetup: Video play attempt ${i + 1} failed:`, playError);
+              if (i < retries - 1) {
+                // Wait a bit before retrying
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            }
+          }
+          console.warn("⚠️ CameraSetup: All video play attempts failed");
+        };
+
+        await playVideo();
+
+        // Additional check to ensure video is visible and properly sized
+        video.style.display = 'block';
+        video.style.visibility = 'visible';
+        video.style.opacity = '1';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.position = 'absolute';
+        video.style.top = '0';
+        video.style.left = '0';
+        video.style.zIndex = '1';
+        console.log("✅ CameraSetup: Video element visibility and sizing set");
 
         console.log("✅ CameraSetup: Camera fully initialized and streaming");
+
+        // Start vision processing if vision is active
+        if (visionActive && vision && videoRef.current) {
+          console.log("🔍 CameraSetup: Starting vision processing with video element");
+
+          // Ensure video is ready before starting vision
+          const video = videoRef.current;
+          if (video.readyState >= 2) { // HAVE_CURRENT_DATA or better
+            try {
+              await vision.start(video);
+              console.log("✅ CameraSetup: Vision processing started successfully");
+            } catch (visionError) {
+              console.warn("⚠️ CameraSetup: Vision start failed:", visionError);
+              // Don't fail the entire setup if vision fails
+            }
+          } else {
+            console.log("⚠️ CameraSetup: Video not ready yet, vision will start when video loads");
+            // Add event listener for when video becomes ready
+            const handleVideoReady = async () => {
+              if (video.readyState >= 2) {
+                video.removeEventListener('loadeddata', handleVideoReady);
+                try {
+                  await vision.start(video);
+                  console.log("✅ CameraSetup: Vision processing started after video loaded");
+                } catch (visionError) {
+                  console.warn("⚠️ CameraSetup: Vision start failed after video load:", visionError);
+                }
+              }
+            };
+            video.addEventListener('loadeddata', handleVideoReady);
+          }
+        }
       } else {
         throw new Error("Camera stream or video element unavailable");
       }
@@ -139,7 +214,7 @@ export const CameraSetup = ({
         </p>
       </div>
 
-      <div className="w-64 h-48 md:w-96 md:h-72 relative rounded-lg overflow-hidden shadow-lg">
+      <div className="w-64 h-48 md:w-96 md:h-72 relative rounded-lg overflow-hidden shadow-lg" style={{ backgroundColor: '#000' }}>
         <Suspense
           fallback={
             <div className="w-full h-full rounded-lg bg-secondary animate-pulse" />

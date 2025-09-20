@@ -8,13 +8,13 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { 
-  useSessionStore, 
-  sessionSelectors, 
+import {
+  useSessionStore,
+  sessionSelectors,
   useSessionPhase,
   useSessionMetrics,
   useSessionConfig,
-  SessionConfig 
+  SessionConfig
 } from '../stores/sessionStore';
 import { useMeditationVision } from './useMeditationVision';
 
@@ -22,6 +22,7 @@ export interface UseSessionOptions {
   autoStart?: boolean;
   enableVision?: boolean;
   targetFPS?: number;
+  videoElement?: React.RefObject<HTMLVideoElement>;
 }
 
 export const useSession = (options: UseSessionOptions = {}) => {
@@ -29,6 +30,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     autoStart = false,
     enableVision = false,
     targetFPS = 2,
+    videoElement,
   } = options;
 
   // Store actions
@@ -56,7 +58,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const phase = useSessionPhase();
   const metrics = useSessionMetrics();
   const config = useSessionConfig();
-  
+
   // Selectors for optimized re-renders
   const isActive = sessionSelectors.isActive();
   const isPaused = sessionSelectors.isPaused();
@@ -86,7 +88,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const requestCamera = useCallback(async () => {
     try {
       console.log('📷 Requesting camera access...');
-      
+
       // Add timeout to prevent indefinite hanging
       const stream = await Promise.race([
         navigator.mediaDevices.getUserMedia({
@@ -96,29 +98,72 @@ export const useSession = (options: UseSessionOptions = {}) => {
             frameRate: { ideal: 15, max: 30 }
           }
         }),
-        new Promise<MediaStream>((_, reject) => 
+        new Promise<MediaStream>((_, reject) =>
           setTimeout(() => reject(new Error('Camera access timeout - please check permissions and try again')), 10000)
         )
       ]);
-      
+
       console.log('✅ Camera access granted');
       setCameraStream(stream);
       setCameraPermission(true);
-      
+
+      // Attach stream to video element if provided
+      if (videoElement?.current) {
+        console.log('📹 useSession: Attaching stream to video element...');
+        const video = videoElement.current;
+
+        // Set stream and video properties
+        video.srcObject = stream;
+        video.muted = true;
+        video.autoplay = true;
+        video.playsInline = true;
+
+        // Ensure video is playing with retry mechanism
+        const playVideo = async (retries = 3) => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              await video.play();
+              console.log('✅ useSession: Video is playing, readyState:', video.readyState);
+              return;
+            } catch (playError) {
+              console.warn(`⚠️ useSession: Video play attempt ${i + 1} failed:`, playError);
+              if (i < retries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            }
+          }
+          console.warn('⚠️ useSession: All video play attempts failed');
+        };
+
+        await playVideo();
+
+        // Set video element styling
+        video.style.display = 'block';
+        video.style.visibility = 'visible';
+        video.style.opacity = '1';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.position = 'absolute';
+        video.style.top = '0';
+        video.style.left = '0';
+        video.style.zIndex = '1';
+        console.log('✅ useSession: Video element configured');
+      }
+
       // Start vision if enabled
       if (enableVision && vision) {
         setVisionActive(true);
         // Vision hook will handle the video element connection
       }
-      
+
       return stream;
     } catch (error) {
       console.warn('❌ Camera access failed:', error);
       setCameraPermission(false);
-      
+
       // Provide more specific error messages
       let errorMessage = 'Camera access was denied. Continuing without camera tracking.';
-      
+
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
           errorMessage = 'Camera access denied. Please allow camera permissions in your browser settings.';
@@ -130,7 +175,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
           errorMessage = 'Camera access timed out. Please check permissions and try again.';
         }
       }
-      
+
       setError(errorMessage);
       return null;
     }
@@ -144,7 +189,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     if (!config?.pattern) {
       return;
     }
-    
+
     const { pattern } = config;
     const phases = [
       { name: 'inhale' as const, duration: pattern.inhale },
@@ -152,30 +197,30 @@ export const useSession = (options: UseSessionOptions = {}) => {
       { name: 'exhale' as const, duration: pattern.exhale },
       ...(pattern.hold_after_exhale ? [{ name: 'pause' as const, duration: pattern.hold_after_exhale }] : []),
     ];
-    
+
     let currentPhaseIndex = 0;
     let phaseStartTime = Date.now();
-    
+
     const updatePhase = () => {
       const now = Date.now();
       const currentPhase = phases[currentPhaseIndex];
       const phaseElapsed = (now - phaseStartTime) / 1000;
       const progress = Math.min((phaseElapsed / currentPhase.duration) * 100, 100);
-      
+
       updateBreathPhase(currentPhase.name, progress);
-      
+
       // Move to next phase
       if (phaseElapsed >= currentPhase.duration) {
         currentPhaseIndex = (currentPhaseIndex + 1) % phases.length;
         phaseStartTime = now;
-        
+
         // Increment cycle when returning to inhale
         if (currentPhaseIndex === 0) {
           incrementCycle();
         }
       }
     };
-    
+
     // Update every 100ms for smooth progress
     phaseTimerRef.current = setInterval(updatePhase, 100);
   }, [config, updateBreathPhase, incrementCycle]);
@@ -193,15 +238,15 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
   const initialize = useCallback(async (sessionConfig: SessionConfig) => {
     initializeSession(sessionConfig);
-    
+
     // Request camera if needed
     if (sessionConfig.enableCamera) {
       await requestCamera();
     }
-    
+
     // Set session as ready after initialization
     setSessionReady();
-    
+
     // Auto-start if enabled
     if (autoStart) {
       setTimeout(() => {
@@ -218,9 +263,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
       setError('Session not properly initialized');
       return;
     }
-    
+
     startSession();
-    
+
     // Start breathing phase cycle
     startBreathingCycle();
   }, [startSession, setError, startBreathingCycle]);
@@ -238,13 +283,14 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const complete = useCallback(() => {
     completeSession();
     stopBreathingCycle();
-    
-    // Cleanup camera
+
+    // Only cleanup camera on actual completion, not during phase transitions
     if (cameraStream) {
+      console.log('🛑 useSession: Stopping camera stream on session completion');
       cameraStream.getTracks().forEach(track => track.stop());
       setCameraStream(null);
     }
-    
+
     // Stop vision
     if (vision) {
       vision.stop();
@@ -255,7 +301,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const reset = useCallback(() => {
     stopBreathingCycle();
     resetSession();
-    
+
     if (vision) {
       vision.reset();
     }
@@ -264,7 +310,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
   // ========================================================================
   // VISION INTEGRATION - Clean, optional
   // ========================================================================
-  
+
   const previousVisionMetricsRef = useRef<string>('');
 
   useEffect(() => {
@@ -301,12 +347,14 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
   useEffect(() => {
     return () => {
+      console.log('🧹 useSession: Component unmounting, cleaning up resources');
       stopBreathingCycle();
       if (cameraStream) {
+        console.log('🛑 useSession: Stopping camera stream on component unmount');
         cameraStream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [stopBreathingCycle, cameraStream]);
+  }, []); // Empty dependency array - only run on unmount
 
   // ========================================================================
   // PUBLIC API - Clean, simple interface
@@ -321,11 +369,11 @@ export const useSession = (options: UseSessionOptions = {}) => {
     isPaused,
     isComplete,
     audioEnabled,
-    
+
     // Vision state (if enabled)
     visionMetrics: enableVision ? visionMetrics : null,
     visionActive: enableVision ? vision?.state.isActive : false,
-    
+
     // Actions
     initialize,
     start,
@@ -335,11 +383,11 @@ export const useSession = (options: UseSessionOptions = {}) => {
     reset,
     toggleAudio,
     requestCamera,
-    
+
     // Utilities
     getSessionDuration,
     getCompletionPercentage,
-    
+
     // Camera state
     cameraStream,
     cameraPermissionGranted: sessionSelectors.canUseCamera(),
