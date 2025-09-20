@@ -314,6 +314,75 @@ export const NetworkErrorBoundary: React.FC<Omit<ErrorBoundaryProps, 'category'>
 };
 
 /**
+ * Session Startup Error Boundary (catches session initialization errors)
+ */
+export const SessionStartupErrorBoundary: React.FC<Omit<ErrorBoundaryProps, 'category'>> = (props) => {
+  return (
+    <ErrorBoundary
+      {...props}
+      category={ErrorCategory.SESSION}
+      isolate={true} // Prevent session errors from crashing the whole app
+      fallback={(error, retry) => (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+          <div className="max-w-md w-full bg-white shadow-xl rounded-lg p-6 mx-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Session Starting...</h1>
+              <p className="text-gray-600 mb-6">We're preparing your breathing session. This should only take a moment.</p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={retry}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center"
+                >
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Retry Session
+                </button>
+
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Refresh Page
+                </button>
+              </div>
+
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-6 text-left">
+                  <details className="text-sm">
+                    <summary className="cursor-pointer font-medium text-gray-700">Technical Details</summary>
+                    <div className="mt-2 p-3 bg-gray-100 rounded text-xs">
+                      <p><strong>Error ID:</strong> {error.id}</p>
+                      <p><strong>Message:</strong> {error.message}</p>
+                      <p><strong>Category:</strong> {error.category}</p>
+                      <p><strong>Severity:</strong> {error.severity}</p>
+                      {error.stack && (
+                        <div>
+                          <strong>Stack:</strong>
+                          <pre className="mt-1 overflow-auto whitespace-pre-wrap">{error.stack}</pre>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    />
+  );
+};
+
+/**
  * Global Error Boundary (catches all unhandled errors)
  */
 export const GlobalErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
@@ -325,7 +394,7 @@ export const GlobalErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
         if (process.env.NODE_ENV === 'development') {
           console.error('Global error caught:', error);
         }
-        
+
         // Call custom handler if provided
         props.onError?.(error);
       }}
@@ -336,10 +405,10 @@ export const GlobalErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
               <svg className="h-16 w-16 text-red-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
-              
+
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Oops! Something went wrong</h1>
               <p className="text-gray-600 mb-6">{error.userMessage}</p>
-              
+
               <div className="space-y-3">
                 <button
                   onClick={retry}
@@ -347,7 +416,7 @@ export const GlobalErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
                 >
                   Try Again
                 </button>
-                
+
                 <button
                   onClick={() => window.location.reload()}
                   className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
@@ -355,7 +424,7 @@ export const GlobalErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
                   Refresh Page
                 </button>
               </div>
-              
+
               {process.env.NODE_ENV === 'development' && (
                 <div className="mt-6 text-left">
                   <details className="text-sm">

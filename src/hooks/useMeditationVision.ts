@@ -27,11 +27,11 @@ export interface MeditationMetrics {
   presence: number;      // 0-100, face detection confidence  
   posture: number;       // 0-100, sitting posture quality
   restlessnessScore?: number; // 0-100, restlessness level
-  
+
   // Visual feedback data
   faceLandmarks?: Array<{ x: number; y: number; z?: number }>;
   faceDetected: boolean;
-  
+
   // Technical metrics (hidden from users)
   confidence: number;
   processingTimeMs: number;
@@ -41,18 +41,18 @@ export interface MeditationMetrics {
 export interface VisionConfig {
   sessionId: string;
   backendUrl?: string;
-  
+
   // Performance settings
   targetFPS?: number;          // Max FPS, will auto-reduce if slow
   enableAdaptiveFPS?: boolean; // Auto-adjust FPS based on performance
-  
+
   // Features
   features?: {
     detectFace?: boolean;
     analyzePosture?: boolean;
     trackMovement?: boolean;
   };
-  
+
   // Meditation UX settings
   silentMode?: boolean;        // No console logs during meditation
   gracefulDegradation?: boolean; // Continue without errors if backend fails
@@ -63,11 +63,11 @@ export interface VisionState {
   isActive: boolean;
   isReady: boolean;
   metrics: MeditationMetrics | null;
-  
+
   // Performance tracking
   currentFPS: number;
   performanceMode: 'optimal' | 'balanced' | 'minimal';
-  
+
   // Connection status (hidden from users in silent mode)
   backendAvailable: boolean;
   error: string | null;
@@ -106,15 +106,15 @@ class MeditationVisionClient {
 
   async processFrame(
     sessionId: string,
-    imageData: string, 
+    imageData: string,
     features: Record<string, boolean>
   ): Promise<MeditationMetrics> {
     if (this.abortController) {
       this.abortController.abort();
     }
-    
+
     this.abortController = new AbortController();
-    
+
     try {
       const response = await apiClient.processVision(sessionId, {
         image_data: imageData,
@@ -125,14 +125,14 @@ class MeditationVisionClient {
           track_breathing: features.trackMovement ?? false,
         },
       });
-      
+
       if (response.data?.fallback) {
         // Backend unavailable, return basic fallback metrics
         return createFallbackMetrics();
       }
-      
+
       const result = response.data;
-      
+
       // Transform backend response to meditation metrics
       const stillnessScore = result.metrics?.stillness_score ? result.metrics.stillness_score * 100 : 85;
       return {
@@ -146,7 +146,7 @@ class MeditationVisionClient {
         processingTimeMs: result.processing_time ?? 100,
         source: 'backend',
       };
-      
+
     } catch (error) {
       // Silent failure with fallback
       return createFallbackMetrics();
@@ -159,7 +159,7 @@ class MeditationVisionClient {
     const centerX = 0.5;
     const centerY = 0.5;
     const radius = 0.15;
-    
+
     // Generate 20 points around face perimeter
     for (let i = 0; i < 20; i++) {
       const angle = (i / 20) * Math.PI * 2;
@@ -169,7 +169,7 @@ class MeditationVisionClient {
         z: 0,
       });
     }
-    
+
     return landmarks;
   }
 
@@ -201,7 +201,7 @@ const generateBasicLandmarks = (): Array<{ x: number; y: number; z?: number }> =
   const landmarks = [];
   const centerX = 0.5;
   const centerY = 0.5;
-  
+
   // Basic 10-point face model for minimal visual feedback
   for (let i = 0; i < 10; i++) {
     const angle = (i / 10) * Math.PI * 2;
@@ -211,7 +211,7 @@ const generateBasicLandmarks = (): Array<{ x: number; y: number; z?: number }> =
       z: 0,
     });
   }
-  
+
   return landmarks;
 };
 
@@ -247,13 +247,13 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
         error: null,
       },
       start: () => Promise.resolve(),
-      stop: () => {},
-      reset: () => {},
+      stop: () => { },
+      reset: () => { },
     };
   }
-  
+
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
-  
+
   const [state, setState] = useState<VisionState>({
     isActive: false,
     isReady: false,
@@ -267,11 +267,12 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
   // Refs for performance tracking
   const clientRef = useRef<MeditationVisionClient>();
   const videoRef = useRef<HTMLVideoElement>();
-  const processingInterval = useRef<NodeJS.Timeout>();
+  const processingInterval = useRef<NodeJS.Timeout | null>(null);
   const performanceTracker = useRef<number[]>([]);
   const lastFrameTime = useRef<number>(0);
   const isActiveRef = useRef<boolean>(false); // Track active state without stale closures
   const isUnmountedRef = useRef<boolean>(false); // Prevent state updates during unmount
+  const errorCountRef = useRef<number>(0); // Track consecutive errors
 
   // Track component unmount to prevent state updates during cleanup
   useEffect(() => {
@@ -307,29 +308,29 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     if (!finalConfig.enableAdaptiveFPS) return;
 
     performanceTracker.current.push(processingTime);
-    
+
     // Keep only last 5 measurements for quick adaptation
     if (performanceTracker.current.length > 5) {
       performanceTracker.current.shift();
     }
-    
-    const avgTime = performanceTracker.current.reduce((sum, time) => sum + time, 0) 
-                   / performanceTracker.current.length;
-    
+
+    const avgTime = performanceTracker.current.reduce((sum, time) => sum + time, 0)
+      / performanceTracker.current.length;
+
     let newMode: 'optimal' | 'balanced' | 'minimal';
     let newFPS: number;
-    
+
     if (avgTime > 2000) {
       newMode = 'minimal';
       newFPS = 0.5; // One frame every 2 seconds
     } else if (avgTime > 1000) {
-      newMode = 'balanced'; 
+      newMode = 'balanced';
       newFPS = 1; // One frame per second
     } else {
       newMode = 'optimal';
       newFPS = finalConfig.targetFPS || 2;
     }
-    
+
     if (!isUnmountedRef.current) {
       setState(prev => ({
         ...prev,
@@ -339,7 +340,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     }
   }, [finalConfig.enableAdaptiveFPS, finalConfig.targetFPS]);
 
-  // Frame processing with graceful failure
+  // Frame processing with graceful failure and error recovery
   const processFrame = useCallback(async () => {
     // Use ref for active state to avoid stale closure issues
     if (!isActiveRef.current || !videoRef.current) return;
@@ -348,42 +349,63 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     const now = Date.now();
     const timeSinceLastFrame = now - lastFrameTime.current;
     const targetFrameTime = 1000 / finalConfig.targetFPS!;
-    
+
     if (timeSinceLastFrame < targetFrameTime) return;
-    
+
     lastFrameTime.current = now;
     const startTime = performance.now();
 
     try {
-      // Create canvas for frame capture
+      // Reset error count on successful processing
+      errorCountRef.current = 0;
+
+      // Create canvas for frame capture with error handling
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
-      if (!ctx) throw new Error('Canvas unavailable');
-      
-      // Efficient frame capture
-      canvas.width = 320;
-      canvas.height = 240;
-      ctx.drawImage(videoRef.current, 0, 0, 320, 240);
-      
+
+      if (!ctx) throw new Error('Canvas context unavailable');
+
+      // Efficient frame capture with bounds checking
+      const video = videoRef.current;
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        throw new Error('Video not ready');
+      }
+
+      canvas.width = Math.min(320, video.videoWidth);
+      canvas.height = Math.min(240, video.videoHeight);
+
+      try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      } catch (drawError) {
+        throw new Error(`Failed to capture video frame: ${drawError}`);
+      }
+
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
-      
+
       let metrics: MeditationMetrics;
-      
+
       if (state.backendAvailable && clientRef.current) {
-        // Try backend processing
+        // Try backend processing with timeout
         try {
-          metrics = await clientRef.current.processFrame(
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Backend timeout')), 5000);
+          });
+
+          const backendPromise = clientRef.current.processFrame(
             finalConfig.sessionId,
             imageData,
             finalConfig.features || {}
           );
+
+          metrics = await Promise.race([backendPromise, timeoutPromise]) as MeditationMetrics;
         } catch (backendError) {
-          // Graceful fallback
+          // Graceful fallback with error tracking
+          errorCountRef.current++;
+
           if (!finalConfig.silentMode) {
             console.warn('Backend processing failed, using fallback:', backendError);
           }
-          
+
           if (!isUnmountedRef.current) {
             setState(prev => ({ ...prev, backendAvailable: false }));
           }
@@ -393,27 +415,40 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
         // Use fallback
         metrics = createFallbackMetrics();
       }
-      
+
       const processingTime = performance.now() - startTime;
       updatePerformanceMode(processingTime);
-      
+
       if (!isUnmountedRef.current) {
         setState(prev => ({ ...prev, metrics, error: null }));
       }
-      
+
     } catch (error) {
-      // Silent failure in meditation mode
+      // Enhanced error handling with recovery
+      errorCountRef.current++;
+
       if (!finalConfig.silentMode) {
         console.warn('Vision processing error:', error);
       }
-      
+
+      // If too many consecutive errors, reduce processing frequency
+      if (errorCountRef.current > 5) {
+        if (!isUnmountedRef.current) {
+          setState(prev => ({
+            ...prev,
+            error: 'Vision processing temporarily disabled due to errors'
+          }));
+        }
+        return; // Skip processing for now
+      }
+
       if (finalConfig.gracefulDegradation) {
         // Provide fallback metrics to keep UI working
         if (!isUnmountedRef.current) {
           setState(prev => ({
             ...prev,
             metrics: createFallbackMetrics(),
-            error: finalConfig.silentMode ? null : 'Using fallback vision'
+            error: finalConfig.silentMode ? null : `Vision error: ${error}`
           }));
         }
       }
@@ -443,7 +478,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     // Start processing loop - use final config FPS to avoid stale state
     const interval = Math.floor(1000 / finalConfig.targetFPS!);
     processingInterval.current = setInterval(processFrame, interval);
-    
+
     // Provide immediate feedback
     if (!isUnmountedRef.current) {
       setState(prev => ({
@@ -451,7 +486,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
         metrics: createFallbackMetrics()
       }));
     }
-    
+
   }, [processFrame]); // Remove state dependencies
 
   // Stop processing
@@ -469,7 +504,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
 
     if (processingInterval.current) {
       clearInterval(processingInterval.current);
-      processingInterval.current = undefined;
+      processingInterval.current = null;
     }
 
     videoRef.current = undefined;
@@ -487,7 +522,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
         currentFPS: finalConfig.targetFPS || 2,
       }));
     }
-    
+
     performanceTracker.current = [];
   }, [finalConfig.targetFPS]);
 

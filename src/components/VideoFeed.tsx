@@ -37,6 +37,15 @@ const VideoFeed = ({
       }
     }
   }, [videoRef.current?.srcObject, trackingStatus]);
+
+  // Handle stream attachment when video element is ready
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (video && !video.srcObject) {
+      // Video element is ready but no stream - this might indicate the stream needs to be reattached
+      console.log('📺 Video element ready but no stream detected');
+    }
+  }, [videoRef.current?.readyState]);
   // Style for the video element
   const videoStyle: React.CSSProperties = {
     width: "100%",

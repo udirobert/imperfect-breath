@@ -49,22 +49,26 @@ export const CameraSetup = ({
       if (stream && videoRef.current) {
         console.log("📹 CameraSetup: Attaching stream to video element...");
         const video = videoRef.current;
+
+        // Set stream and video properties
         video.srcObject = stream;
         video.muted = true;
         video.autoplay = true;
         video.playsInline = true;
 
-        // Wait for video to be ready
+        console.log("✅ CameraSetup: Stream attached to video element, readyState:", video.readyState);
+
+        // Wait for video to be ready with a shorter timeout
         await new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("Video load timeout"));
-          }, 5000);
+          }, 3000);
 
           const onLoadedMetadata = () => {
             clearTimeout(timeout);
             video.removeEventListener("loadedmetadata", onLoadedMetadata);
             video.removeEventListener("error", onError);
-            console.log("✅ CameraSetup: Video metadata loaded");
+            console.log("✅ CameraSetup: Video metadata loaded, dimensions:", video.videoWidth, "x", video.videoHeight);
             resolve();
           };
 
@@ -75,6 +79,14 @@ export const CameraSetup = ({
             console.error("❌ CameraSetup: Video load error:", event);
             reject(new Error("Video load error"));
           };
+
+          // Check if already loaded
+          if (video.readyState >= 2) {
+            clearTimeout(timeout);
+            console.log("✅ CameraSetup: Video already ready");
+            resolve();
+            return;
+          }
 
           video.addEventListener("loadedmetadata", onLoadedMetadata);
           video.addEventListener("error", onError);
@@ -89,6 +101,7 @@ export const CameraSetup = ({
           );
         } catch (playError) {
           console.warn("⚠️ CameraSetup: Video play failed:", playError);
+          // Don't fail the entire setup if play fails
         }
 
         console.log("✅ CameraSetup: Camera fully initialized and streaming");

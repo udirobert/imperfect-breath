@@ -73,6 +73,9 @@ import useAdaptivePerformance, {
 import { useAuth } from "../../hooks/useAuth";
 import { TrackingStatus } from "../../hooks/visionTypes";
 
+// Shared types - consolidated
+import { SessionMetrics, SessionModeConfig, SessionPhase, SessionMode } from "../../types/session";
+
 // Patterns and utilities
 import {
   BREATHING_PATTERNS,
@@ -81,31 +84,11 @@ import {
 import { mapPatternForAnimation } from "../../lib/session/pattern-mapper";
 
 // ============================================================================
-// TYPES - Clean, comprehensive session types
+// CONSOLIDATED TYPES - Using shared types from ../../types/session
 // ============================================================================
 
-export type SessionMode = "classic" | "enhanced" | "advanced" | "mobile";
-export type SessionPhase =
-  | "setup"
-  | "preparation"
-  | "camera_setup"
-  | "ready"
-  | "active"
-  | "paused"
-  | "complete";
-
-export interface SessionModeConfig {
-  enableCamera: boolean;
-  enableVision: boolean;
-  enableAudio: boolean;
-  enableAdvancedFeatures: boolean;
-  enableMobileOptimizations: boolean;
-  showPerformanceMonitor: boolean;
-  layout: "single" | "dual" | "mobile";
-  description: string;
-}
-
 // Mode configurations - consolidated from all session components
+// Using shared SessionModeConfig type from ../../types/session
 const SESSION_MODE_CONFIGS: Record<SessionMode, SessionModeConfig> = {
   classic: {
     enableCamera: false,
@@ -169,21 +152,7 @@ export interface MeditationSessionConfig {
   targetDuration?: number; // in minutes
 }
 
-export interface SessionMetrics {
-  duration: number;
-  cycleCount: number;
-  breathHoldTime?: number;
-  stillnessScore?: number;
-  cameraUsed: boolean;
-  sessionType: string;
-  // UNIFIED: Vision session ID for AI integration (DRY principle)
-  visionSessionId?: string;
-  visionMetrics?: {
-    averageStillness: number;
-    faceDetectionRate: number;
-    postureScore: number;
-  };
-}
+// SessionMetrics moved to shared types file - consolidated
 
 interface MeditationSessionProps {
   config: MeditationSessionConfig;
@@ -241,7 +210,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   const [showFaceMesh, setShowFaceMesh] = useState(true);
   const [showRestlessnessScore, setShowRestlessnessScore] = useState(true);
 
-  // Monitor video element for readiness
+  // Monitor video element for readiness - consolidated video management
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -249,7 +218,6 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     const handleVideoReady = () => {
       console.log("🎥 Video element ready, readyState:", video.readyState);
       if (video.readyState >= 2) {
-        // HAVE_CURRENT_DATA
         setIsVideoReady(true);
       }
     };
@@ -274,7 +242,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       video.removeEventListener("canplay", handleVideoReady);
       video.removeEventListener("error", handleVideoError);
     };
-  }, [session.cameraStream]); // Re-run when camera stream changes
+  }, []); // Consolidated: no external dependencies needed
 
   // ENHANCEMENT: Adaptive encouragement timing (PERFORMANT)
   const [lastEncouragementTime, setLastEncouragementTime] = useState(0);
@@ -507,6 +475,20 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     }
   }, [session.isActive, currentPhase]);
 
+  // Ensure video stream is maintained when transitioning to active phase
+  useEffect(() => {
+    if (currentPhase === "active" && session.cameraStream && videoRef.current) {
+      const video = videoRef.current;
+      if (!video.srcObject) {
+        console.log("🔄 Reattaching camera stream to video element in active phase");
+        video.srcObject = session.cameraStream;
+        video.muted = true;
+        video.autoplay = true;
+        video.playsInline = true;
+      }
+    }
+  }, [currentPhase, session.cameraStream]);
+
   // Synchronized vision processing startup with proper checks
   useEffect(() => {
     const startVisionProcessing = async () => {
@@ -519,7 +501,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         hasVisionHook: !!vision,
         visionNotActive: vision && !vision.state.isActive,
         videoReady: isVideoReady,
-        videoReadyState: videoRef.current?.readyState >= 2,
+        videoReadyState: (videoRef.current?.readyState || 0) >= 2,
         hasCameraStream: !!session.cameraStream,
       };
 
@@ -682,6 +664,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                         muted
                         autoPlay
                         playsInline
+                        style={{ transform: 'scaleX(-1)' }} // Mirror for selfie mode
                       />
                       {/* Face landmarks overlay */}
                       <FaceMeshOverlay
@@ -701,6 +684,12 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                         {vision?.state.isActive
                           ? "Vision Active"
                           : "Vision Starting"}
+                      </div>
+                      {/* Debug info */}
+                      <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        Stream: {session.cameraStream ? '✅' : '❌'} |
+                        Video: {videoRef.current?.srcObject ? '✅' : '❌'} |
+                        Ready: {(videoRef.current?.readyState || 0) >= 2 ? '✅' : '❌'}
                       </div>
                     </div>
                   </div>
