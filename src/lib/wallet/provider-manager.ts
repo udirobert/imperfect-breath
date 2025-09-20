@@ -52,13 +52,13 @@ class WalletProviderManager {
     try {
       // Wait for provider scripts to load
       await this.waitForProviders();
-      
+
       // Detect available providers
       await this.detectProviders();
-      
+
       // Start monitoring for provider changes
       this.startMonitoring();
-      
+
       this.isInitialized = true;
       console.log('Wallet Provider Manager initialized');
     } catch (error) {
@@ -72,7 +72,7 @@ class WalletProviderManager {
    */
   private async waitForProviders(timeout = 3000): Promise<void> {
     const startTime = Date.now();
-    
+
     return new Promise((resolve) => {
       const check = () => {
         // Check if any provider APIs are available
@@ -89,7 +89,7 @@ class WalletProviderManager {
           setTimeout(check, 100);
         }
       };
-      
+
       check();
     });
   }
@@ -174,9 +174,9 @@ class WalletProviderManager {
     // Set active provider to highest priority available
     if (detectedProviders.length > 0) {
       this.activeProvider = detectedProviders[0];
-      this.emit({ 
-        type: 'provider-change', 
-        provider: this.activeProvider 
+      this.emit({
+        type: 'provider-change',
+        provider: this.activeProvider
       });
     }
   }
@@ -284,7 +284,7 @@ class WalletProviderManager {
       return accounts;
     } catch (error) {
       const errorMessage = (error as Error).message;
-      
+
       // Handle common wallet errors gracefully
       if (errorMessage.includes('User rejected') || errorMessage.includes('User denied')) {
         console.log('User rejected wallet connection');
@@ -293,7 +293,7 @@ class WalletProviderManager {
       } else {
         console.error('Wallet connection failed:', errorMessage);
       }
-      
+
       this.emit({ type: 'error', error: error as Error });
       throw error;
     }
@@ -312,7 +312,7 @@ class WalletProviderManager {
       return await this.activeProvider.request(method, params);
     } catch (error) {
       const errorMessage = (error as Error).message;
-      
+
       // Log specific error types for debugging
       if (errorMessage.includes('extension not found')) {
         console.warn(`Wallet provider ${this.activeProvider.name} not available`);

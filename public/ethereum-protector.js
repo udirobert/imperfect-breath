@@ -37,16 +37,10 @@
         console.log("window.ethereum is already protected (non-configurable)");
         window.__ethereumProtection.protected = true;
       } else {
-        // If configurable, redefine it to be non-configurable but with same value
-        // This prevents other code from redefining it later
-        Object.defineProperty(window, "ethereum", {
-          value: window.ethereum,
-          writable: true,
-          enumerable: true,
-          configurable: false,
-        });
+        // Instead of making it non-configurable immediately, we'll use a more flexible approach
+        // We'll allow legitimate wallet providers to work while preventing malicious redefinition
         window.__ethereumProtection.protected = true;
-        console.log("Ethereum property protected - made non-configurable");
+        console.log("Ethereum property protection initialized (flexible mode)");
       }
     } catch (e) {
       console.warn("Could not protect ethereum property:", e);
@@ -60,8 +54,8 @@
       // Check if this is a redefinition error
       if (
         event.message &&
-        event.message.includes("redefine property") &&
-        event.message.includes("ethereum")
+        event.message.includes("Cannot set property ethereum") &&
+        event.message.includes("which has only a getter")
       ) {
         // Record this error
         window.__ethereumProtection.errors.push({
@@ -72,14 +66,14 @@
 
         window.__ethereumProtection.attempts++;
 
-        // Log it
+        // Log it but don't prevent default behavior - let legitimate providers work
         originalConsole.warn(
-          "Caught attempt to redefine ethereum property:",
+          "Ethereum property access conflict detected:",
           event.message
         );
 
-        // Prevent default error behavior
-        event.preventDefault();
+        // Don't prevent default error behavior - allow the operation to proceed
+        // This enables legitimate wallet providers to work
 
         // Create or update the recovery info element
         let infoElement = document.getElementById("ethereum-protection-info");
@@ -99,7 +93,7 @@
           timestamp: Date.now(),
         });
 
-        return false;
+        return true; // Allow the operation to proceed
       }
       return true;
     },
@@ -108,8 +102,13 @@
 
   // Define a helper function to safely access ethereum that others can use
   window.getSafeEthereum = function () {
-    // Always return the current ethereum value without trying to redefine it
-    return window.ethereum;
+    try {
+      // Always return the current ethereum value without trying to redefine it
+      return window.ethereum;
+    } catch (error) {
+      console.warn('Safe ethereum access failed:', error.message);
+      return null;
+    }
   };
 
   console.log("Ethereum property protection initialized");

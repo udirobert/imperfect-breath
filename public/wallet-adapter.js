@@ -90,7 +90,8 @@
     // Create a monitor that periodically checks for changes to window.ethereum
     // without attempting to redefine the property
     function monitorEthereumChanges() {
-      const currentProvider = window.ethereum;
+      // Use safe provider access to avoid conflicts
+      const currentProvider = window.ethereum || window.__walletTracker.currentProvider;
 
       // If ethereum has changed
       if (currentProvider !== window.__walletTracker.currentProvider) {

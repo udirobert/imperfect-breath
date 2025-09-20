@@ -85,6 +85,7 @@
     return diagnostics;
   };
 
+
   // Auto-detect and handle common cache issues
   window.addEventListener('error', function(event) {
     // Check for specific cache-related errors

@@ -1,148 +1,135 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-        <meta http-equiv="Pragma" content="no-cache" />
-        <meta http-equiv="Expires" content="0" />
-        <title>Imperfect Breath</title>
-        <meta
-            name="description"
-            content="A mindfulness app for guided breathing and self-awareness."
-        />
-        <meta name="author" content="Imperfect Breath" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;700&display=swap"
-            rel="stylesheet"
-        />
 
-        <meta property="og:title" content="Imperfect Breath" />
-        <meta
-            property="og:description"
-            content="A mindfulness app for guided breathing and self-awareness."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://imperfect-breath.app" />
-        <meta
-            property="og:image"
-            content="/android-chrome-512x512.png"
-        />
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Imperfect Breath</title>
+    <meta name="description" content="A mindfulness app for guided breathing and self-awareness." />
+    <meta name="author" content="Imperfect Breath" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;700&display=swap" rel="stylesheet" />
 
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@imperfect_breath" />
-        <meta
-            name="twitter:image"
-            content="/android-chrome-512x512.png"
-        />
-    </head>
+    <meta property="og:title" content="Imperfect Breath" />
+    <meta property="og:description" content="A mindfulness app for guided breathing and self-awareness." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://imperfect-breath.app" />
+    <meta property="og:image" content="/android-chrome-512x512.png" />
 
-    <body>
-        <!-- Cache detection and management -->
-        <script>
-            // Detect cache mismatches and handle them gracefully
-            (function() {
-                const BUILD_TIMESTAMP = Date.now();
-                const CACHE_KEY = 'app_build_timestamp';
-                
-                // Check if this is a cached version
-                const lastBuildTime = localStorage.getItem(CACHE_KEY);
-                const timeDiff = BUILD_TIMESTAMP - (parseInt(lastBuildTime) || 0);
-                
-                // If more than 1 hour has passed, clear caches
-                if (timeDiff > 3600000) {
-                    console.log('Clearing old caches due to build time difference');
-                    
-                    // Clear service worker caches
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@imperfect_breath" />
+    <meta name="twitter:image" content="/android-chrome-512x512.png" />
+</head>
+
+<body>
+    <!-- Cache detection and management -->
+    <script>
+        // Detect cache mismatches and handle them gracefully
+        (function () {
+            const BUILD_TIMESTAMP = Date.now();
+            const CACHE_KEY = 'app_build_timestamp';
+
+            // Check if this is a cached version
+            const lastBuildTime = localStorage.getItem(CACHE_KEY);
+            const timeDiff = BUILD_TIMESTAMP - (parseInt(lastBuildTime) || 0);
+
+            // If more than 1 hour has passed, clear caches
+            if (timeDiff > 3600000) {
+                console.log('Clearing old caches due to build time difference');
+
+                // Clear service worker caches
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => caches.delete(name));
+                    });
+                }
+
+                // Update timestamp
+                localStorage.setItem(CACHE_KEY, BUILD_TIMESTAMP.toString());
+            }
+
+            // Add error handler for module loading failures
+            window.addEventListener('error', function (event) {
+                if (event.message && (
+                    event.message.includes('Loading chunk') ||
+                    event.message.includes('Loading CSS chunk') ||
+                    event.message.includes('Failed to fetch')
+                )) {
+                    console.warn('Chunk loading failed, attempting cache clear and reload');
+
+                    // Clear caches and reload
                     if ('caches' in window) {
                         caches.keys().then(names => {
-                            names.forEach(name => caches.delete(name));
-                        });
-                    }
-                    
-                    // Update timestamp
-                    localStorage.setItem(CACHE_KEY, BUILD_TIMESTAMP.toString());
-                }
-                
-                // Add error handler for module loading failures
-                window.addEventListener('error', function(event) {
-                    if (event.message && (
-                        event.message.includes('Loading chunk') ||
-                        event.message.includes('Loading CSS chunk') ||
-                        event.message.includes('Failed to fetch')
-                    )) {
-                        console.warn('Chunk loading failed, attempting cache clear and reload');
-                        
-                        // Clear caches and reload
-                        if ('caches' in window) {
-                            caches.keys().then(names => {
-                                return Promise.all(names.map(name => caches.delete(name)));
-                            }).then(() => {
-                                window.location.reload(true);
-                            });
-                        } else {
+                            return Promise.all(names.map(name => caches.delete(name)));
+                        }).then(() => {
                             window.location.reload(true);
-                        }
+                        });
+                    } else {
+                        window.location.reload(true);
                     }
-                });
-            })();
-        </script>
-        
-        <!-- Very early ethereum property protection - must come before all other scripts -->
-        <script src="/ethereum-protector.js"></script>
-        
-        <div id="root"></div>
-        
-        <!-- NON-INTRUSIVE wallet compatibility that doesn't modify window.ethereum -->
-        <script src="/wallet-adapter.js"></script>
-        
-        <!-- Production patch for wallet provider conflicts -->
-        <script src="/production-patch.js"></script>
-        
-        <!-- Cache management utility -->
-        <script src="/cache-clear.js"></script>
-        
-        <!-- Error detection/prevention script must run before other scripts -->
-        <script>
-            // Define global configuration to control wallet behavior
-            window.__walletConfig = {
-                // Control whether we should try any window.ethereum fixes at all
-                enableFixes: true,
-                // Track any errors we've seen
-                errors: [],
-                // Log error
-                logError: function(err) {
-                    this.errors.push({
-                        message: err.message || String(err),
-                        timestamp: Date.now()
-                    });
-                    console.error('Error logged:', err);
                 }
-            };
-            
-            // Global error handler for critical errors
-            window.addEventListener('error', function(event) {
-                console.log('Error event captured:', event.message);
-                window.__walletConfig.logError(event);
-                
-                // Check for React initialization errors and temporal dead zone errors
-                if (event.message && (
-                    event.message.includes("Cannot read properties of undefined") ||
-                    event.message.includes("Cannot access") && event.message.includes("before initialization") ||
-                    event.message.includes("createContext") ||
-                    event.message.includes("ReactCurrentOwner") ||
-                    event.message.includes("react-jsx-runtime") ||
-                    event.message.includes("React is not defined") ||
-                    event.message.includes("ReferenceError")
-                )) {
-                    console.error('Critical React loading error detected:', event.message);
-                    
-                    // Clear the root element and show a more informative error
-                    const rootElement = document.getElementById('root');
-                    if (rootElement) {
-                        rootElement.innerHTML = `
+            });
+        })();
+    </script>
+
+    <!-- Very early ethereum property protection - must come before all other scripts -->
+    <script src="/ethereum-protector.js"></script>
+
+    <div id="root"></div>
+
+    <!-- NON-INTRUSIVE wallet compatibility that doesn't modify window.ethereum -->
+    <script src="/wallet-adapter.js"></script>
+
+    <!-- Production patch for wallet provider conflicts -->
+    <script src="/production-patch.js"></script>
+
+    <!-- Cache management utility -->
+    <script src="/cache-clear.js"></script>
+
+    <!-- Error detection/prevention script must run before other scripts -->
+    <script>
+        // Define global configuration to control wallet behavior
+        window.__walletConfig = {
+            // Control whether we should try any window.ethereum fixes at all
+            enableFixes: true,
+            // Track any errors we've seen
+            errors: [],
+            // Log error
+            logError: function (err) {
+                this.errors.push({
+                    message: err.message || String(err),
+                    timestamp: Date.now()
+                });
+                console.error('Error logged:', err);
+            }
+        };
+
+        // Global error handler for critical errors
+        window.addEventListener('error', function (event) {
+            console.log('Error event captured:', event.message);
+            window.__walletConfig.logError(event);
+
+            // Check for React initialization errors and temporal dead zone errors
+            if (event.message && (
+                event.message.includes("Cannot read properties of undefined") ||
+                event.message.includes("Cannot access") && event.message.includes("before initialization") ||
+                event.message.includes("createContext") ||
+                event.message.includes("ReactCurrentOwner") ||
+                event.message.includes("react-jsx-runtime") ||
+                event.message.includes("React is not defined") ||
+                event.message.includes("ReferenceError") ||
+                event.message.includes("Cannot access 'F' before initialization")
+            )) {
+                console.error('Critical React loading error detected:', event.message);
+
+                // Clear the root element and show a more informative error
+                const rootElement = document.getElementById('root');
+                if (rootElement) {
+                    rootElement.innerHTML = `
                             <div style="font-family: 'Manrope', sans-serif; padding: 20px; text-align: center; background: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                                 <div style="max-width: 500px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                                     <div style="width: 60px; height: 60px; background: #fee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #dc2626; font-size: 24px;">⚠</div>
@@ -159,78 +146,79 @@
                                 </div>
                             </div>
                         `;
-                        
-                        // Don't auto-reload - let user choose the action
-                        return;
-                    }
-                }
-                
-                // Check for property redefinition errors
-                if (event.message && event.message.includes("Cannot redefine property")) {
-                    console.error('Property redefinition error detected');
-                    
-                    // Disable any further fix attempts
-                    window.__walletConfig.enableFixes = false;
-                    
-                    // If we have our wallet tracker, we can still use it
-                    if (window.__walletTracker) {
-                        console.log('Using wallet tracker for safe provider access');
-                        
-                        // Mark this error as handled
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                }
-            });
-            
-            // Create a safe proxy for ethereum access
-            window.getSafeProvider = function() {
-                // Try production patch API first
-                if (window.walletApi && typeof window.walletApi.getProvider === 'function') {
-                    return window.walletApi.getProvider();
-                }
-                
-                // Then try our tracking system if available
-                if (window.safeWallet && typeof window.safeWallet.getProvider === 'function') {
-                    return window.safeWallet.getProvider();
-                }
-                
-                // Fallback to window.ethereum
-                return window.ethereum;
-            };
-            
-            // Handle provider when it becomes available
-            window.onWalletAvailable = function(callback) {
-                // Check if available via production patch
-                if (window.walletApi && window.walletApi.isAvailable()) {
-                    callback(window.walletApi.getProvider());
+
+                    // Don't auto-reload - let user choose the action
                     return;
                 }
-                
-                // Check if available via original method
-                if (window.safeWallet && window.safeWallet.isAvailable()) {
-                    callback(window.safeWallet.getProvider());
-                    return;
+            }
+
+            // Check for property redefinition errors
+            if (event.message && event.message.includes("Cannot redefine property")) {
+                console.error('Property redefinition error detected');
+
+                // Disable any further fix attempts
+                window.__walletConfig.enableFixes = false;
+
+                // If we have our wallet tracker, we can still use it
+                if (window.__walletTracker) {
+                    console.log('Using wallet tracker for safe provider access');
+
+                    // Mark this error as handled
+                    event.preventDefault();
+                    event.stopPropagation();
                 }
-                
-                // Otherwise check periodically
-                const checkInterval = setInterval(function() {
-                    // Try both APIs
-                    if ((window.walletApi && window.walletApi.isAvailable()) ||
-                        (window.safeWallet && window.safeWallet.isAvailable())) {
-                        clearInterval(checkInterval);
-                        callback(window.getSafeProvider());
-                    }
-                }, 200);
-                
-                // Cleanup after 10 seconds
-                setTimeout(function() {
+            }
+        });
+
+        // Create a safe proxy for ethereum access
+        window.getSafeProvider = function () {
+            // Try production patch API first
+            if (window.walletApi && typeof window.walletApi.getProvider === 'function') {
+                return window.walletApi.getProvider();
+            }
+
+            // Then try our tracking system if available
+            if (window.safeWallet && typeof window.safeWallet.getProvider === 'function') {
+                return window.safeWallet.getProvider();
+            }
+
+            // Fallback to window.ethereum
+            return window.ethereum;
+        };
+
+        // Handle provider when it becomes available
+        window.onWalletAvailable = function (callback) {
+            // Check if available via production patch
+            if (window.walletApi && window.walletApi.isAvailable()) {
+                callback(window.walletApi.getProvider());
+                return;
+            }
+
+            // Check if available via original method
+            if (window.safeWallet && window.safeWallet.isAvailable()) {
+                callback(window.safeWallet.getProvider());
+                return;
+            }
+
+            // Otherwise check periodically
+            const checkInterval = setInterval(function () {
+                // Try both APIs
+                if ((window.walletApi && window.walletApi.isAvailable()) ||
+                    (window.safeWallet && window.safeWallet.isAvailable())) {
                     clearInterval(checkInterval);
-                }, 10000);
-            };
-        </script>
-        
-        <!-- Node.js polyfills are now handled by vite-plugin-node-polyfills -->
-        <script type="module" src="/src/main.tsx"></script>
-    </body>
+                    callback(window.getSafeProvider());
+                }
+            }, 200);
+
+            // Cleanup after 10 seconds
+            setTimeout(function () {
+                clearInterval(checkInterval);
+            }, 10000);
+        };
+    </script>
+
+    <!-- Node.js polyfills are now handled by vite-plugin-node-polyfills -->
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

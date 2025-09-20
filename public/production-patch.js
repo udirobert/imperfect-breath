@@ -66,9 +66,36 @@
       return window.__walletState.current || window.ethereum;
     },
 
+    // Enhanced provider detection that handles protected ethereum
+    getProviderSafely: function () {
+      try {
+        // Try to access ethereum safely
+        if (window.ethereum) {
+          return window.ethereum;
+        }
+
+        // Fallback to our tracked providers
+        return window.__walletState.current || window.__walletState.original;
+      } catch (error) {
+        console.warn("[PATCH] Error accessing ethereum provider:", error.message);
+        return window.__walletState.current || window.__walletState.original;
+      }
+    },
+
     // Safe request implementation that tries multiple providers
     request: async function (method, params) {
       // Try window.ethereum first (current live provider)
+      const safeProvider = this.getProviderSafely();
+      if (safeProvider && typeof safeProvider.request === "function") {
+        try {
+          return await safeProvider.request({ method, params });
+        } catch (err) {
+          console.warn("[PATCH] Error using safe provider:", err);
+          // Continue to fallbacks
+        }
+      }
+
+      // Fallback to direct window.ethereum if safe provider failed
       if (window.ethereum && typeof window.ethereum.request === "function") {
         try {
           return await window.ethereum.request({ method, params });
@@ -111,56 +138,49 @@
     }
 
     window.__walletState.monitor = setInterval(function () {
-      try {
-        // Always use getSafeEthereum if available to avoid redefinition issues
-        const currentProvider = window.getSafeEthereum
-          ? window.getSafeEthereum()
-          : window.ethereum;
+      // Use the safer provider access method
+      const currentProvider = window.walletApi.getProviderSafely();
 
-        // Simple equality check to avoid deep comparison that might cause recursion
-        const hasChanged = currentProvider !== window.__walletState.current;
+      // Simple equality check to avoid deep comparison that might cause recursion
+      const hasChanged = currentProvider !== window.__walletState.current;
 
-        if (hasChanged) {
-          // Update our tracked reference WITHOUT modifying the property
-          window.__walletState.current = currentProvider;
+      if (hasChanged) {
+        // Update our tracked reference WITHOUT modifying the property
+        window.__walletState.current = currentProvider;
 
-          // Special handling for Backpack
-          if (currentProvider && currentProvider._isBackpack) {
-            window.__walletState.backpack = currentProvider;
-          }
-
-          // Only store a reference, not the whole provider object
-          // This helps avoid circular references
-          const providerInfo = {
-            name:
-              currentProvider && currentProvider._isBackpack
-                ? "backpack"
-                : "unknown",
-            timestamp: Date.now(),
-            // Store simple identifier instead of full provider object
-            providerId:
-              Date.now().toString(36) + Math.random().toString(36).substr(2),
-          };
-
-          // Add to providers array with size limit
-          window.__walletState.providers.push(providerInfo);
-
-          // Keep array size limited to prevent memory issues
-          if (
-            window.__walletState.providers.length >
-            window.__walletState.maxProviderHistory
-          ) {
-            window.__walletState.providers =
-              window.__walletState.providers.slice(
-                -window.__walletState.maxProviderHistory
-              );
-          }
-
-          console.log("[PATCH] Provider change detected, tracking updated");
+        // Special handling for Backpack
+        if (currentProvider && currentProvider._isBackpack) {
+          window.__walletState.backpack = currentProvider;
         }
-      } catch (err) {
-        // Catch any errors to prevent crashing the monitor
-        console.warn("[PATCH] Error in wallet monitor:", err.message);
+
+        // Only store a reference, not the whole provider object
+        // This helps avoid circular references
+        const providerInfo = {
+          name:
+            currentProvider && currentProvider._isBackpack
+              ? "backpack"
+              : "unknown",
+          timestamp: Date.now(),
+          // Store simple identifier instead of full provider object
+          providerId:
+            Date.now().toString(36) + Math.random().toString(36).substr(2),
+        };
+
+        // Add to providers array with size limit
+        window.__walletState.providers.push(providerInfo);
+
+        // Keep array size limited to prevent memory issues
+        if (
+          window.__walletState.providers.length >
+          window.__walletState.maxProviderHistory
+        ) {
+          window.__walletState.providers =
+            window.__walletState.providers.slice(
+              -window.__walletState.maxProviderHistory
+            );
+        }
+
+        console.log("[PATCH] Provider change detected, tracking updated");
       }
     }, 1000);
   }
