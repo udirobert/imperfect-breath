@@ -5,7 +5,6 @@
  * progressive enhancement, and graceful error handling.
  */
 
-import { cameraManager, CameraState, CameraEvent } from './camera-manager';
 import { getPhaseSequence } from './pattern-mapper';
 import { breathingPhaseManager, PhaseTransition } from '../breathing/unified-phase-manager';
 
@@ -165,60 +164,21 @@ class SessionOrchestrator {
   /**
    * Handle camera events
    */
-  private handleCameraEvent = (event: CameraEvent): void => {
+  private handleCameraEvent = (event: any): void => {
     switch (event.type) {
       case 'permission-change':
-        this.updateCameraFeatureState();
+        // Camera state is now managed by CameraContext
         break;
 
       case 'stream-change':
-        if (event.stream) {
-          this.setState({
-            features: { ...this.state.features, camera: 'active' }
-          });
-        } else {
-          this.setState({
-            features: { ...this.state.features, camera: 'available' }
-          });
-        }
+        // Camera state is now managed by CameraContext
         break;
 
       case 'error':
-        this.setState({
-          features: { ...this.state.features, camera: 'error' }
-        });
-        this.addWarning(`Camera error: ${event.error?.message || 'Unknown error'}`);
+        // Camera state is now managed by CameraContext
         break;
     }
   };
-
-  /**
-   * Update camera feature state based on manager state
-   */
-  private updateCameraFeatureState(): void {
-    const cameraState = cameraManager.getState();
-    let status: SessionState['features']['camera'] = 'unavailable';
-
-    if (cameraState.isAvailable) {
-      if (cameraState.isStreaming) {
-        status = 'active';
-      } else if (cameraState.isRequesting) {
-        status = 'requesting';
-      } else if (cameraState.hasPermission) {
-        status = 'available';
-      } else {
-        status = 'unavailable';
-      }
-    }
-
-    if (cameraState.error) {
-      status = 'error';
-    }
-
-    this.setState({
-      features: { ...this.state.features, camera: status }
-    });
-  }
 
   /**
    * Initialize camera feature with better error handling
@@ -235,43 +195,11 @@ class SessionOrchestrator {
       features: { ...this.state.features, camera: 'requesting' }
     });
 
-    try {
-      // Setup camera event listener with better error handling
-      this.cameraCleanup = cameraManager.addEventListener(this.handleCameraEvent);
-
-      // Check initial camera state
-      this.updateCameraFeatureState();
-
-      // Pre-validate camera access
-      const cameraState = cameraManager.getState();
-      
-      if (!cameraState.isAvailable) {
-        this.addWarning('Camera not supported - continuing with audio-only session');
-        this.setState({
-          features: { ...this.state.features, camera: 'unavailable' }
-        });
-        return;
-      }
-
-      if (!cameraState.hasPermission) {
-        this.addWarning('Camera permission needed for enhanced features - you can enable this later');
-        this.setState({
-          features: { ...this.state.features, camera: 'unavailable' }
-        });
-        return;
-      }
-
-      this.setState({
-        features: { ...this.state.features, camera: 'available' }
-      });
-
-    } catch (error) {
-      console.warn('Camera initialization failed:', error);
-      this.setState({
-        features: { ...this.state.features, camera: 'error' }
-      });
-      this.addWarning('Camera unavailable - session will continue without video features');
-    }
+    // Camera state is now managed by CameraContext
+    // We'll just set the feature as available since CameraContext handles the actual stream
+    this.setState({
+      features: { ...this.state.features, camera: 'available' }
+    });
   }
 
   /**
@@ -479,14 +407,13 @@ class SessionOrchestrator {
     }
 
     try {
-      // Start camera stream if available and enabled
+      // Camera state is now managed by CameraContext
+      // We'll just set the camera feature as active if it was available
       if (this.config?.features.enableCamera &&
           this.state.features.camera === 'available') {
-        try {
-          await cameraManager.requestStream();
-        } catch (error) {
-          this.addWarning('Camera stream failed, continuing without video');
-        }
+        this.setState({
+          features: { ...this.state.features, camera: 'active' }
+        });
       }
 
       // Activate AI if available
@@ -552,9 +479,12 @@ class SessionOrchestrator {
    * Stop the session
    */
   stop(): void {
-    // Stop camera
+    // Camera state is now managed by CameraContext
+    // We'll just set the camera feature back to available if it was active
     if (this.state.features.camera === 'active') {
-      cameraManager.stopStream();
+      this.setState({
+        features: { ...this.state.features, camera: 'available' }
+      });
     }
 
     // Stop all timers
@@ -575,10 +505,8 @@ class SessionOrchestrator {
    * Reset session to initial state
    */
   reset(): void {
-    // Stop any active resources
-    if (this.state.features.camera === 'active') {
-      cameraManager.stopStream();
-    }
+    // Camera state is now managed by CameraContext
+    // We'll just reset the camera feature state
     
     // Stop all timers
     this.stopAllTimers();
@@ -631,7 +559,8 @@ class SessionOrchestrator {
    * Get camera stream if available
    */
   getCameraStream(): MediaStream | null {
-    return cameraManager.getState().stream;
+    // Camera stream is now managed by CameraContext
+    return null;
   }
 
   /**

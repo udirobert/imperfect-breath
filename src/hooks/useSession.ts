@@ -17,6 +17,7 @@ import {
   SessionConfig
 } from '../stores/sessionStore';
 import { useMeditationVision } from './useMeditationVision';
+import { useCamera } from '../contexts/CameraContext';
 
 export interface UseSessionOptions {
   autoStart?: boolean;
@@ -67,6 +68,16 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const cameraStream = useSessionStore((state) => state.cameraStream);
   const visionMetrics = useSessionStore((state) => state.visionMetrics);
 
+  // Camera context
+  const { 
+    stream: cameraContextStream, 
+    status: cameraStatus, 
+    error: cameraError,
+    requestStream: requestCameraStream,
+    releaseStream: releaseCameraStream,
+    hasPermission: cameraPermission
+  } = useCamera();
+
   // Vision processing (conditional)
   const vision = useMeditationVision(
     enableVision ? {
@@ -87,78 +98,74 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
   const requestCamera = useCallback(async () => {
     try {
-      console.log('📷 Requesting camera access...');
+      console.log('📷 useSession: Requesting camera access through CameraContext...');
 
-      // Add timeout to prevent indefinite hanging
-      const stream = await Promise.race([
-        navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            frameRate: { ideal: 15, max: 30 }
-          }
-        }),
-        new Promise<MediaStream>((_, reject) =>
-          setTimeout(() => reject(new Error('Camera access timeout - please check permissions and try again')), 10000)
-        )
-      ]);
+      const stream = await requestCameraStream();
+      
+      if (stream) {
+        console.log('✅ useSession: Camera access granted through CameraContext');
+        setCameraStream(stream);
+        setCameraPermission(true);
 
-      console.log('✅ Camera access granted');
-      setCameraStream(stream);
-      setCameraPermission(true);
+        // Attach stream to video element if provided
+        if (videoElement?.current) {
+          console.log('📹 useSession: Attaching stream to video element...');
+          const video = videoElement.current;
 
-      // Attach stream to video element if provided
-      if (videoElement?.current) {
-        console.log('📹 useSession: Attaching stream to video element...');
-        const video = videoElement.current;
+          // Set stream and video properties
+          video.srcObject = stream;
+          video.muted = true;
+          video.autoplay = true;
+          video.playsInline = true;
 
-        // Set stream and video properties
-        video.srcObject = stream;
-        video.muted = true;
-        video.autoplay = true;
-        video.playsInline = true;
-
-        // Ensure video is playing with retry mechanism
-        const playVideo = async (retries = 3) => {
-          for (let i = 0; i < retries; i++) {
-            try {
-              await video.play();
-              console.log('✅ useSession: Video is playing, readyState:', video.readyState);
-              return;
-            } catch (playError) {
-              console.warn(`⚠️ useSession: Video play attempt ${i + 1} failed:`, playError);
-              if (i < retries - 1) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+          // Ensure video is playing with retry mechanism
+          const playVideo = async (retries = 3) => {
+            for (let i = 0; i < retries; i++) {
+              try {
+                await video.play();
+                console.log('✅ useSession: Video is playing, readyState:', video.readyState);
+                return;
+              } catch (playError) {
+                console.warn(`⚠️ useSession: Video play attempt ${i + 1} failed:`, playError);
+                if (i < retries - 1) {
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                }
               }
             }
-          }
-          console.warn('⚠️ useSession: All video play attempts failed');
-        };
+            console.warn('⚠️ useSession: All video play attempts failed');
+          };
 
-        await playVideo();
+          await playVideo();
 
-        // Set video element styling
-        video.style.display = 'block';
-        video.style.visibility = 'visible';
-        video.style.opacity = '1';
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.position = 'absolute';
-        video.style.top = '0';
-        video.style.left = '0';
-        video.style.zIndex = '1';
-        console.log('✅ useSession: Video element configured');
+          // Set video element styling
+          video.style.display = 'block';
+          video.style.visibility = 'visible';
+          video.style.opacity = '1';
+          video.style.width = '100%';
+          video.style.height = '100%';
+          video.style.position = 'absolute';
+          video.style.top = '0';
+          video.style.left = '0';
+          video.style.zIndex = '1';
+          console.log('✅ useSession: Video element configured');
+        }
+
+        // Start vision if enabled
+        if (enableVision && vision) {
+          setVisionActive(true);
+          // Vision hook will handle the video element connection
+        }
+
+        return stream;
+      } else {
+        // Handle case where stream request failed
+        setCameraPermission(false);
+        const errorMessage = cameraError || 'Camera access failed';
+        setError(errorMessage);
+        return null;
       }
-
-      // Start vision if enabled
-      if (enableVision && vision) {
-        setVisionActive(true);
-        // Vision hook will handle the video element connection
-      }
-
-      return stream;
     } catch (error) {
-      console.warn('❌ Camera access failed:', error);
+      console.warn('❌ useSession: Camera access failed:', error);
       setCameraPermission(false);
 
       // Provide more specific error messages
@@ -179,7 +186,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       setError(errorMessage);
       return null;
     }
-  }, [enableVision, vision, setCameraStream, setCameraPermission, setVisionActive, setError]);
+  }, [requestCameraStream, setCameraStream, setCameraPermission, setVisionActive, setError, videoElement, enableVision, vision, cameraError]);
 
   // ========================================================================
   // BREATHING CYCLE MANAGEMENT - Clean timing
@@ -285,18 +292,16 @@ export const useSession = (options: UseSessionOptions = {}) => {
     stopBreathingCycle();
 
     // Only cleanup camera on actual completion, not during phase transitions
-    if (cameraStream) {
-      console.log('🛑 useSession: Stopping camera stream on session completion');
-      cameraStream.getTracks().forEach(track => track.stop());
-      setCameraStream(null);
-    }
+    // Camera cleanup is now handled by CameraContext
+    console.log('🛑 useSession: Session completed, releasing camera reference');
+    releaseCameraStream();
 
     // Stop vision
     if (vision) {
       vision.stop();
       setVisionActive(false);
     }
-  }, [completeSession, cameraStream, setCameraStream, vision, setVisionActive]);
+  }, [completeSession, releaseCameraStream, vision, setVisionActive]);
 
   const reset = useCallback(() => {
     stopBreathingCycle();
@@ -349,12 +354,11 @@ export const useSession = (options: UseSessionOptions = {}) => {
     return () => {
       console.log('🧹 useSession: Component unmounting, cleaning up resources');
       stopBreathingCycle();
-      if (cameraStream) {
-        console.log('🛑 useSession: Stopping camera stream on component unmount');
-        cameraStream.getTracks().forEach(track => track.stop());
-      }
+      // Release camera reference instead of directly stopping stream
+      console.log('🧹 useSession: Releasing camera reference on component unmount');
+      releaseCameraStream();
     };
-  }, []); // Empty dependency array - only run on unmount
+  }, [releaseCameraStream]); // Empty dependency array - only run on unmount
 
   // ========================================================================
   // PUBLIC API - Clean, simple interface
@@ -389,8 +393,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
     getCompletionPercentage,
 
     // Camera state
-    cameraStream,
-    cameraPermissionGranted: sessionSelectors.canUseCamera(),
+    cameraStream: cameraContextStream,
+    cameraPermissionGranted: cameraPermission,
   };
 };
 

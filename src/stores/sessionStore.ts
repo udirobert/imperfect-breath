@@ -191,12 +191,9 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     },
 
     resetSession: () => {
-      const { cameraStream } = get();
-      // Only cleanup camera stream on actual reset, not during phase transitions
-      if (cameraStream) {
-        console.log('🛑 SessionStore: Stopping camera stream on session reset');
-        cameraStream.getTracks().forEach(track => track.stop());
-      }
+      // NOTE: Camera stream cleanup is now handled by cameraManager
+      // We only reset the store state, not the actual camera stream
+      console.log('🔄 SessionStore: Resetting session state (camera stream managed by cameraManager)');
 
       set({
         ...initialState,

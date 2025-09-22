@@ -6,7 +6,7 @@ import { useSession } from "@/hooks/useSession";
 
 import { mapPatternForAnimation } from "@/lib/session/pattern-mapper";
 import BreathingAnimation from "@/components/BreathingAnimation";
-import { PreparationPhase } from "./PreparationPhase";
+import { SessionPreview } from "./SessionPreview";
 import { useTouchGestures } from "@/hooks/useTouchGestures";
 import {
   BreathingPhaseName,
@@ -111,10 +111,15 @@ export const MobileBreathingInterface: React.FC<
   if (showPreparation && isReady) {
     return (
       <div className="w-full flex flex-col bg-gradient-to-b from-background to-muted/20 relative overflow-hidden min-h-[calc(100vh-4rem)] pb-safe">
-        <PreparationPhase
+        <SessionPreview
           patternName={patternName}
           pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
-          onStart={handlePlayPause}
+          enableCamera={false} // Mobile interface doesn't support camera yet
+          videoRef={containerRef} // Using container ref as placeholder
+          onStart={() => {
+            setShowPreparation(false);
+            handlePlayPause();
+          }}
           onCancel={handleCancelPreparation}
         />
       </div>

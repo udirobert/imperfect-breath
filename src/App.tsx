@@ -6,6 +6,9 @@ import MainLayout from "@/components/MainLayout";
 import SessionEntryPoints from "@/components/navigation/SessionEntryPoints";
 import SessionModeWrapper from "@/components/session/SessionModeWrapper";
 
+// Camera Context Provider
+import { CameraProvider } from "@/contexts/CameraContext";
+
 // Small pages that can load immediately
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -42,48 +45,50 @@ const PageLoader = () => (
 
 function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Main Application Routes with Header */}
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Index enhanced={false} />} />
-            <Route path="/enhanced" element={<Index enhanced={true} />} />
-            <Route path="/session" element={<SessionEntryPoints />} />
-            <Route path="/patterns" element={<PatternSelectionPage />} />
-            <Route path="/session/:mode" element={<SessionModeWrapper />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="/marketplace" element={<EnhancedMarketplace />} />
-            <Route path="/create" element={<CreatePattern />} />
-            <Route
-              path="/create-post"
-              element={
-                <div className="min-h-screen">
-                  <ResponsiveSocialCreate />
-                </div>
-              }
-            />
-            <Route path="/community" element={<CommunityFeed />} />
-            <Route path="/profile" element={<UserProfile />} />
-            <Route
-              path="/instructor-onboarding"
-              element={<InstructorOnboarding />}
-            />
-          </Route>
+    <CameraProvider>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Main Application Routes with Header */}
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Index enhanced={false} />} />
+              <Route path="/enhanced" element={<Index enhanced={true} />} />
+              <Route path="/session" element={<SessionEntryPoints />} />
+              <Route path="/patterns" element={<PatternSelectionPage />} />
+              <Route path="/session/:mode" element={<SessionModeWrapper />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/results" element={<Results />} />
+              <Route path="/marketplace" element={<EnhancedMarketplace />} />
+              <Route path="/create" element={<CreatePattern />} />
+              <Route
+                path="/create-post"
+                element={
+                  <div className="min-h-screen">
+                    <ResponsiveSocialCreate />
+                  </div>
+                }
+              />
+              <Route path="/community" element={<CommunityFeed />} />
+              <Route path="/profile" element={<UserProfile />} />
+              <Route
+                path="/instructor-onboarding"
+                element={<InstructorOnboarding />}
+              />
+            </Route>
 
-          {/* Routes without Header */}
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/onboarding" element={<Auth />} />
+            {/* Routes without Header */}
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/onboarding" element={<Auth />} />
 
-          {/* Catch all route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Catch all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
 
-        {/* Mobile Bottom Navigation */}
-        <MobileBottomNav />
-      </Suspense>
-    </BrowserRouter>
+          {/* Mobile Bottom Navigation */}
+          <MobileBottomNav />
+        </Suspense>
+      </BrowserRouter>
+    </CameraProvider>
   );
 }
 

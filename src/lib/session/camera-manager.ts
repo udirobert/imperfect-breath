@@ -3,6 +3,7 @@
  * 
  * Handles camera permissions, streaming, and device management with graceful fallbacks.
  * Provides a clean API for camera operations with proper error handling.
+ * CENTRALIZED CAMERA MANAGEMENT to ensure stream persistence through session phases.
  */
 
 export interface CameraConstraints {
@@ -32,6 +33,8 @@ export interface CameraState {
   error: string | null;
   devices: CameraDevice[];
   activeDeviceId: string | null;
+  // Track stream consumers to prevent premature cleanup
+  streamConsumers: Set<string>;
 }
 
 export type CameraEventType = 'permission-change' | 'stream-change' | 'error' | 'devices-change';
@@ -66,6 +69,7 @@ class CameraManager {
     error: null,
     devices: [],
     activeDeviceId: null,
+    streamConsumers: new Set(), // Track which components are using the stream
   };
 
   private listeners: Set<(event: CameraEvent) => void> = new Set();
@@ -230,12 +234,50 @@ class CameraManager {
   }
 
   /**
+   * Register a component as a stream consumer
+   * This prevents premature cleanup when multiple components need the stream
+   */
+  registerConsumer(consumerId: string): void {
+    this.state.streamConsumers.add(consumerId);
+    console.log(`📹 CameraManager: Registered consumer ${consumerId}. Total consumers: ${this.state.streamConsumers.size}`);
+  }
+
+  /**
+   * Unregister a component as a stream consumer
+   * Only stops the stream when no consumers remain
+   */
+  unregisterConsumer(consumerId: string): void {
+    this.state.streamConsumers.delete(consumerId);
+    console.log(`📹 CameraManager: Unregistered consumer ${consumerId}. Remaining consumers: ${this.state.streamConsumers.size}`);
+    
+    // Only stop stream if no consumers remain
+    if (this.state.streamConsumers.size === 0) {
+      console.log('📹 CameraManager: No consumers remaining, stopping stream');
+      this.stopStream();
+    }
+  }
+
+  /**
    * Request camera permission and stream
+   * Reuses existing stream if available and compatible
    */
   async requestStream(
     constraints?: Partial<CameraConstraints>,
-    deviceId?: string
+    deviceId?: string,
+    consumerId?: string
   ): Promise<MediaStream> {
+    // If we already have a stream and it's compatible, reuse it
+    if (this.state.stream && this.state.isStreaming) {
+      console.log('📹 CameraManager: Reusing existing camera stream');
+      
+      // Register consumer if provided
+      if (consumerId) {
+        this.registerConsumer(consumerId);
+      }
+      
+      return this.state.stream;
+    }
+
     if (this.state.isRequesting) {
       throw new Error('Camera request already in progress');
     }
@@ -247,11 +289,6 @@ class CameraManager {
     this.setState({ isRequesting: true, error: null });
 
     try {
-      // Stop existing stream first
-      if (this.state.stream) {
-        this.stopStream();
-      }
-
       const streamConstraints = this.createConstraints(constraints, deviceId);
       const stream = await navigator.mediaDevices.getUserMedia(streamConstraints);
 
@@ -263,6 +300,11 @@ class CameraManager {
         activeDeviceId: deviceId || null,
         error: null,
       });
+
+      // Register consumer if provided
+      if (consumerId) {
+        this.registerConsumer(consumerId);
+      }
 
       // Update devices list now that we have permission
       await this.updateDevices();
@@ -287,8 +329,41 @@ class CameraManager {
 
   /**
    * Stop camera stream
+   * Only stops if no consumers are registered
    */
   stopStream(): void {
+    // Only stop if no consumers are registered
+    if (this.state.streamConsumers.size > 0) {
+      console.log(`📹 CameraManager: Skipping stream stop, ${this.state.streamConsumers.size} consumers still active`);
+      return;
+    }
+
+    if (this.state.stream) {
+      console.log('📹 CameraManager: Stopping camera stream');
+      this.state.stream.getTracks().forEach(track => {
+        track.stop();
+      });
+
+      this.setState({
+        isStreaming: false,
+        stream: null,
+        activeDeviceId: null,
+      });
+
+      this.emit({ type: 'stream-change', stream: undefined });
+    }
+  }
+
+  /**
+   * Force stop camera stream regardless of consumers
+   * Use only when session is truly complete
+   */
+  forceStopStream(): void {
+    console.log('📹 CameraManager: Force stopping camera stream');
+    
+    // Clear all consumers
+    this.state.streamConsumers.clear();
+    
     if (this.state.stream) {
       this.state.stream.getTracks().forEach(track => {
         track.stop();
@@ -386,7 +461,7 @@ class CameraManager {
    * Cleanup resources
    */
   destroy(): void {
-    this.stopStream();
+    this.forceStopStream(); // Force cleanup on destroy
     this.listeners.clear();
     
     if (this.permissionWatcher) {

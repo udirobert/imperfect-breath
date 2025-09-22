@@ -30,7 +30,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Progress } from "../ui/progress";
 import { Badge } from "../ui/badge";
@@ -55,10 +55,7 @@ import BreathingAnimation from "../BreathingAnimation";
 import { FaceMeshOverlay } from "../vision/FaceMeshOverlay";
 import { GentleErrorBoundary } from "../meditation/GentleErrorBoundary";
 import { CalmLoading } from "../meditation/CalmLoading";
-import { PreparationPhase } from "./PreparationPhase";
-import { PerformanceMonitor } from "../vision/PerformanceMonitor";
-import { MobileBreathingControls } from "../mobile/MobileBreathingControls";
-import { CameraSetup } from "./CameraSetup";
+import { SessionPreview } from "./SessionPreview";
 import { SessionProgressDisplay } from "./SessionProgressDisplay";
 import { PostSessionCelebration } from "./PostSessionCelebration";
 import { SessionControls } from "./SessionControls";
@@ -72,6 +69,7 @@ import useAdaptivePerformance, {
 } from "../../hooks/useAdaptivePerformance";
 import { useAuth } from "../../hooks/useAuth";
 import { TrackingStatus } from "../../hooks/visionTypes";
+import { useCamera } from "../../contexts/CameraContext";
 
 // Shared types - consolidated
 import { SessionMetrics, SessionModeConfig, SessionPhase, SessionMode } from "../../types/session";
@@ -204,7 +202,6 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // CLEAN: Single source of truth for session phase
   const [currentPhase, setCurrentPhase] = useState<SessionPhase>("setup");
   const [isVideoReady, setIsVideoReady] = useState(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   // MODULAR: User-controllable overlay preferences
   const [showFaceMesh, setShowFaceMesh] = useState(true);
@@ -252,6 +249,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // PERFORMANT: Debug state tracking
   const debugKeyRef = useRef<string>("");
+
+  // Use CameraContext for camera state
+  const { stream: cameraStream } = useCamera();
 
   // Enhanced session management with adaptive performance
   const visionEnabled = modeConfig.enableVision && !isLowEndDevice;
@@ -360,7 +360,12 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
         // Initialize the session store
         console.log("Session config prepared:", sessionConfig);
-        session.initialize(sessionConfig);
+        session.initialize(sessionConfig)
+          .catch((error) => {
+            console.error("❌ Failed to initialize session:", error);
+            // Handle initialization error gracefully
+            session.setError("Failed to initialize session. Please try again.");
+          });
       }
     }
   }, [config, modeConfig]);
@@ -481,26 +486,37 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // Ensure video stream is maintained when transitioning to active phase
   useEffect(() => {
-    if (currentPhase === "active" && session.cameraStream && videoRef.current) {
+    if (currentPhase === "active" && cameraStream && videoRef.current) {
       const video = videoRef.current;
       if (!video.srcObject) {
         console.log("🔄 Reattaching camera stream to video element in active phase");
-        video.srcObject = session.cameraStream;
+        video.srcObject = cameraStream;
         video.muted = true;
         video.autoplay = true;
         video.playsInline = true;
+        
+        // Ensure video is visible and properly sized
+        video.style.display = 'block';
+        video.style.visibility = 'visible';
+        video.style.opacity = '1';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.position = 'absolute';
+        video.style.top = '0';
+        video.style.left = '0';
+        video.style.zIndex = '1';
       }
     }
-  }, [currentPhase, session.cameraStream]);
+  }, [currentPhase, cameraStream]);
 
   // Attach camera stream to video element when camera is granted
   useEffect(() => {
-    if (session.cameraStream && videoRef.current && !videoRef.current.srcObject) {
+    if (cameraStream && videoRef.current && !videoRef.current.srcObject) {
       console.log("📹 MeditationSession: Attaching camera stream to video element");
       const video = videoRef.current;
 
       // Set stream and video properties
-      video.srcObject = session.cameraStream;
+      video.srcObject = cameraStream;
       video.muted = true;
       video.autoplay = true;
       video.playsInline = true;
@@ -536,7 +552,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       video.style.zIndex = '1';
       console.log('✅ MeditationSession: Video element configured');
     }
-  }, [session.cameraStream]);
+  }, [cameraStream]);
 
   // Synchronized vision processing startup with proper checks
   useEffect(() => {
@@ -551,7 +567,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         visionNotActive: vision && !vision.state.isActive,
         videoReady: isVideoReady,
         videoReadyState: (videoRef.current?.readyState || 0) >= 2,
-        hasCameraStream: !!session.cameraStream,
+        hasCameraStream: !!cameraStream,
       };
 
       console.log("🔍 Vision startup conditions check:", conditions);
@@ -600,7 +616,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     vision,
     isVideoReady,
     videoRef.current?.readyState,
-    session.cameraStream, // Added dependency to retry when camera becomes available
+    cameraStream, // Added dependency to retry when camera becomes available
   ]);
 
   // Cleanup vision processing when component unmounts
@@ -651,34 +667,50 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
         <Card className="border-0 shadow-lg">
           <CardContent className="p-6">
             {currentPhase === "setup" && (
-              <PreparationPhase
+              <SessionPreview
                 patternName={config.pattern.name}
                 pattern={config.pattern}
-                showBenefits={true}
-                onStart={() => {
+                enableCamera={modeConfig.enableCamera}
+                videoRef={videoRef}
+                onStart={(cameraEnabled) => {
                   console.log(
-                    "🎯 Preparation complete, moving to camera setup..."
+                    "🎯 Session preview complete, moving to active phase...",
+                    { cameraEnabled }
                   );
-                  if (modeConfig.enableCamera) {
-                    setCurrentPhase("camera_setup");
-                  } else {
-                    // Skip camera setup for classic mode
-                    console.log("🎯 Starting breathing session (no camera)...");
-                    session.start();
-                    setCurrentPhase("active");
-                  }
+                  
+                  // Start session with camera enabled/disabled based on user choice
+                  session.initialize({
+                    mode: config.mode === "classic" ? "basic" : "enhanced",
+                    pattern: {
+                      id: config.pattern.name.toLowerCase().replace(/\s+/g, "_"),
+                      name: config.pattern.name,
+                      description: `${config.pattern.name} breathing pattern`,
+                      inhale: config.pattern.phases.inhale,
+                      hold: config.pattern.phases.hold || 0,
+                      exhale: config.pattern.phases.exhale,
+                      hold_after_exhale: config.pattern.phases?.pause || 0,
+                      benefits: config.pattern.benefits || [
+                        "Improved focus",
+                        "Reduced stress",
+                        "Better breathing control",
+                      ],
+                    },
+                    enableCamera: cameraEnabled && modeConfig.enableCamera,
+                    enableAudio: modeConfig.enableAudio,
+                    enableAI: modeConfig.enableVision,
+                  }).then(() => {
+                    session.start().catch((error) => {
+                      console.error("❌ Failed to start session:", error);
+                      session.setError("Failed to start session. Please try again.");
+                    });
+                  }).catch((error) => {
+                    console.error("❌ Failed to initialize session:", error);
+                    session.setError("Failed to initialize session. Please try again.");
+                  });
+                  
+                  setCurrentPhase("active");
                 }}
                 onCancel={onSessionExit}
-              />
-            )}
-
-            {currentPhase === "camera_setup" && (
-              <CameraSetup
-                videoRef={videoRef}
-                landmarks={landmarks}
-                trackingStatus={
-                  vision?.state.isActive ? "TRACKING" : "INITIALIZING"
-                }
               />
             )}
 
