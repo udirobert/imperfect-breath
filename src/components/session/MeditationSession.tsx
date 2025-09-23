@@ -52,18 +52,20 @@ import {
 
 // Core imports
 import BreathingAnimation from "../BreathingAnimation";
-import { FaceMeshOverlay } from "../vision/FaceMeshOverlay";
-import { GentleErrorBoundary } from "../meditation/GentleErrorBoundary";
+import { EnhancedSessionErrorBoundary, VisionErrorBoundary } from "../../lib/errors/error-boundary";
 import { CalmLoading } from "../meditation/CalmLoading";
 import { SessionPreview } from "./SessionPreview";
 import { SessionProgressDisplay } from "./SessionProgressDisplay";
 import { PostSessionCelebration } from "./PostSessionCelebration";
 import { SessionControls } from "./SessionControls";
 import { MobileBreathingInterface } from "./MobileBreathingInterface";
+import VideoFeed from "../VideoFeed";
 
 // Unified hooks
 import { useSession } from "../../hooks/useSession";
-import { useMeditationVision } from "../../hooks/useMeditationVision";
+import { useVideoElement } from "../../hooks/useVideoElement";
+import { useAdaptiveEncouragement } from "../../hooks/useAdaptiveEncouragement";
+import { useSessionInitialization } from "../../hooks/useSessionInitialization";
 import useAdaptivePerformance, {
   useIsMobile,
 } from "../../hooks/useAdaptivePerformance";
@@ -80,55 +82,13 @@ import {
   BreathingPhaseName,
 } from "../../lib/breathingPatterns";
 import { mapPatternForAnimation } from "../../lib/session/pattern-mapper";
+import { getModeConfig } from "../../lib/session/session-modes";
 
 // ============================================================================
 // CONSOLIDATED TYPES - Using shared types from ../../types/session
 // ============================================================================
 
-// Mode configurations - consolidated from all session components
-// Using shared SessionModeConfig type from ../../types/session
-const SESSION_MODE_CONFIGS: Record<SessionMode, SessionModeConfig> = {
-  classic: {
-    enableCamera: false,
-    enableVision: false,
-    enableAudio: true,
-    enableAdvancedFeatures: false,
-    enableMobileOptimizations: false,
-    showPerformanceMonitor: false,
-    layout: "single",
-    description: "Pure breathing practice with no distractions",
-  },
-  enhanced: {
-    enableCamera: true,
-    enableVision: true,
-    enableAudio: true,
-    enableAdvancedFeatures: true,
-    enableMobileOptimizations: true,
-    showPerformanceMonitor: false,
-    layout: "dual",
-    description: "AI-powered breathing with real-time feedback",
-  },
-  advanced: {
-    enableCamera: true,
-    enableVision: true,
-    enableAudio: true,
-    enableAdvancedFeatures: true,
-    enableMobileOptimizations: true,
-    showPerformanceMonitor: true,
-    layout: "dual",
-    description: "Full featured session with performance monitoring",
-  },
-  mobile: {
-    enableCamera: true,
-    enableVision: true,
-    enableAudio: true,
-    enableAdvancedFeatures: true,
-    enableMobileOptimizations: true,
-    showPerformanceMonitor: false,
-    layout: "mobile",
-    description: "Mobile-optimized session with haptic feedback",
-  },
-};
+// Session mode configurations moved to ../../lib/session/session-modes.ts
 
 export interface MeditationSessionConfig {
   mode: SessionMode;
@@ -173,10 +133,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // Get mode configuration (with custom overrides)
   const modeConfig = useMemo(
-    () => ({
-      ...SESSION_MODE_CONFIGS[config.mode],
-      ...config.customSettings,
-    }),
+    () => getModeConfig(config.mode, config.customSettings),
     [config.mode, config.customSettings]
   );
 
@@ -201,91 +158,33 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // CLEAN: Single source of truth for session phase
   const [currentPhase, setCurrentPhase] = useState<SessionPhase>("setup");
-  const [isVideoReady, setIsVideoReady] = useState(false);
 
   // MODULAR: User-controllable overlay preferences
   const [showFaceMesh, setShowFaceMesh] = useState(true);
   const [showRestlessnessScore, setShowRestlessnessScore] = useState(true);
 
-  // Monitor video element for readiness - consolidated video management
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+  // Use CameraContext for camera state
+  const { stream: cameraStream } = useCamera();
 
-    const handleVideoReady = () => {
-      console.log("🎥 Video element ready, readyState:", video.readyState);
-      if (video.readyState >= 2) {
-        setIsVideoReady(true);
-      }
-    };
-
-    const handleVideoError = (error: Event) => {
-      console.error("❌ Video element error:", error);
-      setIsVideoReady(false);
-    };
-
-    // Listen for video ready events
-    video.addEventListener("loadedmetadata", handleVideoReady);
-    video.addEventListener("canplay", handleVideoReady);
-    video.addEventListener("error", handleVideoError);
-
-    // Check initial state
-    if (video.readyState >= 2) {
-      setIsVideoReady(true);
-    }
-
-    return () => {
-      video.removeEventListener("loadedmetadata", handleVideoReady);
-      video.removeEventListener("canplay", handleVideoReady);
-      video.removeEventListener("error", handleVideoError);
-    };
-  }, []); // Consolidated: no external dependencies needed
+  // Consolidated video element management
+  const { isReady: isVideoReady } = useVideoElement(videoRef, cameraStream, {
+    autoPlay: true,
+    muted: true,
+    mirror: true,
+    onReady: () => console.log("🎥 Video element ready via consolidated hook"),
+    onError: (error) => console.error("❌ Video element error:", error),
+  });
 
   // ENHANCEMENT: Adaptive encouragement timing (PERFORMANT)
-  const [lastEncouragementTime, setLastEncouragementTime] = useState(0);
-  const [encouragementStreak, setEncouragementStreak] = useState(0);
   const [adaptiveEncouragementEnabled, setAdaptiveEncouragementEnabled] =
     useState(true);
 
   // PERFORMANT: Debug state tracking
   const debugKeyRef = useRef<string>("");
 
-  // Use CameraContext for camera state
-  const { stream: cameraStream } = useCamera();
 
   // Enhanced session management with adaptive performance
   const visionEnabled = modeConfig.enableVision && !isLowEndDevice;
-
-  // Memoize vision config to prevent recreation on every render
-  const visionConfig = useMemo(
-    () => ({
-      sessionId: `session_${Date.now()}`,
-      targetFPS: 2,
-      silentMode: false,
-      gracefulDegradation: true,
-    }),
-    []
-  ); // Empty deps - only create once
-
-  // CLEAN: Log only once when component mounts
-  React.useEffect(() => {
-    console.log("🔍 Vision enablement debug:", {
-      modeConfigEnableVision: modeConfig.enableVision,
-      isLowEndDevice,
-      finalVisionEnabled: visionEnabled,
-      configMode: config.mode,
-    });
-
-    // MODULAR: Direct backend health check
-    fetch("http://localhost:8001/health")
-      .then((res) => res.json())
-      .then((health) => {
-        console.log("🏥 Backend health check:", health);
-      })
-      .catch((err) => {
-        console.error("❌ Backend health check failed:", err);
-      });
-  }, []); // Empty dependency array - run only once
 
   // Memoize session options to prevent useSession hook from being recreated during phase transitions
   const sessionOptions = useMemo(() => ({
@@ -297,181 +196,23 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   const session = useSession(sessionOptions);
 
-  // Vision processing hook - only enable when needed
-  const vision = useMeditationVision(visionEnabled ? visionConfig : undefined);
-
-  // Memoize landmarks to prevent infinite re-renders
-  const landmarks = useMemo(
-    () => vision?.state.metrics?.faceLandmarks || [],
-    [vision?.state.metrics?.faceLandmarks]
-  );
-
-  // Track initialization to prevent infinite re-renders
-  const isInitializedRef = useRef(false);
-  const configHashRef = useRef("");
+  // Adaptive encouragement system
+  const { encouragementStreak } = useAdaptiveEncouragement({
+    enabled: adaptiveEncouragementEnabled,
+    sessionMetrics: session.metrics,
+    visionMetrics: session.visionMetrics,
+    currentPhase,
+    isSessionActive: session.isActive,
+  });
 
   // Initialize session with pattern configuration
-  useEffect(() => {
-    if (config && config.pattern) {
-      // Create a hash of the config to detect actual changes
-      const configHash = JSON.stringify({
-        mode: config.mode,
-        pattern: config.pattern,
-        enableCamera: modeConfig.enableCamera,
-        enableAudio: modeConfig.enableAudio,
-        enableVision: modeConfig.enableVision,
-      });
+  useSessionInitialization({
+    config,
+    modeConfig,
+    session,
+  });
 
-      // Only initialize if config actually changed
-      if (configHash !== configHashRef.current || !isInitializedRef.current) {
-        configHashRef.current = configHash;
-        isInitializedRef.current = true;
 
-        console.log("🧘 Initializing meditation session:", {
-          patternName: config.pattern.name,
-          phases: config.pattern.phases,
-          mode: config.mode,
-        });
-
-        // Convert MeditationSessionConfig to SessionConfig for the store
-        const sessionConfig = {
-          mode:
-            config.mode === "classic"
-              ? ("basic" as const)
-              : ("enhanced" as const),
-          pattern: {
-            id: config.pattern.name.toLowerCase().replace(/\s+/g, "_"),
-            name: config.pattern.name,
-            description: `${config.pattern.name} breathing pattern`,
-            inhale: config.pattern.phases.inhale,
-            hold: config.pattern.phases.hold || 0,
-            exhale: config.pattern.phases.exhale,
-            hold_after_exhale: config.pattern.phases?.pause || 0,
-            benefits: config.pattern.benefits || [
-              "Improved focus",
-              "Reduced stress",
-              "Better breathing control",
-            ],
-          },
-          enableCamera: modeConfig.enableCamera,
-          enableAudio: modeConfig.enableAudio,
-          enableAI: modeConfig.enableVision, // Map vision to AI feature
-        };
-
-        // Initialize the session store
-        console.log("Session config prepared:", sessionConfig);
-        session.initialize(sessionConfig)
-          .catch((error) => {
-            console.error("❌ Failed to initialize session:", error);
-            // Handle initialization error gracefully
-            session.setError("Failed to initialize session. Please try again.");
-          });
-      }
-    }
-  }, [config, modeConfig]);
-
-  // ENHANCEMENT: Adaptive encouragement system (MODULAR)
-  const getAdaptiveEncouragement = useCallback(() => {
-    if (!adaptiveEncouragementEnabled) return null;
-
-    const now = Date.now();
-    const timeSinceLastEncouragement = now - lastEncouragementTime;
-    const sessionProgress = session.metrics
-      ? (session.metrics.cycleCount / 10) * 100
-      : 0; // Assume 10 cycles target
-    const stillnessScore = session.visionMetrics?.stillness || 0;
-
-    // Adaptive timing based on performance
-    let encouragementInterval = 30000; // 30 seconds default
-
-    if (stillnessScore > 80) {
-      encouragementInterval = 45000; // Less frequent for high performers
-    } else if (stillnessScore < 50) {
-      encouragementInterval = 20000; // More frequent for struggling users
-    }
-
-    // Early session encouragement
-    if (sessionProgress < 25) {
-      encouragementInterval = Math.min(encouragementInterval, 25000);
-    }
-
-    if (timeSinceLastEncouragement < encouragementInterval) {
-      return null;
-    }
-
-    // Generate contextual encouragement
-    const encouragements = {
-      highPerformer: [
-        "Beautiful focus! You're mastering this pattern.",
-        "Excellent stillness. Your practice is deepening.",
-        "Outstanding! You're in complete control.",
-      ],
-      steady: [
-        "Great work! Keep that steady rhythm.",
-        "Well done! You're building excellent habits.",
-        "Nice consistency! You're doing wonderfully.",
-      ],
-      needsSupport: [
-        "You're doing great! Take it one breath at a time.",
-        "Every breath counts. You're making progress!",
-        "Stay with it! You're stronger than you think.",
-      ],
-    };
-
-    let messageSet = encouragements.steady;
-    if (stillnessScore > 75) {
-      messageSet = encouragements.highPerformer;
-    } else if (stillnessScore < 60) {
-      messageSet = encouragements.needsSupport;
-    }
-
-    const message = messageSet[Math.floor(Math.random() * messageSet.length)];
-
-    setLastEncouragementTime(now);
-    setEncouragementStreak((prev) => prev + 1);
-
-    return {
-      message,
-      type: stillnessScore > 75 ? "celebration" : "encouragement",
-      haptic: stillnessScore > 75,
-    };
-  }, [
-    adaptiveEncouragementEnabled,
-    lastEncouragementTime,
-    session.metrics,
-    session.visionMetrics,
-  ]);
-
-  // Apply encouragement during active session
-  useEffect(() => {
-    if (currentPhase === "active" && session.isActive) {
-      console.log("📊 Session metrics:", {
-        isActive: session.isActive,
-        duration: session.getSessionDuration?.(),
-        cycleCount: session.metrics?.cycleCount,
-        currentPhase: session.metrics?.currentPhase,
-        completion: session.getCompletionPercentage?.(),
-      });
-
-      const encouragement = getAdaptiveEncouragement();
-      if (encouragement) {
-        // Trigger haptic feedback for celebrations
-        if (encouragement.haptic && "vibrate" in navigator) {
-          navigator.vibrate([100, 50, 100]);
-        }
-
-        // Here you would integrate with your notification/toast system
-        console.log("🌟 Adaptive encouragement:", encouragement);
-      }
-    }
-  }, [
-    currentPhase,
-    session.isActive,
-    session.metrics,
-    session.getSessionDuration,
-    session.getCompletionPercentage,
-    getAdaptiveEncouragement,
-  ]);
 
   // Transition to active phase when session starts
   useEffect(() => {
@@ -484,152 +225,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     }
   }, [session.isActive, currentPhase]);
 
-  // Ensure video stream is maintained when transitioning to active phase
-  useEffect(() => {
-    if (currentPhase === "active" && cameraStream && videoRef.current) {
-      const video = videoRef.current;
-      if (!video.srcObject) {
-        console.log("🔄 Reattaching camera stream to video element in active phase");
-        video.srcObject = cameraStream;
-        video.muted = true;
-        video.autoplay = true;
-        video.playsInline = true;
-        
-        // Ensure video is visible and properly sized
-        video.style.display = 'block';
-        video.style.visibility = 'visible';
-        video.style.opacity = '1';
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.position = 'absolute';
-        video.style.top = '0';
-        video.style.left = '0';
-        video.style.zIndex = '1';
-      }
-    }
-  }, [currentPhase, cameraStream]);
 
-  // Attach camera stream to video element when camera is granted
-  useEffect(() => {
-    if (cameraStream && videoRef.current && !videoRef.current.srcObject) {
-      console.log("📹 MeditationSession: Attaching camera stream to video element");
-      const video = videoRef.current;
-
-      // Set stream and video properties
-      video.srcObject = cameraStream;
-      video.muted = true;
-      video.autoplay = true;
-      video.playsInline = true;
-
-      // Ensure video is playing with retry mechanism
-      const playVideo = async (retries = 3) => {
-        for (let i = 0; i < retries; i++) {
-          try {
-            await video.play();
-            console.log('✅ MeditationSession: Video is playing, readyState:', video.readyState);
-            return;
-          } catch (playError) {
-            console.warn(`⚠️ MeditationSession: Video play attempt ${i + 1} failed:`, playError);
-            if (i < retries - 1) {
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
-          }
-        }
-        console.warn('⚠️ MeditationSession: All video play attempts failed');
-      };
-
-      playVideo();
-
-      // Set video element styling
-      video.style.display = 'block';
-      video.style.visibility = 'visible';
-      video.style.opacity = '1';
-      video.style.width = '100%';
-      video.style.height = '100%';
-      video.style.position = 'absolute';
-      video.style.top = '0';
-      video.style.left = '0';
-      video.style.zIndex = '1';
-      console.log('✅ MeditationSession: Video element configured');
-    }
-  }, [cameraStream]);
-
-  // Synchronized vision processing startup with proper checks
-  useEffect(() => {
-    const startVisionProcessing = async () => {
-      // Enhanced conditions with better logging
-      const conditions = {
-        correctPhase:
-          currentPhase === "active" || currentPhase === "camera_setup",
-        visionEnabled,
-        hasVideoElement: !!videoRef.current,
-        hasVisionHook: !!vision,
-        visionNotActive: vision && !vision.state.isActive,
-        videoReady: isVideoReady,
-        videoReadyState: (videoRef.current?.readyState || 0) >= 2,
-        hasCameraStream: !!cameraStream,
-      };
-
-      console.log("🔍 Vision startup conditions check:", conditions);
-
-      if (
-        conditions.correctPhase &&
-        conditions.visionEnabled &&
-        conditions.hasVideoElement &&
-        conditions.hasVisionHook &&
-        conditions.visionNotActive &&
-        conditions.videoReady &&
-        conditions.videoReadyState &&
-        conditions.hasCameraStream
-      ) {
-        try {
-          console.log(
-            "🔍 Starting vision processing with video readyState:",
-            videoRef.current?.readyState
-          );
-          await vision.start(videoRef.current!);
-          console.log(
-            "✅ Vision processing started successfully - Facemesh should now be active"
-          );
-        } catch (err) {
-          console.warn("⚠️ Vision start failed, continuing without:", err);
-          // Vision hook handles graceful degradation internally
-        }
-      } else {
-        const missingConditions = Object.entries(conditions)
-          .filter(([_, value]) => !value)
-          .map(([key]) => key);
-
-        if (missingConditions.length > 0) {
-          console.log(
-            "🔍 Vision startup waiting for:",
-            missingConditions.join(", ")
-          );
-        }
-      }
-    };
-
-    startVisionProcessing();
-  }, [
-    currentPhase,
-    visionEnabled,
-    vision,
-    isVideoReady,
-    videoRef.current?.readyState,
-    cameraStream, // Added dependency to retry when camera becomes available
-  ]);
-
-  // Cleanup vision processing when component unmounts
-  const visionRef = useRef(vision);
-  visionRef.current = vision;
-
-  useEffect(() => {
-    return () => {
-      if (visionRef.current) {
-        visionRef.current.stop();
-      }
-    };
-  }, []); // Empty dependency array - only run on unmount
 
   // Camera initialization is now handled by CameraSetup component
 
@@ -647,10 +243,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   }
 
   return (
-    <GentleErrorBoundary
-      fallbackMessage="Your breathing practice continues peacefully. Let's take a gentle reset together."
-      onReset={() => setPhase("setup")}
-    >
+    <EnhancedSessionErrorBoundary>
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         {/* Subtle mode indicator */}
         {config.mode !== "classic" && (
@@ -699,13 +292,13 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                     enableAudio: modeConfig.enableAudio,
                     enableAI: modeConfig.enableVision,
                   }).then(() => {
-                    session.start().catch((error) => {
+                    try {
+                      session.start();
+                    } catch (error) {
                       console.error("❌ Failed to start session:", error);
-                      session.setError("Failed to start session. Please try again.");
-                    });
+                    }
                   }).catch((error) => {
                     console.error("❌ Failed to initialize session:", error);
-                    session.setError("Failed to initialize session. Please try again.");
                   });
                   
                   setCurrentPhase("active");
@@ -730,50 +323,27 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                       ? session.getCompletionPercentage()
                       : 0
                   }
-                  qualityScore={vision?.state.metrics?.stillness}
-                  stillnessScore={vision?.state.metrics?.stillness}
+                  qualityScore={session.visionMetrics?.stillness}
+                  stillnessScore={session.visionMetrics?.stillness}
                   showQualityMetrics={modeConfig.enableVision}
                 />
 
-                {/* Camera Feed - only show if camera is enabled and available */}
+                {/* Video Feed with FaceMesh overlay and restlessness score */}
                 {modeConfig.enableCamera && session.cameraStream && (
-                  <div className="flex justify-center mb-4">
-                    <div className="w-64 h-48 md:w-96 md:h-72 rounded-lg overflow-hidden shadow-md border-2 border-primary/20 relative">
-                      <video
-                        ref={videoRef}
-                        className="w-full h-full object-cover"
-                        muted
-                        autoPlay
-                        playsInline
-                        style={{ transform: 'scaleX(-1)' }} // Mirror for selfie mode
-                      />
-                      {/* Face landmarks overlay */}
-                      <FaceMeshOverlay
-                        videoElement={videoRef.current}
-                        landmarks={landmarks}
-                        isActive={vision?.state.isActive || false}
-                        confidence={vision?.state.metrics?.confidence || 0}
-                        postureScore={vision?.state.metrics?.posture || 0}
-                        movementLevel={
-                          vision?.state.metrics?.restlessnessScore
-                            ? vision?.state.metrics?.restlessnessScore / 100
-                            : 0
-                        }
-                      />
-                      {/* Vision status indicator */}
-                      <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        {vision?.state.isActive
-                          ? "Vision Active"
-                          : "Vision Starting"}
-                      </div>
-                      {/* Debug info */}
-                      <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        Stream: {session.cameraStream ? '✅' : '❌'} |
-                        Video: {videoRef.current?.srcObject ? '✅' : '❌'} |
-                        Ready: {(videoRef.current?.readyState || 0) >= 2 ? '✅' : '❌'}
+                  <VisionErrorBoundary>
+                    <div className="flex justify-center mb-4">
+                      <div className="w-64 h-48 md:w-96 md:h-72 rounded-lg overflow-hidden shadow-md border-2 border-primary/20">
+                        <VideoFeed
+                          videoRef={videoRef}
+                          isActive={visionEnabled && session.isActive}
+                          landmarks={session.visionMetrics?.faceLandmarks || []}
+                          trackingStatus={(session.visionMetrics?.presence || 0) > 0 ? "TRACKING" : "IDLE"}
+                          showRestlessnessScore={showRestlessnessScore}
+                          restlessnessScore={session.visionMetrics?.stillness || 0}
+                        />
                       </div>
                     </div>
-                  </div>
+                  </VisionErrorBoundary>
                 )}
 
                 {/* Breathing Animation */}
@@ -795,7 +365,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                     // Collect real session metrics before completing
                     const sessionDuration = session.getSessionDuration?.() || 0;
                     const cycleCount = session.metrics?.cycleCount || 0;
-                    const visionData = vision?.state.metrics;
+                    const visionData = session.visionMetrics;
 
                     const metrics: SessionMetrics = {
                       duration:
@@ -809,7 +379,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                       cameraUsed: !!cameraStream,
                       sessionType:
                         config.mode === "classic" ? "classic" : "enhanced",
-                      visionSessionId: visionConfig.sessionId,
+                      visionSessionId: `session_${Date.now()}`,
                       visionMetrics: visionData
                         ? {
                             averageStillness: visionData.stillness,
@@ -819,15 +389,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                         : undefined,
                     };
 
-                    // Stop vision processing before completing
-                    if (vision) {
-                      vision.stop();
-                    }
-
-                    // Stop camera stream
+                    // Stop camera stream using CameraContext
                     if (cameraStream) {
                       cameraStream.getTracks().forEach((track) => track.stop());
-                      setCameraStream(null);
                     }
 
                     // Complete session in store
@@ -875,10 +439,6 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                   console.log("Navigate to patterns");
                 }}
                 onClose={() => {
-                  // Stop vision processing before exiting
-                  if (vision) {
-                    vision.stop();
-                  }
                   onSessionExit?.();
                 }}
               />
@@ -886,7 +446,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
           </CardContent>
         </Card>
       </div>
-    </GentleErrorBoundary>
+    </EnhancedSessionErrorBoundary>
   );
 };
 

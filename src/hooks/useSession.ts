@@ -16,7 +16,7 @@ import {
   useSessionConfig,
   SessionConfig
 } from '../stores/sessionStore';
-import { useMeditationVision } from './useMeditationVision';
+import { useVisionStore, visionSelectors } from '../stores/visionStore';
 import { useCamera } from '../contexts/CameraContext';
 
 export interface UseSessionOptions {
@@ -66,27 +66,22 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const isComplete = sessionSelectors.isComplete();
   const audioEnabled = useSessionStore((state) => state.audioEnabled);
   const cameraStream = useSessionStore((state) => state.cameraStream);
-  const visionMetrics = useSessionStore((state) => state.visionMetrics);
+  const sessionVisionMetrics = useSessionStore((state) => state.visionMetrics);
 
   // Camera context
-  const { 
-    stream: cameraContextStream, 
-    status: cameraStatus, 
+  const {
+    stream: cameraContextStream,
+    status: cameraStatus,
     error: cameraError,
     requestStream: requestCameraStream,
     releaseStream: releaseCameraStream,
     hasPermission: cameraPermission
   } = useCamera();
 
-  // Vision processing (conditional)
-  const vision = useMeditationVision(
-    enableVision ? {
-      sessionId: `session_${Date.now()}`,
-      targetFPS,
-      silentMode: true,
-      gracefulDegradation: true,
-    } : undefined
-  );
+  // Vision processing (conditional) - use vision store
+  const visionStore = useVisionStore();
+  const isVisionActive = visionSelectors.isActive();
+  const visionMetrics = visionSelectors.hasMetrics() ? visionStore.metrics : null;
 
   // Breathing phase timer
   const phaseTimerRef = useRef<NodeJS.Timeout>();
@@ -101,7 +96,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       console.log('📷 useSession: Requesting camera access through CameraContext...');
 
       const stream = await requestCameraStream();
-      
+
       if (stream) {
         console.log('✅ useSession: Camera access granted through CameraContext');
         setCameraStream(stream);
@@ -151,9 +146,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
         }
 
         // Start vision if enabled
-        if (enableVision && vision) {
+        if (enableVision && visionStore.isReady) {
           setVisionActive(true);
-          // Vision hook will handle the video element connection
+          // Vision store will handle the video element connection
         }
 
         return stream;
@@ -186,7 +181,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       setError(errorMessage);
       return null;
     }
-  }, [requestCameraStream, setCameraStream, setCameraPermission, setVisionActive, setError, videoElement, enableVision, vision, cameraError]);
+  }, [requestCameraStream, setCameraStream, setCameraPermission, setVisionActive, setError, videoElement, enableVision, visionStore, cameraError]);
 
   // ========================================================================
   // BREATHING CYCLE MANAGEMENT - Clean timing
@@ -297,20 +292,20 @@ export const useSession = (options: UseSessionOptions = {}) => {
     releaseCameraStream();
 
     // Stop vision
-    if (vision) {
-      vision.stop();
+    if (visionStore.isActive) {
+      visionStore.stop();
       setVisionActive(false);
     }
-  }, [completeSession, releaseCameraStream, vision, setVisionActive]);
+  }, [completeSession, releaseCameraStream, visionStore, setVisionActive]);
 
   const reset = useCallback(() => {
     stopBreathingCycle();
     resetSession();
 
-    if (vision) {
-      vision.reset();
+    if (visionStore.isActive) {
+      visionStore.reset();
     }
-  }, [resetSession, vision]);
+  }, [resetSession, visionStore]);
 
   // ========================================================================
   // VISION INTEGRATION - Clean, optional
@@ -319,8 +314,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const previousVisionMetricsRef = useRef<string>('');
 
   useEffect(() => {
-    if (enableVision && vision?.state.metrics) {
-      const { stillness, presence, posture, restlessnessScore, faceLandmarks } = vision.state.metrics;
+    if (enableVision && visionMetrics) {
+      const { stillness, presence, posture, restlessnessScore, faceLandmarks } = visionMetrics;
 
       // Create a hash to detect actual changes in metrics (include faceLandmarks)
       const metricsHash = JSON.stringify({
@@ -344,7 +339,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
         });
       }
     }
-  }, [enableVision, vision?.state.metrics, updateVisionMetrics]);
+  }, [enableVision, visionMetrics, updateVisionMetrics]);
 
   // ========================================================================
   // CLEANUP - Proper resource management
@@ -375,8 +370,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
     audioEnabled,
 
     // Vision state (if enabled)
-    visionMetrics: enableVision ? visionMetrics : null,
-    visionActive: enableVision ? vision?.state.isActive : false,
+    visionMetrics: enableVision ? sessionVisionMetrics : null,
+    visionActive: enableVision ? isVisionActive : false,
 
     // Actions
     initialize,

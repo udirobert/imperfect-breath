@@ -6,7 +6,7 @@ Quick setup and testing guide for Imperfect Breath local development.
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/your-username/imperfect-breath.git
+git clone https://github.com/udirobert/imperfect-breath.git
 cd imperfect-breath
 npm install
 

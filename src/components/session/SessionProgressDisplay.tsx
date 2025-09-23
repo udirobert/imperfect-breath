@@ -59,14 +59,31 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
 
       return (
         <div className={`space-y-4 ${className}`}>
-          {/* Session Header - compact */}
+          {/* Session Header - enhanced with prominent stillness score */}
           <div className="text-center">
             <p className="text-lg text-muted-foreground">{patternName}</p>
             <p className="text-3xl font-mono font-bold text-primary">
               {duration}
             </p>
-            {/* ENHANCEMENT: Overall quality indicator */}
-            {showQualityMetrics && overallQuality && (
+
+            {/* ENHANCEMENT: Prominent stillness score display */}
+            {showQualityMetrics && stillnessScore && (
+              <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-blue-700">Live Stillness Score</span>
+                </div>
+                <div className={`text-4xl font-bold ${getQualityColor(stillnessScore)}`}>
+                  {Math.round(stillnessScore)}%
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  {getQualityLabel(stillnessScore)} stillness • {getQualityLabel(stillnessScore)} focus
+                </p>
+              </div>
+            )}
+
+            {/* ENHANCEMENT: Overall quality indicator (when no stillness score) */}
+            {showQualityMetrics && overallQuality && !stillnessScore && (
               <div className="mt-2">
                 <p
                   className={`text-sm font-medium ${getQualityColor(

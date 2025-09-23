@@ -27,6 +27,13 @@ export interface ErrorReport extends ErrorInfo {
   environment: string;
   buildVersion?: string;
   additionalContext?: Record<string, any>;
+  // Vision-specific fields
+  visionError?: boolean;
+  faceMeshError?: boolean;
+  mediaPipeError?: boolean;
+  cameraPermission?: boolean;
+  visionModelLoaded?: boolean;
+  faceDetectionActive?: boolean;
 }
 
 interface ErrorMetrics {
@@ -60,7 +67,7 @@ class ErrorReporter {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.sessionId = this.generateSessionId();
     this.metrics = this.initializeMetrics();
-    
+
     // Setup global error handlers
     this.setupGlobalHandlers();
   }
@@ -134,25 +141,25 @@ class ErrorReporter {
   async reportError(error: AppError, additionalContext?: Record<string, any>): Promise<void> {
     try {
       const errorReport = this.createErrorReport(error, additionalContext);
-      
+
       // Update metrics
       this.updateMetrics(error);
-      
+
       // Console logging
       if (this.config.enableConsoleLogging) {
         this.logToConsole(errorReport);
       }
-      
+
       // Local storage
       if (this.config.enableLocalStorage) {
         this.storeErrorLocally(errorReport);
       }
-      
+
       // Remote reporting
       if (this.config.enableRemoteReporting && this.shouldReportRemotely(error)) {
         await this.sendToRemote(errorReport);
       }
-      
+
     } catch (reportingError) {
       console.error('Error reporting failed:', reportingError);
     }
@@ -189,14 +196,14 @@ class ErrorReporter {
    */
   private logToConsole(errorReport: ErrorReport): void {
     const logLevel = this.getConsoleLogLevel(errorReport.severity);
-    
+
     console[logLevel](`[${errorReport.severity.toUpperCase()}] ${errorReport.category}:`, {
       message: errorReport.message,
       id: errorReport.id,
       context: errorReport.context,
       additionalContext: errorReport.additionalContext,
     });
-    
+
     // Log stack trace for development
     if (this.config.environment === 'development' && errorReport.stack) {
       console.groupCollapsed('Stack Trace');
@@ -229,18 +236,18 @@ class ErrorReporter {
     try {
       const stored = this.getStoredErrors();
       stored.push(errorReport);
-      
+
       // Keep only recent errors
       const trimmed = stored.slice(-this.config.maxStoredErrors);
-      
+
       localStorage.setItem('app_errors', JSON.stringify(trimmed));
-      
+
       // Update session errors
       this.metrics.sessionErrors.push(errorReport);
       if (this.metrics.sessionErrors.length > 50) {
         this.metrics.sessionErrors = this.metrics.sessionErrors.slice(-50);
       }
-      
+
     } catch (storageError) {
       console.warn('Failed to store error locally:', storageError);
     }
@@ -266,17 +273,17 @@ class ErrorReporter {
     if (this.config.environment === 'development' && error.severity === ErrorSeverity.LOW) {
       return false;
     }
-    
+
     // Always report critical errors
     if (error.severity === ErrorSeverity.CRITICAL) {
       return true;
     }
-    
+
     // Sample non-critical errors to avoid spam
     if (error.severity === ErrorSeverity.LOW) {
       return Math.random() < 0.1; // 10% sampling
     }
-    
+
     return true;
   }
 
@@ -287,7 +294,7 @@ class ErrorReporter {
     if (!this.config.reportingEndpoint) {
       return;
     }
-    
+
     try {
       const response = await fetch(this.config.reportingEndpoint, {
         method: 'POST',
@@ -297,11 +304,11 @@ class ErrorReporter {
         },
         body: JSON.stringify(errorReport),
       });
-      
+
       if (!response.ok) {
         console.warn('Error reporting failed:', response.statusText);
       }
-      
+
     } catch (networkError) {
       console.warn('Error reporting network failure:', networkError);
     }
@@ -380,6 +387,86 @@ class ErrorReporter {
         enableRemoteReporting: this.config.enableRemoteReporting,
       },
     };
+  }
+
+  /**
+   * Report vision-specific errors with enhanced context
+   */
+  reportVisionError(
+    error: AppError,
+    visionContext?: {
+      cameraPermission?: boolean;
+      visionModelLoaded?: boolean;
+      faceDetectionActive?: boolean;
+      landmarksCount?: number;
+      confidence?: number;
+    }
+  ): void {
+    const enhancedContext = {
+      ...error.context,
+      ...visionContext,
+      visionError: true,
+    };
+
+    this.reportError(error, enhancedContext);
+  }
+
+  /**
+   * Get vision-specific error metrics
+   */
+  getVisionMetrics(): {
+    totalVisionErrors: number;
+    faceMeshErrors: number;
+    mediaPipeErrors: number;
+    cameraPermissionErrors: number;
+    modelLoadingErrors: number;
+    recentVisionErrors: ErrorReport[];
+  } {
+    const allErrors = this.getStoredErrors();
+    const visionErrors = allErrors.filter(error =>
+      error.visionError || error.faceMeshError || error.mediaPipeError
+    );
+
+    return {
+      totalVisionErrors: visionErrors.length,
+      faceMeshErrors: visionErrors.filter(e => e.faceMeshError).length,
+      mediaPipeErrors: visionErrors.filter(e => e.mediaPipeError).length,
+      cameraPermissionErrors: visionErrors.filter(e => e.context?.cameraPermission === false).length,
+      modelLoadingErrors: visionErrors.filter(e => e.message?.toLowerCase().includes('model')).length,
+      recentVisionErrors: visionErrors.slice(-10), // Last 10 vision errors
+    };
+  }
+
+  /**
+   * Report successful vision initialization for analytics
+   */
+  reportVisionSuccess(context: {
+    sessionId: string;
+    modelLoadTime?: number;
+    initialDetectionTime?: number;
+    landmarksCount?: number;
+    confidence?: number;
+  }): void {
+    if (this.config.environment === 'development') {
+      console.log('🎥 Vision system initialized successfully:', context);
+    }
+
+    // Store success metrics for analysis
+    try {
+      const successData = {
+        type: 'vision_success',
+        timestamp: Date.now(),
+        ...context,
+      };
+
+      const stored = this.getStoredErrors();
+      stored.push(successData as any);
+
+      const trimmed = stored.slice(-this.config.maxStoredErrors);
+      localStorage.setItem('app_errors', JSON.stringify(trimmed));
+    } catch (error) {
+      console.warn('Failed to store vision success metrics:', error);
+    }
   }
 }
 

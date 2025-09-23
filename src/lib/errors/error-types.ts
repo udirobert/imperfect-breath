@@ -173,8 +173,8 @@ export class CameraError extends AppError {
     const userMessage = message.includes('NotAllowedError')
       ? 'Camera access denied. Please allow camera permissions in your browser.'
       : message.includes('NotFoundError')
-      ? 'No camera found. Please connect a camera and try again.'
-      : 'Camera error occurred. Please check your camera settings.';
+        ? 'No camera found. Please connect a camera and try again.'
+        : 'Camera error occurred. Please check your camera settings.';
 
     super(
       message,
@@ -201,8 +201,8 @@ export class WalletError extends AppError {
     const userMessage = message.includes('rejected')
       ? 'Transaction rejected. Please try again if you want to proceed.'
       : message.includes('insufficient')
-      ? 'Insufficient funds for this transaction.'
-      : 'Wallet connection issue. Please check your wallet.';
+        ? 'Insufficient funds for this transaction.'
+        : 'Wallet connection issue. Please check your wallet.';
 
     super(
       message,
@@ -283,6 +283,88 @@ export class AIError extends AppError {
 }
 
 /**
+ * Vision-specific errors
+ */
+export class VisionError extends AppError {
+  constructor(
+    message: string,
+    context: Record<string, unknown> = {},
+    recovery: RecoveryStrategy = RecoveryStrategy.FALLBACK
+  ) {
+    const userMessage = message.includes('model')
+      ? 'Vision model loading failed. Your session will continue without face tracking.'
+      : message.includes('landmarks')
+        ? 'Face detection temporarily unavailable. Continuing with basic session.'
+        : message.includes('camera')
+          ? 'Camera vision processing failed. Session continues without tracking.'
+          : 'Vision features temporarily unavailable. Your breathing session continues normally.';
+
+    super(
+      message,
+      ErrorCategory.AI,
+      ErrorSeverity.LOW,
+      recovery,
+      { ...context, visionError: true },
+      userMessage,
+      'Continue Session'
+    );
+    this.name = 'VisionError';
+  }
+}
+
+/**
+ * FaceMesh-specific errors
+ */
+export class FaceMeshError extends AppError {
+  constructor(
+    message: string,
+    context: Record<string, unknown> = {},
+    recovery: RecoveryStrategy = RecoveryStrategy.RETRY
+  ) {
+    const userMessage = message.includes('loading')
+      ? 'Face tracking model is loading. This may take a moment on first use.'
+      : message.includes('detection')
+        ? 'Face detection temporarily unavailable. Please ensure good lighting and face visibility.'
+        : message.includes('processing')
+          ? 'Face processing error. Your session continues without face tracking.'
+          : 'Face tracking features temporarily unavailable.';
+
+    super(
+      message,
+      ErrorCategory.AI,
+      ErrorSeverity.MEDIUM,
+      recovery,
+      { ...context, faceMeshError: true },
+      userMessage,
+      'Retry Face Tracking'
+    );
+    this.name = 'FaceMeshError';
+  }
+}
+
+/**
+ * MediaPipe-specific errors
+ */
+export class MediaPipeError extends AppError {
+  constructor(
+    message: string,
+    context: Record<string, unknown> = {},
+    recovery: RecoveryStrategy = RecoveryStrategy.FALLBACK
+  ) {
+    super(
+      message,
+      ErrorCategory.AI,
+      ErrorSeverity.MEDIUM,
+      recovery,
+      { ...context, mediaPipeError: true },
+      'MediaPipe vision processing failed. Session continues without advanced tracking.',
+      'Continue Without Vision'
+    );
+    this.name = 'MediaPipeError';
+  }
+}
+
+/**
  * Validation errors
  */
 export class ValidationError extends AppError {
@@ -357,7 +439,7 @@ export function handleError(operation: string, error: unknown): Error {
   if (error instanceof AppError) {
     return error;
   }
-  
+
   if (error instanceof Error) {
     const message = `Error during ${operation}: ${error.message}`;
     console.error(message, error);
@@ -369,7 +451,7 @@ export function handleError(operation: string, error: unknown): Error {
       { originalError: error.message }
     );
   }
-  
+
   const message = `Unknown error during ${operation}`;
   console.error(message, error);
   return new AppError(
@@ -391,17 +473,17 @@ export function handleError(operation: string, error: unknown): Error {
  */
 export function handleApiError(res: { status: (code: number) => { json: (data: any) => any } }, error: unknown, operation: string): unknown {
   console.error(`API Error - ${operation}:`, error);
-  
+
   // Default to 500 Internal Server Error
   let statusCode = 500;
   let errorMessage = `Error during ${operation}`;
   let errorCode = 'INTERNAL_SERVER_ERROR';
-  
+
   if (error instanceof AppError) {
     // Map error categories to HTTP status codes
     errorCode = error.category.toUpperCase();
     errorMessage = error.message;
-    
+
     if (error.category === ErrorCategory.AUTHENTICATION) {
       statusCode = 401;
     } else if (error.category === ErrorCategory.AUTHORIZATION) {
@@ -414,7 +496,7 @@ export function handleApiError(res: { status: (code: number) => { json: (data: a
   } else if (error instanceof Error) {
     errorMessage = error.message;
   }
-  
+
   return res.status(statusCode).json({
     success: false,
     error: {
@@ -459,6 +541,18 @@ export class ErrorFactory {
     return new WalletError(error.message, { originalError: error.name, ...context });
   }
 
+  static fromVisionError(error: Error, context?: Record<string, unknown>): VisionError {
+    return new VisionError(error.message, { originalError: error.name, ...context });
+  }
+
+  static fromFaceMeshError(error: Error, context?: Record<string, unknown>): FaceMeshError {
+    return new FaceMeshError(error.message, { originalError: error.name, ...context });
+  }
+
+  static fromMediaPipeError(error: Error, context?: Record<string, unknown>): MediaPipeError {
+    return new MediaPipeError(error.message, { originalError: error.name, ...context });
+  }
+
   private static inferCategory(error: Error): ErrorCategory {
     const message = error.message.toLowerCase();
     const name = error.name.toLowerCase();
@@ -477,6 +571,12 @@ export class ErrorFactory {
     }
     if (message.includes('session')) {
       return ErrorCategory.SESSION;
+    }
+    if (message.includes('vision') || message.includes('facemesh') || message.includes('landmark') || message.includes('mediapipe')) {
+      return ErrorCategory.AI;
+    }
+    if (message.includes('model') || message.includes('tensorflow') || message.includes('wasm')) {
+      return ErrorCategory.AI;
     }
 
     return ErrorCategory.UNKNOWN;
