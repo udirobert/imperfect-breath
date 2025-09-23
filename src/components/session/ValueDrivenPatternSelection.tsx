@@ -8,6 +8,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { usePatternPreferences } from "@/stores/preferencesStore";
 import {
   Search,
   Star,
@@ -30,9 +31,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BREATHING_PATTERNS } from "@/lib/breathingPatterns";
 import type { CustomPattern } from "@/lib/ai/providers";
-import { SmartPatternRecommendations, type RecommendationContext } from "@/lib/recommendations/SmartPatternRecommendations";
+import type { EnhancedCustomPattern } from "@/types/patterns";
+import { SmartPatternRecommendations, type RecommendationContext, type PatternMatch, type EnhancedRecommendationContext } from "@/lib/recommendations/SmartPatternRecommendations";
+import { enhancePattern } from "@/types/patterns";
 
 // Enhanced pattern data with user-focused benefits
 const ENHANCED_PATTERNS = {
@@ -106,7 +111,7 @@ const ENHANCED_PATTERNS = {
 
 interface ValueDrivenPatternSelectionProps {
   userLibrary: CustomPattern[];
-  onPatternSelect: (pattern: CustomPattern | null) => void;
+  onPatternSelect: (pattern: EnhancedCustomPattern | null) => void;
   onCreateNew: () => void;
   showPersonalization?: boolean;
   recommendationContext?: RecommendationContext;
@@ -122,11 +127,44 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGoal, setSelectedGoal] = useState<string>("recommended");
   const navigate = useNavigate();
+  const patternPreferences = usePatternPreferences();
 
-  // Get smart recommendations
+  // Get smart recommendations with dynamic match percentages
   const smartRecommendations = useMemo(() => {
     return SmartPatternRecommendations.getRecommendations(recommendationContext);
   }, [recommendationContext]);
+
+  // Create enhanced context with user preferences
+  const enhancedContext: EnhancedRecommendationContext = useMemo(() => ({
+    ...recommendationContext,
+    userPreferences: {
+      favoritePatterns: patternPreferences.favoritePatterns,
+      completedSessions: patternPreferences.completedSessions,
+      preferredGoals: patternPreferences.preferredGoals,
+      timePreferences: patternPreferences.timePreferences,
+      effectivenessRatings: patternPreferences.effectivenessRatings,
+      difficultyPreference: patternPreferences.difficultyPreference,
+    },
+    // Handle legacy sessionHistory - convert string[] to SessionData[] if needed
+    sessionHistory: recommendationContext.sessionHistory?.map(sessionId => ({
+      patternId: sessionId,
+      duration: 0, // Default values for legacy data
+      completionRate: 100,
+      timestamp: Date.now(),
+    })) || undefined,
+  }), [recommendationContext, patternPreferences]);
+
+  // Get enhanced pattern matches with dynamic percentages
+  const [patternMatches, setPatternMatches] = useState<PatternMatch[]>([]);
+
+  useMemo(() => {
+    const loadPatternMatches = async () => {
+      const matches = await SmartPatternRecommendations.getPatternMatches(enhancedContext);
+      setPatternMatches(matches);
+    };
+
+    loadPatternMatches();
+  }, [enhancedContext]);
 
   // Goal-based filtering with smart recommendations
   const goals = [
@@ -141,41 +179,52 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
 
   const filteredPatterns = useMemo(() => {
     let patterns = Object.values(ENHANCED_PATTERNS);
-    
+
     // Filter by goal
     if (selectedGoal === "recommended") {
-      // Show only recommended patterns in recommended order
-      patterns = smartRecommendations.map(rec => ENHANCED_PATTERNS[rec.patternId as keyof typeof ENHANCED_PATTERNS]).filter(Boolean);
+      // Show only recommended patterns in recommended order, enhanced with dynamic match data
+      patterns = smartRecommendations.map(rec => {
+        const enhancedPattern = ENHANCED_PATTERNS[rec.patternId as keyof typeof ENHANCED_PATTERNS];
+        const match = patternMatches.find(m => m.patternId === rec.patternId);
+        if (enhancedPattern && match) {
+          return {
+            ...enhancedPattern,
+            successRate: `${match.matchPercentage}% match`,
+            dynamicMatch: match
+          };
+        }
+        return enhancedPattern;
+      }).filter(Boolean);
     } else if (selectedGoal !== "all") {
       const goal = goals.find(g => g.id === selectedGoal);
       if (goal?.patterns) {
         patterns = patterns.filter(p => goal.patterns.includes(p.id));
       }
     }
-    
+
     // Filter by search
     if (searchQuery) {
-      patterns = patterns.filter(pattern => 
+      patterns = patterns.filter(pattern =>
         pattern.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         pattern.userBenefit.toLowerCase().includes(searchQuery.toLowerCase()) ||
         pattern.bestFor.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     return patterns;
-  }, [searchQuery, selectedGoal, smartRecommendations]);
+  }, [searchQuery, selectedGoal, smartRecommendations, patternMatches]);
 
   const handlePatternSelect = (patternId: string) => {
     const pattern = ENHANCED_PATTERNS[patternId as keyof typeof ENHANCED_PATTERNS];
     if (!pattern) return;
 
     // Convert to CustomPattern format
-    const customPattern: CustomPattern = {
+    const basePattern: CustomPattern = {
       id: pattern.id,
       name: pattern.name,
       description: `A ${pattern.name.toLowerCase()} breathing pattern for ${pattern.userBenefit}.`,
-      category: pattern.userBenefit === "sleep" || pattern.userBenefit === "focus" || pattern.userBenefit === "performance" || pattern.userBenefit === "stress" || pattern.userBenefit === "energy" 
-        ? pattern.userBenefit 
+      category: pattern.userBenefit === "sleep" || pattern.userBenefit === "focus" || pattern.userBenefit === "performance" || pattern.userBenefit === "stress" || pattern.userBenefit === "energy"
+        ? pattern.userBenefit
         : "stress", // default to stress if not a valid category
       difficulty: "beginner",
       duration: pattern.inhale + pattern.hold + pattern.exhale + pattern.hold_after_exhale,
@@ -187,6 +236,9 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
         { name: 'hold_after_exhale', duration: pattern.hold_after_exhale * 1000 }
       ]
     };
+
+    // Enhance to full EnhancedCustomPattern using the utility function
+    const customPattern: EnhancedCustomPattern = enhancePattern(basePattern);
 
     onPatternSelect(customPattern);
   };
@@ -204,7 +256,8 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
   };
 
   return (
-    <div className="space-y-8">
+    <TooltipProvider>
+      <div className="space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
         <h2 className="text-3xl font-bold">Choose Your Next Pattern</h2>
@@ -265,7 +318,8 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
         {filteredPatterns.map((pattern) => {
           const Icon = pattern.icon;
           const colorClasses = getColorClasses(pattern.color);
-          
+          const matchData = patternMatches.find(m => m.patternId === pattern.id);
+
           return (
             <Card key={pattern.id} className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
               <CardHeader className="pb-4">
@@ -292,9 +346,40 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
                     <Timer className="h-4 w-4 text-green-500" />
                     <span>Effects in {pattern.timeToEffect}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-blue-500" />
-                    <span>{pattern.successRate} success rate</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-blue-500" />
+                      <span>Match Score</span>
+                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Progress
+                            value={matchData?.matchPercentage || 0}
+                            colorScheme="match"
+                            size="sm"
+                            showLabel
+                            labelPosition="inside"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="space-y-1 text-xs">
+                          <div className="font-medium">Match Breakdown</div>
+                          {matchData && (
+                            <>
+                              <div>Time: {matchData.matchFactors.timeOptimization}%</div>
+                              <div>Goal: {matchData.matchFactors.goalAlignment}%</div>
+                              <div>History: {matchData.matchFactors.userHistory}%</div>
+                              <div>Difficulty: {matchData.matchFactors.difficultyFit}%</div>
+                              <div className="pt-1 border-t text-muted-foreground">
+                                {matchData.explanation}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Lightbulb className="h-4 w-4 text-orange-500" />
@@ -358,7 +443,8 @@ export const ValueDrivenPatternSelection: React.FC<ValueDrivenPatternSelectionPr
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 

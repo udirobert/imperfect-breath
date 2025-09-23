@@ -64,6 +64,7 @@ export const MobileBreathingInterface: React.FC<
 
   const [showPreparation, setShowPreparation] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Only render on mobile
   if (!isMobile) {
@@ -115,7 +116,7 @@ export const MobileBreathingInterface: React.FC<
           patternName={patternName}
           pattern={mapPatternForAnimation(BREATHING_PATTERNS.box)}
           enableCamera={false} // Mobile interface doesn't support camera yet
-          videoRef={containerRef} // Using container ref as placeholder
+          videoRef={videoRef}
           onStart={() => {
             setShowPreparation(false);
             handlePlayPause();

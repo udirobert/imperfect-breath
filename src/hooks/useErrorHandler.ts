@@ -30,12 +30,12 @@ export interface UseErrorHandlerReturn {
   hasError: boolean;
   isRecovering: boolean;
   canRecover: boolean;
-  
+
   // Actions
   handleError: (error: Error | AppError, context?: Record<string, any>) => void;
   clearError: () => void;
   retry: () => Promise<void>;
-  
+
   // Utilities
   reportError: (error: AppError, context?: Record<string, any>) => void;
   wrapAsync: <T extends any[], R>(fn: (...args: T) => Promise<R>) => (...args: T) => Promise<R>;
@@ -46,8 +46,8 @@ const DEFAULT_OPTIONS: Required<ErrorHandlerOptions> = {
   maxRecoveryAttempts: 3,
   autoReportErrors: true,
   showErrorToast: true,
-  onError: () => {},
-  onRecovery: () => {},
+  onError: () => { },
+  onRecovery: () => { },
 };
 
 /**
@@ -62,7 +62,7 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     lastErrorTime: null,
   });
 
-  const lastRecoveryAction = useRef<(() => Promise<void>) | null>(null);
+  const lastRecoveryAction = useRef<(() => Promise<any>) | null>(null);
 
   /**
    * Handle an error
@@ -71,8 +71,8 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     error: Error | AppError,
     context?: Record<string, any>
   ) => {
-    const appError = error instanceof AppError 
-      ? error 
+    const appError = error instanceof AppError
+      ? error
       : ErrorFactory.fromError(error, undefined, context);
 
     const newState: ErrorState = {
@@ -179,11 +179,11 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
       console.error('Recovery failed:', recoveryError);
       setErrorState(prev => ({ ...prev, isRecovering: false }));
       config.onRecovery(errorState.error, false);
-      
+
       // Handle recovery error
-      handleError(recoveryError as Error, { 
+      handleError(recoveryError as Error, {
         originalError: errorState.error.id,
-        recoveryAttempt: errorState.recoveryAttempts 
+        recoveryAttempt: errorState.recoveryAttempts
       });
     }
   }, [errorState, config, clearError, handleError]);
@@ -231,7 +231,7 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
 
   // Computed values
   const hasError = errorState.error !== null;
-  const canRecover = hasError && 
+  const canRecover = hasError &&
     errorState.recoveryAttempts < config.maxRecoveryAttempts &&
     errorState.error!.recovery !== RecoveryStrategy.FATAL;
 
@@ -241,12 +241,12 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     hasError,
     isRecovering: errorState.isRecovering,
     canRecover,
-    
+
     // Actions
     handleError,
     clearError,
     retry,
-    
+
     // Utilities
     reportError,
     wrapAsync,
@@ -262,7 +262,7 @@ export const useCategoryErrorHandler = (
   options?: ErrorHandlerOptions
 ) => {
   const baseHandler = useErrorHandler(options);
-  
+
   const handleError = useCallback((error: Error, context?: Record<string, any>) => {
     const appError = ErrorFactory.fromError(error, category, context);
     baseHandler.handleError(appError, context);

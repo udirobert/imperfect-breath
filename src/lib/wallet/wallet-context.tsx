@@ -11,7 +11,7 @@ import { AuthType, AuthContext, getFeaturesForAuthLevel } from '../../config/mes
 
 // Helper function to get features for auth level
 const getAuthLevelFeatures = (authLevel: AuthType): string[] => {
-  return getFeaturesForAuthLevel(authLevel);
+  return [...getFeaturesForAuthLevel(authLevel)];
 };
 
 // State interface
@@ -53,7 +53,7 @@ const initialState: WalletState = {
   error: null,
   lastConnected: null,
   authLevel: 'none',
-  availableFeatures: ['Unlimited breathing sessions', 'Basic pattern library', 'Simple progress tracking (local)'],
+  availableFeatures: ['Unlimited breathing sessions', 'Basic pattern library', 'Simple progress tracking (local)'] as string[],
   pendingAction: undefined,
 };
 

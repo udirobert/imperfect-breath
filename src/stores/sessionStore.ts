@@ -35,6 +35,13 @@ export interface SessionMetrics {
   stillnessScore?: number; // 0-100
   breathQuality?: number; // 0-100
   startTime?: number;
+
+  // Pattern-specific performance tracking
+  patternId?: string;
+  completionRate?: number; // 0-100
+  userEngagement?: number; // 0-100
+  effectivenessScore?: number; // 0-100
+  restlessnessScore?: number; // 0-100
 }
 
 export interface SessionState {
@@ -83,6 +90,10 @@ export interface SessionActions {
   // Phase management
   updateBreathPhase: (phase: BreathPhase, progress: number) => void;
   incrementCycle: () => void;
+
+  // Pattern performance tracking
+  updatePatternMetrics: (metrics: Partial<SessionMetrics>) => void;
+  recordPatternPerformance: (patternId: string, completionRate: number, engagement: number) => void;
 
   // Media management
   setCameraStream: (stream: MediaStream | null) => void;
@@ -289,6 +300,29 @@ export const useSessionStore = create<SessionState & SessionActions>()(
       set({ performanceMode: mode });
     },
 
+    // Pattern performance tracking
+    updatePatternMetrics: (metrics) => {
+      set((state) => ({
+        metrics: {
+          ...state.metrics,
+          ...metrics,
+        },
+      }));
+    },
+
+    recordPatternPerformance: (patternId, completionRate, engagement) => {
+      const effectivenessScore = (completionRate + engagement) / 2;
+      set((state) => ({
+        metrics: {
+          ...state.metrics,
+          patternId,
+          completionRate,
+          userEngagement: engagement,
+          effectivenessScore,
+        },
+      }));
+    },
+
     // Utilities
     getSessionDuration: () => {
       const { metrics } = get();
@@ -340,6 +374,12 @@ export const sessionSelectors = {
     state.performanceMode === 'optimal'
   ),
 
+  // Pattern performance state
+  currentPatternId: () => useSessionStore((state) => state.metrics.patternId),
+  patternCompletionRate: () => useSessionStore((state) => state.metrics.completionRate),
+  patternEngagement: () => useSessionStore((state) => state.metrics.userEngagement),
+  patternEffectiveness: () => useSessionStore((state) => state.metrics.effectivenessScore),
+
   // Error state
   hasError: () => useSessionStore((state) => !!state.error),
   hasWarnings: () => useSessionStore((state) => state.warnings.length > 0),
@@ -356,6 +396,14 @@ export const useSessionError = () => useSessionStore((state) => state.error);
 export const useVisionState = () => useSessionStore((state) => ({
   active: state.visionActive,
   metrics: state.visionMetrics,
+}));
+
+// Pattern performance hooks
+export const usePatternPerformance = () => useSessionStore((state) => ({
+  patternId: state.metrics.patternId,
+  completionRate: state.metrics.completionRate,
+  engagement: state.metrics.userEngagement,
+  effectiveness: state.metrics.effectivenessScore,
 }));
 
 export default useSessionStore;

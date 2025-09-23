@@ -8,8 +8,8 @@ import React from "react";
 import {
   MeditationSession,
   MeditationSessionConfig,
-  SessionMetrics,
 } from "./MeditationSession";
+import { SessionMetrics } from "../../types/session";
 
 import { BREATHING_PATTERNS } from "../../lib/breathingPatterns";
 

@@ -2,17 +2,40 @@
  * Helper functions and examples for creating breathing phases correctly
  */
 
-import { createBreathingPhase, createCustomPhase, isValidPhaseName, type BreathingPhaseName } from "./breathingPatterns";
+import type { BreathingPhaseName } from "./breathingPatterns";
+
+// Helper function implementations
+function createBreathingPhase(name: BreathingPhaseName, duration: number, text: string, instruction?: string) {
+  return {
+    name,
+    duration,
+    text,
+    instruction: instruction || text
+  };
+}
+
+function createCustomPhase(name: string, duration: number, text: string, instruction?: string) {
+  return {
+    name: name as BreathingPhaseName,
+    duration,
+    text,
+    instruction: instruction || text
+  };
+}
+
+function isValidPhaseName(name: string): name is BreathingPhaseName {
+  return ['inhale', 'hold', 'exhale', 'hold_after_exhale'].includes(name);
+}
 
 // Example: Create a standard breathing phase (restricted to known phase names)
-export const createStandardInhalePhase = () => 
+export const createStandardInhalePhase = () =>
   createBreathingPhase('inhale', 4000, 'Breathe In...', 'Take a slow, deep breath through your nose');
 
-export const createStandardExhalePhase = () => 
+export const createStandardExhalePhase = () =>
   createBreathingPhase('exhale', 4000, 'Breathe Out...', 'Release the air slowly through your mouth');
 
 // Example: Create custom phases for user-defined patterns
-export const createCustomInstructionalPhase = (name: string, duration: number, instruction: string) => 
+export const createCustomInstructionalPhase = (name: string, duration: number, instruction: string) =>
   createCustomPhase(name, duration, instruction, instruction);
 
 // Helper to safely convert a string to a phase name

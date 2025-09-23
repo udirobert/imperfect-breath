@@ -1,5 +1,14 @@
-import type { LicenseTerms } from "./blockchain";
 import type { CustomPattern } from "../lib/patternStorage";
+
+// License terms for pattern usage
+export interface LicenseTerms {
+  type: "personal" | "commercial" | "exclusive";
+  duration: number; // in days
+  price: number;
+  currency: string;
+  restrictions?: string[];
+  transferable: boolean;
+}
 
 /**
  * Represents a pattern available in the marketplace

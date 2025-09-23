@@ -86,6 +86,18 @@ export interface AccessibilityPreferences {
     colorBlindMode: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 }
 
+export interface PatternPreferences {
+    favoritePatterns: string[];
+    completedSessions: string[];
+    preferredGoals: string[];
+    timePreferences: Record<string, string[]>; // Time of day -> pattern IDs
+    effectivenessRatings: Record<string, number>; // Pattern ID -> 1-5 rating
+    difficultyPreference: 'beginner' | 'intermediate' | 'advanced';
+    // Blockchain enhancement points (null until connected)
+    onchainAchievements?: null;
+    nftPatterns?: null;
+}
+
 export interface UserPreferences {
     vision: VisionPreferences;
     audio: AudioPreferences;
@@ -93,6 +105,7 @@ export interface UserPreferences {
     ui: UIPreferences;
     session: SessionPreferences;
     accessibility: AccessibilityPreferences;
+    patterns: PatternPreferences;
     lastUpdated: number;
     version: string; // For migration support
 }
@@ -105,18 +118,20 @@ export interface PreferencesActions {
     updateUIPreferences: (preferences: Partial<UIPreferences>) => void;
     updateSessionPreferences: (preferences: Partial<SessionPreferences>) => void;
     updateAccessibilityPreferences: (preferences: Partial<AccessibilityPreferences>) => void;
+    updatePatternPreferences: (preferences: Partial<PatternPreferences>) => void;
 
     // Batch updates
     updatePreferences: (updates: Partial<UserPreferences>) => void;
 
     // Reset functionality
-    resetToDefaults: (scope?: 'all' | 'vision' | 'audio' | 'performance' | 'ui' | 'session' | 'accessibility') => void;
+    resetToDefaults: (scope?: 'all' | 'vision' | 'audio' | 'performance' | 'ui' | 'session' | 'accessibility' | 'patterns') => void;
     resetVisionPreferences: () => void;
     resetAudioPreferences: () => void;
     resetPerformancePreferences: () => void;
     resetUIPreferences: () => void;
     resetSessionPreferences: () => void;
     resetAccessibilityPreferences: () => void;
+    resetPatternPreferences: () => void;
 
     // Import/Export
     exportPreferences: () => UserPreferences;
@@ -198,6 +213,17 @@ const DEFAULT_ACCESSIBILITY_PREFERENCES: AccessibilityPreferences = {
     colorBlindMode: 'none',
 };
 
+const DEFAULT_PATTERN_PREFERENCES: PatternPreferences = {
+    favoritePatterns: [],
+    completedSessions: [],
+    preferredGoals: [],
+    timePreferences: {},
+    effectivenessRatings: {},
+    difficultyPreference: 'beginner',
+    onchainAchievements: null,
+    nftPatterns: null,
+};
+
 const DEFAULT_PREFERENCES: UserPreferences = {
     vision: DEFAULT_VISION_PREFERENCES,
     audio: DEFAULT_AUDIO_PREFERENCES,
@@ -205,6 +231,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     ui: DEFAULT_UI_PREFERENCES,
     session: DEFAULT_SESSION_PREFERENCES,
     accessibility: DEFAULT_ACCESSIBILITY_PREFERENCES,
+    patterns: DEFAULT_PATTERN_PREFERENCES,
     lastUpdated: Date.now(),
     version: '1.0.0',
 };
@@ -269,6 +296,14 @@ export const usePreferencesStore = create<UserPreferences & PreferencesActions>(
                     }));
                 },
 
+                // Pattern preferences
+                updatePatternPreferences: (preferences: Partial<PatternPreferences>) => {
+                    set((state) => ({
+                        patterns: { ...state.patterns, ...preferences },
+                        lastUpdated: Date.now(),
+                    }));
+                },
+
                 // Batch updates
                 updatePreferences: (updates: Partial<UserPreferences>) => {
                     const validated = get().validatePreferences(updates);
@@ -305,6 +340,9 @@ export const usePreferencesStore = create<UserPreferences & PreferencesActions>(
                     if (scope === 'all' || scope === 'accessibility') {
                         resetData.accessibility = DEFAULT_ACCESSIBILITY_PREFERENCES;
                     }
+                    if (scope === 'all' || scope === 'patterns') {
+                        resetData.patterns = DEFAULT_PATTERN_PREFERENCES;
+                    }
 
                     set(resetData);
                     console.log(`🔄 PreferencesStore: Reset ${scope} preferences to defaults`);
@@ -316,6 +354,7 @@ export const usePreferencesStore = create<UserPreferences & PreferencesActions>(
                 resetUIPreferences: () => get().resetToDefaults('ui'),
                 resetSessionPreferences: () => get().resetToDefaults('session'),
                 resetAccessibilityPreferences: () => get().resetToDefaults('accessibility'),
+                resetPatternPreferences: () => get().resetToDefaults('patterns'),
 
                 // Import/Export
                 exportPreferences: () => {
@@ -462,6 +501,7 @@ export const preferencesSelectors = {
     uiPreferences: () => usePreferencesStore((state) => state.ui),
     sessionPreferences: () => usePreferencesStore((state) => state.session),
     accessibilityPreferences: () => usePreferencesStore((state) => state.accessibility),
+    patternPreferences: () => usePreferencesStore((state) => state.patterns),
 
     // Specific selectors
     showFaceMesh: () => usePreferencesStore((state) => state.vision.showFaceMesh),
@@ -481,5 +521,6 @@ export const usePerformancePreferences = () => usePreferencesStore((state) => st
 export const useUIPreferences = () => usePreferencesStore((state) => state.ui);
 export const useSessionPreferences = () => usePreferencesStore((state) => state.session);
 export const useAccessibilityPreferences = () => usePreferencesStore((state) => state.accessibility);
+export const usePatternPreferences = () => usePreferencesStore((state) => state.patterns);
 
 export default usePreferencesStore;

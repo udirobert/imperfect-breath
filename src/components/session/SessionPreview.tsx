@@ -144,7 +144,7 @@ export const SessionPreview: React.FC<SessionPreviewProps> = ({
         // Ensure video is playing
         await new Promise<void>((resolve) => {
           const checkReady = () => {
-            if (videoRef.current?.readyState >= 2) {
+            if (videoRef.current && videoRef.current.readyState >= 2) {
               resolve();
             } else {
               setTimeout(checkReady, 100);
