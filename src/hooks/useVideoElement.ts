@@ -73,6 +73,7 @@ export const useVideoElement = (
         video.style.top = '0';
         video.style.left = '0';
         video.style.zIndex = '1';
+        video.style.backgroundColor = 'transparent';
 
         console.log('📹 Video element configured with options:', options);
     }, [muted, autoPlay, mirror, options]);
@@ -123,31 +124,33 @@ export const useVideoElement = (
     // Attach stream to video element
     useEffect(() => {
         const video = videoRef.current;
-        if (!video || !stream) return;
+        if (!video || !stream) {
+            console.log('📹 Video element or stream not available:', { 
+                hasVideo: !!video, 
+                hasStream: !!stream,
+                streamActive: stream?.active,
+                streamTracks: stream?.getTracks().length || 0
+            });
+            return;
+        }
 
         if (video.srcObject !== stream) {
             console.log("📹 Attaching camera stream to video element");
             video.srcObject = stream;
             setupVideoElement(video);
 
-            // Try to play video with retry mechanism
-            const playVideo = async (retries = 3) => {
-                for (let i = 0; i < retries; i++) {
-                    try {
-                        await video.play();
-                        console.log('✅ Video is playing, readyState:', video.readyState);
-                        return;
-                    } catch (playError) {
-                        console.warn(`⚠️ Video play attempt ${i + 1} failed:`, playError);
-                        if (i < retries - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                        }
-                    }
+            // Try to play video with proper promise handling
+            const playVideo = async () => {
+                try {
+                    await video.play();
+                    console.log('✅ Video is playing, readyState:', video.readyState);
+                } catch (playError) {
+                    console.warn('⚠️ Video play failed:', playError);
                 }
-                console.warn('⚠️ All video play attempts failed');
             };
 
-            playVideo();
+            // Small delay to ensure stream is properly attached
+            setTimeout(playVideo, 100);
         }
     }, [stream, videoRef, setupVideoElement]);
 

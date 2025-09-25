@@ -69,6 +69,7 @@ export const SessionPreview: React.FC<SessionPreviewProps> = ({
     hasPermission
   } = useCamera();
   
+  
   // Auto-start camera setup in background if enabled
   const hasStartedCameraSetup = useRef(false);
   
@@ -134,31 +135,16 @@ export const SessionPreview: React.FC<SessionPreviewProps> = ({
 
       const stream = await requestCameraStream();
       
+      // Stream attachment is now handled by CameraContext
+      // We only need to ensure the video element is properly configured
       if (stream && videoRef.current) {
-        // Attach stream to video element
-        videoRef.current.srcObject = stream;
+        // Ensure video element has the correct attributes
         videoRef.current.muted = true;
         videoRef.current.autoplay = true;
         videoRef.current.playsInline = true;
         
-        // Ensure video is playing
-        await new Promise<void>((resolve) => {
-          const checkReady = () => {
-            if (videoRef.current && videoRef.current.readyState >= 2) {
-              resolve();
-            } else {
-              setTimeout(checkReady, 100);
-            }
-          };
-          checkReady();
-        });
-        
-        // Try to play the video
-        try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.warn("Video play failed:", playError);
-        }
+        // CameraContext now handles stream attachment
+        // This ensures we don't have conflicts between SessionPreview and useSession
       }
       
       // Move to preparation phase

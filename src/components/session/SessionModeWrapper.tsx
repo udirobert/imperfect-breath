@@ -161,9 +161,10 @@ export const SessionModeWrapper: React.FC = () => {
   } = useSession();
 
   // Determine session configuration based on mode
-  const useEnhancedVision = mode === "enhanced";
+  // FIXED: Default to enhanced vision unless explicitly classic
+  const useEnhancedVision = mode !== "classic";
   const useMobileInterface =
-    mode === "mobile" || (isMobile && mode === "enhanced");
+    mode === "mobile" || (isMobile && mode !== "classic");
 
   // Build configuration for MeditationSession
   const sessionConfig: MeditationSessionConfig = useMemo(

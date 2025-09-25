@@ -103,52 +103,20 @@ export const useSession = (options: UseSessionOptions = {}) => {
         setCameraPermission(true);
 
         // Attach stream to video element if provided
-        if (videoElement?.current) {
-          console.log('📹 useSession: Attaching stream to video element...');
-          const video = videoElement.current;
-
-          // Set stream and video properties
-          video.srcObject = stream;
-          video.muted = true;
-          video.autoplay = true;
-          video.playsInline = true;
-
-          // Ensure video is playing with retry mechanism
-          const playVideo = async (retries = 3) => {
-            for (let i = 0; i < retries; i++) {
-              try {
-                await video.play();
-                console.log('✅ useSession: Video is playing, readyState:', video.readyState);
-                return;
-              } catch (playError) {
-                console.warn(`⚠️ useSession: Video play attempt ${i + 1} failed:`, playError);
-                if (i < retries - 1) {
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                }
-              }
-            }
-            console.warn('⚠️ useSession: All video play attempts failed');
-          };
-
-          await playVideo();
-
-          // Set video element styling
-          video.style.display = 'block';
-          video.style.visibility = 'visible';
-          video.style.opacity = '1';
-          video.style.width = '100%';
-          video.style.height = '100%';
-          video.style.position = 'absolute';
-          video.style.top = '0';
-          video.style.left = '0';
-          video.style.zIndex = '1';
-          console.log('✅ useSession: Video element configured');
-        }
+        // Video element handling is now managed by VideoFeed component.
+        // The stream is stored in CameraContext and consumed by VideoFeed,
+        // so we only need to request the stream and update the store.
 
         // Start vision if enabled
-        if (enableVision && visionStore.isReady) {
-          setVisionActive(true);
-          // Vision store will handle the video element connection
+        if (enableVision && visionStore.isReady && videoElement?.current) {
+          console.log('🔍 useSession: Starting vision processing with video element');
+          try {
+            await visionStore.start(videoElement.current);
+            setVisionActive(true);
+          } catch (error) {
+            console.warn('⚠️ useSession: Failed to start vision processing:', error);
+            setError(`Vision processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
         }
 
         return stream;
@@ -241,6 +209,28 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const initialize = useCallback(async (sessionConfig: SessionConfig) => {
     initializeSession(sessionConfig);
 
+    // Initialize vision store if vision is enabled
+    if (enableVision && sessionConfig.enableCamera) {
+      console.log('🔍 useSession: Initializing vision store');
+      try {
+        const stableSessionId = `session_${Date.now()}`;
+        await visionStore.initialize({
+          sessionId: stableSessionId,
+          targetFPS: targetFPS,
+          silentMode: false,
+          gracefulDegradation: false, // No fake data
+          features: {
+            detectFace: true,
+            analyzePosture: true,
+            trackMovement: true,
+          },
+        });
+      } catch (error) {
+        console.warn('⚠️ useSession: Failed to initialize vision store:', error);
+        setError(`Vision initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
     // Request camera if needed
     if (sessionConfig.enableCamera) {
       await requestCamera();
@@ -256,7 +246,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
         start();
       }, 1000);
     }
-  }, [initializeSession, requestCamera, setSessionReady, autoStart]);
+  }, [initializeSession, requestCamera, setSessionReady, autoStart, enableVision, visionStore, targetFPS, setError]);
 
   const start = useCallback(() => {
     // Check if session is properly initialized by checking the store directly

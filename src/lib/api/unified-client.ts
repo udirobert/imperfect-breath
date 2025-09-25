@@ -512,20 +512,10 @@ export class UnifiedAPIClient {
   }
 
   /**
-   * Vision Processing with graceful degradation
+   * Vision Processing - honest failure mode
    */
   async processVision(sessionId: string, frameData: any): Promise<APIResponse> {
-    const isHealthy = this.serviceRegistry.isServiceHealthy('vision');
-    
-    if (!isHealthy) {
-      console.info('Vision service unavailable, continuing without analysis');
-      return {
-        success: true,
-        data: { metrics: null, fallback: true },
-        metadata: { provider: 'fallback' },
-      };
-    }
-
+    // No health check fallback - let the request fail honestly
     return this.request('vision', API_ENDPOINTS.vision.process, {
       method: 'POST',
       body: JSON.stringify({ session_id: sessionId, ...frameData }),

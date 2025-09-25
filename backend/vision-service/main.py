@@ -38,14 +38,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Production Configuration
+# ENHANCEMENT FIRST: Environment-aware configuration
+def get_models_dir() -> Path:
+    """Get models directory based on environment - CLEAN separation of local vs production"""
+    # Check if we're in Docker/production environment
+    if (os.getenv("ENV") == "production" or 
+        os.path.exists("/app") or 
+        os.getenv("DOCKER_ENV") == "true"):
+        return Path("/app/models")  # Docker/Hetzner production
+    else:
+        return Path("./models")     # Local development
+
+# Production Configuration - ENHANCEMENT FIRST: Centralized config with environment support
 CONFIG = {
-    "models_dir": Path("/app/models"),
+    "models_dir": get_models_dir(),  # DRY: Single source of truth for models path
     "max_concurrent_sessions": int(os.getenv("MAX_CONCURRENT_SESSIONS", "10")),
     "model_download_on_start": os.getenv("MODEL_DOWNLOAD_ON_START", "true").lower() == "true",
     "session_timeout": 300,  # 5 minutes
     "max_image_size": 1920,
-    "jpeg_quality": 85
+    "jpeg_quality": 85,
+    # PERFORMANT: Dynamic port configuration
+    "port": int(os.getenv("PORT", "8001")),  # Default to 8001 to match Docker
+    "host": os.getenv("HOST", "0.0.0.0")
 }
 
 # MediaPipe model URLs for production deployment
@@ -718,40 +732,21 @@ async def get_session_summary(session_id: str):
     logger.info(f"Session summary for {session_id}: {summary}")
     return summary
 
-@app.get("/api/health/vision")
-@app.head("/api/health/vision")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "vision-processing",
-        "timestamp": time.time(),
-        "active_sessions": len(vision_processor.sessions)
-    }
-
+# AGGRESSIVE CONSOLIDATION: Single session management endpoint
 @app.delete("/api/vision/session/{session_id}")
-async def cleanup_session(session_id: str):
-    """Manually cleanup a session"""
+@app.post("/api/vision/session/{session_id}/stop")
+async def manage_session(session_id: str):
+    """CLEAN: Unified session management - stop/cleanup session"""
     if session_id in vision_processor.sessions:
         del vision_processor.sessions[session_id]
-        return {"success": True, "message": f"Session {session_id} cleaned up"}
-    else:
-        return {"success": False, "message": "Session not found"}
-
-@app.post("/vision/stop/{session_id}")
-async def stop_session(session_id: str):
-    """Stop a vision session (production endpoint)"""
-    if session_id in vision_processor.sessions:
-        # Mark session as stopped but don't delete immediately
-        session = vision_processor.sessions[session_id]
-        logger.info(f"Session {session_id} stopped")
-        return {"message": f"Session {session_id} stopped", "session_id": session_id}
+        logger.info(f"Session {session_id} stopped and cleaned up")
+        return {"success": True, "message": f"Session {session_id} cleaned up", "session_id": session_id}
     else:
         raise HTTPException(status_code=404, detail="Session not found")
 
 @app.get("/api/vision/sessions")
 async def list_sessions():
-    """List active sessions (for debugging)"""
+    """ORGANIZED: Single endpoint for session listing"""
     current_time = time.time()
     sessions_info = []
     
@@ -771,37 +766,30 @@ async def list_sessions():
         "active_count": len([s for s in sessions_info if s["is_active"]])
     }
 
-@app.get("/vision/sessions")
-async def list_sessions_production():
-    """List all active sessions (production endpoint)"""
-    return await list_sessions()
-
-# AI Analysis Endpoints
+# AGGRESSIVE CONSOLIDATION: Single AI analysis endpoint
 @app.post("/api/ai-analysis", response_model=AIAnalysisResponse)
 async def ai_analysis(request: AIAnalysisRequest):
-    """AI-powered breathing session analysis"""
+    """DRY: Single AI analysis endpoint"""
     logger.info(f"AI analysis request: {request.provider} {request.analysis_type}")
     return await process_ai_analysis(request)
 
+# AGGRESSIVE CONSOLIDATION: Single health check endpoint
 @app.get("/health")
 @app.head("/health")
-async def health_check_main():
-    """Main health check endpoint"""
+async def health_check():
+    """CLEAN: Unified health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": time.time(),
+        "port": CONFIG["port"],
         "services": {
             "vision": "active",
             "ai_analysis": "active"
-        }
+        },
+        "active_sessions": len(vision_processor.sessions)
     }
-
-@app.get("/ping")
-@app.head("/ping")
-async def ping():
-    """Simple ping endpoint for health checks"""
-    return {"status": "ok", "timestamp": time.time()}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)  # Fixed: use port 8000 per architecture specs
+    # ENHANCEMENT FIRST: Use centralized config for consistency
+    uvicorn.run(app, host=CONFIG["host"], port=CONFIG["port"])

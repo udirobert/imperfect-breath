@@ -38,7 +38,7 @@ print_status "Deploying to $SERVER_USER@$SERVER_HOST"
 # Create deployment package
 print_status "Creating deployment package..."
 tar -czf vision-service.tar.gz \
-    main_production.py \
+    main.py \
     requirements.txt \
     Dockerfile \
     docker-compose.yml \

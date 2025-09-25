@@ -37,7 +37,7 @@ npm install
 # 2. Start the backend service (optional, for full AI & vision features)
 cd backend/vision-service
 pip install -r requirements.txt
-MODEL_DOWNLOAD_ON_START=false python3 main.py &
+MODEL_DOWNLOAD_ON_START=false python3 main.py &  # Runs on port 8001
 cd ../..
 
 # 3. Start development server

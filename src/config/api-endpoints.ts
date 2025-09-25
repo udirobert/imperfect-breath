@@ -25,7 +25,7 @@ export const API_ENDPOINTS = {
     session: (sessionId: string) => `/api/vision/session/${sessionId}`,
     stopSession: (sessionId: string) => `/vision/stop/${sessionId}`,
     listSessions: '/vision/sessions',
-    health: '/api/health/vision',
+    health: '/health',
   },
 
   // Social/Sharing Service

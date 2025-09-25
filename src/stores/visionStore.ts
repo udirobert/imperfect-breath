@@ -84,6 +84,8 @@ export interface VisionState {
     sessionStartTime: number | null;
     totalProcessingTime: number;
     frameCount: number;
+
+
 }
 
 export interface VisionActions {
@@ -146,21 +148,10 @@ const PERFORMANCE_CONSTRAINTS = {
 };
 
 // ============================================================================
-// FALLBACK METRICS - Graceful degradation
+// UTILITY FUNCTIONS - Real data only
 // ============================================================================
 
-const createFallbackMetrics = (): MeditationMetrics => ({
-    stillness: 85,
-    presence: 90,
-    posture: 80,
-    restlessnessScore: 15,
-    faceLandmarks: generateBasicLandmarks(),
-    faceDetected: true,
-    confidence: 0.8,
-    processingTimeMs: 50,
-    source: 'fallback',
-});
-
+// Generate basic landmarks only when we have real face detection
 const generateBasicLandmarks = (): Array<{ x: number; y: number; z?: number }> => {
     const landmarks = [];
     const centerX = 0.5;
@@ -253,10 +244,13 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         isActive: true,
                         sessionStartTime,
                         error: null,
-                        metrics: createFallbackMetrics(), // Immediate feedback
+                        metrics: null, // No fake data - wait for real processing
                     });
 
-                    // Start processing loop
+                    // Import API client dynamically to avoid circular dependencies
+                    const { apiClient } = await import('../lib/api/unified-client');
+
+                    // Start processing loop with real backend calls
                     const processFrame = async () => {
                         const visionState = get();
 
@@ -265,19 +259,71 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         const startTime = performance.now();
 
                         try {
-                            // Frame capture and processing logic would go here
-                            // For now, provide fallback metrics
-                            const metrics = createFallbackMetrics();
+                            // Capture frame from video element
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+
+                            if (!ctx || !videoElement) {
+                                throw new Error('Canvas context or video element unavailable');
+                            }
+
+                            // Set canvas size (smaller for performance)
+                            canvas.width = Math.min(320, videoElement.videoWidth || 320);
+                            canvas.height = Math.min(240, videoElement.videoHeight || 240);
+
+                            // Draw current video frame
+                            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+                            // Make API call to backend
+                            const response = await apiClient.processVision(visionState.config?.sessionId || 'default', {
+                                image_data: imageData,
+                                timestamp: Date.now(),
+                                options: {
+                                    detect_face: visionState.config?.features?.detectFace ?? true,
+                                    analyze_posture: visionState.config?.features?.analyzePosture ?? true,
+                                    track_breathing: visionState.config?.features?.trackMovement ?? false,
+                                },
+                            });
 
                             const processingTime = performance.now() - startTime;
 
-                            set((state) => ({
-                                metrics,
-                                lastMetrics: state.metrics,
-                                totalProcessingTime: state.totalProcessingTime + processingTime,
-                                frameCount: state.frameCount + 1,
-                                error: null,
-                            }));
+                            if (response.success && response.data && !response.data.fallback) {
+                                // Transform backend response to meditation metrics
+                                const backendMetrics = response.data.metrics;
+                                const metrics: MeditationMetrics = {
+                                    stillness: backendMetrics?.movement_level ? (1 - backendMetrics.movement_level) * 100 : 85,
+                                    presence: backendMetrics?.confidence ? backendMetrics.confidence * 100 : 90,
+                                    posture: backendMetrics?.posture_score ? backendMetrics.posture_score * 100 : 80,
+                                    restlessnessScore: backendMetrics?.movement_level ? backendMetrics.movement_level * 100 : 15,
+                                    faceLandmarks: backendMetrics?.landmarks || generateBasicLandmarks(),
+                                    faceDetected: backendMetrics?.face_detected ?? true,
+                                    confidence: backendMetrics?.confidence ?? 0.9,
+                                    processingTimeMs: backendMetrics?.processing_time_ms ?? processingTime,
+                                    source: 'backend',
+                                };
+
+                                set((state) => ({
+                                    metrics,
+                                    lastMetrics: state.metrics,
+                                    totalProcessingTime: state.totalProcessingTime + processingTime,
+                                    frameCount: state.frameCount + 1,
+                                    error: null,
+                                    backendAvailable: true,
+                                }));
+
+                                console.log('🔍 VisionStore: Backend processing successful', metrics);
+                            } else {
+                                // Backend unavailable - clear error state
+                                set((state) => ({
+                                    metrics: null,
+                                    lastMetrics: state.metrics,
+                                    error: 'Vision service unavailable - biometric tracking disabled',
+                                    backendAvailable: false,
+                                }));
+
+                                console.warn('⚠️ VisionStore: Backend unavailable - no biometric data');
+                            }
 
                             // Adaptive performance management
                             get().updatePerformanceMode(processingTime);
@@ -285,8 +331,11 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         } catch (error) {
                             console.error('Vision processing error:', error);
 
+                            // Clear error state - no fake data
                             set((state) => ({
-                                error: error instanceof Error ? error.message : 'Processing error',
+                                metrics: null,
+                                error: `Vision processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                                backendAvailable: false,
                             }));
                         }
 
@@ -298,10 +347,10 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         }
                     };
 
-                    // Start processing
-                    setTimeout(processFrame, 100);
+                    // Start processing with a small delay to ensure video is ready
+                    setTimeout(processFrame, 500);
 
-                    console.log('🔍 VisionStore: Started processing');
+                    console.log('🔍 VisionStore: Started real backend processing');
                 },
 
                 stop: () => {
@@ -337,9 +386,10 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                 },
 
                 reset: () => {
+                    const state = get();
                     set({
                         ...initialState,
-                        config: get().config, // Preserve config
+                        config: state.config, // Preserve config
                     });
 
                     console.log('🔄 VisionStore: Reset to initial state');

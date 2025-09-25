@@ -127,8 +127,8 @@ class MeditationVisionClient {
       });
 
       if (response.data?.fallback) {
-        // Backend unavailable, return basic fallback metrics
-        return createFallbackMetrics();
+        // Backend unavailable - throw error instead of fake data
+        throw new Error('Vision service unavailable');
       }
 
       const result = response.data;
@@ -148,8 +148,8 @@ class MeditationVisionClient {
       };
 
     } catch (error) {
-      // Silent failure with fallback
-      return createFallbackMetrics();
+      // No silent failures - throw the error
+      throw error;
     }
   }
 
@@ -182,38 +182,20 @@ class MeditationVisionClient {
 }
 
 // ============================================================================
-// FRONTEND FALLBACK - Graceful degradation
+// ERROR HANDLING - Honest failure states
 // ============================================================================
 
-const createFallbackMetrics = (): MeditationMetrics => ({
-  stillness: 85,     // Assume good stillness
-  presence: 90,      // Assume face present
-  posture: 80,       // Assume decent posture
-  restlessnessScore: 15, // Low restlessness (inverse of stillness)
-  faceLandmarks: generateBasicLandmarks(),
-  faceDetected: true,
-  confidence: 0.8,
-  processingTimeMs: 50,
-  source: 'fallback',
+const createErrorState = (message: string): MeditationMetrics => ({
+  stillness: 0,
+  presence: 0,
+  posture: 0,
+  restlessnessScore: 0,
+  faceLandmarks: [],
+  faceDetected: false,
+  confidence: 0,
+  processingTimeMs: 0,
+  source: 'error',
 });
-
-const generateBasicLandmarks = (): Array<{ x: number; y: number; z?: number }> => {
-  const landmarks = [];
-  const centerX = 0.5;
-  const centerY = 0.5;
-
-  // Basic 10-point face model for minimal visual feedback
-  for (let i = 0; i < 10; i++) {
-    const angle = (i / 10) * Math.PI * 2;
-    landmarks.push({
-      x: centerX + Math.cos(angle) * 0.12,
-      y: centerY + Math.sin(angle) * 0.15,
-      z: 0,
-    });
-  }
-
-  return landmarks;
-};
 
 // ============================================================================
 // MAIN HOOK - Clean, meditation-focused interface
@@ -442,15 +424,13 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
         return; // Skip processing for now
       }
 
-      if (finalConfig.gracefulDegradation) {
-        // Provide fallback metrics to keep UI working
-        if (!isUnmountedRef.current) {
-          setState(prev => ({
-            ...prev,
-            metrics: createFallbackMetrics(),
-            error: finalConfig.silentMode ? null : `Vision error: ${error}`
-          }));
-        }
+      // No graceful degradation with fake data - show honest error
+      if (!isUnmountedRef.current) {
+        setState(prev => ({
+          ...prev,
+          metrics: null,
+          error: `Vision processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        }));
       }
     }
   }, [
@@ -479,11 +459,11 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     const interval = Math.floor(1000 / finalConfig.targetFPS!);
     processingInterval.current = setInterval(processFrame, interval);
 
-    // Provide immediate feedback
+    // No immediate fake feedback - wait for real data
     if (!isUnmountedRef.current) {
       setState(prev => ({
         ...prev,
-        metrics: createFallbackMetrics()
+        metrics: null
       }));
     }
 

@@ -150,32 +150,9 @@ const BreathingSession: React.FC = () => {
   // Session completion handler - DRY
   const handleSessionComplete = useSessionCompletion();
 
-  // UNIFIED: Handle MeditationSession metrics (CLEAN separation)
-  const onSessionComplete = useCallback((metrics: any) => {
-    // Convert MeditationSession metrics to legacy format for compatibility
-    const legacySessionData = {
-      pattern: initialPattern,
-      cycleCount: metrics.cycleCount,
-      breathHoldTime: metrics.breathHoldTime || 0,
-      restlessnessScore: metrics.stillnessScore ? 100 - metrics.stillnessScore : 0,
-      elapsedTime: metrics.duration * 1000, // Convert to milliseconds
-      phaseAccuracy: 85, // Default value
-      rhythmConsistency: 90, // Default value
-      sessionDuration: metrics.duration,
-      patternName: initialPattern.name,
-      // UNIFIED: Pass through vision session ID for AI integration
-      visionSessionId: metrics.visionSessionId,
-      sessionType: metrics.sessionType,
-      cameraUsed: metrics.cameraUsed,
-    };
-
-    handleSessionComplete(legacySessionData);
-  }, [handleSessionComplete, initialPattern]);
-
   // Enhanced session management - MODERN
   const {
-    state: sessionState,
-    isReady,
+    phase: sessionPhase,
     isActive,
     initialize,
     start,
@@ -183,9 +160,18 @@ const BreathingSession: React.FC = () => {
   } = useSession();
 
   // Simple mode detection - determine if enhanced vision should be used
+  // FIXED: Default to enhanced mode to ensure camera access for vision features
   const useEnhancedVision =
-    location.pathname.includes("/enhanced") ||
-    location.search.includes("enhanced=true");
+    !location.pathname.includes("/classic") &&
+    !location.search.includes("classic=true");
+
+  // Debug logging
+  console.log('🔍 BreathingSession mode detection:', {
+    pathname: location.pathname,
+    search: location.search,
+    useEnhancedVision,
+    mode: useEnhancedVision ? 'enhanced' : 'classic'
+  });
 
   // Memoized session configuration - PERFORMANCE
   const sessionConfig: MeditationSessionConfig = useMemo(
@@ -209,8 +195,8 @@ const BreathingSession: React.FC = () => {
     [initialPattern, useEnhancedVision]
   );
 
-  // Session completion callback - CLEAN
-  const onSessionComplete = useCallback(
+  // UNIFIED: Handle MeditationSession metrics (CLEAN separation)
+  const handleMeditationSessionComplete = useCallback(
     (metrics: any) => {
       handleSessionComplete({
         pattern: {
@@ -235,7 +221,7 @@ const BreathingSession: React.FC = () => {
     <SessionErrorBoundary>
       <MeditationSession
         config={sessionConfig}
-        onSessionComplete={onSessionComplete}
+        onSessionComplete={handleMeditationSessionComplete}
         onSessionExit={() => window.history.back()}
       />
     </SessionErrorBoundary>

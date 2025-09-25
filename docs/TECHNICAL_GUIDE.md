@@ -21,7 +21,7 @@ npm run dev  # Frontend at localhost:4556
 **Single Frontend Architecture:**
 
 - **Frontend**: React + Vite (served by Netlify) - port 4556 in dev
-- **Backend**: Python FastAPI API service (Hetzner) - port 8000
+- **Backend**: Python FastAPI API service (Hetzner) - port 8001
 - **Services**: Supabase (auth/data), Flow/Lens (blockchain)
 
 **Key Point**: Backend is pure API service. Frontend always runs separately and calls backend APIs for AI/vision processing.
@@ -59,7 +59,7 @@ npm run dev
 # Terminal 1: Start Python API backend
 cd backend/vision-service
 pip install -r requirements.txt
-python main.py  # API server on port 8000
+python main.py  # API server on port 8001
 
 # Terminal 2: Start frontend (same as always)
 npm run dev  # Frontend on port 4556
@@ -209,7 +209,7 @@ VITE_HETZNER_SERVICE_URL=http://
 
 **Backend Development (if needed):**
 
-1. ✅ Python server starts on port 8000
+1. ✅ Python server starts on port 8001
 2. ✅ Health endpoint responds
 3. ✅ AI analysis endpoint works
 4. ✅ Frontend connects to local backend

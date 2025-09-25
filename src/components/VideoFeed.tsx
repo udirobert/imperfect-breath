@@ -1,4 +1,5 @@
 import React from "react";
+import { useCamera } from "../contexts/CameraContext";
 import { TrackingStatus, Keypoint } from "../hooks/visionTypes";
 
 interface VideoFeedProps {
@@ -23,6 +24,8 @@ const VideoFeed = ({
   // PERFORMANT: Log only when stream connection changes
   const lastStreamState = React.useRef<boolean>(false);
 
+ 
+
   React.useEffect(() => {
     if (videoRef.current) {
       const hasStream = !!videoRef.current.srcObject;
@@ -36,22 +39,36 @@ const VideoFeed = ({
         lastStreamState.current = hasStream;
       }
     }
-  }, [videoRef.current?.srcObject, trackingStatus]);
+  }, [videoRef, videoRef.current?.srcObject, trackingStatus]);
 
   // Handle stream attachment when video element is ready
   React.useEffect(() => {
     const video = videoRef.current;
-    if (video && !video.srcObject) {
-      // Video element is ready but no stream - this might indicate the stream needs to be reattached
-      console.log('📺 Video element ready but no stream detected');
+    if (video) {
+      console.log('📺 VideoFeed: Video element state check:', {
+        hasVideo: !!video,
+        hasSrcObject: !!video.srcObject,
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        paused: video.paused
+      });
+      
+      if (!video.srcObject) {
+        console.log('📺 Video element ready but no stream detected');
+      }
     }
-  }, [videoRef.current?.readyState]);
+  }, [videoRef, videoRef.current?.readyState, videoRef.current?.srcObject]);
+  
   // Style for the video element
   const videoStyle: React.CSSProperties = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
     transform: "scaleX(-1)", // Mirror the video (selfie mode)
+    backgroundColor: "transparent", // Ensure no white background
+    display: "block",
+    visibility: "visible",
   };
 
   // Style for each landmark point
@@ -105,13 +122,54 @@ const VideoFeed = ({
     }
   };
 
+ // Stream presence derived from CameraContext
+ const { stream } = useCamera();
+ const hasVideoStream = !!stream;
+
+ // Attach stream to video element when available
+ React.useEffect(() => {
+   if (videoRef.current && stream) {
+     videoRef.current.srcObject = stream;
+     // Attempt to play the video; ignore errors (e.g., autoplay restrictions)
+     videoRef.current.play().catch(() => {});
+   }
+ }, [videoRef, videoRef.current, stream]);
+
   return (
-    <div className={`relative ${className}`} style={{ overflow: "hidden" }}>
+    <div className={`relative ${className}`} style={{ overflow: "hidden", backgroundColor: "black" }}>
       {/* Video element */}
-      <video ref={videoRef} style={videoStyle} autoPlay playsInline muted />
+      <video 
+        ref={videoRef} 
+        style={videoStyle} 
+        autoPlay 
+        playsInline 
+        muted 
+        className={hasVideoStream ? "" : "hidden"}
+      />
+
+      {/* Debug overlay to show video element state */}
+      {!hasVideoStream && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: 'white',
+          fontSize: '14px',
+          textAlign: 'center',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          padding: '10px',
+          borderRadius: '5px',
+          zIndex: 10,
+        }}>
+          No camera stream detected
+          <br />
+          <small>Video element: {videoRef.current ? 'Ready' : 'Not ready'}</small>
+        </div>
+      )}
 
       {/* Overlay landmarks */}
-      {isActive &&
+      {isActive && hasVideoStream &&
         landmarks.map((point, index) => (
           <div
             key={`landmark-${index}`}
@@ -127,7 +185,7 @@ const VideoFeed = ({
       <div style={getStatusStyle()}>{trackingStatus}</div>
 
       {/* MODULAR: Restlessness score overlay */}
-      {showRestlessnessScore && isActive && (
+      {showRestlessnessScore && isActive && hasVideoStream && (
         <div style={{
           position: 'absolute',
           top: '10px',

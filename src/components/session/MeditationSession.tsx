@@ -60,10 +60,10 @@ import { PostSessionCelebration } from "./PostSessionCelebration";
 import { SessionControls } from "./SessionControls";
 import { MobileBreathingInterface } from "./MobileBreathingInterface";
 import VideoFeed from "../VideoFeed";
+import { VisionManager } from "./VisionManager";
 
 // Unified hooks
 import { useSession } from "../../hooks/useSession";
-import { useVideoElement } from "../../hooks/useVideoElement";
 import { useAdaptiveEncouragement } from "../../hooks/useAdaptiveEncouragement";
 import { useSessionInitialization } from "../../hooks/useSessionInitialization";
 import useAdaptivePerformance, {
@@ -72,6 +72,7 @@ import useAdaptivePerformance, {
 import { useAuth } from "../../hooks/useAuth";
 import { TrackingStatus } from "../../hooks/visionTypes";
 import { useCamera } from "../../contexts/CameraContext";
+import { useVisionStore } from "../../stores/visionStore";
 
 // Shared types - consolidated
 import { SessionMetrics, SessionModeConfig, SessionPhase, SessionMode } from "../../types/session";
@@ -155,6 +156,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // Camera and video refs with proper lifecycle management
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  // Camera state is now managed by CameraContext
+  // Removed duplicate stream and cameraPermission state to prevent conflicts
 
   // CLEAN: Single source of truth for session phase
   const [currentPhase, setCurrentPhase] = useState<SessionPhase>("setup");
@@ -166,15 +170,6 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // Use CameraContext for camera state
   const { stream: cameraStream } = useCamera();
 
-  // Consolidated video element management
-  const { isReady: isVideoReady } = useVideoElement(videoRef, cameraStream, {
-    autoPlay: true,
-    muted: true,
-    mirror: true,
-    onReady: () => console.log("🎥 Video element ready via consolidated hook"),
-    onError: (error) => console.error("❌ Video element error:", error),
-  });
-
   // ENHANCEMENT: Adaptive encouragement timing (PERFORMANT)
   const [adaptiveEncouragementEnabled, setAdaptiveEncouragementEnabled] =
     useState(true);
@@ -182,19 +177,22 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   // PERFORMANT: Debug state tracking
   const debugKeyRef = useRef<string>("");
 
+  // Stable session ID to prevent vision reinitialization
+  const sessionIdRef = useRef<string>(`session_${Date.now()}`);
+  const sessionId = sessionIdRef.current;
+
 
   // Enhanced session management with adaptive performance
   const visionEnabled = modeConfig.enableVision && !isLowEndDevice;
 
   // Memoize session options to prevent useSession hook from being recreated during phase transitions
-  const sessionOptions = useMemo(() => ({
+  const session = useSession({
     autoStart: config.autoStart,
     enableVision: true, // CLEAN: Force enable for debugging
     targetFPS: 2, // Default FPS for vision processing
-    videoElement: videoRef,
-  }), [config.autoStart, videoRef]);
+    videoElement: videoRef, // Pass video ref for vision processing
+  });
 
-  const session = useSession(sessionOptions);
 
   // Adaptive encouragement system
   const { encouragementStreak } = useAdaptiveEncouragement({
@@ -328,18 +326,27 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                   showQualityMetrics={modeConfig.enableVision}
                 />
 
-                {/* Video Feed with FaceMesh overlay and restlessness score */}
-                {modeConfig.enableCamera && session.cameraStream && (
+                {/* Video Feed with Vision Processing */}
+                {modeConfig.enableCamera && cameraStream && (
                   <VisionErrorBoundary>
                     <div className="flex justify-center mb-4">
-                      <div className="w-64 h-48 md:w-96 md:h-72 rounded-lg overflow-hidden shadow-md border-2 border-primary/20">
+                      <div className="w-64 h-48 md:w-96 md:h-72 rounded-lg overflow-hidden shadow-md border-2 border-primary/20 relative">
                         <VideoFeed
                           videoRef={videoRef}
-                          isActive={visionEnabled && session.isActive}
+                          isActive={session.isActive}
                           landmarks={session.visionMetrics?.faceLandmarks || []}
                           trackingStatus={(session.visionMetrics?.presence || 0) > 0 ? "TRACKING" : "IDLE"}
                           showRestlessnessScore={showRestlessnessScore}
-                          restlessnessScore={session.visionMetrics?.stillness || 0}
+                          restlessnessScore={session.visionMetrics?.restlessnessScore || 0}
+                        />
+                        {/* Vision Processing Manager */}
+                        <VisionManager
+                          enabled={visionEnabled && session.isActive}
+                          videoRef={videoRef}
+                          cameraStream={cameraStream}
+                          sessionId={sessionId}
+                          onVisionReady={() => console.log('🔍 Vision processing ready')}
+                          onVisionError={(error) => console.warn('⚠️ Vision processing error:', error)}
                         />
                       </div>
                     </div>
@@ -390,9 +397,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                     };
 
                     // Stop camera stream using CameraContext
-                    if (cameraStream) {
-                      cameraStream.getTracks().forEach((track) => track.stop());
-                    }
+                    // Camera cleanup is now handled by CameraContext
 
                     // Complete session in store
                     session.complete();
