@@ -85,7 +85,10 @@ export interface VisionState {
     totalProcessingTime: number;
     frameCount: number;
 
-
+    // ENHANCEMENT FIRST: Smooth UI transitions
+    smoothedMetrics: MeditationMetrics | null;
+    metricHistory: MeditationMetrics[];
+    detectionHistory: boolean[]; // For face detection stability
 }
 
 export interface VisionActions {
@@ -130,7 +133,7 @@ export interface VisionActions {
 const DEFAULT_CONFIG: VisionConfig = {
     sessionId: '',
     backendUrl: 'http://localhost:8001',
-    targetFPS: 2,
+    targetFPS: 1, // LUXURY: Slower processing for smoother UX
     enableAdaptiveFPS: true,
     features: {
         detectFace: true,
@@ -148,25 +151,91 @@ const PERFORMANCE_CONSTRAINTS = {
 };
 
 // ============================================================================
-// UTILITY FUNCTIONS - Real data only
+// UTILITY FUNCTIONS - PERFORMANT: Smooth metric transitions for delightful UX
 // ============================================================================
 
-// Generate basic landmarks only when we have real face detection
-const generateBasicLandmarks = (): Array<{ x: number; y: number; z?: number }> => {
-    const landmarks = [];
-    const centerX = 0.5;
-    const centerY = 0.5;
+// PERFORMANT: Advanced smoothing for luxury meditation UX
+const smoothMetric = (current: number, previous: number, alpha: number = 0.15): number => {
+    return previous + alpha * (current - previous);
+};
 
-    for (let i = 0; i < 10; i++) {
-        const angle = (i / 10) * Math.PI * 2;
-        landmarks.push({
-            x: centerX + Math.cos(angle) * 0.12,
-            y: centerY + Math.sin(angle) * 0.15,
-            z: 0,
-        });
+// CLEAN: Face detection stability with hysteresis to prevent flashing
+const stabilizeFaceDetection = (
+    currentDetected: boolean,
+    previousDetected: boolean,
+    confidence: number,
+    history: boolean[]
+): boolean => {
+    // Add current detection to history
+    const newHistory = [...history.slice(-4), currentDetected]; // Keep last 5 frames
+    
+    // Count recent detections
+    const recentDetections = newHistory.filter(Boolean).length;
+    
+    // Hysteresis logic: require more evidence to change state
+    if (previousDetected) {
+        // If previously detected, need 3+ failures to mark as not detected
+        return recentDetections >= 2;
+    } else {
+        // If previously not detected, need 3+ successes to mark as detected
+        return recentDetections >= 3;
+    }
+};
+
+// DRY: Luxury smooth metrics with stability and grace
+const createSmoothedMetrics = (
+    newMetrics: MeditationMetrics, 
+    previousSmoothed: MeditationMetrics | null,
+    detectionHistory: boolean[]
+): { metrics: MeditationMetrics; newHistory: boolean[] } => {
+    if (!previousSmoothed) {
+        return {
+            metrics: newMetrics,
+            newHistory: [newMetrics.faceDetected]
+        };
     }
 
-    return landmarks;
+    // LUXURY: Stabilize face detection to prevent flashing
+    const stableFaceDetected = stabilizeFaceDetection(
+        newMetrics.faceDetected,
+        previousSmoothed.faceDetected,
+        newMetrics.confidence,
+        detectionHistory
+    );
+
+    // PERFORMANT: Only update metrics when face is stably detected
+    const shouldUpdateMetrics = stableFaceDetected && newMetrics.faceDetected;
+
+    const smoothedMetrics: MeditationMetrics = {
+        ...newMetrics,
+        // CLEAN: Smooth core metrics with very gentle transitions
+        stillness: shouldUpdateMetrics ? 
+            smoothMetric(newMetrics.stillness, previousSmoothed.stillness, 0.1) : // Very slow for calmness
+            previousSmoothed.stillness,
+        presence: shouldUpdateMetrics ?
+            smoothMetric(newMetrics.presence, previousSmoothed.presence, 0.15) :
+            Math.max(previousSmoothed.presence * 0.95, 0), // Gentle fade when not detected
+        posture: shouldUpdateMetrics ?
+            smoothMetric(newMetrics.posture, previousSmoothed.posture, 0.12) :
+            previousSmoothed.posture,
+        restlessnessScore: shouldUpdateMetrics && newMetrics.restlessnessScore ? 
+            smoothMetric(newMetrics.restlessnessScore, previousSmoothed.restlessnessScore || 0, 0.08) : // Very slow
+            previousSmoothed.restlessnessScore,
+        
+        // MODULAR: Stable face detection and landmarks
+        faceDetected: stableFaceDetected,
+        faceLandmarks: stableFaceDetected ? newMetrics.faceLandmarks : previousSmoothed.faceLandmarks,
+        
+        // Keep technical fields accurate
+        confidence: newMetrics.confidence,
+        processingTimeMs: newMetrics.processingTimeMs,
+        source: newMetrics.source,
+    };
+
+    return {
+        metrics: smoothedMetrics,
+        newHistory: [...detectionHistory.slice(-4), newMetrics.faceDetected]
+    };
 };
 
 // ============================================================================
@@ -187,6 +256,9 @@ const initialState: VisionState = {
     sessionStartTime: null,
     totalProcessingTime: 0,
     frameCount: 0,
+    smoothedMetrics: null,
+    metricHistory: [],
+    detectionHistory: [],
 };
 
 // ============================================================================
@@ -289,30 +361,52 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                             const processingTime = performance.now() - startTime;
 
                             if (response.success && response.data && !response.data.fallback) {
-                                // Transform backend response to meditation metrics
+                                // CLEAN: Transform backend response to meditation metrics with proper field mapping
                                 const backendMetrics = response.data.metrics;
+                                
+                                // DRY: Single source of truth for metric calculations
+                                const movementLevel = backendMetrics?.movement_level ?? 0;
+                                const confidence = backendMetrics?.confidence ?? 0;
+                                const postureScore = backendMetrics?.posture_score ?? 0;
+                                const faceDetected = backendMetrics?.face_detected ?? false;
+                                
                                 const metrics: MeditationMetrics = {
-                                    stillness: backendMetrics?.movement_level ? (1 - backendMetrics.movement_level) * 100 : 85,
-                                    presence: backendMetrics?.confidence ? backendMetrics.confidence * 100 : 90,
-                                    posture: backendMetrics?.posture_score ? backendMetrics.posture_score * 100 : 80,
-                                    restlessnessScore: backendMetrics?.movement_level ? backendMetrics.movement_level * 100 : 15,
-                                    faceLandmarks: backendMetrics?.landmarks || generateBasicLandmarks(),
-                                    faceDetected: backendMetrics?.face_detected ?? true,
-                                    confidence: backendMetrics?.confidence ?? 0.9,
+                                    stillness: faceDetected ? (1 - movementLevel) * 100 : 0,
+                                    presence: faceDetected ? confidence * 100 : 0,
+                                    posture: faceDetected ? postureScore * 100 : 0,
+                                    restlessnessScore: faceDetected ? movementLevel * 100 : 0,
+                                    faceLandmarks: faceDetected ? (backendMetrics?.landmarks || []) : [],
+                                    faceDetected,
+                                    confidence,
                                     processingTimeMs: backendMetrics?.processing_time_ms ?? processingTime,
                                     source: 'backend',
                                 };
 
+                                // PERFORMANT: Create luxury smooth metrics with stability
+                                const smoothingResult = createSmoothedMetrics(
+                                    metrics, 
+                                    get().smoothedMetrics,
+                                    get().detectionHistory
+                                );
+
                                 set((state) => ({
                                     metrics,
+                                    smoothedMetrics: smoothingResult.metrics, // LUXURY: Stable, smooth metrics
+                                    detectionHistory: smoothingResult.newHistory, // Track detection stability
                                     lastMetrics: state.metrics,
+                                    metricHistory: [...state.metricHistory.slice(-9), metrics], // Keep last 10 for trends
                                     totalProcessingTime: state.totalProcessingTime + processingTime,
                                     frameCount: state.frameCount + 1,
                                     error: null,
                                     backendAvailable: true,
                                 }));
 
-                                console.log('🔍 VisionStore: Backend processing successful', metrics);
+                                console.log('🔍 VisionStore: Backend processing successful', {
+                                    faceDetected,
+                                    stillness: metrics.stillness,
+                                    restlessness: metrics.restlessnessScore,
+                                    landmarkCount: metrics.faceLandmarks?.length || 0
+                                });
                             } else {
                                 // Backend unavailable - clear error state
                                 set((state) => ({
@@ -549,11 +643,12 @@ export const useVisionStore = create<VisionState & VisionActions>()(
 export const visionSelectors = {
     isActive: () => useVisionStore((state) => state.isActive),
     isReady: () => useVisionStore((state) => state.isReady),
-    hasMetrics: () => useVisionStore((state) => !!state.metrics),
+    hasMetrics: () => useVisionStore((state) => !!state.smoothedMetrics), // CLEAN: Use smoothed metrics for UI
     hasError: () => useVisionStore((state) => !!state.error),
     isBackendAvailable: () => useVisionStore((state) => state.backendAvailable),
-    restlessnessScore: () => useVisionStore((state) => state.metrics?.restlessnessScore || 0),
-    stillnessScore: () => useVisionStore((state) => state.metrics?.stillness || 0),
+    // DRY: Single source for smooth UI metrics
+    restlessnessScore: () => useVisionStore((state) => state.smoothedMetrics?.restlessnessScore || 0),
+    stillnessScore: () => useVisionStore((state) => state.smoothedMetrics?.stillness || 0),
     sessionDuration: () => useVisionStore((state) => {
         return state.sessionStartTime ? Date.now() - state.sessionStartTime : 0;
     }),
@@ -564,9 +659,9 @@ export const visionSelectors = {
 // ============================================================================
 
 export const useVisionStatus = () => useVisionStore((state) => state.status);
-export const useVisionMetrics = () => useVisionStore((state) => state.metrics);
+export const useVisionMetrics = () => useVisionStore((state) => state.smoothedMetrics); // PERFORMANT: Use smoothed for UI
 export const useVisionError = () => useVisionStore((state) => state.error);
 export const useVisionConfig = () => useVisionStore((state) => state.config);
-export const useRestlessnessScore = () => useVisionStore((state) => state.metrics?.restlessnessScore || 0);
+export const useRestlessnessScore = () => useVisionStore((state) => state.smoothedMetrics?.restlessnessScore || 0);
 
 export default useVisionStore;

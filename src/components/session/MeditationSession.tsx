@@ -165,7 +165,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // MODULAR: User-controllable overlay preferences
   const [showFaceMesh, setShowFaceMesh] = useState(true);
-  const [showRestlessnessScore, setShowRestlessnessScore] = useState(true);
+  // AGGRESSIVE CONSOLIDATION: Removed showRestlessnessScore - using centralized display
 
   // Use CameraContext for camera state
   const { stream: cameraStream } = useCamera();
@@ -192,6 +192,18 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     targetFPS: 2, // Default FPS for vision processing
     videoElement: videoRef, // Pass video ref for vision processing
   });
+  
+  // CLEAN: Debug vision enablement logic (moved after session declaration)
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('🔍 MeditationSession vision state:', {
+        visionEnabled,
+        hasCameraStream: !!cameraStream,
+        sessionIsActive: session.isActive,
+        enableVisionCondition: visionEnabled && cameraStream !== null
+      });
+    }
+  }, [visionEnabled, cameraStream, session.isActive]);
 
 
   // Adaptive encouragement system
@@ -336,12 +348,10 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                           isActive={session.isActive}
                           landmarks={session.visionMetrics?.faceLandmarks || []}
                           trackingStatus={(session.visionMetrics?.presence || 0) > 0 ? "TRACKING" : "IDLE"}
-                          showRestlessnessScore={showRestlessnessScore}
-                          restlessnessScore={session.visionMetrics?.restlessnessScore || 0}
                         />
                         {/* Vision Processing Manager */}
                         <VisionManager
-                          enabled={visionEnabled && session.isActive}
+                          enabled={visionEnabled && cameraStream !== null}
                           videoRef={videoRef}
                           cameraStream={cameraStream}
                           sessionId={sessionId}

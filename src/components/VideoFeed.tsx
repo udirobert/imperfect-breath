@@ -8,8 +8,7 @@ interface VideoFeedProps {
   landmarks?: Keypoint[];
   trackingStatus?: TrackingStatus;
   className?: string;
-  showRestlessnessScore?: boolean;
-  restlessnessScore?: number;
+  // AGGRESSIVE CONSOLIDATION: Removed duplicate restlessness props
 }
 
 const VideoFeed = ({
@@ -18,8 +17,6 @@ const VideoFeed = ({
   landmarks = [],
   trackingStatus = "IDLE",
   className = "",
-  showRestlessnessScore = false,
-  restlessnessScore = 0,
 }: VideoFeedProps) => {
   // PERFORMANT: Log only when stream connection changes
   const lastStreamState = React.useRef<boolean>(false);
@@ -184,22 +181,8 @@ const VideoFeed = ({
       {/* Status indicator */}
       <div style={getStatusStyle()}>{trackingStatus}</div>
 
-      {/* MODULAR: Restlessness score overlay */}
-      {showRestlessnessScore && isActive && hasVideoStream && (
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: 'rgba(0, 0, 0, 0.7)',
-          color: 'white',
-          padding: '8px 12px',
-          borderRadius: '6px',
-          fontSize: '14px',
-          fontWeight: '500',
-        }}>
-          Restlessness: {restlessnessScore.toFixed(1)}
-        </div>
-      )}
+      {/* AGGRESSIVE CONSOLIDATION: Removed duplicate restlessness score */}
+      {/* DRY: Stillness score is already prominently displayed in SessionProgressDisplay */}
     </div>
   );
 };

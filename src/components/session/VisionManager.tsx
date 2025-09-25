@@ -52,16 +52,34 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
     prevSessionIdRef.current = sessionId;
   }, [sessionId]);
 
-  // Use vision store for state management
+  // CLEAN: Use vision store for state management with enhanced debugging
   const visionStore = useVisionStore();
   const isVisionActive = visionSelectors.isActive();
-  const visionMetrics = visionSelectors.hasMetrics() ? visionStore.metrics : null;
+  const visionMetrics = visionSelectors.hasMetrics() ? visionStore.smoothedMetrics : null; // PERFORMANT: Use smoothed metrics
+  const visionError = useVisionStore((state) => state.error);
+  const backendAvailable = useVisionStore((state) => state.backendAvailable);
 
-  // Memoize landmarks to prevent infinite re-renders
+  // PERFORMANT: Memoize landmarks to prevent infinite re-renders
   const landmarks = useMemo(
     () => visionMetrics?.faceLandmarks || [],
     [visionMetrics?.faceLandmarks]
   );
+
+  // DRY: Debug logging for vision state changes
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('🔍 VisionManager state:', {
+        enabled,
+        isVisionActive,
+        hasMetrics: !!visionMetrics,
+        landmarkCount: landmarks.length,
+        backendAvailable,
+        error: visionError,
+        restlessness: visionMetrics?.restlessnessScore,
+        stillness: visionMetrics?.stillness
+      });
+    }
+  }, [enabled, isVisionActive, visionMetrics, landmarks.length, backendAvailable, visionError]);
 
   // Initialize vision when enabled
   useEffect(() => {

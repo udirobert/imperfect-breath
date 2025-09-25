@@ -66,17 +66,17 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
               {duration}
             </p>
 
-            {/* ENHANCEMENT: Prominent stillness score display */}
-            {showQualityMetrics && stillnessScore && (
-              <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
-                <div className="flex items-center justify-center gap-2 mb-1">
+            {/* LUXURY: Ultra-smooth stillness score display with stability */}
+            {showQualityMetrics && stillnessScore && stillnessScore > 5 && ( // Only show when meaningful
+              <div className="mt-3 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-200 transition-all duration-1000 ease-out">
+                <div className="flex items-center justify-center gap-2 mb-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-sm font-medium text-blue-700">Live Stillness Score</span>
                 </div>
-                <div className={`text-4xl font-bold ${getQualityColor(stillnessScore)}`}>
+                <div className={`text-4xl font-bold transition-all duration-1500 ease-out ${getQualityColor(stillnessScore)}`}>
                   {Math.round(stillnessScore)}%
                 </div>
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-blue-600 mt-2 transition-all duration-800 ease-out">
                   {getQualityLabel(stillnessScore)} stillness • {getQualityLabel(stillnessScore)} focus
                 </p>
               </div>
@@ -108,35 +108,22 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
             </div>
           </div>
 
-          {/* ENHANCEMENT: Quality metrics display (MODULAR) */}
-          {showQualityMetrics && (stillnessScore || consistencyScore) && (
-            <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
-              {stillnessScore && (
-                <div className="text-center">
-                  <div
-                    className={`text-lg font-bold ${getQualityColor(
-                      stillnessScore
-                    )}`}
-                  >
-                    {Math.round(stillnessScore)}%
-                  </div>
-                  <div className="text-xs text-muted-foreground">Stillness</div>
+          {/* AGGRESSIVE CONSOLIDATION: Removed duplicate stillness display */}
+          {/* DRY: Only show consistency score if available and different from stillness */}
+          {showQualityMetrics && consistencyScore && !stillnessScore && (
+            <div className="text-center max-w-md mx-auto">
+              <div className="text-center">
+                <div
+                  className={`text-lg font-bold ${getQualityColor(
+                    consistencyScore
+                  )}`}
+                >
+                  {Math.round(consistencyScore)}%
                 </div>
-              )}
-              {consistencyScore && (
-                <div className="text-center">
-                  <div
-                    className={`text-lg font-bold ${getQualityColor(
-                      consistencyScore
-                    )}`}
-                  >
-                    {Math.round(consistencyScore)}%
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Consistency
-                  </div>
+                <div className="text-xs text-muted-foreground">
+                  Consistency
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>

@@ -118,8 +118,8 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Show immediate feedback even when processing
-      setIsProcessing(confidence === 0 && isActive);
+      // LUXURY: Show processing state with stability threshold
+      setIsProcessing(confidence < 0.3 && isActive);
 
       // Basic camera frame indicator
       if (isActive) {
@@ -145,8 +145,8 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
         );
         ctx.setLineDash([]);
 
-        // Text indicator
-        if (confidence === 0) {
+        // LUXURY: Text indicator with stability threshold
+        if (confidence < 0.3) { // Consistent with other thresholds
           ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
           ctx.font = "14px sans-serif";
           ctx.textAlign = "center";
@@ -154,60 +154,70 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
         }
       }
 
-      // Simple landmark rendering with error handling
-      if (landmarks && landmarks.length > 0 && confidence > 0) {
+      // LUXURY: Only render landmarks when stably detected (prevents flashing)
+      if (landmarks && landmarks.length > 0 && confidence > 0.5) { // Higher threshold for stability
         try {
-          const keypoints: MediaPipeLandmark[] =
-            Array.isArray(landmarks) && (landmarks as any)[0]?.keypoints
-              ? (landmarks as any)[0].keypoints
-              : landmarks;
+          // CLEAN: Normalize landmark format - handle both direct arrays and nested structures
+          const keypoints: MediaPipeLandmark[] = Array.isArray(landmarks) ? landmarks : [];
 
-          if (keypoints && keypoints.length > 0) {
-            // Calculate face center
-            const avgX = keypoints.reduce((sum, point) => sum + point.x, 0) / keypoints.length;
-            const avgY = keypoints.reduce((sum, point) => sum + point.y, 0) / keypoints.length;
-            const actualCenterX = avgX * canvas.width;
-            const actualCenterY = avgY * canvas.height;
+          if (keypoints.length > 0) {
+            // PERFORMANT: Calculate face center for positioning
+            const validPoints = keypoints.filter(point => 
+              typeof point.x === 'number' && typeof point.y === 'number' &&
+              point.x >= 0 && point.x <= 1 && point.y >= 0 && point.y <= 1
+            );
 
-            setFaceCenter({ x: actualCenterX, y: actualCenterY });
+            if (validPoints.length > 0) {
+              const avgX = validPoints.reduce((sum, point) => sum + point.x, 0) / validPoints.length;
+              const avgY = validPoints.reduce((sum, point) => sum + point.y, 0) / validPoints.length;
+              const actualCenterX = avgX * canvas.width;
+              const actualCenterY = avgY * canvas.height;
 
-            // Draw landmarks with error handling
-            ctx.fillStyle = "rgba(46, 204, 113, 0.8)";
-            const landmarksToShow = Math.min(keypoints.length, 10); // Reduced for performance
+              setFaceCenter({ x: actualCenterX, y: actualCenterY });
 
-            keypoints.slice(0, landmarksToShow).forEach((point, index) => {
-              try {
+              // MODULAR: Draw landmarks with consistent styling
+              ctx.fillStyle = "rgba(46, 204, 113, 0.8)";
+              const landmarksToShow = Math.min(validPoints.length, 15); // Show more landmarks for better mesh
+
+              validPoints.slice(0, landmarksToShow).forEach((point, index) => {
+                try {
+                  ctx.beginPath();
+                  const radius = index < 5 ? 3 : 2; // Emphasize key landmarks
+                  ctx.arc(
+                    point.x * canvas.width,
+                    point.y * canvas.height,
+                    radius,
+                    0,
+                    2 * Math.PI
+                  );
+                  ctx.fill();
+                } catch (landmarkError) {
+                  // ORGANIZED: Skip problematic landmarks silently
+                  console.warn('Skipping invalid landmark:', index, landmarkError);
+                }
+              });
+
+              // DRY: Clear any previous errors when landmarks are successfully drawn
+              setError(null);
+
+              // Simple breathing phase indicator
+              if (breathPhase && faceCenter) {
+                const baseRadius = 40;
+                let breathingScale = 1;
+
+                if (breathPhase === "inhale" || breathPhase === "exhale") {
+                  const time = Date.now() / 1000;
+                  breathingScale = 1 + Math.sin(time * 2) * 0.1;
+                }
+
+                ctx.strokeStyle = `rgba(46, 204, 113, ${confidence * 0.6})`;
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                const radius = index < 3 ? 3 : 2;
-                ctx.arc(
-                  point.x * canvas.width,
-                  point.y * canvas.height,
-                  radius,
-                  0,
-                  2 * Math.PI
-                );
-                ctx.fill();
-              } catch (landmarkError) {
-                // Skip problematic landmarks
-                console.warn('Error drawing landmark:', landmarkError);
+                ctx.arc(actualCenterX, actualCenterY, baseRadius * breathingScale, 0, 2 * Math.PI);
+                ctx.stroke();
               }
-            });
-
-            // Simple breathing phase indicator
-            if (breathPhase) {
-              const baseRadius = 40;
-              let breathingScale = 1;
-
-              if (breathPhase === "inhale" || breathPhase === "exhale") {
-                const time = Date.now() / 1000;
-                breathingScale = 1 + Math.sin(time * 2) * 0.1;
-              }
-
-              ctx.strokeStyle = `rgba(46, 204, 113, ${confidence * 0.6})`;
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.arc(actualCenterX, actualCenterY, baseRadius * breathingScale, 0, 2 * Math.PI);
-              ctx.stroke();
+            } else {
+              console.warn('No valid landmarks found in array of', keypoints.length);
             }
           }
         } catch (landmarksError) {
@@ -286,8 +296,8 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
           </div>
         )}
 
-        {/* Only show guidance when truly no face is detected */}
-        {confidence === 0 && (
+        {/* LUXURY: Only show guidance when consistently no face detected */}
+        {confidence < 0.3 && ( // Lower threshold to prevent flashing guidance
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-2xl text-sm font-light border border-white/20">
               <div className="flex items-center gap-2">
