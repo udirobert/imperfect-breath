@@ -89,6 +89,15 @@ export interface VisionState {
     smoothedMetrics: MeditationMetrics | null;
     metricHistory: MeditationMetrics[];
     detectionHistory: boolean[]; // For face detection stability
+    
+    // LUXURY: Persistence state for stable UI display
+    persistentDisplay: {
+        lastValidMetrics: MeditationMetrics | null;
+        displayStartTime: number | null;
+        lastValidTime: number | null;
+        shouldPersist: boolean;
+        confidenceStreak: number; // Track consecutive confident detections
+    };
 }
 
 export interface VisionActions {
@@ -127,12 +136,12 @@ export interface VisionActions {
 }
 
 // ============================================================================
-// CONSTANTS - Vision configuration
+// CONSTANTS - Vision configuration with persistence settings
 // ============================================================================
 
 const DEFAULT_CONFIG: VisionConfig = {
     sessionId: '',
-    backendUrl: 'http://localhost:8001',
+    backendUrl: 'https://api.imperfectform.fun', // ENHANCEMENT: Use production domain
     targetFPS: 1, // LUXURY: Slower processing for smoother UX
     enableAdaptiveFPS: true,
     features: {
@@ -142,6 +151,16 @@ const DEFAULT_CONFIG: VisionConfig = {
     },
     silentMode: false,
     gracefulDegradation: true,
+};
+
+// ENHANCEMENT: Persistence configuration for luxury UX
+const PERSISTENCE_CONFIG = {
+    minDisplayTime: 2000,        // Minimum 2s display for readability
+    fadeOutDelay: 1000,          // 1s delay before fade starts
+    stabilityThreshold: 0.7,     // Confidence threshold for showing metrics
+    confidenceHysteresis: 0.2,   // Prevent rapid on/off switching
+    smoothingAlpha: 0.05,        // Ultra-smooth value transitions
+    detectionStabilityFrames: 3, // Frames needed for stable detection
 };
 
 const PERFORMANCE_CONSTRAINTS = {
@@ -157,6 +176,33 @@ const PERFORMANCE_CONSTRAINTS = {
 // PERFORMANT: Advanced smoothing for luxury meditation UX
 const smoothMetric = (current: number, previous: number, alpha: number = 0.15): number => {
     return previous + alpha * (current - previous);
+};
+
+// LUXURY: Enhanced persistence logic for stable UI display
+const updatePersistentDisplay = (
+    currentMetrics: MeditationMetrics,
+    persistentState: VisionState['persistentDisplay'],
+    isStable: boolean
+): VisionState['persistentDisplay'] => {
+    const now = Date.now();
+    
+    if (isStable && currentMetrics.faceDetected) {
+        // ENHANCEMENT: Update persistent metrics when stable
+        return {
+            lastValidMetrics: currentMetrics,
+            displayStartTime: persistentState.displayStartTime || now,
+            lastValidTime: now,
+            shouldPersist: true,
+            confidenceStreak: Math.min(persistentState.confidenceStreak + 1, 10),
+        };
+    } else {
+        // CLEAN: Maintain persistence but update timing
+        return {
+            ...persistentState,
+            confidenceStreak: Math.max(persistentState.confidenceStreak - 1, 0),
+            shouldPersist: persistentState.confidenceStreak > 2, // Hysteresis
+        };
+    }
 };
 
 // CLEAN: Face detection stability with hysteresis to prevent flashing
@@ -259,6 +305,14 @@ const initialState: VisionState = {
     smoothedMetrics: null,
     metricHistory: [],
     detectionHistory: [],
+    // LUXURY: Initialize persistence state
+    persistentDisplay: {
+        lastValidMetrics: null,
+        displayStartTime: null,
+        lastValidTime: null,
+        shouldPersist: false,
+        confidenceStreak: 0,
+    },
 };
 
 // ============================================================================
@@ -388,11 +442,21 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                                     get().smoothedMetrics,
                                     get().detectionHistory
                                 );
+                                
+                                // LUXURY: Update persistent display state
+                                const isStable = smoothingResult.metrics.confidence >= PERSISTENCE_CONFIG.stabilityThreshold &&
+                                               smoothingResult.metrics.faceDetected;
+                                const updatedPersistentDisplay = updatePersistentDisplay(
+                                    smoothingResult.metrics,
+                                    get().persistentDisplay,
+                                    isStable
+                                );
 
                                 set((state) => ({
                                     metrics,
                                     smoothedMetrics: smoothingResult.metrics, // LUXURY: Stable, smooth metrics
                                     detectionHistory: smoothingResult.newHistory, // Track detection stability
+                                    persistentDisplay: updatedPersistentDisplay, // ENHANCEMENT: Persistence state
                                     lastMetrics: state.metrics,
                                     metricHistory: [...state.metricHistory.slice(-9), metrics], // Keep last 10 for trends
                                     totalProcessingTime: state.totalProcessingTime + processingTime,
@@ -407,17 +471,23 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                                     restlessness: metrics.restlessnessScore,
                                     landmarkCount: metrics.faceLandmarks?.length || 0
                                 });
-                            } else {
-                                // Backend unavailable - clear error state
-                                set((state) => ({
-                                    metrics: null,
-                                    lastMetrics: state.metrics,
-                                    error: 'Vision service unavailable - biometric tracking disabled',
-                                    backendAvailable: false,
-                                }));
+                        } else {
+                            // Backend unavailable - maintain persistence but update state
+                            set((state) => ({
+                                metrics: null,
+                                lastMetrics: state.metrics,
+                                error: 'Vision service unavailable - biometric tracking disabled',
+                                backendAvailable: false,
+                                // LUXURY: Gradually fade persistent display when backend unavailable
+                                persistentDisplay: {
+                                    ...state.persistentDisplay,
+                                    shouldPersist: state.persistentDisplay.confidenceStreak > 5,
+                                    confidenceStreak: Math.max(state.persistentDisplay.confidenceStreak - 2, 0),
+                                },
+                            }));
 
-                                console.warn('⚠️ VisionStore: Backend unavailable - no biometric data');
-                            }
+                            console.warn('⚠️ VisionStore: Backend unavailable - no biometric data');
+                        }
 
                             // Adaptive performance management
                             get().updatePerformanceMode(processingTime);
@@ -425,11 +495,17 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         } catch (error) {
                             console.error('Vision processing error:', error);
 
-                            // Clear error state - no fake data
+                            // Clear error state - no fake data, but maintain some persistence
                             set((state) => ({
                                 metrics: null,
                                 error: `Vision processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
                                 backendAvailable: false,
+                                // CLEAN: Gradually reduce persistence on errors
+                                persistentDisplay: {
+                                    ...state.persistentDisplay,
+                                    shouldPersist: state.persistentDisplay.confidenceStreak > 3,
+                                    confidenceStreak: Math.max(state.persistentDisplay.confidenceStreak - 1, 0),
+                                },
                             }));
                         }
 
@@ -452,6 +528,14 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         status: 'idle',
                         isActive: false,
                         metrics: null,
+                        // CLEAN: Reset persistence state on stop
+                        persistentDisplay: {
+                            lastValidMetrics: null,
+                            displayStartTime: null,
+                            lastValidTime: null,
+                            shouldPersist: false,
+                            confidenceStreak: 0,
+                        },
                     });
 
                     console.log('🛑 VisionStore: Stopped processing');
