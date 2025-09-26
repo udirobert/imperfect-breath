@@ -270,10 +270,14 @@ Focused breathing practice with Imperfect Breath 🌬️`;
       }
 
       // Fallback to native sharing for enhanced sessions
+      const actualStillness = sessionData.restlessnessScore !== undefined 
+        ? Math.max(0, 100 - sessionData.restlessnessScore)
+        : null;
+      
       const summary = `I just completed a mindful breathing session!
 - Duration: ${formatTime(sessionData.sessionDuration || 0)}
-- Cycles: ${sessionData.cycleCount || 0}
-- Stillness: ${Math.max(0, 100 - restlessnessValue)}%
+- Cycles: ${sessionData.cycleCount || 0}${actualStillness !== null ? `
+- Stillness: ${actualStillness}%` : ''}
 Check out Imperfect Breath!`;
 
       if (navigator.share) {
@@ -328,7 +332,9 @@ Check out Imperfect Breath!`;
       stillnessScore:
         sessionData.sessionType === "classic" || !sessionData.cameraUsed
           ? null // Don't calculate stillness for classic sessions
-          : Math.max(0, 100 - (sessionData.restlessnessScore || 0)),
+          : sessionData.restlessnessScore !== undefined
+          ? Math.max(0, 100 - sessionData.restlessnessScore) // Real data: stillness = 100 - restlessness
+          : null, // No real data available
       completionRate: sessionData.targetCycles
         ? Math.round(
             ((sessionData.cycleCount || 0) / sessionData.targetCycles) * 100
@@ -1083,9 +1089,9 @@ Check out Imperfect Breath!`;
                       100,
                       Math.max(50, (enhancedSessionData.cycleCount || 1) * 10)
                     ) // Score based on cycles for classic
-                  : sessionData.restlessnessScore
-                  ? Math.max(0, 100 - sessionData.restlessnessScore)
-                  : 75,
+                  : enhancedSessionData.stillnessScore !== null
+                  ? enhancedSessionData.stillnessScore // Use real calculated stillness
+                  : 75, // Fallback only if no real data
               breathHoldTime:
                 enhancedSessionData.sessionType === "classic"
                   ? 0

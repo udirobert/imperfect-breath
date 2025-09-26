@@ -34,10 +34,9 @@ export type DisplayState = 'hidden' | 'appearing' | 'visible' | 'fading';
 
 export interface StableMetricsResult {
   // Core metrics (always available, smoothed)
-  stillnessScore: number;
+  stillnessScore: number;  // 0-100% (100 = perfectly still, 0 = very restless)
   presenceScore: number;
   postureScore: number;
-  restlessnessScore: number;
   
   // Display state
   displayState: DisplayState;
@@ -158,10 +157,10 @@ export const useStableMetrics = (): StableMetricsResult => {
     
     return {
       // CLEAN: Always provide stable values (0 if no data)
+      // Stillness = 100 - restlessness (inverted for intuitive understanding)
       stillnessScore: Math.round(metricsToUse?.stillness || 0),
       presenceScore: Math.round(metricsToUse?.presence || 0),
       postureScore: Math.round(metricsToUse?.posture || 0),
-      restlessnessScore: Math.round(metricsToUse?.restlessnessScore || 0),
       
       // Display state
       displayState,

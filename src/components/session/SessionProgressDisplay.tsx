@@ -42,60 +42,50 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
       const smoothPresence = useSmoothValue(stableMetrics.presenceScore, 1200);
       const smoothCycle = useSmoothValue(cycleCount, 800);
       
-      // MEDITATION-FOCUSED: Clean inline layout matching your preferred structure
+      // LUXURY: Compact, elegant layout with premium feel
       return (
-        <div className={`space-y-2 text-center ${className}`}>
-          {/* Pattern Name */}
-          <p className="text-lg text-muted-foreground">{patternName}</p>
+        <div className={`text-center ${className}`}>
+          {/* Session Header - Compact */}
+          <div className="space-y-1 mb-4">
+            <p className="text-base font-medium text-muted-foreground">{patternName}</p>
+            <p className="text-2xl font-mono font-bold text-primary tracking-wide">
+              {duration}
+            </p>
+          </div>
           
-          {/* Duration - Prominent */}
-          <p className="text-3xl font-mono font-bold text-primary transition-all duration-500">
-            {duration}
-          </p>
-          
-          {/* HERO: Live Stillness Score */}
-          {showQualityMetrics && (
-            <div className="mt-4">
-              <p className="text-sm font-medium text-muted-foreground mb-2">
-                Live Stillness Score
-              </p>
-              
-              {/* HERO: Large Stillness Percentage */}
-              <div className={`text-6xl font-bold transition-all duration-1500 ease-out ${
-                getQualityColor(smoothStillness)
-              }`}>
-                {smoothStillness}%
-              </div>
-              
-              {/* Quality Labels */}
-              <p className="text-sm text-muted-foreground mt-2">
-                {getQualityLabel(smoothStillness)} stillness • {getQualityLabel(smoothStillness)} focus
-              </p>
-              
-              {/* Secondary Metrics - Only when stable */}
-              {stableMetrics.isStable && stableMetrics.hasValidData && (
-                <div className="mt-3 space-y-1">
-                  <p className="text-sm text-muted-foreground">
-                    Presence: {smoothPresence}%
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Confidence: {Math.round(stableMetrics.confidence * 100)}%
-                  </p>
+          {/* HERO: Stillness Score - Luxurious */}
+          {showQualityMetrics && stableMetrics.hasValidData && (
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-6 mb-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="space-y-3">
+                {/* Stillness Score - Hero */}
+                <div className={`text-5xl font-bold tracking-tight transition-all duration-1500 ease-out ${
+                  getQualityColor(smoothStillness)
+                }`}>
+                  {smoothStillness}%
                 </div>
-              )}
+                
+                {/* Quality Label - Elegant */}
+                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
+                  {getQualityLabel(smoothStillness)} Stillness
+                </p>
+                
+                {/* Secondary Metrics - Minimal when stable */}
+                {stableMetrics.isStable && (
+                  <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <span>Presence {smoothPresence}%</span>
+                    <span>•</span>
+                    <span>Confidence {Math.round(stableMetrics.confidence * 100)}%</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
           
-          {/* Cycle Information */}
-          <div className="mt-4">
-            <p className="text-sm text-muted-foreground">
-              Cycle {smoothCycle}
-            </p>
-            
-            {/* Progress Percentage - Secondary */}
-            <p className="text-sm text-muted-foreground mt-1">
-              {Math.round(progressPercentage)}%
-            </p>
+          {/* Cycle & Progress - Minimal */}
+          <div className="flex justify-center gap-4 text-sm text-muted-foreground">
+            <span>Cycle {smoothCycle}</span>
+            <span>•</span>
+            <span>{Math.round(progressPercentage)}% complete</span>
           </div>
         </div>
       );
