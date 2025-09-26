@@ -5,10 +5,11 @@ Handles vision processing, face detection, landmark analysis, breathing pattern 
 and AI-powered session analysis.
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+from webhook_handler import process_webhook
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -775,19 +776,24 @@ async def ai_analysis(request: AIAnalysisRequest):
 
 # AGGRESSIVE CONSOLIDATION: Single health check endpoint
 @app.get("/health")
-@app.head("/health")
 async def health_check():
-    """CLEAN: Unified health check endpoint"""
+    """Health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": time.time(),
-        "port": CONFIG["port"],
+        "port": 8001,
         "services": {
             "vision": "active",
-            "ai_analysis": "active"
+            "ai_analysis": "active",
+            "webhook": "active"
         },
-        "active_sessions": len(vision_processor.sessions)
+        "active_sessions": len(active_sessions)
     }
+
+@app.post("/webhook/github")
+async def github_webhook(request: Request, background_tasks: BackgroundTasks):
+    """GitHub webhook endpoint for automatic deployments"""
+    return await process_webhook(request, background_tasks)
 
 if __name__ == "__main__":
     import uvicorn

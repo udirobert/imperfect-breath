@@ -1,8 +1,11 @@
-# Imperfect Breath 🌬️
+# Imperfect Breath
 
-**Ancient Wisdom Meets Modern Technology**
+> A decentralized wellness platform combining AI-powered breathing analysis with Web3 technology
 
-A production-ready multichain wellness platform that transforms breathing practice through AI-powered computer vision, blockchain integration, and social community features. Built mobile-first with progressive Web3 enhancement.
+[![Deploy Status](https://github.com/your-username/imperfect-breath/workflows/Deploy%20Imperfect%20Breath/badge.svg)](https://github.com/your-username/imperfect-breath/actions)
+[![API Status](https://img.shields.io/website?url=https%3A//api.imperfectform.fun/health&label=API)](https://api.imperfectform.fun/health)
+
+**Live Demo**: [Your Netlify URL] | **API**: [api.imperfectform.fun](https://api.imperfectform.fun)
 
 ## 🎯 What is Imperfect Breath?
 

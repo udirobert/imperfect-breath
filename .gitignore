@@ -12,11 +12,15 @@ dist
 dist-ssr
 *.local
 
-# Environment variables
+# Environment variables - CRITICAL SECURITY
 .env
 .env.*
 !.env.example
-# NEVER track .env.development - it may contain real secrets
+.env.local
+.env.production
+.env.development
+# NEVER track any .env files except .env.example
+# These may contain real API keys and secrets
 
 # Flow-specific security files
 *.pkey
@@ -48,6 +52,8 @@ out/
 deployment-info.txt
 DEPLOYMENT_SUCCESS.md
 validate-env.sh
+*.tar.gz
+*.zip
 
 # Flow emulator and blockchain
 .flowconfig
