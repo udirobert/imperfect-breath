@@ -1,19 +1,18 @@
 /**
  * Session Progress Display Component
  *
- * ENHANCED: Persistent overlay with luxury UX and stable metrics.
- * Eliminates flashing through always-visible structure with smooth transitions.
+ * MEDITATION-FOCUSED: Clean inline display with stillness score as hero.
+ * Positioned above video feed without blocking user's view of themselves.
  * 
  * Core Principles Applied:
- * - ENHANCEMENT FIRST: Enhanced existing component instead of creating new
- * - AGGRESSIVE CONSOLIDATION: Removed conditional rendering causing flashing
+ * - ENHANCEMENT FIRST: Enhanced existing component with stable metrics
  * - DRY: Uses single source of truth from useStableMetrics
- * - PERFORMANT: Memoized with custom comparison to prevent unnecessary re-renders
- * - LUXURY: Smooth transitions with persistent display
+ * - CLEAN: Simple, focused layout matching app theme
+ * - PERFORMANT: Smooth transitions without flashing
+ * - MEDITATION UX: Stillness score as hero, minimal distraction
  */
 
-import React, { useMemo } from "react";
-import { Progress } from "../ui/progress";
+import React from "react";
 import { useStableMetrics, useSmoothValue, getQualityLabel, getQualityColor } from "../../hooks/useStableMetrics";
 
 interface SessionProgressDisplayProps {
@@ -22,11 +21,7 @@ interface SessionProgressDisplayProps {
   cycleCount: number;
   progressPercentage: number;
   className?: string;
-  // ENHANCEMENT: Simplified props - metrics come from stable hook
   showQualityMetrics?: boolean;
-  // LUXURY: Display mode options
-  displayMode?: 'overlay' | 'inline' | 'centered';
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center';
 }
 
 export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
@@ -38,8 +33,6 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
       progressPercentage,
       className = "",
       showQualityMetrics = true,
-      displayMode = 'centered',
-      position = 'top-center',
     }) => {
       // DRY: Single source of truth for stable metrics
       const stableMetrics = useStableMetrics();
@@ -49,221 +42,60 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
       const smoothPresence = useSmoothValue(stableMetrics.presenceScore, 1200);
       const smoothCycle = useSmoothValue(cycleCount, 800);
       
-      // PERFORMANT: Memoized position classes
-      const positionClasses = useMemo(() => {
-        const positions = {
-          'top-right': 'top-4 right-4',
-          'top-left': 'top-4 left-4',
-          'bottom-right': 'bottom-4 right-4',
-          'bottom-left': 'bottom-4 left-4',
-          'top-center': 'top-4 left-1/2 transform -translate-x-1/2',
-        };
-        return positions[position];
-      }, [position]);
-      
-      // CLEAN: Memoized display state classes
-      const displayClasses = useMemo(() => {
-        const baseClasses = "transition-all duration-1000 ease-out";
-        
-        switch (stableMetrics.displayState) {
-          case 'appearing':
-            return `${baseClasses} opacity-70 scale-95 translate-y-2`;
-          case 'visible':
-            return `${baseClasses} opacity-100 scale-100 translate-y-0`;
-          case 'fading':
-            return `${baseClasses} opacity-40 scale-95 translate-y-1`;
-          case 'hidden':
-          default:
-            return `${baseClasses} opacity-0 scale-90 translate-y-4 pointer-events-none`;
-        }
-      }, [stableMetrics.displayState]);
-      
-      // LUXURY: Centered mode with persistent display (default for meditation)
-      if (displayMode === 'centered') {
-        return (
-          <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-40 ${displayClasses}`}>
-            <div className="bg-black/70 backdrop-blur-lg rounded-2xl px-6 py-4 text-white shadow-xl border border-white/20">
-              <div className="space-y-3 min-w-[240px] text-center">
-                {/* Session Header */}
-                <div>
-                  <div className="text-lg font-medium text-white/90">{patternName}</div>
-                  <div className="text-3xl font-mono font-bold text-white transition-all duration-500">
-                    {duration}
-                  </div>
-                </div>
-                
-                {/* LUXURY: Always-visible stillness score with smooth transitions */}
-                {showQualityMetrics && (
-                  <div className="border-t border-white/20 pt-3">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                        stableMetrics.isStable ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'
-                      }`}></div>
-                      <span className="text-sm font-medium text-white/70">Live Stillness Score</span>
-                    </div>
-                    
-                    <div className={`text-4xl font-bold transition-all duration-1500 ease-out ${
-                      getQualityColor(smoothStillness).replace('text-', 'text-')
-                    }`}>
-                      {smoothStillness}%
-                    </div>
-                    
-                    <div className="text-sm text-white/60 mt-2 transition-all duration-800 ease-out">
-                      {getQualityLabel(smoothStillness)} stillness • {getQualityLabel(smoothStillness)} focus
-                    </div>
-                    
-                    {/* ENHANCEMENT: Additional metrics when stable */}
-                    {stableMetrics.isStable && stableMetrics.hasValidData && (
-                      <div className="mt-3 pt-2 border-t border-white/10">
-                        <div className="flex justify-between text-xs text-white/50">
-                          <span>Presence: {smoothPresence}%</span>
-                          <span>Confidence: {Math.round(stableMetrics.confidence * 100)}%</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Cycle Information */}
-                <div className="border-t border-white/20 pt-3">
-                  <div className="text-sm text-white/70 transition-all duration-500">
-                    Cycle {smoothCycle}
-                  </div>
-                  
-                  {/* ENHANCEMENT: Progress indicator in overlay */}
-                  <div className="mt-2">
-                    <div className="w-full bg-white/20 rounded-full h-1.5">
-                      <div 
-                        className="bg-gradient-to-r from-blue-400 to-green-400 h-1.5 rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-white/50 mt-1 text-center">
-                      {Math.round(progressPercentage)}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      }
-      
-      // LUXURY: Corner overlay mode (alternative positioning)
-      if (displayMode === 'overlay') {
-        return (
-          <div className={`fixed ${positionClasses} z-50 ${displayClasses}`}>
-            <div className="bg-black/80 backdrop-blur-md rounded-xl p-4 text-white shadow-2xl border border-white/10">
-              <div className="space-y-3 min-w-[200px]">
-                {/* Session Header */}
-                <div className="text-center">
-                  <div className="text-lg font-medium text-white/90">{patternName}</div>
-                  <div className="text-3xl font-mono font-bold text-white transition-all duration-500">
-                    {duration}
-                  </div>
-                </div>
-                
-                {/* LUXURY: Always-visible stillness score with smooth transitions */}
-                {showQualityMetrics && (
-                  <div className="border-t border-white/20 pt-3">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                        stableMetrics.isStable ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'
-                      }`}></div>
-                      <span className="text-sm font-medium text-white/70">Live Stillness Score</span>
-                    </div>
-                    
-                    <div className={`text-4xl font-bold transition-all duration-1500 ease-out ${
-                      getQualityColor(smoothStillness).replace('text-', 'text-')
-                    }`}>
-                      {smoothStillness}%
-                    </div>
-                    
-                    <div className="text-sm text-white/60 mt-2 transition-all duration-800 ease-out">
-                      {getQualityLabel(smoothStillness)} stillness • {getQualityLabel(smoothStillness)} focus
-                    </div>
-                    
-                    {/* ENHANCEMENT: Additional metrics when stable */}
-                    {stableMetrics.isStable && stableMetrics.hasValidData && (
-                      <div className="mt-3 pt-2 border-t border-white/10">
-                        <div className="flex justify-between text-xs text-white/50">
-                          <span>Presence: {smoothPresence}%</span>
-                          <span>Confidence: {Math.round(stableMetrics.confidence * 100)}%</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Cycle Information */}
-                <div className="border-t border-white/20 pt-3">
-                  <div className="text-sm text-white/70 transition-all duration-500">
-                    Cycle {smoothCycle}
-                  </div>
-                  
-                  {/* ENHANCEMENT: Progress indicator in overlay */}
-                  <div className="mt-2">
-                    <div className="w-full bg-white/20 rounded-full h-1.5">
-                      <div 
-                        className="bg-gradient-to-r from-blue-400 to-green-400 h-1.5 rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-white/50 mt-1 text-right">
-                      {Math.round(progressPercentage)}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      }
-      
-      // CLEAN: Inline mode (enhanced existing layout)
+      // MEDITATION-FOCUSED: Clean inline layout matching your preferred structure
       return (
-        <div className={`space-y-4 ${className}`}>
-          {/* Session Header */}
-          <div className="text-center">
-            <p className="text-lg text-muted-foreground">{patternName}</p>
-            <p className="text-3xl font-mono font-bold text-primary transition-all duration-500">
-              {duration}
-            </p>
-
-            {/* ENHANCEMENT: Always-visible metrics with smooth transitions */}
-            {showQualityMetrics && (
-              <div className={`mt-3 p-4 rounded-xl border transition-all duration-1000 ease-out ${
-                stableMetrics.isStable 
-                  ? 'bg-gradient-to-r from-blue-50 to-green-50 border-blue-200' 
-                  : 'bg-gray-50 border-gray-200'
+        <div className={`space-y-2 text-center ${className}`}>
+          {/* Pattern Name */}
+          <p className="text-lg text-muted-foreground">{patternName}</p>
+          
+          {/* Duration - Prominent */}
+          <p className="text-3xl font-mono font-bold text-primary transition-all duration-500">
+            {duration}
+          </p>
+          
+          {/* HERO: Live Stillness Score */}
+          {showQualityMetrics && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Live Stillness Score
+              </p>
+              
+              {/* HERO: Large Stillness Percentage */}
+              <div className={`text-6xl font-bold transition-all duration-1500 ease-out ${
+                getQualityColor(smoothStillness)
               }`}>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                    stableMetrics.isStable ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'
-                  }`}></div>
-                  <span className="text-sm font-medium text-blue-700">Live Stillness Score</span>
-                </div>
-                
-                <div className={`text-4xl font-bold transition-all duration-1500 ease-out ${
-                  getQualityColor(smoothStillness)
-                }`}>
-                  {smoothStillness}%
-                </div>
-                
-                <p className="text-xs text-blue-600 mt-2 transition-all duration-800 ease-out">
-                  {getQualityLabel(smoothStillness)} stillness • {getQualityLabel(smoothStillness)} focus
-                </p>
+                {smoothStillness}%
               </div>
-            )}
-          </div>
-
-          {/* Progress Indicator */}
-          <div className="w-full max-w-md space-y-2 mx-auto">
-            <Progress value={progressPercentage} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Cycle {smoothCycle}</span>
-              <span>{Math.round(progressPercentage)}%</span>
+              
+              {/* Quality Labels */}
+              <p className="text-sm text-muted-foreground mt-2">
+                {getQualityLabel(smoothStillness)} stillness • {getQualityLabel(smoothStillness)} focus
+              </p>
+              
+              {/* Secondary Metrics - Only when stable */}
+              {stableMetrics.isStable && stableMetrics.hasValidData && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    Presence: {smoothPresence}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Confidence: {Math.round(stableMetrics.confidence * 100)}%
+                  </p>
+                </div>
+              )}
             </div>
+          )}
+          
+          {/* Cycle Information */}
+          <div className="mt-4">
+            <p className="text-sm text-muted-foreground">
+              Cycle {smoothCycle}
+            </p>
+            
+            {/* Progress Percentage - Secondary */}
+            <p className="text-sm text-muted-foreground mt-1">
+              {Math.round(progressPercentage)}%
+            </p>
           </div>
         </div>
       );
@@ -275,9 +107,7 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
         prevProps.duration === nextProps.duration &&
         Math.abs(prevProps.cycleCount - nextProps.cycleCount) < 1 &&
         Math.abs(prevProps.progressPercentage - nextProps.progressPercentage) < 2 &&
-        prevProps.showQualityMetrics === nextProps.showQualityMetrics &&
-        prevProps.displayMode === nextProps.displayMode &&
-        prevProps.position === nextProps.position
+        prevProps.showQualityMetrics === nextProps.showQualityMetrics
       );
     }
   );
@@ -285,7 +115,7 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
 SessionProgressDisplay.displayName = "SessionProgressDisplay";
 
 // ============================================================================
-// EXPORT - Enhanced component with stable metrics
+// EXPORT - Clean meditation-focused component with stable metrics
 // ============================================================================
 
 export default SessionProgressDisplay;
