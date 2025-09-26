@@ -53,10 +53,10 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
             </p>
           </div>
           
-          {/* HERO: Stillness Score - Luxurious */}
+          {/* HERO: Stillness Score - Ultra Compact */}
           {showQualityMetrics && stableMetrics.hasValidData && (
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-6 mb-4 border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="space-y-3">
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-5 mb-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="space-y-2">
                 {/* Stillness Score - Hero */}
                 <div className={`text-5xl font-bold tracking-tight transition-all duration-1500 ease-out ${
                   getQualityColor(smoothStillness)
@@ -64,14 +64,9 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
                   {smoothStillness}%
                 </div>
                 
-                {/* Quality Label - Elegant */}
-                <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
-                  {getQualityLabel(smoothStillness)} Stillness
-                </p>
-                
                 {/* Secondary Metrics - Minimal when stable */}
                 {stableMetrics.isStable && (
-                  <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-1">
                     <span>Presence {smoothPresence}%</span>
                     <span>•</span>
                     <span>Confidence {Math.round(stableMetrics.confidence * 100)}%</span>
