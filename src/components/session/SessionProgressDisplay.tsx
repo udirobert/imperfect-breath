@@ -42,33 +42,37 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
       const smoothPresence = useSmoothValue(stableMetrics.presenceScore, 1200);
       const smoothCycle = useSmoothValue(cycleCount, 800);
       
-      // LUXURY: Compact, elegant layout with premium feel
+      // LUXURY: Balanced, minimal layout with relaxing proportions
       return (
         <div className={`text-center ${className}`}>
-          {/* Session Header - Compact */}
-          <div className="space-y-1 mb-4">
-            <p className="text-base font-medium text-muted-foreground">{patternName}</p>
-            <p className="text-2xl font-mono font-bold text-primary tracking-wide">
+          {/* Session Header - Elegant */}
+          <div className="space-y-2 mb-6">
+            <p className="text-lg font-medium text-muted-foreground">{patternName}</p>
+            <p className="text-3xl font-mono font-bold text-primary tracking-wide">
               {duration}
             </p>
           </div>
           
-          {/* HERO: Stillness Score - Ultra Compact */}
+          {/* Stillness Card - Balanced & Relaxing */}
           {showQualityMetrics && stableMetrics.hasValidData && (
-            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-5 mb-4 border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="space-y-2">
-                {/* Stillness Score - Hero */}
-                <div className={`text-5xl font-bold tracking-tight transition-all duration-1500 ease-out ${
+            <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-6 mb-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="space-y-4">
+                {/* Stillness Label - Minimal */}
+                <p className="text-sm font-medium text-muted-foreground tracking-wide">
+                  Stillness
+                </p>
+                
+                {/* Stillness Score - Balanced size */}
+                <div className={`text-4xl font-bold tracking-tight transition-all duration-1500 ease-out ${
                   getQualityColor(smoothStillness)
                 }`}>
                   {smoothStillness}%
                 </div>
                 
-                {/* Secondary Metrics - Minimal when stable */}
+                {/* Secondary Metrics - Clean when stable */}
                 {stableMetrics.isStable && (
-                  <div className="flex justify-center gap-4 text-xs text-muted-foreground pt-1">
+                  <div className="flex justify-center gap-6 text-sm text-muted-foreground pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
                     <span>Presence {smoothPresence}%</span>
-                    <span>•</span>
                     <span>Confidence {Math.round(stableMetrics.confidence * 100)}%</span>
                   </div>
                 )}
@@ -76,10 +80,9 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
             </div>
           )}
           
-          {/* Cycle & Progress - Minimal */}
-          <div className="flex justify-center gap-4 text-sm text-muted-foreground">
+          {/* Cycle & Progress - Relaxed spacing */}
+          <div className="flex justify-center gap-6 text-sm text-muted-foreground">
             <span>Cycle {smoothCycle}</span>
-            <span>•</span>
             <span>{Math.round(progressPercentage)}% complete</span>
           </div>
         </div>
