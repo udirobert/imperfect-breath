@@ -96,9 +96,10 @@ fi
 echo ""
 echo "🔍 Checking for other secret patterns..."
 
-# Private keys
-if git grep -E "(BEGIN|END) (RSA |EC |OPENSSH )?PRIVATE KEY" -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.py' '*.md' >/dev/null 2>&1; then
+# Private keys (exclude documentation examples)
+if git grep -E "^[^#]*-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----" -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.py' >/dev/null 2>&1; then
     print_fail "Private keys found in tracked files"
+    git grep -n -E "^[^#]*-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----" -- '*.js' '*.ts' '*.jsx' '*.tsx' '*.py'
 else
     print_pass "No private keys in tracked files"
 fi
