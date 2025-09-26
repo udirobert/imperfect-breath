@@ -17,27 +17,11 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { persist } from 'zustand/middleware';
+import type { MeditationMetrics, VisionStatus, PerformanceMode, MetricTrend } from '../types/metrics';
 
 // ============================================================================
-// TYPES - Comprehensive vision state structure
+// VISION-SPECIFIC TYPES - Vision store specific interfaces
 // ============================================================================
-
-export interface MeditationMetrics {
-    // Primary meditation metrics (user-facing)
-    stillness: number;     // 0-100, movement calmness
-    presence: number;      // 0-100, face detection confidence
-    posture: number;       // 0-100, sitting posture quality
-    restlessnessScore?: number; // 0-100, restlessness level
-
-    // Visual feedback data
-    faceLandmarks?: Array<{ x: number; y: number; z?: number }>;
-    faceDetected: boolean;
-
-    // Technical metrics (hidden from users)
-    confidence: number;
-    processingTimeMs: number;
-    source: 'backend' | 'frontend' | 'fallback';
-}
 
 export interface VisionConfig {
     sessionId: string;
@@ -59,7 +43,7 @@ export interface VisionConfig {
     gracefulDegradation?: boolean;
 }
 
-export type VisionStatus = 'idle' | 'initializing' | 'ready' | 'active' | 'error' | 'paused';
+// VisionStatus now imported from types/metrics.ts
 
 export interface VisionState {
     // Core state
@@ -73,7 +57,7 @@ export interface VisionState {
 
     // Performance tracking
     currentFPS: number;
-    performanceMode: 'optimal' | 'balanced' | 'minimal';
+    performanceMode: PerformanceMode;
 
     // Connection status
     backendAvailable: boolean;
@@ -131,7 +115,7 @@ export interface VisionActions {
     // Utilities
     getSessionDuration: () => number;
     getAverageProcessingTime: () => number;
-    getRestlessnessTrend: () => 'improving' | 'stable' | 'worsening';
+    getRestlessnessTrend: () => MetricTrend;
     exportSessionData: () => any;
 }
 

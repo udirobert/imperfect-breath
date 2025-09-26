@@ -6,6 +6,7 @@ import {
   isExpandedPhase,
   shouldShowRhythmIndicator,
 } from "../lib/breathing-phase-config";
+import { getQualityColor } from "../utils/quality";
 
 interface BreathingAnimationProps {
   phase:

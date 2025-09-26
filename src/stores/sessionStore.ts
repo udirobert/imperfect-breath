@@ -10,14 +10,11 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { BreathingPattern } from '../lib/breathingPatterns';
+import type { SessionPhase, BreathPhase, SessionMode, SessionMetrics, PerformanceMode, VisionMetrics } from '../types/metrics';
 
 // ============================================================================
-// TYPES - Clean, meditation-focused state structure
+// SESSION-SPECIFIC TYPES - Session store specific interfaces
 // ============================================================================
-
-export type SessionPhase = 'setup' | 'preparation' | 'ready' | 'active' | 'paused' | 'complete';
-export type BreathPhase = 'inhale' | 'hold' | 'exhale' | 'pause';
-export type SessionMode = 'basic' | 'enhanced';
 
 export interface SessionConfig {
   mode: SessionMode;
@@ -27,22 +24,7 @@ export interface SessionConfig {
   enableAI: boolean;
 }
 
-export interface SessionMetrics {
-  duration: number; // seconds
-  cycleCount: number;
-  currentPhase: BreathPhase;
-  phaseProgress: number; // 0-100
-  stillnessScore?: number; // 0-100
-  breathQuality?: number; // 0-100
-  startTime?: number;
-
-  // Pattern-specific performance tracking
-  patternId?: string;
-  completionRate?: number; // 0-100
-  userEngagement?: number; // 0-100
-  effectivenessScore?: number; // 0-100
-  restlessnessScore?: number; // 0-100
-}
+// SessionMetrics now imported from types/metrics.ts
 
 export interface SessionState {
   // Core session state
@@ -57,20 +39,14 @@ export interface SessionState {
 
   // Vision processing state
   visionActive: boolean;
-  visionMetrics: {
-    stillness: number;
-    presence: number;
-    posture: number;
-    restlessnessScore?: number;
-    faceLandmarks?: Array<{ x: number; y: number; z?: number }>;
-  } | null;
+  visionMetrics: VisionMetrics | null;
 
   // Error and warning state
   error: string | null;
   warnings: string[];
 
   // Performance state
-  performanceMode: 'optimal' | 'balanced' | 'minimal';
+  performanceMode: PerformanceMode;
 }
 
 // ============================================================================
@@ -102,7 +78,7 @@ export interface SessionActions {
 
   // Vision processing
   setVisionActive: (active: boolean) => void;
-  updateVisionMetrics: (metrics: SessionState['visionMetrics']) => void;
+  updateVisionMetrics: (metrics: VisionMetrics | null) => void;
 
   // Error handling
   setError: (error: string | null) => void;
@@ -110,7 +86,7 @@ export interface SessionActions {
   clearWarnings: () => void;
 
   // Performance
-  setPerformanceMode: (mode: SessionState['performanceMode']) => void;
+  setPerformanceMode: (mode: PerformanceMode) => void;
 
   // Utilities
   getSessionDuration: () => string;
@@ -124,6 +100,8 @@ export interface SessionActions {
 const initialMetrics: SessionMetrics = {
   duration: 0,
   cycleCount: 0,
+  cameraUsed: false,
+  sessionType: 'basic',
   currentPhase: 'inhale',
   phaseProgress: 0,
 };

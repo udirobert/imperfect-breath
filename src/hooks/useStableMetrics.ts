@@ -12,41 +12,20 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useVisionStore, MeditationMetrics } from '../stores/visionStore';
+import { useVisionStore } from '../stores/visionStore';
+import type { MeditationMetrics, StableMetricsResult, DisplayState, MetricsConfig } from '../types/metrics';
 
 // ============================================================================
 // CONSTANTS - Persistence configuration for luxury UX
 // ============================================================================
 
-const PERSISTENCE_CONFIG = {
+const PERSISTENCE_CONFIG: MetricsConfig = {
   minDisplayTime: 2000,        // Minimum 2s display for readability
   fadeOutDelay: 1000,          // 1s delay before fade starts
   stabilityThreshold: 0.7,     // Confidence threshold for showing metrics
   confidenceHysteresis: 0.2,   // Prevent rapid on/off switching
   smoothingAlpha: 0.05,        // Ultra-smooth value transitions
 };
-
-// ============================================================================
-// TYPES - Clean display state management
-// ============================================================================
-
-export type DisplayState = 'hidden' | 'appearing' | 'visible' | 'fading';
-
-export interface StableMetricsResult {
-  // Core metrics (always available, smoothed)
-  stillnessScore: number;  // 0-100% (100 = perfectly still, 0 = very restless)
-  presenceScore: number;
-  postureScore: number;
-  
-  // Display state
-  displayState: DisplayState;
-  isStable: boolean;
-  confidence: number;
-  
-  // Raw metrics (for debugging)
-  rawMetrics: MeditationMetrics | null;
-  hasValidData: boolean;
-}
 
 // ============================================================================
 // CUSTOM HOOK - Stable metrics with persistence
@@ -215,28 +194,12 @@ export const useSmoothValue = (targetValue: number, duration: number = 1500) => 
   return Math.round(displayValue);
 };
 
-/**
- * Quality label helper
- * DRY: Single source for quality descriptions
- */
-export const getQualityLabel = (score: number): string => {
-  if (score >= 80) return 'Excellent';
-  if (score >= 60) return 'Good';
-  if (score >= 40) return 'Fair';
-  if (score >= 20) return 'Needs Focus';
-  return 'Getting Started';
-};
+// ============================================================================
+// QUALITY UTILITIES - Re-exported from utils for backward compatibility
+// ============================================================================
 
-/**
- * Quality color helper
- * DRY: Single source for quality colors
- */
-export const getQualityColor = (score: number): string => {
-  if (score >= 80) return 'text-green-400';
-  if (score >= 60) return 'text-blue-400';
-  if (score >= 40) return 'text-yellow-400';
-  if (score >= 20) return 'text-orange-400';
-  return 'text-red-400';
-};
+// ORGANIZED: Quality utilities moved to src/utils/quality.ts
+// Re-export for backward compatibility during transition
+export { getQualityLabel, getQualityColor } from '../utils/quality';
 
 export default useStableMetrics;

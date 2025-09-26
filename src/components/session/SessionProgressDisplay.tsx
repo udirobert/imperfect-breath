@@ -13,7 +13,8 @@
  */
 
 import React from "react";
-import { useStableMetrics, useSmoothValue, getQualityLabel, getQualityColor } from "../../hooks/useStableMetrics";
+import { useStableMetrics, useSmoothValue } from "../../hooks/useStableMetrics";
+import { getQualityLabel, getQualityColor } from "../../utils/quality";
 
 interface SessionProgressDisplayProps {
   patternName: string;

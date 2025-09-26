@@ -1,34 +1,22 @@
 /**
  * SHARED SESSION TYPES
- * Consolidated from multiple components to eliminate duplication
+ * 
+ * CONSOLIDATED: Now re-exports from types/metrics.ts
+ * This file maintained for backward compatibility during transition.
  */
 
-export interface SessionMetrics {
-    duration: number;
-    cycleCount: number;
-    breathHoldTime?: number;
-    stillnessScore?: number;
-    cameraUsed: boolean;
-    sessionType: string;
-    // UNIFIED: Vision session ID for AI integration (DRY principle)
-    visionSessionId?: string;
-    visionMetrics?: {
-        averageStillness: number;
-        faceDetectionRate: number;
-        postureScore: number;
-    };
-}
-
-export interface SessionModeConfig {
-    enableCamera: boolean;
-    enableVision: boolean;
-    enableAudio: boolean;
-    enableAdvancedFeatures: boolean;
-    enableMobileOptimizations: boolean;
-    showPerformanceMonitor: boolean;
-    layout: "single" | "dual" | "mobile";
-    description: string;
-}
-
-export type SessionPhase = "setup" | "preparation" | "camera_setup" | "ready" | "active" | "paused" | "complete";
-export type SessionMode = "classic" | "enhanced" | "advanced" | "mobile";
+// ORGANIZED: All types moved to types/metrics.ts for better organization
+export type {
+  SessionMetrics,
+  SessionModeConfig,
+  SessionPhase,
+  SessionMode,
+  BreathPhase,
+  MeditationMetrics,
+  StableMetricsResult,
+  DisplayState,
+  VisionStatus,
+  PerformanceMode,
+  MetricTrend,
+  QualityLevel
+} from './metrics';
