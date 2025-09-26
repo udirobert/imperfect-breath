@@ -37,6 +37,16 @@ interface BreathingAnimationProps {
   cycleCount?: number;
   emotionalState?: "calm" | "focused" | "energized" | "peaceful";
   sessionQuality?: number;
+  
+  // INTEGRATED: Session progress information
+  sessionInfo?: {
+    duration?: string;
+    progressPercentage?: number;
+    stillnessScore?: number;
+    presenceScore?: number;
+    confidenceScore?: number;
+    showMetrics?: boolean;
+  };
 }
 
 const BreathingAnimation = React.memo<BreathingAnimationProps>(
@@ -53,6 +63,7 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
     cycleCount = 0,
     emotionalState = "calm",
     sessionQuality = 75,
+    sessionInfo,
   }) => {
     const phaseConfig = useMemo(() => getPhaseConfig(phase), [phase]);
     
@@ -185,6 +196,69 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       </div>
     );
 
+    // INTEGRATED: Session header component
+    const SessionHeader = () => {
+      if (!sessionInfo || !isActive) return null;
+      
+      return (
+        <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 w-full max-w-md">
+          <div className="bg-gradient-to-r from-slate-50/90 to-slate-100/90 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-300">
+                {pattern?.name || "Breathing"}
+              </span>
+              <span className="font-mono font-bold text-primary">
+                {sessionInfo.duration || "00:00"}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    };
+    
+    // INTEGRATED: Session footer component
+    const SessionFooter = () => {
+      if (!sessionInfo || !isActive) return null;
+      
+      return (
+        <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 w-full max-w-md">
+          <div className="bg-gradient-to-r from-slate-50/90 to-slate-100/90 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm rounded-xl px-4 py-3 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+            <div className="space-y-2">
+              {/* Primary metrics line */}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400">
+                  Cycle {cycleCount}
+                </span>
+                {sessionInfo.showMetrics && sessionInfo.stillnessScore !== undefined && (
+                  <span className={cn(
+                    "font-medium",
+                    sessionInfo.stillnessScore >= 80 ? "text-green-600 dark:text-green-400" :
+                    sessionInfo.stillnessScore >= 60 ? "text-blue-600 dark:text-blue-400" :
+                    sessionInfo.stillnessScore >= 40 ? "text-yellow-600 dark:text-yellow-400" :
+                    "text-orange-600 dark:text-orange-400"
+                  )}>
+                    Stillness {sessionInfo.stillnessScore}%
+                  </span>
+                )}
+                <span className="text-slate-600 dark:text-slate-400">
+                  {Math.round(sessionInfo.progressPercentage || 0)}% complete
+                </span>
+              </div>
+              
+              {/* Secondary metrics line - only when stable */}
+              {sessionInfo.showMetrics && sessionInfo.presenceScore !== undefined && sessionInfo.confidenceScore !== undefined && (
+                <div className="flex items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                  <span>Presence {sessionInfo.presenceScore}%</span>
+                  <span>•</span>
+                  <span>Confidence {sessionInfo.confidenceScore}%</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     const CenterContent = () => (
       <div className="z-10 text-center space-y-3">
         <p
@@ -208,7 +282,8 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
           <RhythmIndicator />
         )}
 
-        {!isActive && pattern && phase !== "countdown" && (
+        {/* Only show pattern name when not active and no session info */}
+        {!isActive && pattern && phase !== "countdown" && !sessionInfo && (
           <p className="text-sm text-muted-foreground opacity-80 font-medium">
             {pattern.name}
           </p>
@@ -222,12 +297,20 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
           "relative flex items-center justify-center",
           compactMode
             ? "w-48 h-48 md:w-56 md:h-56"
-            : "w-64 h-64 md:w-80 md:h-80"
+            : "w-64 h-64 md:w-80 md:h-80",
+          // Add extra space for header/footer when session info is present
+          sessionInfo && isActive && "mt-20 mb-24"
         )}
       >
+        {/* INTEGRATED: Session header */}
+        <SessionHeader />
+        
         <BackgroundCircle />
         <MainCircle />
         <CenterContent />
+        
+        {/* INTEGRATED: Session footer */}
+        <SessionFooter />
 
         {/* ENHANCED: Micro-celebration with haptic feedback */}
         {isActive &&

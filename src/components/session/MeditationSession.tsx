@@ -73,6 +73,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { TrackingStatus } from "../../hooks/visionTypes";
 import { useCamera } from "../../contexts/CameraContext";
 import { useVisionStore } from "../../stores/visionStore";
+import { useStableMetrics } from "../../hooks/useStableMetrics";
 
 // Shared types - consolidated
 import { SessionMetrics, SessionModeConfig, SessionPhase, SessionMode } from "../../types/session";
@@ -169,6 +170,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
   // Use CameraContext for camera state
   const { stream: cameraStream } = useCamera();
+  
+  // INTEGRATED: Get stable metrics for consistent UI display
+  const stableMetrics = useStableMetrics();
 
   // ENHANCEMENT: Adaptive encouragement timing (PERFORMANT)
   const [adaptiveEncouragementEnabled, setAdaptiveEncouragementEnabled] =
@@ -319,24 +323,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
 
             {currentPhase === "active" && (
               <div className="space-y-6">
-                {/* Rich Progress Display */}
-                <SessionProgressDisplay
-                  patternName={config.pattern.name}
-                  duration={
-                    session.getSessionDuration
-                      ? session.getSessionDuration()
-                      : "00:00"
-                  }
-                  cycleCount={session.metrics?.cycleCount || 0}
-                  progressPercentage={
-                    session.getCompletionPercentage
-                      ? session.getCompletionPercentage()
-                      : 0
-                  }
-                  qualityScore={session.visionMetrics?.stillness}
-                  stillnessScore={session.visionMetrics?.stillness}
-                  showQualityMetrics={modeConfig.enableVision}
-                />
+                {/* REMOVED: Separate SessionProgressDisplay - now integrated into BreathingAnimation */}
 
                 {/* Video Feed with Vision Processing */}
                 {modeConfig.enableCamera && cameraStream && (
@@ -363,7 +350,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                   </VisionErrorBoundary>
                 )}
 
-                {/* Breathing Animation */}
+                {/* INTEGRATED: Breathing Animation with Session Progress */}
                 <div className="flex justify-center">
                   <BreathingAnimation
                     phase={
@@ -373,6 +360,19 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
                     }
                     pattern={config.pattern}
                     isActive={session.isActive}
+                    cycleCount={session.metrics?.cycleCount || 0}
+                    sessionInfo={{
+                      duration: session.getSessionDuration
+                        ? session.getSessionDuration()
+                        : "00:00",
+                      progressPercentage: session.getCompletionPercentage
+                        ? session.getCompletionPercentage()
+                        : 0,
+                      stillnessScore: stableMetrics.stillnessScore,
+                      presenceScore: stableMetrics.presenceScore,
+                      confidenceScore: Math.round(stableMetrics.confidence * 100),
+                      showMetrics: modeConfig.enableVision && stableMetrics.hasValidData && stableMetrics.isStable,
+                    }}
                   />
                 </div>
 
