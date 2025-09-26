@@ -25,8 +25,8 @@ interface SessionProgressDisplayProps {
   // ENHANCEMENT: Simplified props - metrics come from stable hook
   showQualityMetrics?: boolean;
   // LUXURY: Display mode options
-  displayMode?: 'overlay' | 'inline';
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  displayMode?: 'overlay' | 'inline' | 'centered';
+  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center';
 }
 
 export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
@@ -38,8 +38,8 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
       progressPercentage,
       className = "",
       showQualityMetrics = true,
-      displayMode = 'overlay',
-      position = 'top-right',
+      displayMode = 'centered',
+      position = 'top-center',
     }) => {
       // DRY: Single source of truth for stable metrics
       const stableMetrics = useStableMetrics();
@@ -56,6 +56,7 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
           'top-left': 'top-4 left-4',
           'bottom-right': 'bottom-4 right-4',
           'bottom-left': 'bottom-4 left-4',
+          'top-center': 'top-4 left-1/2 transform -translate-x-1/2',
         };
         return positions[position];
       }, [position]);
@@ -77,7 +78,78 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
         }
       }, [stableMetrics.displayState]);
       
-      // LUXURY: Overlay mode with persistent display
+      // LUXURY: Centered mode with persistent display (default for meditation)
+      if (displayMode === 'centered') {
+        return (
+          <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-40 ${displayClasses}`}>
+            <div className="bg-black/70 backdrop-blur-lg rounded-2xl px-6 py-4 text-white shadow-xl border border-white/20">
+              <div className="space-y-3 min-w-[240px] text-center">
+                {/* Session Header */}
+                <div>
+                  <div className="text-lg font-medium text-white/90">{patternName}</div>
+                  <div className="text-3xl font-mono font-bold text-white transition-all duration-500">
+                    {duration}
+                  </div>
+                </div>
+                
+                {/* LUXURY: Always-visible stillness score with smooth transitions */}
+                {showQualityMetrics && (
+                  <div className="border-t border-white/20 pt-3">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                        stableMetrics.isStable ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'
+                      }`}></div>
+                      <span className="text-sm font-medium text-white/70">Live Stillness Score</span>
+                    </div>
+                    
+                    <div className={`text-4xl font-bold transition-all duration-1500 ease-out ${
+                      getQualityColor(smoothStillness).replace('text-', 'text-')
+                    }`}>
+                      {smoothStillness}%
+                    </div>
+                    
+                    <div className="text-sm text-white/60 mt-2 transition-all duration-800 ease-out">
+                      {getQualityLabel(smoothStillness)} stillness • {getQualityLabel(smoothStillness)} focus
+                    </div>
+                    
+                    {/* ENHANCEMENT: Additional metrics when stable */}
+                    {stableMetrics.isStable && stableMetrics.hasValidData && (
+                      <div className="mt-3 pt-2 border-t border-white/10">
+                        <div className="flex justify-between text-xs text-white/50">
+                          <span>Presence: {smoothPresence}%</span>
+                          <span>Confidence: {Math.round(stableMetrics.confidence * 100)}%</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Cycle Information */}
+                <div className="border-t border-white/20 pt-3">
+                  <div className="text-sm text-white/70 transition-all duration-500">
+                    Cycle {smoothCycle}
+                  </div>
+                  
+                  {/* ENHANCEMENT: Progress indicator in overlay */}
+                  <div className="mt-2">
+                    <div className="w-full bg-white/20 rounded-full h-1.5">
+                      <div 
+                        className="bg-gradient-to-r from-blue-400 to-green-400 h-1.5 rounded-full transition-all duration-1000 ease-out"
+                        style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-xs text-white/50 mt-1 text-center">
+                      {Math.round(progressPercentage)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      
+      // LUXURY: Corner overlay mode (alternative positioning)
       if (displayMode === 'overlay') {
         return (
           <div className={`fixed ${positionClasses} z-50 ${displayClasses}`}>
