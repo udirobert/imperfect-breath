@@ -178,13 +178,15 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:4556",        # Local development frontend
-        "https://*.netlify.app",        # Netlify deployments
-        "https://imperfectbreath.com",  # Production domain
+        "http://localhost:4556",                    # Local development frontend
+        "http://localhost:4567",                    # Alternative local port
+        "https://imperfectbreath.netlify.app",      # Production Netlify
+        "https://imperfectbreath.com",              # Production domain
+        "https://breath.imperfectform.fun",         # Alternative domain
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # Request/Response Models
@@ -787,7 +789,7 @@ async def health_check():
             "ai_analysis": "active",
             "webhook": "active"
         },
-        "active_sessions": len(active_sessions)
+        "active_sessions": len(vision_processor.sessions)
     }
 
 @app.post("/webhook/github")
