@@ -6,11 +6,12 @@
  * MODULAR: Reusable across different session types
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import { RecommendationService } from "@/services/RecommendationService";
 import { Progress } from "../ui/progress";
 import {
   Trophy,
@@ -93,75 +94,65 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
     };
   };
 
-  const getSmartRecommendations = () => {
-    const hour = new Date().getHours();
-    const isFirstSession = metrics.isFirstSession || isFirstTime;
-
-    if (isFirstSession) {
-      // First session - encourage immediate repetition or gentle exploration
+  // CLEAN: Use centralized recommendation service
+  const getSmartRecommendations = async () => {
+    // First session - encourage exploration
+    if (!sessionResults.sessionId) {
       return [
         {
-          id: "repeat",
-          title: "Practice Again",
-          description: "Strike while the iron is hot - do another session now",
-          icon: Heart,
-          action: () => onContinue?.(),
-          priority: "high",
-          timeToValue: "Right now",
+          title: "Try Different Patterns",
+          description: "Explore various breathing techniques to find what works best for you",
+          action: () => navigate("/patterns"),
+          icon: "🌟",
+          priority: "high"
         },
         {
-          id: "explore",
-          title: "Unlock More Patterns",
-          description:
-            "You've proven breathing works - explore 6+ more techniques",
-          icon: Unlock,
-          action: () => onExplorePatterns?.(),
-          priority: "medium",
-          timeToValue: "2 minutes",
-        },
+          title: "Learn the Basics",
+          description: "Understand breathing fundamentals with our guided introduction",
+          action: () => navigate("/learn"),
+          icon: "📚",
+          priority: "medium"
+        }
       ];
     }
 
-    // Returning user - time-based and goal-based recommendations
-    const recommendations = [];
+    // ENHANCEMENT FIRST: Use centralized time-based recommendations
+    try {
+      const timeRecommendations = await RecommendationService.getTimeBasedRecommendations();
+      const recommendations = [];
+      
+      if (timeRecommendations.length > 0) {
+        const topRec = timeRecommendations[0];
+        recommendations.push({
+          title: `Try ${topRec.pattern.name}`,
+          description: topRec.explanation,
+          action: () => navigate(`/session?pattern=${topRec.patternId}`),
+          icon: "🎯",
+          priority: "high"
+        });
+      }
 
-    if (hour >= 6 && hour < 12) {
       recommendations.push({
-        id: "energy",
-        title: "Morning Energy Boost",
-        description: "Try energizing breath patterns to start your day strong",
-        icon: Zap,
-        action: () => navigate("/patterns?goal=energy"),
-        priority: "high",
-        timeToValue: "3 minutes",
+        title: "Track Your Progress",
+        description: "View your breathing journey and improvements over time",
+        action: () => navigate("/progress"),
+        icon: "📈",
+        priority: "medium"
       });
-    } else if (hour >= 17) {
-      recommendations.push({
-        id: "evening",
-        title: "Evening Wind-Down",
-        description: "Transition to relaxation patterns for better sleep",
-        icon: Brain,
-        action: () => navigate("/patterns?goal=sleep"),
-        priority: "high",
-        timeToValue: "5 minutes",
-      });
+
+      return recommendations;
+    } catch (error) {
+      console.error("Failed to get recommendations:", error);
+      return [];
     }
-
-    recommendations.push({
-      id: "advanced",
-      title: "Try Enhanced Mode",
-      description: "Get AI coaching and detailed feedback on your technique",
-      icon: Star,
-      action: () => navigate("/session/enhanced"),
-      priority: "medium",
-      timeToValue: "1 minute",
-    });
-
-    return recommendations;
   };
 
   const impact = getImpactMessage();
-  const recommendations = getSmartRecommendations();
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  
+  useEffect(() => {
+    getSmartRecommendations().then(setRecommendations).catch(console.error);
+  }, [sessionResults.sessionId]);
   const duration = Math.round(metrics.duration / 60);
 
   // ENHANCEMENT: Haptic feedback for step transitions (PERFORMANT)

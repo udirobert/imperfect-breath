@@ -35,9 +35,9 @@ export const AUTH_METHODS: Record<string, AuthMethod> = {
     description: 'Try breathing sessions immediately',
     icon: Zap,
     benefits: [
-      'No signup required',
-      'Instant access to all breathing patterns',
-      'Try the app risk-free'
+      'Instant access',
+      'All breathing patterns',
+      'No signup required'
     ],
     features: {},
     priority: 1,
@@ -47,13 +47,12 @@ export const AUTH_METHODS: Record<string, AuthMethod> = {
   email: {
     id: 'email',
     title: 'Save Progress',
-    description: 'Never lose your breathing journey',
+    description: 'Track your breathing journey',
     icon: Mail,
     benefits: [
-      'Cloud sync across devices',
-      'Progress tracking and analytics',
-      'Personalized recommendations',
-      'Session history and insights'
+      'Cloud sync',
+      'Progress tracking',
+      'Personalized insights'
     ],
     features: {},
     priority: 2,
@@ -62,14 +61,13 @@ export const AUTH_METHODS: Record<string, AuthMethod> = {
   
   wallet: {
     id: 'wallet',
-    title: 'Own Your Patterns',
-    description: 'NFTs, social features, and creator tools',
+    title: 'Own Your Data',
+    description: 'NFTs, social features, and tools',
     icon: Wallet,
     benefits: [
-      'Own breathing patterns as NFTs',
-      'Social features and community',
-      'Creator tools and monetization',
-      'Decentralized identity'
+      'Own your patterns',
+      'Social community',
+      'Creator monetization'
     ],
     features: { blockchain: true },
     priority: 3,

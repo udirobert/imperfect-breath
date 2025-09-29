@@ -28,14 +28,9 @@ import {
 import { BREATHING_PATTERNS } from "@/lib/breathingPatterns";
 import type { CustomPattern } from "@/lib/ai/providers";
 
-// Time-aware recommendations - ENHANCED UX without duplication
-const getTimeBasedRecommendations = (): string[] => {
-  const hour = new Date().getHours();
-  if (hour >= 6 && hour < 12) return ["energy", "box"];
-  if (hour >= 12 && hour < 17) return ["box", "mindfulness"];
-  if (hour >= 17 && hour < 21) return ["relaxation", "box"];
-  return ["sleep", "relaxation"];
-};
+// CLEAN: Import centralized recommendation logic (DRY principle)
+import { RecommendationService } from "@/services/RecommendationService";
+import { MoodBasedRecommendations } from "./MoodBasedRecommendations";
 
 // Goal-based categories - ORGANIZED without duplication
 const WELLNESS_CATEGORIES = {
@@ -113,17 +108,23 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
   );
   const navigate = useNavigate();
 
-  // Time-based recommendations - ENHANCED UX
-  const recommendations = useMemo(() => getTimeBasedRecommendations(), []);
-
-  // Time greeting - USER DELIGHT
-  const timeGreeting = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    if (hour < 21) return "Good evening";
-    return "Good night";
+  // ENHANCEMENT FIRST: Smart recommendations with user input
+  const [userRecommendations, setUserRecommendations] = useState<any[]>([]);
+  const [showMoodSelector, setShowMoodSelector] = useState(true);
+  
+  // PERFORMANT: Fallback to cached time-based recommendations
+  const [fallbackRecommendations, setFallbackRecommendations] = useState<any[]>([]);
+  
+  useEffect(() => {
+    RecommendationService.getTimeBasedRecommendations("beginner")
+      .then(setFallbackRecommendations)
+      .catch(console.error);
   }, []);
+  
+  const activeRecommendations = userRecommendations.length > 0 ? userRecommendations : fallbackRecommendations;
+
+  // CLEAN: Use centralized greeting service
+  const timeGreeting = RecommendationService.getTimeGreeting();
 
   useEffect(() => {
     // Combine built-in patterns with user library
@@ -200,7 +201,8 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
   // Using consolidated formatters from utils
 
   const PatternCard = ({ pattern }: { pattern: PatternWithStats }) => {
-    const isRecommended = recommendations.includes(pattern.id);
+    const isRecommended = activeRecommendations.some(rec => rec.patternId === pattern.id);
+    const recommendationData = activeRecommendations.find(rec => rec.patternId === pattern.id);
 
     return (
       <Card
@@ -218,13 +220,13 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
             <div className="flex-1">
               <CardTitle className="text-lg line-clamp-1 flex items-center gap-2">
                 {pattern.name}
-                {isRecommended && (
+                {isRecommended && recommendationData && (
                   <Badge
                     variant="default"
                     className="text-xs bg-gradient-to-r from-amber-500 to-orange-500"
                   >
                     <Star className="w-3 h-3 mr-1" />
-                    Recommended
+                    {recommendationData.badge || "Perfect match"}
                   </Badge>
                 )}
               </CardTitle>
@@ -292,33 +294,68 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
         <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
           {timeGreeting}! Choose Your Breathing Pattern
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mb-4">
           Select from our curated collection or your personal library
         </p>
+        
+        {/* ENHANCEMENT: Mood-based recommendations for user delight */}
+        {showMoodSelector && (
+          <MoodBasedRecommendations
+            variant="compact"
+            onRecommendationsUpdate={(recs) => {
+              setUserRecommendations(recs);
+              if (recs.length > 0) {
+                setShowMoodSelector(false);
+              }
+            }}
+            className="mb-6"
+          />
+        )}
       </div>
 
-      {/* Time-based Recommendations - ENHANCED UX */}
-      {recommendations.length > 0 && (
+      {/* ENHANCED: Smart Recommendations with Clear Explanations */}
+      {activeRecommendations.length > 0 && (
         <div className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-          <div className="flex items-center mb-4">
-            <Star className="w-5 h-5 text-amber-500 mr-2" />
-            <h3 className="font-semibold">Recommended for now</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Star className="w-5 h-5 text-amber-500 mr-2" />
+              <h3 className="font-semibold">
+                {userRecommendations.length > 0 ? "Perfect for your mood" : "Recommended for now"}
+              </h3>
+            </div>
+            {userRecommendations.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setUserRecommendations([]);
+                  setShowMoodSelector(true);
+                }}
+                className="text-xs"
+              >
+                Change mood
+              </Button>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {recommendations.map((patternId) => {
-              const pattern = builtInPatterns.find((p) => p.id === patternId);
+            {activeRecommendations.slice(0, 4).map((rec) => {
+              const pattern = builtInPatterns.find((p) => p.id === rec.patternId);
               return pattern ? (
                 <Button
-                  key={patternId}
+                  key={rec.patternId}
                   variant="outline"
                   className="h-auto p-4 bg-white/80 hover:bg-white text-left"
                   onClick={() => handlePatternSelect(pattern)}
                 >
                   <div className="w-full">
-                    <div className="font-semibold">{pattern.name}</div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="font-semibold">{pattern.name}</div>
+                      <Badge variant="secondary" className="text-xs">
+                        {rec.badge || "Perfect match"}
+                      </Badge>
+                    </div>
                     <div className="text-xs text-muted-foreground">
-                      {BREATHING_PATTERNS[patternId]?.benefits[0] ||
-                        "Wellness focused"}
+                      {rec.explanation || rec.reason || "Great for your wellness goals"}
                     </div>
                   </div>
                 </Button>

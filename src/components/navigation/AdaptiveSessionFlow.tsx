@@ -28,7 +28,7 @@ import {
   Award
 } from "lucide-react";
 import { ContextualGuidance } from "../onboarding/ContextualGuidance";
-import { ValueDrivenPatternSelection } from "../session/ValueDrivenPatternSelection";
+import { PatternSelection } from "../session/PatternSelection";
 import { SmartPatternRecommendations, type RecommendationContext } from "../../lib/recommendations/SmartPatternRecommendations";
 import { cn } from "../../lib/utils";
 
@@ -173,16 +173,10 @@ export const AdaptiveSessionFlow: React.FC<AdaptiveSessionFlowProps> = ({
           </p>
         </div>
         
-        <ValueDrivenPatternSelection
+        <PatternSelection
           userLibrary={[]}
           onPatternSelect={handlePatternSelected}
           onCreateNew={() => navigate("/instructor-onboarding?focus=patterns")}
-          showPersonalization={true}
-          recommendationContext={{
-            sessionType: "enhanced",
-            userLevel: "intermediate", // Could be determined from user history
-            timeOfDay: new Date().getHours()
-          }}
         />
         
         <div className="mt-8 text-center">

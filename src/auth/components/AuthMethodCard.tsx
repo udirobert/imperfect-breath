@@ -10,7 +10,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AuthMethod } from "../auth-methods";
 
@@ -96,11 +96,11 @@ export const AuthMethodCard: React.FC<AuthMethodCardProps> = ({
               <Icon className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold">{method.title}</h3>
                 {isRecommended && (
-                  <Badge variant="secondary" className="text-xs">
-                    Recommended
+                  <Badge variant="secondary" className="text-xs flex items-center justify-center w-6 h-6 p-0 rounded-full">
+                    <Star className="h-3 w-3 fill-current" />
                   </Badge>
                 )}
               </div>
@@ -129,26 +129,26 @@ export const AuthMethodCard: React.FC<AuthMethodCardProps> = ({
       onClick={handleSelect}
     >
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center",
-              "bg-primary/10 text-primary"
-            )}>
-              <Icon className="h-6 w-6" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{method.title}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {method.description}
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-12 h-12 rounded-full flex items-center justify-center",
+            "bg-primary/10 text-primary"
+          )}>
+            <Icon className="h-6 w-6" />
           </div>
-          {isRecommended && (
-            <Badge variant="secondary">
-              Recommended
-            </Badge>
-          )}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <CardTitle className="text-lg">{method.title}</CardTitle>
+              {isRecommended && (
+                <Badge variant="secondary" className="text-xs flex items-center justify-center w-6 h-6 p-0 rounded-full">
+                  <Star className="h-3 w-3 fill-current" />
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {method.description}
+            </p>
+          </div>
         </div>
       </CardHeader>
       
