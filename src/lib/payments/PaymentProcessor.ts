@@ -6,7 +6,7 @@
  * - Lens Protocol: Social tipping and creator support
  */
 
-import { useBasicAuth } from "@/auth";
+import { useFullAuth } from "@/auth";
 
 export interface BlockchainPaymentRequest {
   amount: number;
@@ -150,7 +150,7 @@ export class BlockchainPaymentHandler {
  * React hook for blockchain payments
  */
 export const useBlockchainPayments = () => {
-  const authState = useUnifiedAuth();
+  const authState = useFullAuth();
   const handler = new BlockchainPaymentHandler(authState);
 
   return {

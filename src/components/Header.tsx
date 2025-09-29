@@ -241,34 +241,49 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
               </div>
             )}
 
-            {/* Right Side - Minimal */}
+            {/* Right Side - Enhanced Auth Visibility */}
             <div className="flex items-center gap-2">
-              {/* Only show wallet manager when needed - not prominently displayed */}
-              <div className="hidden">
-                <WalletManager />
-              </div>
-
-              {/* Simple user menu */}
+              {/* ENHANCED: Always show auth state - no homepage exception */}
               {user ? (
-                <Link to="/profile">
-                  <Button variant="ghost" size="sm">
-                    Profile
-                  </Button>
-                </Link>
-              ) : (
-                /* Only show instructor CTA if not on homepage */
-                location.pathname !== "/" && (
-                  <Link to="/instructor-onboarding">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <Heart className="w-4 h-4" />
-                      Teach
+                <div className="flex items-center gap-2">
+                  <Link to="/profile">
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Profile
                     </Button>
                   </Link>
-                )
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={logout}
+                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {/* ENHANCED: Always visible auth button */}
+                  <Link to="/auth">
+                    <Button variant="default" size="sm" className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Sign In
+                    </Button>
+                  </Link>
+                  {/* Secondary CTA for non-homepage */}
+                  {location.pathname !== "/" && (
+                    <Link to="/instructor-onboarding">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-2"
+                      >
+                        <Heart className="w-4 h-4" />
+                        Teach
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
           </div>

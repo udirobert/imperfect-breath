@@ -1,66 +1,53 @@
+/**
+ * ENHANCED Auth Page - Uses UnifiedAuthFlow
+ * 
+ * ENHANCEMENT FIRST: Replaced duplicate auth logic with enhanced UnifiedAuthFlow
+ * AGGRESSIVE CONSOLIDATION: Removed redundant auth implementation
+ * DRY: Single source of truth for auth flows
+ */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { UnifiedAuthFlow } from '@/components/auth/UnifiedAuthFlow';
 import { toast } from 'sonner';
+import type { AuthContext } from '@/auth';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleAuth = async (isSignUp: boolean) => {
-    setIsSubmitting(true);
-    const authMethod = isSignUp ? supabase.auth.signUp : supabase.auth.signInWithPassword;
+  const [searchParams] = useSearchParams();
+  
+  // ORGANIZED: Extract context from URL params
+  const context: AuthContext = {
+    type: (searchParams.get('context') as AuthContext['type']) || 'profile',
+    source: searchParams.get('source') || undefined,
+  };
+  
+  const handleAuthComplete = (authType?: string) => {
+    // CLEAN: Contextual success messages
+    const messages = {
+      guest: 'Welcome! You can start breathing immediately.',
+      email: 'Successfully signed in! Your progress will be saved.',
+      wallet: 'Wallet connected! You now have access to all features.',
+    };
     
-    const { error } = await authMethod({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    });
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success(isSignUp ? 'Confirmation email sent! Please check your inbox.' : 'Successfully logged in!');
-      navigate('/');
+    if (authType && messages[authType as keyof typeof messages]) {
+      toast.success(messages[authType as keyof typeof messages]);
     }
-    setIsSubmitting(false);
+    
+    // ORGANIZED: Context-aware navigation
+    const redirectTo = searchParams.get('redirect') || '/';
+    navigate(redirectTo);
   };
 
   return (
     <div className="flex items-center justify-center min-h-full animate-fade-in p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Welcome</CardTitle>
-          <CardDescription>Enter your credentials to continue.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => handleAuth(false)} className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing In...' : 'Sign In'}
-            </Button>
-            <Button onClick={() => handleAuth(true)} variant="outline" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing Up...' : 'Sign Up'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <UnifiedAuthFlow
+        // MODULAR: Enable blockchain features for full auth experience
+        features={{ blockchain: true }}
+        context={context}
+        onComplete={handleAuthComplete}
+        // PERFORMANT: Use contextual mode for focused experience
+        mode={context.type === 'profile' ? 'full' : 'contextual'}
+      />
     </div>
   );
 };

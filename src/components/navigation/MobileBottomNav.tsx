@@ -1,9 +1,10 @@
 /**
- * Mobile Bottom Navigation - Core Actions for Mobile Users
+ * ENHANCED Mobile Bottom Navigation - Context-Aware Auth Integration
  * 
- * ENHANCEMENT FIRST: Replaces scattered navigation with focused mobile UX
+ * ENHANCEMENT FIRST: Enhanced existing component with auth context
  * CLEAN: Clear separation of primary vs secondary actions
  * MOBILE-FIRST: Touch-optimized with proper spacing and feedback
+ * MODULAR: Uses new auth context system for smart navigation
  */
 
 import React from "react";
@@ -23,6 +24,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useSessionHistory } from "../../hooks/useSessionHistory";
 import { isTouchDevice } from "../../utils/mobile-detection";
 import { cn } from "../../lib/utils";
+import type { AuthContext } from "@/auth";
 
 interface MobileBottomNavProps {
   className?: string;
@@ -91,31 +93,73 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ className }) =
     },
     {
       id: "profile",
-      label: "Profile",
+      label: user ? "Profile" : "Sign In",
       icon: User,
       path: user ? "/profile" : "/auth",
       isActive: location.pathname === "/profile",
-      color: "text-gray-600",
-      activeColor: "text-gray-700 bg-gray-50",
-      description: user ? "Your profile" : "Sign in"
+      color: user ? "text-gray-600" : "text-primary",
+      activeColor: user ? "text-gray-700 bg-gray-50" : "text-primary bg-primary/10",
+      description: user ? "Your profile and settings" : "Sign in to save progress",
+      // ENHANCED: Visual indicator for unauthenticated state
+      badge: !user ? "•" : undefined
     }
   ];
 
+  // ENHANCED: Context-aware navigation with smart auth handling
   const handleNavigation = (item: typeof navItems[0]) => {
+    // MODULAR: Build auth context based on navigation intent
+    const getAuthContext = (itemId: string): AuthContext => {
+      switch (itemId) {
+        case "progress":
+          return { type: 'progress-tracking', source: 'mobile-nav' };
+        case "share":
+          return { type: 'social-share', source: 'mobile-nav' };
+        case "profile":
+          return { type: 'profile', source: 'mobile-nav' };
+        default:
+          return { type: 'profile', source: 'mobile-nav' };
+      }
+    };
+    
+    // CLEAN: Handle auth-required features with context
     if (item.requiresAuth && !user) {
-      navigate("/auth?context=progress");
+      const context = getAuthContext(item.id);
+      const searchParams = new URLSearchParams();
+      searchParams.set('context', context.type);
+      searchParams.set('source', context.source || 'mobile-nav');
+      searchParams.set('redirect', item.path);
+      navigate(`/auth?${searchParams.toString()}`);
       return;
     }
     
+    // ENHANCED: Smart share handling with context
     if (item.id === "share") {
-      // Special handling for share - check if user has sessions
       if (history.length === 0) {
-        // Redirect to start a session first
+        // Redirect to start a session first, with share intent
         navigate("/?prompt=share");
+        return;
+      }
+      // If user has sessions but no auth, show social-share context
+      if (!user) {
+        const searchParams = new URLSearchParams();
+        searchParams.set('context', 'social-share');
+        searchParams.set('source', 'mobile-nav');
+        searchParams.set('redirect', item.path);
+        navigate(`/auth?${searchParams.toString()}`);
         return;
       }
     }
     
+    // ENHANCED: Profile navigation with auth context
+    if (item.id === "profile" && !user) {
+      const searchParams = new URLSearchParams();
+      searchParams.set('context', 'profile');
+      searchParams.set('source', 'mobile-nav');
+      navigate(`/auth?${searchParams.toString()}`);
+      return;
+    }
+    
+    // Default navigation
     navigate(item.path);
   };
 

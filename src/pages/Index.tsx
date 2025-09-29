@@ -14,7 +14,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useIsMobile } from "../hooks/useAdaptivePerformance";
 import { AdaptiveSessionFlow } from "../components/navigation/AdaptiveSessionFlow";
 import { DesktopAdaptiveSessionFlow } from "../components/desktop/DesktopAdaptiveSessionFlow";
-import { SmartAuthGate } from "../components/auth/SmartAuthGate";
+import { ConsolidatedAuthGate } from "../auth/components/ConsolidatedAuthGate";
 import { MESSAGING } from "../config/messaging";
 
 const Feature = ({
@@ -71,7 +71,7 @@ export default function Index({
           style={{ animationDelay: "600ms", opacity: 0 }}
           className="animate-fade-in"
         >
-          <SmartAuthGate required="none" context="wellness">
+          <ConsolidatedAuthGate required="none">
             {isMobile ? (
               <AdaptiveSessionFlow
                 variant="mobile"
@@ -84,14 +84,14 @@ export default function Index({
                 onSessionStart={() => console.log("Starting session")}
               />
             )}
-          </SmartAuthGate>
+          </ConsolidatedAuthGate>
         </div>
       </section>
 
       {/* Secondary Actions - Context-aware and spaced properly */}
       <section className="flex flex-col sm:flex-row gap-4 justify-center items-center">
         {/* Progress tracking - only show after engagement */}
-        <SmartAuthGate required="supabase" context="progress" fallback="hide">
+        <ConsolidatedAuthGate required="email" fallback="hide">
           <Link to="/progress">
             <Button
               size="lg"
@@ -102,10 +102,10 @@ export default function Index({
               {MESSAGING.cta.secondary}
             </Button>
           </Link>
-        </SmartAuthGate>
+        </ConsolidatedAuthGate>
 
         {/* Community features - show only when relevant */}
-        <SmartAuthGate required="evm" context="social" fallback="hide">
+        <ConsolidatedAuthGate required="wallet" fallback="hide">
           <Link to="/community">
             <Button
               size="lg"
@@ -116,7 +116,7 @@ export default function Index({
               {MESSAGING.cta.tertiary}
             </Button>
           </Link>
-        </SmartAuthGate>
+        </ConsolidatedAuthGate>
       </section>
 
       {/* Features Grid - Better spacing and layout */}
@@ -162,27 +162,26 @@ export default function Index({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             {/* NFT Features */}
-            <SmartAuthGate required="flow" context="nft" fallback="prompt">
+            <ConsolidatedAuthGate required="flow" fallback="prompt">
               <div className="text-center p-6 bg-white/50 rounded-xl border border-white/20 hover:bg-white/70 transition-all cursor-pointer">
                 <Coins className="h-8 w-8 text-amber-600 mx-auto mb-3" />
                 <h4 className="font-medium mb-1">Own Your Patterns</h4>
                 <p className="text-sm text-muted-foreground">Mint as NFTs</p>
               </div>
-            </SmartAuthGate>
+            </ConsolidatedAuthGate>
 
             {/* Social Features */}
-            <SmartAuthGate required="evm" context="social" fallback="prompt">
+            <ConsolidatedAuthGate required="wallet" fallback="prompt">
               <div className="text-center p-6 bg-white/50 rounded-xl border border-white/20 hover:bg-white/70 transition-all cursor-pointer">
                 <Users className="h-8 w-8 text-green-600 mx-auto mb-3" />
                 <h4 className="font-medium mb-1">Share & Connect</h4>
                 <p className="text-sm text-muted-foreground">Join community</p>
               </div>
-            </SmartAuthGate>
+            </ConsolidatedAuthGate>
 
             {/* Instructor Path */}
-            <SmartAuthGate
-              required="supabase"
-              context="instructor"
+            <ConsolidatedAuthGate
+              required="email"
               fallback="prompt"
             >
               <Link to="/instructor-onboarding">
@@ -194,7 +193,7 @@ export default function Index({
                   </p>
                 </div>
               </Link>
-            </SmartAuthGate>
+            </ConsolidatedAuthGate>
           </div>
         </section>
       )}

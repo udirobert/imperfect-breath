@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { isTouchDevice } from "@/utils/mobile-detection";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Play,
   Heart,
@@ -18,7 +19,8 @@ interface TabItem {
   badge?: number;
 }
 
-const TAB_ITEMS: TabItem[] = [
+// ENHANCED: Dynamic tab items based on auth state
+const getTabItems = (user: any): TabItem[] => [
   {
     id: "practice",
     label: "Practice",
@@ -45,9 +47,10 @@ const TAB_ITEMS: TabItem[] = [
   },
   {
     id: "profile",
-    label: "Profile",
+    label: user ? "Profile" : "Sign In",
     icon: User,
-    path: "/profile",
+    path: user ? "/profile" : "/auth?context=profile&source=bottom-tab",
+    badge: !user ? 1 : undefined, // Visual indicator for unauthenticated
   },
 ];
 
@@ -57,12 +60,16 @@ interface BottomTabBarProps {
 
 export const BottomTabBar: React.FC<BottomTabBarProps> = ({ className }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const isMobile = isTouchDevice();
 
   // Only show on mobile devices
   if (!isMobile) {
     return null;
   }
+  
+  // ENHANCED: Get dynamic tab items based on auth state
+  const tabItems = getTabItems(user);
 
   return (
     <nav
@@ -75,7 +82,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ className }) => {
       )}
     >
       <div className="flex items-center justify-around px-2 py-2">
-        {TAB_ITEMS.map((item) => {
+        {tabItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
 
