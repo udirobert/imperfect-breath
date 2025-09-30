@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { WalletManager } from "./WalletManager";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface HeaderProps {
   className?: string;
@@ -43,11 +44,35 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     setIsMenuOpen(false);
   };
 
+  // ENHANCEMENT: Subtle haptic feedback for premium interactions
+  const triggerHaptic = () => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate([15]); // Minimal, refined feedback
+    }
+  };
+
+  // ENHANCEMENT: Elegant navigation feedback
+  const showNavigationFeedback = (message: string) => {
+    toast.success(message, {
+      duration: 2000,
+      position: "top-right",
+      style: {
+        background: "rgba(248, 250, 252, 0.95)",
+        color: "#334155",
+        border: "1px solid #e2e8f0",
+        borderRadius: "8px",
+        fontSize: "14px",
+        fontWeight: "500",
+        backdropFilter: "blur(8px)",
+      },
+    });
+  };
+
   return (
     <header
       className={cn(
-        "w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50",
-        className
+        "w-full border-b border-slate-200 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/90 sticky top-0 z-50 transition-all duration-300",
+        className,
       )}
     >
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -55,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           to="/"
           className={cn(
             "flex items-center gap-2 font-bold text-primary hover:opacity-80 transition-opacity",
-            isMobile ? "text-lg" : "text-xl"
+            isMobile ? "text-lg" : "text-xl",
           )}
         >
           <div
@@ -80,17 +105,22 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-80">
+            <SheetContent
+              side="right"
+              className="w-80 bg-white/95 backdrop-blur-sm border-slate-200"
+            >
               <div className="flex flex-col h-full">
                 {/* Header */}
-                <div className="flex items-center gap-3 pb-4 border-b">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Sparkles className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-200">
+                  <div className="p-2 rounded-lg bg-slate-100">
+                    <Sparkles className="w-5 h-5 text-slate-600" />
                   </div>
                   <div>
-                    <h2 className="font-semibold">Imperfect Breath</h2>
+                    <h2 className="font-medium text-slate-800">
+                      Imperfect Breath
+                    </h2>
                     {user && (
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-sm text-slate-500 truncate">
                         {user.email}
                       </p>
                     )}
@@ -103,18 +133,38 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                     <>
                       <Link
                         to="/profile"
-                        onClick={handleMenuItemClick}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                        onClick={() => {
+                          triggerHaptic();
+                          showNavigationFeedback("Opening profile");
+                          handleMenuItemClick();
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
                       >
                         <User className="h-5 w-5" />
                         <span>Profile</span>
                       </Link>
                       <Link
-                        to="/instructor-onboarding"
-                        onClick={handleMenuItemClick}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                        to="/community"
+                        onClick={() => {
+                          triggerHaptic();
+                          showNavigationFeedback("Joining community");
+                          handleMenuItemClick();
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
                       >
-                        <DollarSign className="h-5 w-5" />
+                        <Users className="h-5 w-5" />
+                        <span>Community</span>
+                      </Link>
+                      <Link
+                        to="/instructor-onboarding"
+                        onClick={() => {
+                          triggerHaptic();
+                          showNavigationFeedback("Starting instructor journey");
+                          handleMenuItemClick();
+                        }}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
+                      >
+                        <Heart className="h-5 w-5" />
                         <span>Start Teaching</span>
                       </Link>
                     </>
@@ -246,26 +296,60 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
               {/* ENHANCED: Always show auth state - no homepage exception */}
               {user ? (
                 <div className="flex items-center gap-2">
+                  <Link to="/community">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        triggerHaptic();
+                        showNavigationFeedback("Joining community");
+                      }}
+                      className="flex items-center gap-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-300"
+                    >
+                      <Users className="w-4 h-4" />
+                      Community
+                    </Button>
+                  </Link>
                   <Link to="/profile">
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        triggerHaptic();
+                        showNavigationFeedback("Opening profile");
+                      }}
+                      className="flex items-center gap-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-300"
+                    >
                       <User className="w-4 h-4" />
                       Profile
                     </Button>
                   </Link>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={logout}
-                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      triggerHaptic();
+                      showNavigationFeedback("Signing out");
+                      logout();
+                    }}
+                    className="flex items-center gap-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-300"
                   >
                     <LogOut className="w-4 h-4" />
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  {/* ENHANCED: Always visible auth button */}
+                  {/* ENHANCED: Premium auth button */}
                   <Link to="/auth">
-                    <Button variant="default" size="sm" className="flex items-center gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        triggerHaptic();
+                        showNavigationFeedback("Opening sign in");
+                      }}
+                      className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white transition-all duration-300"
+                    >
                       <User className="w-4 h-4" />
                       Sign In
                     </Button>
@@ -276,7 +360,11 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex items-center gap-2"
+                        onClick={() => {
+                          triggerHaptic();
+                          showNavigationFeedback("Starting instructor journey");
+                        }}
+                        className="flex items-center gap-2 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 transition-all duration-300"
                       >
                         <Heart className="w-4 h-4" />
                         Teach

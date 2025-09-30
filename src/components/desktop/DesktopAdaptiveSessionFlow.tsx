@@ -81,7 +81,7 @@ export const DesktopAdaptiveSessionFlow: React.FC<
   const [activeTab, setActiveTab] = useState("goals");
   const [showOptimizations, setShowOptimizations] = useState(false);
   const [sessionMode, setSessionMode] = useState<"classic" | "enhanced">(
-    "enhanced"
+    "enhanced",
   );
 
   // Get current time context for recommendations
@@ -149,20 +149,26 @@ export const DesktopAdaptiveSessionFlow: React.FC<
   // Get smart recommendations based on context
   const recommendationContext: RecommendationContext = {
     timeOfDay: currentHour,
-    userGoal: selectedGoal as any,
+    userGoal: selectedGoal as
+      | "stress"
+      | "energy"
+      | "sleep"
+      | "focus"
+      | "general"
+      | undefined,
     sessionHistory: history.map((h) => h.pattern_name),
     userLevel:
       history.length < 5
         ? "beginner"
         : history.length < 20
-        ? "intermediate"
-        : "advanced",
+          ? "intermediate"
+          : "advanced",
     sessionType: sessionMode,
     isFirstSession: history.length === 0,
   };
 
   const smartRecommendations = SmartPatternRecommendations.getRecommendations(
-    recommendationContext
+    recommendationContext,
   );
 
   const handleGoalSelect = (goalId: string) => {
@@ -173,7 +179,7 @@ export const DesktopAdaptiveSessionFlow: React.FC<
     const goal = sessionGoals.find((g) => g.id === goalId);
     if (goal && goal.patterns.length > 0) {
       const recommendedPattern = smartRecommendations.find((r) =>
-        goal.patterns.includes(r.patternId)
+        goal.patterns.includes(r.patternId),
       );
       if (recommendedPattern) {
         setSelectedPattern(recommendedPattern.patternId);
@@ -369,14 +375,14 @@ export const DesktopAdaptiveSessionFlow: React.FC<
                       .filter(([id]) => {
                         if (!selectedGoal) return true;
                         const goal = sessionGoals.find(
-                          (g) => g.id === selectedGoal
+                          (g) => g.id === selectedGoal,
                         );
                         return goal?.patterns.includes(id);
                       })
                       .map(([id, pattern]) => {
                         const isSelected = selectedPattern === id;
                         const recommendation = smartRecommendations.find(
-                          (r) => r.patternId === id
+                          (r) => r.patternId === id,
                         );
 
                         return (
@@ -588,11 +594,18 @@ export const DesktopAdaptiveSessionFlow: React.FC<
                     </span>
                     <span className="font-medium">
                       {(() => {
-                        const patternCounts = history.reduce((acc, h) => {
-                          acc[h.pattern_name] = (acc[h.pattern_name] || 0) + 1;
-                          return acc;
-                        }, {} as Record<string, number>);
-                        const mostUsedPattern = Object.entries(patternCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || "None";
+                        const patternCounts = history.reduce(
+                          (acc, h) => {
+                            acc[h.pattern_name] =
+                              (acc[h.pattern_name] || 0) + 1;
+                            return acc;
+                          },
+                          {} as Record<string, number>,
+                        );
+                        const mostUsedPattern =
+                          Object.entries(patternCounts).sort(
+                            ([, a], [, b]) => b - a,
+                          )[0]?.[0] || "None";
                         return mostUsedPattern;
                       })()}
                     </span>

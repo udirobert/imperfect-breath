@@ -276,6 +276,7 @@ export const useLens = (): UseLensReturn => {
         setIsPosting(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isAuthenticated],
   );
 
@@ -316,6 +317,7 @@ export const useLens = (): UseLensReturn => {
         setIsPosting(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isAuthenticated],
   );
 
