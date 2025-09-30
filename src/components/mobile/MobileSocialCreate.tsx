@@ -1,33 +1,43 @@
 /**
- * Mobile Social Create - Mobile-Optimized Social Post Creation
+ * Premium Lens-Focused Mobile Sharing - Mindful Social Creation
  *
- * ENHANCEMENT FIRST: Builds on social creation patterns with mobile-specific optimizations
- * CLEAN: Separates mobile touch logic from desktop interactions
- * MODULAR: Reuses PersonalizedTemplates and social logic
- * PERFORMANT: Optimized for mobile devices and touch interactions
+ * ENHANCEMENT FIRST: Lens-first premium sharing experience for wellness content
+ * CLEAN: Focused solely on Lens Protocol for authentic community building
+ * MODULAR: Reuses PersonalizedTemplates with breathing-specific content
+ * PREMIUM: Sophisticated UI that aligns with luxury wellness aesthetic
  */
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
 import {
-  Share2,
-  Camera,
   Heart,
   Users,
-  Trophy,
   Sparkles,
   ArrowRight,
   CheckCircle,
   Copy,
-  X
+  X,
+  Send,
+  Wind,
+  Clock,
+  Target,
+  Share2,
+  Trophy,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useSessionHistory } from "../../hooks/useSessionHistory";
+import { useLens } from "../../hooks/useLens";
 import { PersonalizedTemplates } from "../../lib/social/PersonalizedTemplates";
+import {
+  triggerPremiumHaptic,
+  showPremiumFeedback,
+} from "../ui/premium-interactions";
+import { cn } from "../../lib/utils";
+import { toast } from "sonner";
 
 interface SessionStats {
   totalSessions: number;
@@ -45,7 +55,7 @@ interface MobileSocialCreateProps {
 
 export const MobileSocialCreate: React.FC<MobileSocialCreateProps> = ({
   onClose,
-  prefilledStats
+  prefilledStats,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -53,150 +63,367 @@ export const MobileSocialCreate: React.FC<MobileSocialCreateProps> = ({
   const [postText, setPostText] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [isSharing, setIsSharing] = useState(false);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["lens"]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([
+    "lens",
+  ]);
 
   // Calculate user stats
-  const stats: SessionStats = {
-    totalSessions: history.length,
-    totalMinutes: history.reduce((acc, h) => acc + (h.session_duration || 5), 0),
-    currentStreak: Math.min(history.length, 7), // Simplified streak calculation
-    favoritePattern: history.length > 0 ? history[0].pattern_name : "Box Breathing",
-    lastSessionScore: 85,
-    weeklyGoalProgress: Math.min((history.length / 7) * 100, 100),
-    ...prefilledStats
-  };
+  const stats: SessionStats = useMemo(
+    () => ({
+      totalSessions: history.length,
+      totalMinutes: history.reduce(
+        (acc, h) => acc + (h.session_duration || 5),
+        0,
+      ),
+      currentStreak: Math.min(history.length, 7), // Simplified streak calculation
+      favoritePattern:
+        history.length > 0 ? history[0].pattern_name : "Box Breathing",
+      lastSessionScore: 85,
+      weeklyGoalProgress: Math.min((history.length / 7) * 100, 100),
+      ...prefilledStats,
+    }),
+    [history, prefilledStats],
+  );
 
   // MODULAR: Reuse PersonalizedTemplates service
   const personalizedTemplates = PersonalizedTemplates.generateTemplates(stats);
+  const { postSession, isPosting } = useLens();
 
   const platformOptions = [
-    { id: "lens", name: "Lens", icon: Users, color: "bg-green-50 border-green-200" },
-    { id: "twitter", name: "Twitter", icon: Share2, color: "bg-blue-50 border-blue-200" }
+    {
+      id: "lens",
+      name: "Lens Protocol",
+      icon: Users,
+      color: "bg-slate-800 text-white border-slate-800",
+      description: "Web3 community • Own your data",
+      recommended: true,
+    },
+    {
+      id: "twitter",
+      name: "Twitter",
+      icon: Share2,
+      color: "bg-blue-50 border-blue-200",
+      description: "Broader reach • Traditional social",
+      recommended: false,
+    },
   ];
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = personalizedTemplates.find(t => t.id === templateId);
+    const template = personalizedTemplates.find((t) => t.id === templateId);
     if (template) {
       setSelectedTemplate(templateId);
       setPostText(template.template);
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (!user) {
-      navigate("/auth?context=social");
+      triggerPremiumHaptic("gentle");
+      showPremiumFeedback("Sign in to share with the community");
+      navigate("/auth?context=social-share&source=mobile-share");
+      return;
+    }
+
+    if (!postText.trim()) {
+      triggerPremiumHaptic("gentle");
+      showPremiumFeedback("Add a message to share your progress");
       return;
     }
 
     setIsSharing(true);
-    try {
-      // Mobile-specific sharing logic
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    triggerPremiumHaptic("gentle");
 
-      if (onClose) {
-        onClose();
+    try {
+      const result = await postSession(
+        postText.trim(),
+        stats.lastSessionScore || 85,
+        stats.favoritePattern || "Box Breathing",
+      );
+
+      if (result.success) {
+        triggerPremiumHaptic("gentle");
+        toast.success("Shared to Lens community", {
+          duration: 3000,
+          style: {
+            background: "rgba(248, 250, 252, 0.95)",
+            color: "#1e293b",
+            border: "1px solid #e2e8f0",
+            borderRadius: "8px",
+            fontSize: "14px",
+            fontWeight: "500",
+            backdropFilter: "blur(12px)",
+          },
+        });
+
+        if (onClose) {
+          onClose();
+        } else {
+          navigate("/community");
+        }
       } else {
-        navigate("/community");
+        throw new Error(result.error || "Failed to share");
       }
     } catch (error) {
-      console.error("Sharing failed:", error);
+      triggerPremiumHaptic("gentle");
+      console.error("Lens sharing failed:", error);
+      showPremiumFeedback("Unable to share right now. Please try again.");
     } finally {
       setIsSharing(false);
     }
-  };
+  }, [user, postText, stats, postSession, onClose, navigate]);
 
-  const handleCopyText = () => {
+  const handleCopyText = useCallback(() => {
+    triggerPremiumHaptic("subtle");
     navigator.clipboard.writeText(postText);
-  };
+    showPremiumFeedback("Text copied to clipboard");
+  }, [postText]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-      {/* Mobile Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4">
+      {/* Premium Header */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Share Journey</h1>
-          <p className="text-sm text-muted-foreground">Tell your wellness story</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 bg-slate-600 rounded-full" />
+            <h1 className="text-xl font-medium text-slate-800">
+              Share Progress
+            </h1>
+          </div>
+          <p className="text-sm text-slate-600">
+            Connect with fellow practitioners
+          </p>
         </div>
         {onClose && (
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              triggerPremiumHaptic("subtle");
+              onClose();
+            }}
+            className="text-slate-500 hover:text-slate-700"
+          >
             <X className="h-5 w-5" />
           </Button>
         )}
       </div>
 
       <div className="space-y-6">
-        {/* Quick Stats */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.totalSessions}</p>
-                <p className="text-xs text-muted-foreground">Sessions</p>
+        {/* Lens Community Context */}
+        <Card className="bg-slate-50 border-slate-200">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center">
+                <Users className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-600">{stats.currentStreak}</p>
-                <p className="text-xs text-muted-foreground">Day Streak</p>
+                <h3 className="font-medium text-slate-800">Lens Community</h3>
+                <p className="text-sm text-slate-600">
+                  Share with 1,200+ practitioners
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-lg font-medium text-slate-800">
+                  {stats.totalSessions}
+                </p>
+                <p className="text-xs text-slate-600">Sessions</p>
+              </div>
+              <div>
+                <p className="text-lg font-medium text-slate-800">
+                  {stats.currentStreak}
+                </p>
+                <p className="text-xs text-slate-600">Day Streak</p>
+              </div>
+              <div>
+                <p className="text-lg font-medium text-slate-800">
+                  {Math.round(stats.totalMinutes / 60)}h
+                </p>
+                <p className="text-xs text-slate-600">Mindful Time</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Template Selection */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Quick Templates</CardTitle>
+        {/* Mindful Templates */}
+        <Card className="border-slate-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Wind className="h-4 w-4 text-slate-600" />
+              <CardTitle className="text-lg text-slate-800">
+                Breathing Insights
+              </CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {personalizedTemplates.slice(0, 3).map((template) => (
-              <Card
+              <Button
                 key={template.id}
-                className={`cursor-pointer transition-all ${
-                  selectedTemplate === template.id ? template.color : "bg-white"
-                }`}
+                variant={
+                  selectedTemplate === template.id ? "default" : "outline"
+                }
+                size="sm"
                 onClick={() => handleTemplateSelect(template.id)}
+                className={cn(
+                  "h-auto p-3 text-left justify-start",
+                  selectedTemplate === template.id
+                    ? "bg-slate-800 text-white"
+                    : "border-slate-200 hover:bg-slate-50",
+                )}
               >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full ${template.color} flex items-center justify-center`}>
-                      {template.icon === "Trophy" && <Trophy className="h-4 w-4" />}
-                      {template.icon === "Sparkles" && <Sparkles className="h-4 w-4" />}
-                      {template.icon === "Heart" && <Heart className="h-4 w-4" />}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{template.title}</h4>
-                      <Badge variant="outline" className="text-xs mt-1">
-                        {template.priority}
-                      </Badge>
-                    </div>
-                    {selectedTemplate === template.id && <CheckCircle className="h-4 w-4 text-green-600" />}
+                <div className="flex items-center gap-2 w-full">
+                  <div className="flex-shrink-0">
+                    {template.icon === "Trophy" && (
+                      <Trophy className="h-4 w-4" />
+                    )}
+                    {template.icon === "Sparkles" && (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {template.icon === "Heart" && <Heart className="h-4 w-4" />}
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {template.title}
+                    </p>
+                    <p className="text-xs opacity-75 truncate">
+                      {template.template.substring(0, 50)}...
+                    </p>
+                  </div>
+                </div>
+              </Button>
             ))}
           </CardContent>
         </Card>
 
         {/* Post Editor */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Your Post</CardTitle>
+        <Card className="border-slate-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-slate-600" />
+              <CardTitle className="text-lg text-slate-800">
+                Your Message
+              </CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
-              placeholder="Share your breathing journey..."
+              placeholder="Share your mindful breathing experience..."
               value={postText}
               onChange={(e) => setPostText(e.target.value)}
-              rows={6}
-              className="resize-none text-base"
+              rows={4}
+              className="resize-none text-base border-slate-200 focus:border-slate-400"
             />
 
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-sm text-slate-500">
               <span>{postText.length}/280</span>
-              <Button variant="outline" size="sm" onClick={handleCopyText}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyText}
+                className="border-slate-200 text-slate-600"
+              >
                 <Copy className="h-3 w-3 mr-1" />
                 Copy
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Platform Selection - Lens Priority */}
+        <Card className="border-slate-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-slate-600" />
+              <CardTitle className="text-lg text-slate-800">Share To</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {platformOptions.map((platform) => {
+              const Icon = platform.icon;
+              const isSelected = selectedPlatforms.includes(platform.id);
+
+              return (
+                <div
+                  key={platform.id}
+                  className={cn(
+                    "p-4 rounded-lg border transition-all duration-300 cursor-pointer",
+                    isSelected
+                      ? platform.id === "lens"
+                        ? "bg-slate-800 border-slate-800 text-white"
+                        : "bg-blue-50 border-blue-200"
+                      : "bg-white border-slate-200 hover:border-slate-300",
+                  )}
+                  onClick={() => {
+                    triggerPremiumHaptic("subtle");
+                    setSelectedPlatforms((prev) =>
+                      isSelected
+                        ? prev.filter((p) => p !== platform.id)
+                        : [...prev, platform.id],
+                    );
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        isSelected
+                          ? platform.id === "lens"
+                            ? "bg-white/20"
+                            : "bg-blue-100"
+                          : "bg-slate-100",
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "h-5 w-5",
+                          isSelected
+                            ? platform.id === "lens"
+                              ? "text-white"
+                              : "text-blue-600"
+                            : "text-slate-600",
+                        )}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium">{platform.name}</h4>
+                        {platform.recommended && (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-green-100 text-green-700"
+                          >
+                            Recommended
+                          </Badge>
+                        )}
+                      </div>
+                      <p
+                        className={cn(
+                          "text-sm",
+                          isSelected
+                            ? platform.id === "lens"
+                              ? "text-white/80"
+                              : "text-blue-700"
+                            : "text-slate-600",
+                        )}
+                      >
+                        {platform.description}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <CheckCircle
+                        className={cn(
+                          "h-5 w-5",
+                          platform.id === "lens"
+                            ? "text-white"
+                            : "text-blue-600",
+                        )}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
 
@@ -218,10 +445,10 @@ export const MobileSocialCreate: React.FC<MobileSocialCreateProps> = ({
                       isSelected ? platform.color : "bg-white"
                     }`}
                     onClick={() => {
-                      setSelectedPlatforms(prev =>
+                      setSelectedPlatforms((prev) =>
                         isSelected
-                          ? prev.filter(p => p !== platform.id)
-                          : [...prev, platform.id]
+                          ? prev.filter((p) => p !== platform.id)
+                          : [...prev, platform.id],
                       );
                     }}
                   >
@@ -242,33 +469,49 @@ export const MobileSocialCreate: React.FC<MobileSocialCreateProps> = ({
         {/* Share Button */}
         <Button
           onClick={handleShare}
-          disabled={isSharing || !postText.trim() || selectedPlatforms.length === 0}
-          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          disabled={
+            isSharing || !postText.trim() || selectedPlatforms.length === 0
+          }
+          className="w-full bg-slate-800 hover:bg-slate-900 text-white transition-all duration-300"
           size="lg"
         >
           {isSharing ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
               Sharing...
             </>
           ) : (
             <>
-              <Share2 className="h-4 w-4 mr-2" />
-              Share Post
-              <ArrowRight className="h-4 w-4 ml-2" />
+              <Send className="w-4 h-4 mr-2" />
+              Share to{" "}
+              {selectedPlatforms.includes("lens")
+                ? "Lens Community"
+                : "Selected Platforms"}
+              <ArrowRight className="w-4 h-4 ml-2" />
             </>
           )}
         </Button>
 
+        {/* Auth Prompt */}
         {!user && (
-          <Card className="bg-yellow-50 border-yellow-200">
-            <CardContent className="p-4 text-center">
-              <h4 className="font-medium text-yellow-800 mb-2">Sign in to share</h4>
-              <p className="text-sm text-yellow-700 mb-3">
-                Connect to share with the community
+          <Card className="bg-slate-50 border-slate-200">
+            <CardContent className="p-5 text-center">
+              <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <h4 className="font-medium text-slate-800 mb-2">
+                Join the Community
+              </h4>
+              <p className="text-sm text-slate-600 mb-4">
+                Sign in to share your progress with fellow practitioners on Lens
               </p>
-              <Button onClick={() => navigate("/auth?context=social")} size="sm">
-                Sign In
+              <Button
+                onClick={() =>
+                  navigate("/auth?context=social-share&source=mobile-share")
+                }
+                className="bg-slate-800 hover:bg-slate-900 text-white"
+              >
+                Connect & Share
               </Button>
             </CardContent>
           </Card>

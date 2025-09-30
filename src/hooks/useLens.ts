@@ -64,9 +64,16 @@ export interface UseLensReturn {
 
   // Content actions
   shareBreathingSession: (
-    session: BreathingSession,
+    sessionOrContent: BreathingSession | string,
+    sessionScore?: number,
+    patternName?: string,
   ) => Promise<SocialActionResult>;
   createPost: (content: string, tags?: string[]) => Promise<SocialActionResult>;
+  postSession: (
+    content: string,
+    sessionScore?: number,
+    patternName?: string,
+  ) => Promise<SocialActionResult>;
   createComment: (
     postId: string,
     content: string,
@@ -248,9 +255,13 @@ export const useLens = (): UseLensReturn => {
     }
   }, []);
 
-  // Share breathing session
+  // Share breathing session (enhanced for all use cases)
   const shareBreathingSession = useCallback(
-    async (session: BreathingSession): Promise<SocialActionResult> => {
+    async (
+      sessionOrContent: BreathingSession | string,
+      sessionScore?: number,
+      patternName?: string,
+    ): Promise<SocialActionResult> => {
       if (!isAuthenticated) {
         return { success: false, error: "Not authenticated" };
       }
@@ -259,7 +270,31 @@ export const useLens = (): UseLensReturn => {
       setActionError(null);
 
       try {
-        const result = await lensAPI.shareBreathingSession(session);
+        let result: SocialActionResult;
+
+        // Handle both session objects and simple content strings
+        if (typeof sessionOrContent === "string") {
+          // Simple content sharing (from mobile)
+          const metadata = {
+            content: sessionOrContent,
+            tags: ["breathing", "wellness", "mindfulness"],
+            locale: "en",
+            sessionData: {
+              score: sessionScore,
+              pattern: patternName,
+              timestamp: new Date().toISOString(),
+            },
+          };
+
+          const contentUri = `data:application/json,${encodeURIComponent(
+            JSON.stringify(metadata),
+          )}`;
+
+          result = await lensAPI.createPost(contentUri);
+        } else {
+          // Full session object sharing
+          result = await lensAPI.shareBreathingSession(sessionOrContent);
+        }
 
         if (result.success) {
           // Refresh timeline to show new post
@@ -278,6 +313,18 @@ export const useLens = (): UseLensReturn => {
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isAuthenticated],
+  );
+
+  // Convenience wrapper for mobile sharing
+  const postSession = useCallback(
+    async (
+      content: string,
+      sessionScore?: number,
+      patternName?: string,
+    ): Promise<SocialActionResult> => {
+      return shareBreathingSession(content, sessionScore, patternName);
+    },
+    [shareBreathingSession],
   );
 
   // Create general post
@@ -622,6 +669,7 @@ export const useLens = (): UseLensReturn => {
     // Content actions
     shareBreathingSession,
     createPost,
+    postSession,
     createComment,
     followUser,
     unfollowUser,
@@ -636,10 +684,8 @@ export const useLens = (): UseLensReturn => {
     // Community features
     loadCommunityStats,
     loadChallenges,
-    joinChallenge,
-
-    // User management
     loadAchievements,
     updatePreferences,
+    joinChallenge,
   };
 };

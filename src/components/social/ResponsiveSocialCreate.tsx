@@ -1,6 +1,6 @@
 /**
  * Responsive Social Create - Adaptive Social Post Creation
- * 
+ *
  * ENHANCEMENT FIRST: Builds on existing social components with responsive design
  * CLEAN: Separates mobile and desktop social creation logic
  * MODULAR: Reuses MobileSocialCreate and DesktopSocialCreate components
@@ -12,30 +12,36 @@ import { isTouchDevice } from "../../utils/mobile-detection";
 import { MobileSocialCreate } from "../mobile/MobileSocialCreate";
 import { DesktopSocialCreate } from "../desktop/DesktopSocialCreate";
 
+interface SessionStats {
+  totalSessions: number;
+  totalMinutes: number;
+  currentStreak: number;
+  favoritePattern: string;
+  lastSessionScore: number;
+  weeklyGoalProgress: number;
+}
+
 interface ResponsiveSocialCreateProps {
   onClose?: () => void;
-  prefilledStats?: any;
+  prefilledStats?: Partial<SessionStats>;
   mode?: "modal" | "page";
 }
 
 export const ResponsiveSocialCreate: React.FC<ResponsiveSocialCreateProps> = ({
   onClose,
   prefilledStats,
-  mode = "page"
+  mode = "page",
 }) => {
   const isMobile = isTouchDevice();
 
   if (isMobile) {
     return (
-      <MobileSocialCreate 
-        onClose={onClose}
-        prefilledStats={prefilledStats}
-      />
+      <MobileSocialCreate onClose={onClose} prefilledStats={prefilledStats} />
     );
   }
 
   return (
-    <DesktopSocialCreate 
+    <DesktopSocialCreate
       onClose={onClose}
       prefilledStats={prefilledStats}
       mode={mode}
