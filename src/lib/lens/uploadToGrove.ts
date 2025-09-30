@@ -7,11 +7,7 @@
 
 import { StorageClient, immutable } from "@lens-chain/storage-client";
 import { currentNetwork } from "./config";
-import type {
-  LensTextOnlyMetadata,
-  LensImageMetadata,
-  BreathingSession,
-} from "./types";
+import type { BreathingSession, PostMetadata } from "./types";
 
 // Create storage client
 const storageClient = StorageClient.create();
@@ -20,7 +16,7 @@ const storageClient = StorageClient.create();
  * Upload JSON metadata to Grove storage
  */
 export async function uploadMetadataToGrove(
-  metadata: LensTextOnlyMetadata | LensImageMetadata,
+  metadata: PostMetadata,
 ): Promise<string> {
   try {
     const acl = immutable(currentNetwork.chainId);
@@ -29,7 +25,7 @@ export async function uploadMetadataToGrove(
     console.log("Metadata uploaded to Grove:", {
       uri: response.uri,
       size: JSON.stringify(metadata).length,
-      contentFocus: metadata.lens.mainContentFocus,
+      title: metadata.title,
     });
 
     return response.uri;
@@ -155,7 +151,7 @@ export function estimateStorageCost(dataSizeBytes: number): {
 /**
  * Validate data before Grove upload
  */
-export function validateForGroveUpload(data: any): {
+export function validateForGroveUpload(data: unknown): {
   isValid: boolean;
   errors: string[];
 } {
@@ -190,7 +186,7 @@ export function validateForGroveUpload(data: any): {
 /**
  * Create fallback data URI if Grove upload fails
  */
-export function createFallbackDataUri(data: any): string {
+export function createFallbackDataUri(data: unknown): string {
   try {
     const jsonString = JSON.stringify(data);
     const base64 = btoa(jsonString);
@@ -204,7 +200,7 @@ export function createFallbackDataUri(data: any): string {
 /**
  * Upload with automatic fallback to data URI
  */
-export async function uploadWithFallback(data: any): Promise<string> {
+export async function uploadWithFallback(data: unknown): Promise<string> {
   const validation = validateForGroveUpload(data);
   if (!validation.isValid) {
     console.warn("Data validation failed, using fallback:", validation.errors);
@@ -212,7 +208,7 @@ export async function uploadWithFallback(data: any): Promise<string> {
   }
 
   try {
-    return await uploadToGrove(data);
+    return await uploadToGrove(data as Record<string, unknown>);
   } catch (error) {
     console.warn("Grove upload failed, using fallback:", error);
     return createFallbackDataUri(data);

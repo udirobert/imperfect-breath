@@ -1,300 +1,255 @@
 /**
  * Lens Protocol v3 Metadata Creation
  *
- * Creates proper Lens v3 metadata using @lens-protocol/metadata
- * and our consolidated types system
+ * Simple metadata creation utilities for Lens v3
+ * Uses basic JSON structures compatible with the new architecture
  */
 
-import { textOnly, image, video } from "@lens-protocol/metadata";
-import type {
-  LensTextOnlyMetadata,
-  LensImageMetadata,
-  BreathingSession,
-  LensPostContent,
-} from "./types";
-import { getAppAddress } from "./config";
+import type { BreathingSession, PostMetadata } from "./types";
 
 /**
- * Create text-only post metadata for breathing sessions
+ * Create metadata for a breathing session post
  */
 export function createBreathingSessionMetadata(
-  sessionData: BreathingSession,
-  aiAnalysis?: string,
-): LensTextOnlyMetadata {
-  const content = generateBreathingSessionContent(sessionData, aiAnalysis);
+  session: BreathingSession,
+): PostMetadata {
+  const minutes = Math.round(session.duration / 60);
+
+  let content = `🌬️ Just completed a ${session.patternName} breathing session!\n\n`;
+  content += `⏱️ Duration: ${minutes} minute${minutes !== 1 ? "s" : ""}\n`;
+
+  if (session.score) {
+    content += `📊 Score: ${session.score}/100\n`;
+  }
+
+  if (session.cycles) {
+    content += `🔄 Cycles: ${session.cycles}\n`;
+  }
+
+  if (session.breathHoldTime) {
+    content += `💨 Max breath hold: ${session.breathHoldTime}s\n`;
+  }
+
+  content += `\n#breathing #mindfulness #wellness #${session.patternName.toLowerCase().replace(/\s+/g, "")}`;
 
   return {
-    $schema: "https://json-schemas.lens.dev/posts/text-only/3.0.0.json",
-    lens: {
-      mainContentFocus: "TEXT_ONLY",
-      title: `${sessionData.patternName} Breathing Session`,
-      content,
-      id: `breathing-session-${sessionData.sessionId || Date.now()}`,
-      locale: "en",
-      tags: [
-        "breathing",
-        "wellness",
-        "mindfulness",
-        "imperfect-breath",
-        sessionData.patternName.toLowerCase().replace(/\s+/g, "-"),
-      ],
-      appId: getAppAddress(),
-    },
+    content,
+    title: `${session.patternName} Breathing Session`,
+    tags: [
+      "breathing",
+      "mindfulness",
+      "wellness",
+      session.patternName.toLowerCase().replace(/\s+/g, ""),
+    ],
+    attributes: [
+      {
+        key: "sessionType",
+        value: "breathing",
+        type: "string" as const,
+      },
+      {
+        key: "pattern",
+        value: session.patternName,
+        type: "string" as const,
+      },
+      {
+        key: "duration",
+        value: session.duration.toString(),
+        type: "number" as const,
+      },
+      ...(session.score
+        ? [
+            {
+              key: "score",
+              value: session.score.toString(),
+              type: "number" as const,
+            },
+          ]
+        : []),
+      ...(session.cycles
+        ? [
+            {
+              key: "cycles",
+              value: session.cycles.toString(),
+              type: "number" as const,
+            },
+          ]
+        : []),
+      ...(session.breathHoldTime
+        ? [
+            {
+              key: "breathHoldTime",
+              value: session.breathHoldTime.toString(),
+              type: "number" as const,
+            },
+          ]
+        : []),
+    ],
+    locale: "en",
   };
 }
 
 /**
- * Create general text post metadata
+ * Create metadata for a general text post
  */
 export function createTextPostMetadata(
   content: string,
-  options?: {
-    title?: string;
-    tags?: string[];
-    id?: string;
-  },
-): LensTextOnlyMetadata {
+  title?: string,
+  tags?: string[],
+): PostMetadata {
   return {
-    $schema: "https://json-schemas.lens.dev/posts/text-only/3.0.0.json",
-    lens: {
-      mainContentFocus: "TEXT_ONLY",
-      title: options?.title,
-      content,
-      id: options?.id || `post-${Date.now()}`,
-      locale: "en",
-      tags: options?.tags || ["imperfect-breath"],
-      appId: getAppAddress(),
-    },
+    content,
+    title,
+    tags: tags || ["imperfect-breath"],
+    locale: "en",
   };
 }
 
 /**
- * Create image post metadata
- */
-export function createImagePostMetadata(
-  imageUri: string,
-  content?: string,
-  options?: {
-    title?: string;
-    tags?: string[];
-    id?: string;
-    altTag?: string;
-    mimeType?: string;
-  },
-): LensImageMetadata {
-  return {
-    $schema: "https://json-schemas.lens.dev/posts/image/3.0.0.json",
-    lens: {
-      mainContentFocus: "IMAGE",
-      title: options?.title,
-      content: content || "",
-      id: options?.id || `image-post-${Date.now()}`,
-      locale: "en",
-      tags: options?.tags || ["imperfect-breath"],
-      appId: getAppAddress(),
-      image: {
-        item: imageUri,
-        type: options?.mimeType || "image/jpeg",
-        altTag: options?.altTag,
-      },
-    },
-  };
-}
-
-/**
- * Create metadata using the official @lens-protocol/metadata library
- */
-export function createLensPostMetadata(
-  contentData: LensPostContent,
-): Promise<string> {
-  const metadata = textOnly({
-    content: contentData.content,
-    tags: contentData.tags,
-    appId: contentData.appId || getAppAddress(),
-  });
-
-  // Return the metadata URI - this would typically be uploaded to IPFS
-  return Promise.resolve(
-    `data:application/json,${encodeURIComponent(JSON.stringify(metadata))}`,
-  );
-}
-
-/**
- * Generate content text for breathing session posts
- */
-function generateBreathingSessionContent(
-  sessionData: BreathingSession,
-  aiAnalysis?: string,
-): string {
-  const durationMinutes = Math.floor(sessionData.duration / 60);
-  const durationSeconds = sessionData.duration % 60;
-
-  let content = `🌬️ Just completed a ${sessionData.patternName} breathing session!\n\n`;
-
-  // Duration
-  content += `⏱️ Duration: ${durationMinutes}m ${durationSeconds}s\n`;
-
-  // Score if available
-  if (sessionData.score !== undefined) {
-    const scoreEmoji = getScoreEmoji(sessionData.score);
-    content += `📊 Session Score: ${sessionData.score}/100 ${scoreEmoji}\n`;
-  }
-
-  // Breath hold time if available
-  if (sessionData.breathHoldTime) {
-    content += `💨 Longest Breath Hold: ${sessionData.breathHoldTime}s\n`;
-  }
-
-  // Cycles if available
-  if (sessionData.cycles) {
-    content += `🔄 Completed Cycles: ${sessionData.cycles}\n`;
-  }
-
-  // Restlessness score if available
-  if (sessionData.restlessnessScore !== undefined) {
-    const calmnessScore = 100 - sessionData.restlessnessScore;
-    content += `🧘 Calmness Level: ${calmnessScore}/100\n`;
-  }
-
-  // AI analysis if provided
-  if (aiAnalysis) {
-    content += `\n🤖 AI Insights: ${aiAnalysis}\n`;
-  }
-
-  // Insights if available
-  if (sessionData.insights && sessionData.insights.length > 0) {
-    content += `\n💡 Key Insights:\n`;
-    sessionData.insights.forEach((insight, index) => {
-      content += `${index + 1}. ${insight}\n`;
-    });
-  }
-
-  // Tags and call to action
-  content += `\n#BreathingPractice #Wellness #Mindfulness #ImperfectBreath`;
-  content += `\n\nJoin me on the journey to better breathing! 🌱`;
-
-  return content;
-}
-
-/**
- * Get emoji based on session score
- */
-function getScoreEmoji(score: number): string {
-  if (score >= 90) return "🌟";
-  if (score >= 80) return "✨";
-  if (score >= 70) return "👍";
-  if (score >= 60) return "👌";
-  if (score >= 50) return "🙂";
-  return "💪";
-}
-
-/**
- * Create metadata for breathing challenges
- */
-export function createChallengeMetadata(
-  challengeTitle: string,
-  challengeDescription: string,
-  patternName: string,
-): LensTextOnlyMetadata {
-  const content = `🏆 New Breathing Challenge: ${challengeTitle}\n\n${challengeDescription}\n\nPattern: ${patternName}\n\n#BreathingChallenge #Wellness #Community #ImperfectBreath`;
-
-  return {
-    $schema: "https://json-schemas.lens.dev/posts/text-only/3.0.0.json",
-    lens: {
-      mainContentFocus: "TEXT_ONLY",
-      title: challengeTitle,
-      content,
-      id: `challenge-${Date.now()}`,
-      locale: "en",
-      tags: [
-        "breathing-challenge",
-        "wellness",
-        "community",
-        "imperfect-breath",
-        patternName.toLowerCase().replace(/\s+/g, "-"),
-      ],
-      appId: getAppAddress(),
-    },
-  };
-}
-
-/**
- * Create metadata for achievement unlocks
+ * Create metadata for an achievement post
  */
 export function createAchievementMetadata(
-  achievementTitle: string,
-  achievementDescription: string,
-  rarity: string,
-): LensTextOnlyMetadata {
-  const rarityEmoji = getRarityEmoji(rarity);
-  const content = `${rarityEmoji} Achievement Unlocked: ${achievementTitle}\n\n${achievementDescription}\n\nRarity: ${rarity}\n\n#Achievement #BreathingJourney #Wellness #ImperfectBreath`;
+  achievementName: string,
+  description: string,
+): PostMetadata {
+  const content = `🏆 Achievement unlocked: ${achievementName}!\n\n${description}\n\n#achievement #wellness #breathing #milestone`;
 
   return {
-    $schema: "https://json-schemas.lens.dev/posts/text-only/3.0.0.json",
-    lens: {
-      mainContentFocus: "TEXT_ONLY",
-      title: `Achievement: ${achievementTitle}`,
-      content,
-      id: `achievement-${Date.now()}`,
-      locale: "en",
-      tags: [
-        "achievement",
-        "breathing-journey",
-        "wellness",
-        "imperfect-breath",
-        rarity,
-      ],
-      appId: getAppAddress(),
-    },
+    content,
+    title: `Achievement: ${achievementName}`,
+    tags: ["achievement", "wellness", "breathing", "milestone"],
+    attributes: [
+      {
+        key: "achievementType",
+        value: "breathing",
+        type: "string" as const,
+      },
+      {
+        key: "achievementName",
+        value: achievementName,
+        type: "string" as const,
+      },
+    ],
+    locale: "en",
   };
 }
 
 /**
- * Get emoji based on achievement rarity
+ * Create metadata for a challenge participation post
  */
-function getRarityEmoji(rarity: string): string {
-  switch (rarity.toLowerCase()) {
-    case "legendary":
-      return "🏆";
-    case "epic":
-      return "💎";
-    case "rare":
-      return "🌟";
-    case "common":
-    default:
-      return "🏅";
+export function createChallengeMetadata(
+  challengeName: string,
+  action: "joined" | "completed" | "progress",
+  progress?: { current: number; total: number },
+): PostMetadata {
+  let content = "";
+
+  switch (action) {
+    case "joined":
+      content = `🚀 Just joined the ${challengeName} challenge! Ready to level up my breathing practice.\n\n#challenge #breathing #wellness #commitment`;
+      break;
+    case "completed":
+      content = `🎉 Challenge completed! Just finished the ${challengeName} challenge. What an incredible journey!\n\n#challenge #completed #breathing #achievement`;
+      break;
+    case "progress": {
+      const progressText = progress
+        ? `Day ${progress.current} of ${progress.total}`
+        : "Making progress";
+      content = `💪 ${progressText} in the ${challengeName} challenge. Staying consistent with my breathing practice!\n\n#challenge #progress #breathing #consistency`;
+      break;
+    }
   }
+
+  return {
+    content,
+    title: `Challenge ${action}: ${challengeName}`,
+    tags: ["challenge", "breathing", "wellness", action],
+    attributes: [
+      {
+        key: "challengeAction",
+        value: action,
+        type: "string" as const,
+      },
+      {
+        key: "challengeName",
+        value: challengeName,
+        type: "string" as const,
+      },
+      ...(progress
+        ? [
+            {
+              key: "progress",
+              value: `${progress.current}/${progress.total}`,
+              type: "string" as const,
+            },
+          ]
+        : []),
+    ],
+    locale: "en",
+  };
 }
 
 /**
- * Validate metadata before posting
+ * Create a data URI from metadata (fallback for when Grove is unavailable)
  */
-export function validateMetadata(
-  metadata: LensTextOnlyMetadata | LensImageMetadata,
-): {
-  isValid: boolean;
+export function createMetadataDataUri(metadata: PostMetadata): string {
+  const jsonString = JSON.stringify(metadata);
+  return `data:application/json,${encodeURIComponent(jsonString)}`;
+}
+
+/**
+ * Validate metadata structure
+ */
+export function validateMetadata(metadata: PostMetadata): {
+  valid: boolean;
   errors: string[];
 } {
   const errors: string[] = [];
 
-  if (!metadata.lens.content || metadata.lens.content.trim().length === 0) {
-    errors.push("Content cannot be empty");
+  if (!metadata.content || metadata.content.trim().length === 0) {
+    errors.push("Content is required");
   }
 
-  if (metadata.lens.content && metadata.lens.content.length > 2000) {
-    errors.push("Content exceeds maximum length of 2000 characters");
+  if (metadata.content && metadata.content.length > 2000) {
+    errors.push("Content too long (max 2000 characters)");
   }
 
-  if (!metadata.lens.id || metadata.lens.id.trim().length === 0) {
-    errors.push("ID is required");
+  if (metadata.tags && metadata.tags.length > 10) {
+    errors.push("Too many tags (max 10)");
   }
 
-  if (metadata.lens.tags && metadata.lens.tags.length > 10) {
-    errors.push("Too many tags (maximum 10)");
+  if (metadata.tags) {
+    metadata.tags.forEach((tag) => {
+      if (tag.length > 50) {
+        errors.push(`Tag too long: ${tag} (max 50 characters)`);
+      }
+    });
   }
 
   return {
-    isValid: errors.length === 0,
+    valid: errors.length === 0,
     errors,
   };
+}
+
+/**
+ * Helper to extract hashtags from content
+ */
+export function extractHashtagsFromContent(content: string): string[] {
+  const hashtagRegex = /#[\w]+/g;
+  const matches = content.match(hashtagRegex);
+  return matches ? matches.map((tag) => tag.slice(1)) : [];
+}
+
+/**
+ * Helper to clean content for social sharing
+ */
+export function cleanContentForSharing(content: string): string {
+  // Remove excessive whitespace
+  let cleaned = content.replace(/\s+/g, " ").trim();
+
+  // Ensure proper line breaks for social media
+  cleaned = cleaned.replace(/\n\s*\n/g, "\n\n");
+
+  return cleaned;
 }

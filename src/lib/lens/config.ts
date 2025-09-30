@@ -8,8 +8,8 @@
 import { mainnet, testnet } from "@lens-protocol/client";
 
 // Environment detection
-const isProduction = import.meta.env.PROD;
-const isDevelopment = import.meta.env.DEV;
+const isProduction = process.env.NODE_ENV === "production";
+const isDevelopment = process.env.NODE_ENV === "development";
 
 // Lens V3 Environment Configuration
 export const environment = isProduction ? mainnet : testnet;
@@ -42,7 +42,11 @@ export const currentNetwork = isProduction
   : LENS_CHAIN_CONFIG.testnet;
 
 // App Configuration
-const LENS_APP_ADDRESS = import.meta.env.VITE_LENS_APP_ADDRESS;
+const LENS_APP_ADDRESS =
+  typeof window !== "undefined"
+    ? (window as { __VITE_LENS_APP_ADDRESS__?: string })
+        .__VITE_LENS_APP_ADDRESS__
+    : process.env.VITE_LENS_APP_ADDRESS;
 
 // Default app addresses for different networks
 export const DEFAULT_APP_ADDRESSES = {

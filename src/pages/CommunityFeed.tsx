@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useAuth } from "@/auth/useAuth";
 import { useLens } from "@/hooks/useLens";
-import { useLensFeed } from "@/hooks/useLensFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +53,8 @@ interface BreathingChallenge {
 }
 
 const CommunityFeed: React.FC = () => {
-  const { isConnected } = useAccount();
+  // Use consolidated auth system
+  const auth = useAuth({ blockchain: true, lens: true });
   const {
     isAuthenticated,
     currentAccount,
@@ -86,20 +86,28 @@ const CommunityFeed: React.FC = () => {
   });
 
   useEffect(() => {
-    if (isAuthenticated) {
-      loadTimeline();
+    if (isAuthenticated && currentAccount) {
+      loadTimeline(true);
     }
-  }, [isAuthenticated, loadTimeline]);
+  }, [isAuthenticated, currentAccount, loadTimeline]);
 
-  const handleConnect = async () => {
+  const handleLensConnect = async () => {
     try {
-      const result = await authenticate("");
+      if (!auth.wallet?.address) {
+        toast.error("Please connect your wallet first");
+        return;
+      }
+
+      const result = await authenticate(auth.wallet.address);
       if (result.success) {
         toast.success("Connected to Lens Protocol!");
+        // Load initial data
+        loadTimeline(true);
       } else {
         throw new Error(result.error || "Authentication failed");
       }
     } catch (error) {
+      console.error("Lens connection error:", error);
       toast.error("Failed to connect to Lens Protocol");
     }
   };
@@ -108,7 +116,12 @@ const CommunityFeed: React.FC = () => {
     const matchesSearch =
       searchQuery === "" ||
       post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (post.author.metadata?.name || post.author.username?.localName || post.author.username?.fullHandle || 'Unknown')
+      (
+        post.author.metadata?.name ||
+        post.author.username?.localName ||
+        post.author.username?.fullHandle ||
+        "Unknown"
+      )
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
 
@@ -120,9 +133,8 @@ const CommunityFeed: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  // Using consolidated formatters from utils
-
-  if (!isConnected) {
+  // Check if wallet is connected
+  if (!auth.hasWallet) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center space-y-6">
@@ -140,7 +152,7 @@ const CommunityFeed: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && auth.hasWallet) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto text-center space-y-6">
@@ -148,13 +160,21 @@ const CommunityFeed: React.FC = () => {
             <Users className="w-16 h-16 mx-auto text-primary" />
             <h1 className="text-3xl font-bold">Join the Community</h1>
             <p className="text-muted-foreground">
-              Authenticate with Lens Protocol to share your breathing sessions
-              and connect with other practitioners.
+              Connect to Lens Protocol to share your breathing sessions and
+              connect with other practitioners worldwide.
             </p>
           </div>
-          <Button onClick={handleConnect} size="lg">
-            Connect to Lens Protocol
-          </Button>
+          <div className="space-y-4">
+            <Button onClick={handleLensConnect} size="lg">
+              Connect to Lens Protocol
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Connected wallet:{" "}
+              {auth.wallet?.address
+                ? `${auth.wallet.address.slice(0, 6)}...${auth.wallet.address.slice(-4)}`
+                : "None"}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -306,231 +326,113 @@ const CommunityFeed: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="w-5 h-5" />
-                  Your Profile
+                  Your Lens Profile
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback>
-                      {currentAccount.metadata?.name?.[0] || "U"}
+                      {currentAccount.metadata?.name?.[0] ||
+                        currentAccount.username?.localName?.[0] ||
+                        "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      {currentAccount.metadata?.name || "Anonymous"}
+                      {currentAccount.metadata?.name ||
+                        currentAccount.username?.localName ||
+                        "Anonymous"}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      @{currentAccount.username?.fullHandle || "user.lens"}
+                      {currentAccount.username?.fullHandle ||
+                        `${currentAccount.address.slice(0, 6)}...${currentAccount.address.slice(-4)}`}
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div>
-                    <div className="text-lg font-bold">12</div>
-                    <div className="text-xs text-muted-foreground">
-                      Sessions
+                <div className="text-sm text-muted-foreground">
+                  {currentAccount.metadata?.bio ||
+                    "Welcome to the breathing community!"}
+                </div>
+
+                {/* Profile Stats */}
+                {currentAccount.stats && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                    <div className="text-center">
+                      <div className="font-medium">
+                        {currentAccount.stats.posts || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Posts</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium">
+                        {currentAccount.stats.followers || 0}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Followers
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-lg font-bold">45</div>
-                    <div className="text-xs text-muted-foreground">
-                      Followers
-                    </div>
+                )}
+
+                {/* Wallet Info */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Connected: {auth.wallet?.chain || "Unknown"}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {auth.isFullyConnected ? "Fully Connected" : "Partial"}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Active Challenge */}
-          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+          {/* Active Challenge Card */}
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-yellow-500" />
+                <Award className="w-5 h-5" />
                 Active Challenge
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div>
-                <h3 className="font-semibold text-lg">
-                  {activeChallenge.name}
-                </h3>
+                <h3 className="font-medium">{activeChallenge.name}</h3>
                 <p className="text-sm text-muted-foreground">
                   {activeChallenge.description}
                 </p>
               </div>
-
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Participants</span>
                 <Badge variant="secondary">
                   {activeChallenge.participants}
                 </Badge>
               </div>
-
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Reward</span>
                 <span className="font-medium">{activeChallenge.reward}</span>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Time left</span>
-                  <span className="font-medium">12 days</span>
-                </div>
-                <div className="w-full bg-secondary rounded-full h-2">
-                  <div
-                    className="bg-primary h-2 rounded-full"
-                    style={{ width: "60%" }}
-                  ></div>
-                </div>
-              </div>
-
               <Button className="w-full" size="sm">
                 Join Challenge
               </Button>
-
-              <div className="text-xs text-center text-muted-foreground">
-                Use {activeChallenge.hashtag} in your posts
-              </div>
             </CardContent>
           </Card>
 
-          {/* Trending Patterns */}
+          {/* Trending Hashtags */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Trending Patterns
-              </CardTitle>
+              <CardTitle>Trending</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                { name: "4-7-8 Breathing", sessions: 234, trend: "+12%" },
-                { name: "Box Breathing", sessions: 189, trend: "+8%" },
-                { name: "Wim Hof Method", sessions: 156, trend: "+15%" },
-                { name: "Coherent Breathing", sessions: 98, trend: "+5%" },
-              ].map((pattern, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-sm">{pattern.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {pattern.sessions} sessions
-                    </div>
+            <CardContent className="space-y-2">
+              {["#breathing", "#mindfulness", "#wellness", "#meditation"].map(
+                (tag) => (
+                  <div key={tag} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{tag}</span>
+                    <TrendingUp className="w-4 h-4 text-green-500" />
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {pattern.trend}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Challenge Leaderboard */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5" />
-                Challenge Leaders
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                {
-                  user: "Sarah M.",
-                  sessions: 28,
-                  streak: "28 days",
-                  position: 1,
-                },
-                {
-                  user: "Alex K.",
-                  sessions: 25,
-                  streak: "25 days",
-                  position: 2,
-                },
-                {
-                  user: "Maya P.",
-                  sessions: 23,
-                  streak: "20 days",
-                  position: 3,
-                },
-                {
-                  user: "David L.",
-                  sessions: 21,
-                  streak: "18 days",
-                  position: 4,
-                },
-              ].map((leader, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-xs font-bold">
-                      {leader.position}
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">{leader.user}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {leader.streak} streak
-                      </div>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {leader.sessions}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {[
-                {
-                  user: "Sarah M.",
-                  action: "completed day 28 of #30DayBreathingReset",
-                  time: "2 hours ago",
-                  isChallenge: true,
-                },
-                {
-                  user: "Alex K.",
-                  action: "shared their breathing journey",
-                  time: "4 hours ago",
-                  isChallenge: false,
-                },
-                {
-                  user: "Maya P.",
-                  action: "joined #30DayBreathingReset challenge",
-                  time: "6 hours ago",
-                  isChallenge: true,
-                },
-                {
-                  user: "David L.",
-                  action: "created a custom pattern",
-                  time: "8 hours ago",
-                  isChallenge: false,
-                },
-              ].map((activity, index) => (
-                <div key={index} className="text-sm space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{activity.user}</span>
-                    <span>{activity.action}</span>
-                    {activity.isChallenge && (
-                      <Badge variant="secondary" className="text-xs">
-                        Challenge
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {activity.time}
-                  </div>
-                </div>
-              ))}
+                ),
+              )}
             </CardContent>
           </Card>
         </div>
