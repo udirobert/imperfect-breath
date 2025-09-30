@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Imperfect Breath</string>
+    <string name="title_activity_main">Imperfect Breath</string>
+    <string name="package_name">com.imperfectbreath.app</string>
+    <string name="custom_url_scheme">com.imperfectbreath.app</string>
+</resources>

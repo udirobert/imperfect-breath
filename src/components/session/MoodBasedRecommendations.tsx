@@ -1,1 +1,412 @@
-/**\n * Mood-Based Recommendations - User-Driven Pattern Selection\n * \n * ENHANCEMENT: Improves recommendation accuracy through user input\n * UX: Simple, intuitive mood selection for better pattern matching\n * CLEAN: Compact design that fits naturally in the session flow\n */\n\nimport React, { useState, useEffect } from \"react\";\nimport { Button } from \"@/components/ui/button\";\nimport { Card, CardContent } from \"@/components/ui/card\";\nimport { Badge } from \"@/components/ui/badge\";\nimport {\n  Zap,\n  Heart,\n  Moon,\n  Focus,\n  Coffee,\n  Frown,\n  Smile,\n  Battery,\n  Brain,\n  Bed,\n  ChevronRight,\n  Sparkles\n} from \"lucide-react\";\nimport { cn } from \"@/lib/utils\";\nimport { SmartPatternRecommendations, type RecommendationContext } from \"@/lib/recommendations/SmartPatternRecommendations\";\n\ninterface MoodOption {\n  id: string;\n  label: string;\n  icon: React.ComponentType<{ className?: string }>;\n  color: string;\n  description: string;\n  goal: \"stress\" | \"energy\" | \"sleep\" | \"focus\" | \"general\";\n  mood: \"stressed\" | \"tired\" | \"anxious\" | \"energetic\" | \"calm\";\n}\n\nconst MOOD_OPTIONS: MoodOption[] = [\n  {\n    id: \"stressed\",\n    label: \"Stressed\",\n    icon: Frown,\n    color: \"bg-red-500\",\n    description: \"Need to calm down\",\n    goal: \"stress\",\n    mood: \"stressed\"\n  },\n  {\n    id: \"tired\",\n    label: \"Tired\",\n    icon: Battery,\n    color: \"bg-orange-500\",\n    description: \"Need energy boost\",\n    goal: \"energy\",\n    mood: \"tired\"\n  },\n  {\n    id: \"anxious\",\n    label: \"Anxious\",\n    icon: Heart,\n    color: \"bg-purple-500\",\n    description: \"Need to relax\",\n    goal: \"stress\",\n    mood: \"anxious\"\n  },\n  {\n    id: \"unfocused\",\n    label: \"Unfocused\",\n    icon: Brain,\n    color: \"bg-blue-500\",\n    description: \"Need mental clarity\",\n    goal: \"focus\",\n    mood: \"stressed\"\n  },\n  {\n    id: \"restless\",\n    label: \"Restless\",\n    icon: Zap,\n    color: \"bg-yellow-500\",\n    description: \"Need to wind down\",\n    goal: \"sleep\",\n    mood: \"anxious\"\n  },\n  {\n    id: \"good\",\n    label: \"Good\",\n    icon: Smile,\n    color: \"bg-green-500\",\n    description: \"General wellness\",\n    goal: \"general\",\n    mood: \"calm\"\n  }\n];\n\ninterface MoodBasedRecommendationsProps {\n  onRecommendationsUpdate: (recommendations: any[]) => void;\n  className?: string;\n  variant?: \"compact\" | \"full\";\n}\n\nexport const MoodBasedRecommendations: React.FC<MoodBasedRecommendationsProps> = ({\n  onRecommendationsUpdate,\n  className,\n  variant = \"compact\"\n}) => {\n  const [selectedMood, setSelectedMood] = useState<string | null>(null);\n  const [recommendations, setRecommendations] = useState<any[]>([]);\n  const [isLoading, setIsLoading] = useState(false);\n\n  // Get time-based greeting\n  const getTimeGreeting = () => {\n    const hour = new Date().getHours();\n    if (hour < 12) return \"Good morning\";\n    if (hour < 17) return \"Good afternoon\";\n    if (hour < 21) return \"Good evening\";\n    return \"Good night\";\n  };\n\n  // Handle mood selection\n  const handleMoodSelect = async (moodOption: MoodOption) => {\n    setSelectedMood(moodOption.id);\n    setIsLoading(true);\n\n    try {\n      // Create recommendation context based on user's mood\n      const context: RecommendationContext = {\n        timeOfDay: new Date().getHours(),\n        userGoal: moodOption.goal,\n        currentMood: moodOption.mood,\n        userLevel: \"beginner\", // Could be made dynamic\n        sessionType: \"classic\"\n      };\n\n      // Get personalized recommendations\n      const newRecommendations = SmartPatternRecommendations.getRecommendations(context);\n      \n      // Add match percentages for display\n      const enhancedRecommendations = newRecommendations.map((rec, index) => ({\n        ...rec,\n        matchPercentage: Math.round((rec.confidence * 100) - (index * 5)), // Slight decrease for ranking\n        explanation: `${rec.reason} • ${rec.timeToEffect} to effect`,\n        badge: index === 0 ? \"optimal time\" : `${Math.round((rec.confidence * 100) - (index * 5))}% match`\n      }));\n\n      setRecommendations(enhancedRecommendations);\n      onRecommendationsUpdate(enhancedRecommendations);\n    } catch (error) {\n      console.error(\"Failed to get recommendations:\", error);\n    } finally {\n      setIsLoading(false);\n    }\n  };\n\n  // Reset selection\n  const handleReset = () => {\n    setSelectedMood(null);\n    setRecommendations([]);\n    onRecommendationsUpdate([]);\n  };\n\n  if (variant === \"compact\") {\n    return (\n      <div className={cn(\"space-y-3\", className)}>\n        {/* Compact Header */}\n        <div className=\"flex items-center justify-between\">\n          <div className=\"text-sm text-muted-foreground\">\n            {getTimeGreeting()}! How are you feeling?\n          </div>\n          {selectedMood && (\n            <Button\n              variant=\"ghost\"\n              size=\"sm\"\n              onClick={handleReset}\n              className=\"text-xs h-6 px-2\"\n            >\n              Change\n            </Button>\n          )}\n        </div>\n\n        {/* Mood Selection - Compact */}\n        {!selectedMood ? (\n          <div className=\"flex flex-wrap gap-2\">\n            {MOOD_OPTIONS.map((mood) => {\n              const Icon = mood.icon;\n              return (\n                <Button\n                  key={mood.id}\n                  variant=\"outline\"\n                  size=\"sm\"\n                  onClick={() => handleMoodSelect(mood)}\n                  className=\"flex items-center gap-1 h-8 px-3 text-xs\"\n                  disabled={isLoading}\n                >\n                  <div className={cn(\n                    \"w-3 h-3 rounded-full flex items-center justify-center text-white\",\n                    mood.color\n                  )}>\n                    <Icon className=\"h-2 w-2\" />\n                  </div>\n                  {mood.label}\n                </Button>\n              );\n            })}\n          </div>\n        ) : (\n          /* Selected Mood Display */\n          <div className=\"flex items-center gap-2 p-2 bg-muted/50 rounded-lg\">\n            {(() => {\n              const selectedMoodOption = MOOD_OPTIONS.find(m => m.id === selectedMood);\n              if (!selectedMoodOption) return null;\n              const Icon = selectedMoodOption.icon;\n              return (\n                <>\n                  <div className={cn(\n                    \"w-4 h-4 rounded-full flex items-center justify-center text-white\",\n                    selectedMoodOption.color\n                  )}>\n                    <Icon className=\"h-2.5 w-2.5\" />\n                  </div>\n                  <span className=\"text-sm font-medium\">{selectedMoodOption.label}</span>\n                  <span className=\"text-xs text-muted-foreground\">• {selectedMoodOption.description}</span>\n                  {recommendations.length > 0 && (\n                    <Badge variant=\"secondary\" className=\"text-xs ml-auto\">\n                      <Sparkles className=\"h-2.5 w-2.5 mr-1\" />\n                      {recommendations.length} matches\n                    </Badge>\n                  )}\n                </>\n              );\n            })()}\n          </div>\n        )}\n      </div>\n    );\n  }\n\n  // Full variant\n  return (\n    <Card className={cn(\"w-full\", className)}>\n      <CardContent className=\"p-6\">\n        <div className=\"space-y-4\">\n          {/* Header */}\n          <div className=\"text-center space-y-2\">\n            <h3 className=\"text-lg font-semibold\">\n              {getTimeGreeting()}! How are you feeling?\n            </h3>\n            <p className=\"text-sm text-muted-foreground\">\n              Tell us how you're feeling to get personalized breathing recommendations\n            </p>\n          </div>\n\n          {/* Mood Selection Grid */}\n          {!selectedMood ? (\n            <div className=\"grid grid-cols-2 md:grid-cols-3 gap-3\">\n              {MOOD_OPTIONS.map((mood) => {\n                const Icon = mood.icon;\n                return (\n                  <Button\n                    key={mood.id}\n                    variant=\"outline\"\n                    onClick={() => handleMoodSelect(mood)}\n                    className=\"h-auto p-4 flex flex-col items-center gap-2 hover:bg-muted/50\"\n                    disabled={isLoading}\n                  >\n                    <div className={cn(\n                      \"w-8 h-8 rounded-full flex items-center justify-center text-white\",\n                      mood.color\n                    )}>\n                      <Icon className=\"h-4 w-4\" />\n                    </div>\n                    <div className=\"text-center\">\n                      <div className=\"font-medium text-sm\">{mood.label}</div>\n                      <div className=\"text-xs text-muted-foreground\">\n                        {mood.description}\n                      </div>\n                    </div>\n                  </Button>\n                );\n              })}\n            </div>\n          ) : (\n            /* Selected Mood and Recommendations */\n            <div className=\"space-y-4\">\n              {/* Selected Mood Display */}\n              <div className=\"flex items-center justify-between p-4 bg-muted/50 rounded-lg\">\n                <div className=\"flex items-center gap-3\">\n                  {(() => {\n                    const selectedMoodOption = MOOD_OPTIONS.find(m => m.id === selectedMood);\n                    if (!selectedMoodOption) return null;\n                    const Icon = selectedMoodOption.icon;\n                    return (\n                      <>\n                        <div className={cn(\n                          \"w-8 h-8 rounded-full flex items-center justify-center text-white\",\n                          selectedMoodOption.color\n                        )}>\n                          <Icon className=\"h-4 w-4\" />\n                        </div>\n                        <div>\n                          <div className=\"font-medium\">{selectedMoodOption.label}</div>\n                          <div className=\"text-sm text-muted-foreground\">\n                            {selectedMoodOption.description}\n                          </div>\n                        </div>\n                      </>\n                    );\n                  })()}\n                </div>\n                <Button\n                  variant=\"ghost\"\n                  size=\"sm\"\n                  onClick={handleReset}\n                  className=\"text-sm\"\n                >\n                  Change\n                </Button>\n              </div>\n\n              {/* Recommendations */}\n              {isLoading ? (\n                <div className=\"text-center py-8\">\n                  <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2\" />\n                  <p className=\"text-sm text-muted-foreground\">Finding perfect patterns...</p>\n                </div>\n              ) : recommendations.length > 0 ? (\n                <div className=\"space-y-3\">\n                  <div className=\"flex items-center gap-2\">\n                    <Sparkles className=\"h-4 w-4 text-primary\" />\n                    <span className=\"font-medium\">Recommended for you</span>\n                    <Badge variant=\"secondary\" className=\"text-xs\">\n                      {recommendations.length} matches\n                    </Badge>\n                  </div>\n                  <div className=\"grid gap-3\">\n                    {recommendations.map((rec, index) => (\n                      <div\n                        key={rec.patternId}\n                        className=\"flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors\"\n                      >\n                        <div className=\"flex-1\">\n                          <div className=\"flex items-center gap-2 mb-1\">\n                            <span className=\"font-medium\">{rec.pattern.name}</span>\n                            <Badge \n                              variant={index === 0 ? \"default\" : \"secondary\"} \n                              className=\"text-xs\"\n                            >\n                              {rec.badge}\n                            </Badge>\n                          </div>\n                          <p className=\"text-sm text-muted-foreground\">\n                            {rec.explanation}\n                          </p>\n                        </div>\n                        <ChevronRight className=\"h-4 w-4 text-muted-foreground\" />\n                      </div>\n                    ))}\n                  </div>\n                </div>\n              ) : null}\n            </div>\n          )}\n        </div>\n      </CardContent>\n    </Card>\n  );\n};\n\nexport default MoodBasedRecommendations;"
+/**
+ * Mood-Based Recommendations - User-Driven Pattern Selection
+ *
+ * ENHANCEMENT: Improves recommendation accuracy through user input
+ * UX: Simple, intuitive mood selection for better pattern matching
+ * CLEAN: Compact design that fits naturally in the session flow
+ */
+
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Zap,
+  Heart,
+  Moon,
+  Focus,
+  Coffee,
+  Frown,
+  Smile,
+  Battery,
+  Brain,
+  Bed,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  SmartPatternRecommendations,
+  type RecommendationContext,
+} from "@/lib/recommendations/SmartPatternRecommendations";
+
+interface MoodOption {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  description: string;
+  goal: "stress" | "energy" | "sleep" | "focus" | "general";
+  mood: "stressed" | "tired" | "anxious" | "energetic" | "calm";
+}
+
+const MOOD_OPTIONS: MoodOption[] = [
+  {
+    id: "stressed",
+    label: "Stressed",
+    icon: Frown,
+    color: "bg-red-500",
+    description: "Need to calm down",
+    goal: "stress",
+    mood: "stressed",
+  },
+  {
+    id: "tired",
+    label: "Tired",
+    icon: Battery,
+    color: "bg-orange-500",
+    description: "Need energy boost",
+    goal: "energy",
+    mood: "tired",
+  },
+  {
+    id: "anxious",
+    label: "Anxious",
+    icon: Heart,
+    color: "bg-purple-500",
+    description: "Need to relax",
+    goal: "stress",
+    mood: "anxious",
+  },
+  {
+    id: "unfocused",
+    label: "Unfocused",
+    icon: Brain,
+    color: "bg-blue-500",
+    description: "Need mental clarity",
+    goal: "focus",
+    mood: "stressed",
+  },
+  {
+    id: "restless",
+    label: "Restless",
+    icon: Zap,
+    color: "bg-yellow-500",
+    description: "Need to wind down",
+    goal: "sleep",
+    mood: "anxious",
+  },
+  {
+    id: "good",
+    label: "Good",
+    icon: Smile,
+    color: "bg-green-500",
+    description: "General wellness",
+    goal: "general",
+    mood: "calm",
+  },
+];
+
+interface RecommendationItem {
+  patternId: string;
+  pattern: { name: string };
+  confidence: number;
+  reason: string;
+  timeToEffect: string;
+  matchPercentage: number;
+  explanation: string;
+  badge: string;
+}
+
+interface MoodBasedRecommendationsProps {
+  onRecommendationsUpdate: (recommendations: RecommendationItem[]) => void;
+  className?: string;
+  variant?: "compact" | "full";
+}
+
+export const MoodBasedRecommendations: React.FC<
+  MoodBasedRecommendationsProps
+> = ({ onRecommendationsUpdate, className, variant = "compact" }) => {
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>(
+    [],
+  );
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Get time-based greeting
+  const getTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    if (hour < 21) return "Good evening";
+    return "Good night";
+  };
+
+  // Handle mood selection
+  const handleMoodSelect = async (moodOption: MoodOption) => {
+    setSelectedMood(moodOption.id);
+    setIsLoading(true);
+
+    try {
+      // Create recommendation context based on user's mood
+      const context: RecommendationContext = {
+        timeOfDay: new Date().getHours(),
+        userGoal: moodOption.goal,
+        currentMood: moodOption.mood,
+        userLevel: "beginner", // Could be made dynamic
+        sessionType: "classic",
+      };
+
+      // Get personalized recommendations
+      const newRecommendations =
+        SmartPatternRecommendations.getRecommendations(context);
+
+      // Add match percentages for display
+      const enhancedRecommendations = newRecommendations.map((rec, index) => ({
+        ...rec,
+        matchPercentage: Math.round(rec.confidence * 100 - index * 5), // Slight decrease for ranking
+        explanation: `${rec.reason} • ${rec.timeToEffect} to effect`,
+        badge:
+          index === 0
+            ? "optimal time"
+            : `${Math.round(rec.confidence * 100 - index * 5)}% match`,
+      }));
+
+      setRecommendations(enhancedRecommendations);
+      onRecommendationsUpdate(enhancedRecommendations);
+    } catch (error) {
+      console.error("Failed to get recommendations:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reset selection
+  const handleReset = () => {
+    setSelectedMood(null);
+    setRecommendations([]);
+    onRecommendationsUpdate([]);
+  };
+
+  if (variant === "compact") {
+    return (
+      <div className={cn("space-y-3", className)}>
+        {/* Compact Header */}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {getTimeGreeting()}! How are you feeling?
+          </div>
+          {selectedMood && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="text-xs h-6 px-2"
+            >
+              Change
+            </Button>
+          )}
+        </div>
+
+        {/* Mood Selection - Compact */}
+        {!selectedMood ? (
+          <div className="flex flex-wrap gap-2">
+            {MOOD_OPTIONS.map((mood) => {
+              const Icon = mood.icon;
+              return (
+                <Button
+                  key={mood.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleMoodSelect(mood)}
+                  className="flex items-center gap-1 h-8 px-3 text-xs"
+                  disabled={isLoading}
+                >
+                  <div
+                    className={cn(
+                      "w-3 h-3 rounded-full flex items-center justify-center text-white",
+                      mood.color,
+                    )}
+                  >
+                    <Icon className="h-2 w-2" />
+                  </div>
+                  {mood.label}
+                </Button>
+              );
+            })}
+          </div>
+        ) : (
+          /* Selected Mood Display */
+          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+            {(() => {
+              const selectedMoodOption = MOOD_OPTIONS.find(
+                (m) => m.id === selectedMood,
+              );
+              if (!selectedMoodOption) return null;
+              const Icon = selectedMoodOption.icon;
+              return (
+                <>
+                  <div
+                    className={cn(
+                      "w-4 h-4 rounded-full flex items-center justify-center text-white",
+                      selectedMoodOption.color,
+                    )}
+                  >
+                    <Icon className="h-2.5 w-2.5" />
+                  </div>
+                  <span className="text-sm font-medium">
+                    {selectedMoodOption.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    • {selectedMoodOption.description}
+                  </span>
+                  {recommendations.length > 0 && (
+                    <Badge variant="secondary" className="text-xs ml-auto">
+                      <Sparkles className="h-2.5 w-2.5 mr-1" />
+                      {recommendations.length} matches
+                    </Badge>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Full variant
+  return (
+    <Card className={cn("w-full", className)}>
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <h3 className="text-lg font-semibold">
+              {getTimeGreeting()}! How are you feeling?
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Tell us how you're feeling to get personalized breathing
+              recommendations
+            </p>
+          </div>
+
+          {/* Mood Selection Grid */}
+          {!selectedMood ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {MOOD_OPTIONS.map((mood) => {
+                const Icon = mood.icon;
+                return (
+                  <Button
+                    key={mood.id}
+                    variant="outline"
+                    onClick={() => handleMoodSelect(mood)}
+                    className="h-auto p-4 flex flex-col items-center gap-2 hover:bg-muted/50"
+                    disabled={isLoading}
+                  >
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-white",
+                        mood.color,
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium text-sm">{mood.label}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {mood.description}
+                      </div>
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+          ) : (
+            /* Selected Mood and Recommendations */
+            <div className="space-y-4">
+              {/* Selected Mood Display */}
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const selectedMoodOption = MOOD_OPTIONS.find(
+                      (m) => m.id === selectedMood,
+                    );
+                    if (!selectedMoodOption) return null;
+                    const Icon = selectedMoodOption.icon;
+                    return (
+                      <>
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-white",
+                            selectedMoodOption.color,
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <div className="font-medium">
+                            {selectedMoodOption.label}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {selectedMoodOption.description}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                  className="text-sm"
+                >
+                  Change
+                </Button>
+              </div>
+
+              {/* Recommendations */}
+              {isLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Finding perfect patterns...
+                  </p>
+                </div>
+              ) : recommendations.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Recommended for you</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {recommendations.length} matches
+                    </Badge>
+                  </div>
+                  <div className="grid gap-3">
+                    {recommendations.map((rec, index) => (
+                      <div
+                        key={rec.patternId}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium">
+                              {rec.pattern.name}
+                            </span>
+                            <Badge
+                              variant={index === 0 ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {rec.badge}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {rec.explanation}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default MoodBasedRecommendations;

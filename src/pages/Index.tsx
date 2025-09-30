@@ -9,6 +9,8 @@ import {
   Heart,
   Users,
   Coins,
+  Crown,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useIsMobile } from "../hooks/useAdaptivePerformance";
@@ -80,7 +82,9 @@ export default function Index({
             ) : (
               <DesktopAdaptiveSessionFlow
                 className="max-w-7xl mx-auto"
-                onPatternSelect={(patternId) => console.log("Selected pattern:", patternId)}
+                onPatternSelect={(patternId) =>
+                  console.log("Selected pattern:", patternId)
+                }
                 onSessionStart={() => console.log("Starting session")}
               />
             )}
@@ -126,7 +130,8 @@ export default function Index({
             Why does this work so well?
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Ancient breathing wisdom meets modern AI coaching. Proven techniques that activate your body's natural relaxation response.
+            Ancient breathing wisdom meets modern AI coaching. Proven techniques
+            that activate your body's natural relaxation response.
           </p>
         </div>
 
@@ -180,10 +185,7 @@ export default function Index({
             </ConsolidatedAuthGate>
 
             {/* Instructor Path */}
-            <ConsolidatedAuthGate
-              required="email"
-              fallback="prompt"
-            >
+            <ConsolidatedAuthGate required="email" fallback="prompt">
               <Link to="/instructor-onboarding">
                 <div className="text-center p-6 bg-white/50 rounded-xl border border-white/20 hover:bg-white/70 transition-all cursor-pointer">
                   <Heart className="h-8 w-8 text-purple-600 mx-auto mb-3" />
@@ -197,6 +199,59 @@ export default function Index({
           </div>
         </section>
       )}
+
+      {/* Subscription Promotion */}
+      <section className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl border border-purple-200/20 p-8 space-y-6">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Crown className="h-6 w-6 text-purple-600" />
+            <h3 className="text-xl font-semibold">Unlock Premium Features</h3>
+          </div>
+          <p className="text-muted-foreground mb-6">
+            Take your breathing practice to the next level with AI coaching,
+            advanced patterns, and Web3 features
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          {/* Premium Tier */}
+          <div className="bg-white/50 rounded-xl border border-blue-200/50 p-6 text-center hover:bg-white/70 transition-all">
+            <Sparkles className="h-8 w-8 text-blue-600 mx-auto mb-3" />
+            <h4 className="font-semibold mb-2">Premium</h4>
+            <p className="text-2xl font-bold text-blue-600 mb-2">$4.99/mo</p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>✓ AI coaching with Zen agent</li>
+              <li>✓ Advanced breathing patterns</li>
+              <li>✓ Cloud synchronization</li>
+              <li>✓ Detailed analytics</li>
+            </ul>
+          </div>
+
+          {/* Pro Tier */}
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200 p-6 text-center relative overflow-hidden">
+            <div className="absolute top-2 right-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
+              Popular
+            </div>
+            <Crown className="h-8 w-8 text-purple-600 mx-auto mb-3" />
+            <h4 className="font-semibold mb-2">Pro</h4>
+            <p className="text-2xl font-bold text-purple-600 mb-2">$9.99/mo</p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>✓ Everything in Premium</li>
+              <li>✓ NFT creation & minting</li>
+              <li>✓ Web3 social features</li>
+              <li>✓ Instructor tools</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="text-center">
+          <Link to="/subscription">
+            <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+              View All Plans
+            </Button>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

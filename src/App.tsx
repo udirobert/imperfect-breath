@@ -23,14 +23,15 @@ import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
 const Progress = React.lazy(() => import("@/pages/Progress"));
 const Results = React.lazy(() => import("@/pages/Results"));
 const EnhancedMarketplace = React.lazy(
-  () => import("@/pages/EnhancedMarketplace")
+  () => import("@/pages/EnhancedMarketplace"),
 );
 const CreatePattern = React.lazy(() => import("@/pages/CreatePattern"));
 const CommunityFeed = React.lazy(() => import("@/pages/CommunityFeed"));
 const UserProfile = React.lazy(() => import("@/pages/UserProfile"));
 const InstructorOnboarding = React.lazy(
-  () => import("@/pages/InstructorOnboarding")
+  () => import("@/pages/InstructorOnboarding"),
 );
+const Subscription = React.lazy(() => import("@/pages/Subscription"));
 
 // Loading component for lazy routes
 const PageLoader = () => (
@@ -74,6 +75,7 @@ function App() {
                 path="/instructor-onboarding"
                 element={<InstructorOnboarding />}
               />
+              <Route path="/subscription" element={<Subscription />} />
             </Route>
 
             {/* Routes without Header */}
