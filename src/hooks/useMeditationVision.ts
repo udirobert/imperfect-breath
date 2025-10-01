@@ -197,6 +197,19 @@ const createErrorState = (message: string): MeditationMetrics => ({
   source: 'error',
 });
 
+// CLEAN: Honest fallback that doesn't lie to users
+const createFallbackMetrics = (): MeditationMetrics => ({
+  stillness: 0,        // HONEST: No camera = no stillness data
+  presence: 0,         // HONEST: No face detection = no presence
+  posture: 0,          // HONEST: No posture analysis = no score
+  restlessnessScore: 0, // HONEST: No movement tracking = no data
+  faceLandmarks: [],
+  faceDetected: false, // HONEST: No camera = no face detected
+  confidence: 0,       // HONEST: No processing = no confidence
+  processingTimeMs: 0,
+  source: 'fallback',
+});
+
 // ============================================================================
 // MAIN HOOK - Clean, meditation-focused interface
 // ============================================================================

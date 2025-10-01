@@ -5,6 +5,7 @@
 
 import React from "react";
 import { Twitter, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface SocialLink {
   name: string;
@@ -57,6 +58,30 @@ export const Footer: React.FC = () => {
                 </a>
               );
             })}
+          </div>
+
+          {/* Legal Links */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <Link
+              to="/privacy"
+              className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+            >
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link
+              to="/terms"
+              className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+            >
+              Terms of Service
+            </Link>
+            <span>•</span>
+            <a
+              href="mailto:privacy@imperfectform.fun"
+              className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+            >
+              Contact
+            </a>
           </div>
 
           {/* Copyright */}

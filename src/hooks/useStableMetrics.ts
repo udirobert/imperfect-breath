@@ -66,25 +66,31 @@ export const useStableMetrics = (): StableMetricsResult => {
     return currentValue + alpha * (targetValue - currentValue);
   }, []);
 
-  // PERFORMANT: Update persistent metrics with hysteresis
+  // HONEST SMOOTHING: Prevent flashing while reflecting real data
   useEffect(() => {
     const now = Date.now();
     
-    if (isStable && smoothedMetrics) {
-      // ENHANCEMENT: Update persistent metrics when stable
+    if (isStable && smoothedMetrics && smoothedMetrics.faceDetected) {
+      // HONEST: Apply gentle smoothing only to real data to prevent flashing
       setPersistentMetrics(prev => {
         if (!prev) return smoothedMetrics;
         
-        // LUXURY: Smooth interpolation of values
-        return {
-          ...smoothedMetrics,
-          stillness: useSmoothValue(smoothedMetrics.stillness, prev.stillness),
-          presence: useSmoothValue(smoothedMetrics.presence, prev.presence),
-          posture: useSmoothValue(smoothedMetrics.posture, prev.posture),
-          restlessnessScore: smoothedMetrics.restlessnessScore ? 
-            useSmoothValue(smoothedMetrics.restlessnessScore, prev.restlessnessScore || 0) : 
-            prev.restlessnessScore,
-        };
+        // HONEST SMOOTHING: Only smooth when we have real data from both frames
+        if (prev.faceDetected && smoothedMetrics.faceDetected) {
+          return {
+            ...smoothedMetrics,
+            // Gentle smoothing to prevent UI flashing, but still reflects real changes
+            stillness: prev.stillness + (smoothedMetrics.stillness - prev.stillness) * 0.3,
+            presence: prev.presence + (smoothedMetrics.presence - prev.presence) * 0.4,
+            posture: prev.posture + (smoothedMetrics.posture - prev.posture) * 0.3,
+            restlessnessScore: smoothedMetrics.restlessnessScore ? 
+              prev.restlessnessScore + (smoothedMetrics.restlessnessScore - (prev.restlessnessScore || 0)) * 0.3 :
+              prev.restlessnessScore,
+          };
+        }
+        
+        // If face detection state changed, use new data directly
+        return smoothedMetrics;
       });
       
       setLastValidTime(now);
@@ -96,8 +102,23 @@ export const useStableMetrics = (): StableMetricsResult => {
       } else if (displayState === 'appearing') {
         setDisplayState('visible');
       }
+    } else if (!smoothedMetrics || !smoothedMetrics.faceDetected) {
+      // HONEST: Graceful fade when face lost, but don't show fake data
+      if (persistentMetrics && displayState === 'visible') {
+        setDisplayState('fading');
+        // Clear after fade delay
+        setTimeout(() => {
+          setPersistentMetrics(null);
+          setDisplayState('hidden');
+          setDisplayStartTime(null);
+        }, 1000);
+      } else {
+        setPersistentMetrics(null);
+        setDisplayState('hidden');
+        setDisplayStartTime(null);
+      }
     }
-  }, [isStable, smoothedMetrics, displayStartTime, displayState, useSmoothValue]);
+  }, [isStable, smoothedMetrics, displayStartTime, displayState, persistentMetrics]);
 
   // CLEAN: Display state management with minimum display time
   useEffect(() => {
@@ -129,26 +150,25 @@ export const useStableMetrics = (): StableMetricsResult => {
     }
   }, [isStable, displayState, lastValidTime, displayStartTime, isActive]);
 
-  // PERFORMANT: Memoized result to prevent unnecessary re-renders
+  // HONEST: Memoized result with real data only
   const result = useMemo((): StableMetricsResult => {
-    // Use persistent metrics if available, otherwise fall back to current
-    const metricsToUse = persistentMetrics || smoothedMetrics;
+    // HONEST: Only use metrics when we actually have face detection
+    const metricsToUse = persistentMetrics && persistentMetrics.faceDetected ? persistentMetrics : null;
     
     return {
-      // CLEAN: Always provide stable values (0 if no data)
-      // Stillness = 100 - restlessness (inverted for intuitive understanding)
+      // HONEST: Show 0 when no real data available
       stillnessScore: Math.round(metricsToUse?.stillness || 0),
       presenceScore: Math.round(metricsToUse?.presence || 0),
       postureScore: Math.round(metricsToUse?.posture || 0),
       
       // Display state
-      displayState,
-      isStable,
+      displayState: metricsToUse ? displayState : 'hidden',
+      isStable: isStable && !!metricsToUse,
       confidence: metricsToUse?.confidence || 0,
       
       // Debug info
       rawMetrics: smoothedMetrics,
-      hasValidData: !!persistentMetrics,
+      hasValidData: !!metricsToUse,
     };
   }, [persistentMetrics, smoothedMetrics, displayState, isStable]);
 
