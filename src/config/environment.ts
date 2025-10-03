@@ -83,6 +83,9 @@ const optionalEnvVars = [
   "VITE_GEMINI_API_KEY",
 ] as const;
 
+// Note: RevenueCat keys are intentionally excluded from client-side environment
+// They should be handled securely via server-side configuration or secure runtime loading
+
 const missingOptionalVars = optionalEnvVars.filter(
   (varName) => !import.meta.env[varName],
 );

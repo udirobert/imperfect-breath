@@ -6,6 +6,7 @@
  * MODULAR: Composable subscription tiers and purchase handling
  */
 
+import React from "react";
 import {
   Purchases,
   PurchasesOffering,
@@ -38,12 +39,15 @@ interface RecommendationItem {
   badge: string;
 }
 
-// RevenueCat API Keys - From environment variables for security
-const REVENUECAT_CONFIG = {
-  ios: import.meta.env.VITE_REVENUECAT_IOS_KEY || "appl_your_ios_key_here",
-  android:
-    import.meta.env.VITE_REVENUECAT_ANDROID_KEY || "goog_your_android_key_here",
-};
+// Import secure configuration management
+import { 
+  loadRevenueCatConfig, 
+  getRevenueCatKeyForPlatform, 
+  isValidRevenueCatKey,
+  createMockRevenueCatConfig,
+  type RevenueCatConfig,
+  type SecureRevenueCatConfig 
+} from './revenueCatConfig';
 
 // Subscription Tiers
 export interface SubscriptionTier {
@@ -155,6 +159,7 @@ export class RevenueCatService {
   private isInitialized = false;
   private currentOfferings: PurchasesOffering | null = null;
   private customerInfo: CustomerInfo | null = null;
+  private secureConfig: SecureRevenueCatConfig | null = null;
 
   private constructor() {}
 
@@ -166,18 +171,30 @@ export class RevenueCatService {
   }
 
   /**
-   * Initialize RevenueCat SDK
+   * Initialize RevenueCat SDK with secure configuration
    */
   public async initialize(): Promise<boolean> {
     try {
-      // Determine platform and use appropriate API key
-      const platform = this.getPlatform();
-      const apiKey =
-        platform === "ios" ? REVENUECAT_CONFIG.ios : REVENUECAT_CONFIG.android;
-
-      if (!apiKey || apiKey.includes("your_") || apiKey.includes("_here")) {
+      // Load secure configuration
+      this.secureConfig = await loadRevenueCatConfig();
+      
+      if (!this.secureConfig.isAvailable || !this.secureConfig.config) {
         console.warn(
-          "RevenueCat API key not configured. Check environment variables. Using demo mode.",
+          "RevenueCat configuration not available:",
+          this.secureConfig.error || "Configuration unavailable"
+        );
+        console.info("Running in demo mode without RevenueCat integration");
+        return false;
+      }
+
+      // Determine platform and get appropriate API key
+      const platform = this.getPlatform();
+      const apiKey = getRevenueCatKeyForPlatform(this.secureConfig.config, platform);
+
+      // Validate the API key
+      if (!isValidRevenueCatKey(apiKey, platform)) {
+        console.warn(
+          `Invalid RevenueCat API key for ${platform} platform. Using demo mode.`
         );
         return false;
       }
@@ -445,6 +462,28 @@ export class RevenueCatService {
     }
   }
 
+  /**
+   * Check if RevenueCat is available and properly configured
+   */
+  public isRevenueCatAvailable(): boolean {
+    return this.secureConfig?.isAvailable === true && this.isInitialized;
+  }
+
+  /**
+   * Get configuration status for debugging
+   */
+  public getConfigurationStatus(): {
+    isAvailable: boolean;
+    isInitialized: boolean;
+    error?: string;
+  } {
+    return {
+      isAvailable: this.secureConfig?.isAvailable === true,
+      isInitialized: this.isInitialized,
+      error: this.secureConfig?.error
+    };
+  }
+
   // Private helper methods
   private getPlatform(): "ios" | "android" {
     // For Capacitor, we can check the platform
@@ -536,5 +575,4 @@ export function useRevenueCat() {
   };
 }
 
-// Add React import (needed for the hook)
-import React from "react";
+

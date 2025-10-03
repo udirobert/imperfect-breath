@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from webhook_handler import process_webhook
+from revenuecat_config import router as revenuecat_router
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -173,6 +174,9 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
+
+# Include RevenueCat configuration router
+app.include_router(revenuecat_router)
 
 # CORS configuration
 app.add_middleware(
