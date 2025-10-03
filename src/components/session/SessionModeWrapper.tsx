@@ -185,6 +185,7 @@ export const SessionModeWrapper: React.FC = () => {
         },
         difficulty: "intermediate",
         benefits: initialPattern.benefits,
+        description: initialPattern.description,
       },
       autoStart: false,
       // CLEAN: Default session durations based on mode

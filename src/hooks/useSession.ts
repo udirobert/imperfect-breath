@@ -236,12 +236,14 @@ export const useSession = (options: UseSessionOptions = {}) => {
       await requestCamera();
     }
 
-    // Set session as ready after initialization
-    setSessionReady();
+    // CLEAN: Don't auto-advance to ready - let preparation flow handle it
+    // Session stays in 'setup' phase until user completes preparation
+    console.log('🔧 Session initialized in setup phase, waiting for preparation flow');
 
-    // Auto-start if enabled
-    if (autoStart) {
+    // Auto-start if enabled (only for classic mode or when preparation is disabled)
+    if (autoStart && !sessionConfig.enableCamera) {
       setTimeout(() => {
+        setSessionReady();
         const { startSession: start } = useSessionStore.getState();
         start();
       }, 1000);
@@ -256,11 +258,20 @@ export const useSession = (options: UseSessionOptions = {}) => {
       return;
     }
 
-    startSession();
-
-    // Start breathing phase cycle
-    startBreathingCycle();
-  }, [startSession, setError, startBreathingCycle]);
+    // Ensure we're in ready state before starting
+    if (currentState.phase !== 'ready') {
+      console.log('🔄 Moving to ready phase before starting session');
+      setSessionReady();
+      // Small delay to ensure state update
+      setTimeout(() => {
+        startSession();
+        startBreathingCycle();
+      }, 100);
+    } else {
+      startSession();
+      startBreathingCycle();
+    }
+  }, [startSession, setError, startBreathingCycle, setSessionReady]);
 
   const pause = useCallback(() => {
     pauseSession();

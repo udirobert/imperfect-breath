@@ -14,12 +14,14 @@ import { useIsMobile } from '../../hooks/use-mobile';
 import { useCamera } from '../../contexts/CameraContext';
 import { useStableMetrics } from '../../hooks/useStableMetrics';
 import { useSession } from '../../hooks/useSession';
+import { useSessionPhase } from '../../stores/sessionStore';
 
 import VideoFeed from '../VideoFeed';
 import { VisionManager } from './VisionManager';
 import BreathingAnimation from '../BreathingAnimation';
 import { SessionControls } from './SessionControls';
 import { EnhancedSessionLayout } from './EnhancedSessionLayout';
+import { SessionPreview } from './SessionPreview';
 
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -36,6 +38,8 @@ interface ResponsiveEnhancedSessionProps {
         exhale: number;
         pause?: number;
       };
+      benefits?: string[];
+      description?: string;
     };
     mode: 'classic' | 'enhanced';
   };
@@ -58,6 +62,9 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   const isMobile = useIsMobile();
   const videoRef = useRef<HTMLVideoElement>(null);
   
+  // Session phase state - SINGLE SOURCE OF TRUTH
+  const sessionPhase = useSessionPhase();
+  
   // Camera and vision state
   const { stream: cameraStream } = useCamera();
   const stableMetrics = useStableMetrics();
@@ -67,6 +74,36 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
     targetFPS: isMobile ? 0.5 : 1, // Slower FPS on mobile for performance
     videoElement: videoRef,
   });
+
+  // ENHANCEMENT FIRST: Initialize session with proper config
+  React.useEffect(() => {
+    if (!session.config) {
+      console.log('🔧 Initializing enhanced session with config:', { 
+        pattern: config.pattern.name, 
+        mode: config.mode,
+        enableCamera: modeConfig.enableCamera,
+        enableVision: modeConfig.enableVision 
+      });
+      session.initialize({
+        mode: config.mode as any,
+        pattern: config.pattern as any,
+        enableCamera: modeConfig.enableCamera,
+        enableAudio: true,
+        enableAI: modeConfig.enableVision,
+      });
+    }
+  }, [session, config, modeConfig]);
+
+  // Debug session phase changes
+  React.useEffect(() => {
+    console.log('📊 Session phase changed to:', sessionPhase);
+  }, [sessionPhase]);
+
+  // Handle session start from preparation flow
+  const handleSessionStart = React.useCallback((cameraEnabled: boolean) => {
+    console.log('🚀 Starting session with camera:', cameraEnabled);
+    session.start();
+  }, [session]);
 
   // Session info for display
   const sessionInfo = {
@@ -164,6 +201,32 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
       }}
     />
   );
+
+  // CLEAN: Phase-driven rendering - single responsibility
+  // Show preparation flow for setup/preparation/camera_setup phases
+  if (sessionPhase === 'setup' || sessionPhase === 'preparation' || sessionPhase === 'camera_setup') {
+    console.log('📋 Showing preparation phase:', sessionPhase);
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SessionPreview
+          patternName={config.pattern.name}
+          pattern={{
+            name: config.pattern.name,
+            phases: config.pattern.phases,
+            benefits: config.pattern.benefits || ['Improved focus', 'Stress reduction'],
+            description: config.pattern.description || `Experience the ${config.pattern.name} breathing technique with enhanced AI feedback.`
+          }}
+          enableCamera={modeConfig.enableCamera}
+          videoRef={videoRef}
+          onStart={handleSessionStart}
+          onCancel={onSessionExit}
+        />
+      </div>
+    );
+  }
+
+  // Show active session for ready/active/paused/complete phases
+  console.log('🎯 Showing active session phase:', sessionPhase);
 
   // MOBILE: Special handling for mobile enhanced sessions
   if (isMobile && config.mode === 'enhanced') {

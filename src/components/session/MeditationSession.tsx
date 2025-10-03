@@ -34,6 +34,7 @@ export interface MeditationSessionConfig {
     };
     difficulty: string;
     benefits: string[];
+    description?: string;
   };
   autoStart: boolean;
   maxCycles?: number;
@@ -59,7 +60,12 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   
   // Map the MeditationSessionConfig to ResponsiveEnhancedSession props
   const responsiveConfig = {
-    pattern: config.pattern,
+    pattern: {
+      name: config.pattern.name,
+      phases: config.pattern.phases,
+      benefits: config.pattern.benefits,
+      description: config.pattern.description || `A ${config.pattern.difficulty} breathing technique with proven benefits.`
+    },
     mode: config.mode,
   };
   
