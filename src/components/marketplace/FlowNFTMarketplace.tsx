@@ -254,15 +254,26 @@ export const FlowNFTMarketplace: React.FC = () => {
         return;
       }
 
+      if (!nft.price || !nft.id) {
+        toast.error("Invalid listing information");
+        return;
+      }
+
       try {
-        // In a real implementation, this would involve marketplace contracts
-        toast.info("Purchase functionality coming soon!");
+        // Use the new purchaseNFT function with enhanced marketplace contract
+        const marketplaceAddress = "0xProfile"; // This should be the actual marketplace contract address
+        const txId = await purchaseNFT(nft.id, nft.price, marketplaceAddress);
+        
+        toast.success(`Successfully purchased ${nft.name}! Transaction: ${txId.substring(0, 8)}...`);
+        
+        // Refresh the marketplace data after purchase
+        loadMarketplaceNFTs();
       } catch (error) {
         console.error("Purchase failed:", error);
-        toast.error("Purchase failed");
+        toast.error(`Purchase failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } 
     },
-    [flowState.isConnected, connectFlow],
+    [flowState.isConnected, connectFlow, purchaseNFT, loadMarketplaceNFTs],
   );
 
   // Handle sharing to Lens

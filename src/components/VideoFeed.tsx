@@ -8,7 +8,7 @@ interface VideoFeedProps {
   landmarks?: Keypoint[];
   trackingStatus?: TrackingStatus;
   className?: string;
-  // AGGRESSIVE CONSOLIDATION: Removed duplicate restlessness props
+  luxuryMode?: boolean; // ENHANCEMENT: Optional premium face mesh styling
 }
 
 const VideoFeed = ({
@@ -17,6 +17,7 @@ const VideoFeed = ({
   landmarks = [],
   trackingStatus = "IDLE",
   className = "",
+  luxuryMode = true, // ENHANCEMENT: Default to premium styling
 }: VideoFeedProps) => {
   // PERFORMANT: Log only when stream connection changes
   const lastStreamState = React.useRef<boolean>(false);
@@ -68,14 +69,22 @@ const VideoFeed = ({
     visibility: "visible",
   };
 
-  // Style for each landmark point
-  const landmarkStyle: React.CSSProperties = {
-    position: "absolute",
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    backgroundColor: "rgba(0, 255, 0, 0.8)",
-    transform: "translate(-50%, -50%)",
+  // Premium landmark styles - subtle and sophisticated
+  const getLandmarkStyle = (index: number, total: number): React.CSSProperties => {
+    // Create subtle variation in opacity for depth
+    const baseOpacity = 0.3;
+    const variation = (Math.sin(index * 0.1) * 0.1) + baseOpacity;
+    
+    return {
+      position: "absolute",
+      width: "3px",
+      height: "3px",
+      borderRadius: "50%",
+      background: `radial-gradient(circle, rgba(59, 130, 246, ${variation + 0.2}) 0%, rgba(59, 130, 246, ${variation}) 70%, transparent 100%)`,
+      transform: "translate(-50%, -50%)",
+      boxShadow: `0 0 4px rgba(59, 130, 246, ${variation * 0.5})`,
+      transition: "all 0.3s ease-out",
+    };
   };
 
   // Status indicator style
@@ -165,21 +174,60 @@ const VideoFeed = ({
         </div>
       )}
 
-      {/* Overlay landmarks */}
-      {isActive && hasVideoStream &&
-        landmarks.map((point, index) => (
-          <div
-            key={`landmark-${index}`}
-            style={{
-              ...landmarkStyle,
-              left: `${point.x * 100}%`,
-              top: `${point.y * 100}%`,
-            }}
-          />
-        ))}
+      {/* Face Mesh Overlay - Luxury vs Basic */}
+      {isActive && hasVideoStream && landmarks.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none">
+          {luxuryMode ? (
+            // PREMIUM: Sophisticated face mesh with ambient effects
+            <>
+              {/* Subtle face outline glow */}
+              <div 
+                className="absolute inset-0 opacity-20 transition-opacity duration-1000"
+                style={{
+                  background: `radial-gradient(ellipse 40% 50% at 50% 45%, rgba(59, 130, 246, 0.1) 0%, transparent 70%)`,
+                  filter: 'blur(20px)',
+                }}
+              />
+              
+              {/* Premium landmark points with breathing animation */}
+              {landmarks.map((point, index) => (
+                <div
+                  key={`landmark-${index}`}
+                  className="animate-pulse"
+                  style={{
+                    ...getLandmarkStyle(index, landmarks.length),
+                    left: `${point.x * 100}%`,
+                    top: `${point.y * 100}%`,
+                    animationDelay: `${index * 0.05}s`,
+                    animationDuration: '3s',
+                  }}
+                />
+              ))}
+              
+              {/* Elegant tracking indicator */}
+              <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/20 backdrop-blur-sm rounded-full px-3 py-1.5 transition-all duration-500">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                <span className="text-white/80 text-xs font-light tracking-wide">Tracking</span>
+              </div>
+            </>
+          ) : (
+            // BASIC: Simple clean dots for performance/preference
+            landmarks.map((point, index) => (
+              <div
+                key={`landmark-${index}`}
+                className="absolute w-1 h-1 bg-blue-400/60 rounded-full"
+                style={{
+                  left: `${point.x * 100}%`,
+                  top: `${point.y * 100}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
+              />
+            ))
+          )}
+        </div>
+      )}
 
-      {/* Status indicator */}
-      <div style={getStatusStyle()}>{trackingStatus}</div>
+      {/* AGGRESSIVE CONSOLIDATION: Removed old status indicator - using premium one above */}
 
       {/* AGGRESSIVE CONSOLIDATION: Removed duplicate restlessness score */}
       {/* DRY: Stillness score is already prominently displayed in SessionProgressDisplay */}

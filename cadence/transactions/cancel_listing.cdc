@@ -3,10 +3,10 @@ import ImperfectBreath from "../contracts/ImperfectBreath.cdc"
 
 transaction(patternID: UInt64) {
 
-    let marketplace: &BreathFlowVision.Marketplace
+    let marketplace: &ImperfectBreath.Marketplace
 
     prepare(signer: AuthAccount) {
-        self.marketplace = signer.borrow<&BreathFlowVision.Marketplace>(from: BreathFlowVision.MarketplaceStoragePath)
+        self.marketplace = signer.borrow<&ImperfectBreath.Marketplace>(from: ImperfectBreath.MarketplaceStoragePath)
             ?? panic("Could not borrow a reference to the marketplace")
     }
 

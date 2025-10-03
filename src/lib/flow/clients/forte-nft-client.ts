@@ -1,6 +1,4 @@
-/**\n * Consolidated NFT Client
- * Unified NFT operations for breathing patterns
- */
+/**\n * Enhanced NFT Client with Forte Actions and Cross-Network Integration\n * Unified NFT operations with atomic marketplace and social features\n */
 
 import BaseFlowClient from './base-client';
 import type {
@@ -13,6 +11,7 @@ import type {
 import { handleError } from '../../errors/error-types';
 import { startTimer, timed } from '../../../lib/utils/performance-utils';
 import { getCache } from '../../../lib/utils/cache-utils';
+import CrossNetworkIntegration from '../cross-network/cross-network-integration';
 
 // Cadence scripts and transactions
 const SCRIPTS = {
@@ -147,17 +146,17 @@ const TRANSACTIONS = {
   `
 };
 
-export class NFTClient {
+export class ForteNFTClient {
   private baseClient: BaseFlowClient;
   private cache = getCache();
+  private crossNetwork: CrossNetworkIntegration;
   
   constructor() {
     this.baseClient = BaseFlowClient.getInstance();
+    this.crossNetwork = new CrossNetworkIntegration();
   }
   
-  /**
-   * Setup account for NFT collection
-   */
+  /**\n   * Setup account for NFT collection\n   */
   async setupAccount(): Promise<string> {
     const endTimer = startTimer('setupAccount');
     try {
@@ -169,16 +168,15 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Mint a breathing pattern NFT
-   */
-  async mintBreathingPattern(
+  /**\n   * Mint a breathing pattern NFT with automatic Lens post\n   */
+  async mintBreathingPatternWithSocial(
     attributes: BreathingPatternAttributes,
     metadata: NFTMetadata,
     recipient: string,
-    royalties: RoyaltyInfo[] = []
-  ): Promise<string> {
-    const endTimer = startTimer('mintBreathingPattern');
+    royalties: RoyaltyInfo[] = [],
+    postToLens: boolean = true
+  ): Promise<{ txId: string; lensPost: any | null }> {
+    const endTimer = startTimer('mintBreathingPatternWithSocial');
     try {
       // Convert royalties to Cadence format
       const cadenceRoyalties = royalties.map(royalty => ({
@@ -212,17 +210,170 @@ export class NFTClient {
       // Invalidate any cached NFTs for this account
       this.cache.delete(`nfts-${recipient}`);
       
-      return txId;
+      // Post to Lens if requested
+      let lensPost = null;
+      if (postToLens) {
+        const nftForPost: BreathingPatternNFT = {
+          id: 'pending', // Will be updated after mint confirmation
+          name: metadata.name,
+          description: metadata.description,
+          image: metadata.image,
+          attributes: attributes,
+          owner: recipient,
+          creator: recipient,
+          royalties: royalties,
+          metadata: metadata
+        };
+        
+        lensPost = await this.crossNetwork.postMintToLens({
+          nft: nftForPost,
+          transactionId: txId,
+          uniqueId: `mint_${txId}`,
+          creatorAddress: recipient
+        });
+      }
+      
+      return { txId, lensPost };
     } catch (error) {
-      throw handleError('mint breathing pattern', error);
+      throw handleError('mint breathing pattern with social', error);
+    } finally {
+      endTimer();
+    }
+  }
+
+  /**\n   * Purchase NFT from marketplace with payment and social posting\n   */
+  async purchaseNFTWithSocial(
+    nftId: string,
+    price: number,
+    marketplaceAddress: string,
+    postToLens: boolean = true
+  ): Promise<{ txId: string; lensPost: any | null }> {
+    const endTimer = startTimer('purchaseNFTWithSocial');
+    try {
+      // Transaction that handles both NFT transfer and payment
+      const purchaseTransaction = `
+        import ImperfectBreath from 0xProfile
+        import FlowToken from 0xFlowToken
+        import FungibleToken from 0xFungibleToken
+
+        transaction(patternID: UInt64, marketplaceAddress: Address) {
+          let buyerCollection: &ImperfectBreath.Collection
+          let marketplace: &ImperfectBreath.Marketplace{ImperfectBreath.MarketplacePublic}
+          let flowTokenVault: @FungibleToken.Vault
+
+          prepare(signer: AuthAccount) {
+            self.buyerCollection = signer.borrow<&ImperfectBreath.Collection>(from: ImperfectBreath.CollectionStoragePath)
+                ?? panic("Could not borrow a reference to the buyer's collection")
+
+            self.marketplace = getAccount(marketplaceAddress)
+                .getCapability(ImperfectBreath.MarketplacePublicPath)
+                .borrow<&ImperfectBreath.Marketplace{ImperfectBreath.MarketplacePublic}>()
+                ?? panic("Could not borrow a reference to the marketplace")
+
+            let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+                ?? panic("Could not borrow buyer's FlowToken vault reference")
+            // For this transaction, we withdraw the needed amount for the purchase
+            self.flowTokenVault <- vaultRef.withdraw(amount: UFix64("${price}"))
+          }
+
+          execute {
+            self.marketplace.purchaseNFTWithPayment(
+              patternID: patternID, 
+              buyerCollection: self.buyerCollection,
+              payment: <-self.flowTokenVault
+            )
+          }
+        }
+      `;
+      
+      const args = [parseInt(nftId), marketplaceAddress];
+      const txId = await this.baseClient.sendTransaction(purchaseTransaction, args);
+      const result = await this.baseClient.waitForTransaction(txId);
+      
+      if (result.status !== 4) { // 4 = SEALED
+        throw new Error(`Purchase transaction failed: ${result.errorMessage}`);
+      }
+      
+      // Invalidate caches for both buyer and seller
+      const buyerAddress = this.baseClient.getCurrentUserAddress();
+      if (buyerAddress) {
+        this.cache.delete(`nfts-${buyerAddress}`);
+        this.cache.delete(`nft-ids-${buyerAddress}`);
+      }
+      
+      // Post to Lens if requested
+      let lensPost = null;
+      if (postToLens) {
+        // We would need to fetch the NFT details to create the post
+        // For now, we'll mock it
+        const mockNFT: BreathingPatternNFT = {
+          id: nftId,
+          name: `Purchased NFT ${nftId}`,
+          description: `Recently purchased breathing pattern`,
+          image: 'https://via.placeholder.com/300x300?text=NFT',
+          attributes: {
+            inhale: 4,
+            hold: 4,
+            exhale: 4,
+            rest: 4,
+            difficulty: 'beginner',
+            category: 'wellness',
+            tags: ['breathing', 'nft'],
+            totalCycles: 10,
+            estimatedDuration: 160,
+          },
+          owner: buyerAddress || '',
+          creator: 'mock-creator',
+          royalties: [],
+          metadata: {
+            name: `Purchased NFT ${nftId}`,
+            description: `Recently purchased breathing pattern`,
+            image: 'https://via.placeholder.com/300x300?text=NFT',
+            attributes: [],
+          }
+        };
+        
+        lensPost = await this.crossNetwork.postPurchaseToLens({
+          nft: mockNFT,
+          transactionId: txId,
+          uniqueId: `purchase_${txId}`,
+          buyerAddress: buyerAddress || '',
+          price: price
+        });
+      }
+      
+      return { txId, lensPost };
+    } catch (error) {
+      throw handleError('purchase NFT with social', error);
+    } finally {
+      endTimer();
+    }
+  }
+
+  /**\n   * Execute atomic Forte Actions transaction with social posting\n   */
+  async executeForteTransactionWithSocial(
+    actions: Array<{
+      type: 'source' | 'sink' | 'swap' | 'nft_transfer';
+      params: Record<string, any>;
+    }>,
+    nft: BreathingPatternNFT,
+    lensAction: 'purchase' | 'mint' | 'sale'
+  ): Promise<{ forteResult: any; lensPost: any | null }> {
+    const endTimer = startTimer('executeForteTransactionWithSocial');
+    try {
+      return await this.crossNetwork.executeForteWithLensIntegration(
+        actions,
+        lensAction,
+        nft
+      );
+    } catch (error) {
+      throw handleError('execute Forte transaction with social', error);
     } finally {
       endTimer();
     }
   }
   
-  /**
-   * Transfer NFT to another account
-   */
+  /**\n   * Transfer NFT to another account\n   */
   async transferNFT(nftId: string, recipient: string, sender?: string): Promise<string> {
     const endTimer = startTimer('transferNFT');
     try {
@@ -246,9 +397,7 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Purchase NFT from marketplace with payment
-   */
+  /**\n   * Purchase NFT from marketplace with payment\n   */
   async purchaseNFT(nftId: string, price: number, marketplaceAddress: string): Promise<string> {
     const endTimer = startTimer('purchaseNFT');
     try {
@@ -311,9 +460,7 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Get NFT IDs owned by an account
-   */
+  /**\n   * Get NFT IDs owned by an account\n   */
   async getNFTIds(account: string): Promise<string[]> {
     const endTimer = startTimer('getNFTIds');
     const cacheKey = `nft-ids-${account}`;
@@ -339,9 +486,7 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Get NFT metadata
-   */
+  /**\n   * Get NFT metadata\n   */
   async getNFTMetadata(account: string, nftId: string): Promise<BreathingPatternNFT | null> {
     const endTimer = startTimer('getNFTMetadata');
     const cacheKey = `nft-metadata-${account}-${nftId}`;
@@ -403,9 +548,7 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Get all NFTs owned by an account
-   */
+  /**\n   * Get all NFTs owned by an account\n   */
   async getAllNFTs(account: string): Promise<BreathingPatternNFT[]> {
     const outerTimer = startTimer('getAllNFTs');
     const cacheKey = `nfts-${account}`;
@@ -447,9 +590,7 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Get collection length
-   */
+  /**\n   * Get collection length\n   */
   async getCollectionLength(account: string): Promise<number> {
     const endTimer = startTimer('getCollectionLength');
     try {
@@ -461,9 +602,7 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Check if account has collection setup
-   */
+  /**\n   * Check if account has collection setup\n   */
   async hasCollectionSetup(account: string): Promise<boolean> {
     const endTimer = startTimer('hasCollectionSetup');
     try {
@@ -477,9 +616,7 @@ export class NFTClient {
     }
   }
   
-  /**
-   * Batch mint multiple patterns
-   */
+  /**\n   * Batch mint multiple patterns\n   */
   async batchMintPatterns(
     patterns: Array<{
       attributes: BreathingPatternAttributes;
@@ -522,9 +659,7 @@ export class NFTClient {
     return txIds;
   }
   
-  /**
-   * Get NFT events
-   */
+  /**\n   * Get NFT events\n   */
   async getNFTEvents(nftId: string): Promise<any[]> {
     const endTimer = startTimer('getNFTEvents');
     try {
@@ -539,4 +674,4 @@ export class NFTClient {
   }
 }
 
-export default NFTClient;
+export default ForteNFTClient;

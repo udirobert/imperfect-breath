@@ -5,17 +5,17 @@ import FungibleToken from 0xFungibleToken
 
 transaction(patternID: UInt64, amount: UFix64, marketplaceAddress: Address) {
 
-    let buyerCollection: &BreathFlowVision.Collection
-    let marketplace: &BreathFlowVision.Marketplace{BreathFlowVision.MarketplacePublic}
+    let buyerCollection: &ImperfectBreath.Collection
+    let marketplace: &ImperfectBreath.Marketplace{ImperfectBreath.MarketplacePublic}
     let flowTokenVault: @FungibleToken.Vault
 
     prepare(signer: AuthAccount) {
-        self.buyerCollection = signer.borrow<&BreathFlowVision.Collection>(from: BreathFlowVision.CollectionStoragePath)
+        self.buyerCollection = signer.borrow<&ImperfectBreath.Collection>(from: ImperfectBreath.CollectionStoragePath)
             ?? panic("Could not borrow a reference to the buyer's collection")
 
         self.marketplace = getAccount(marketplaceAddress)
-            .getCapability(BreathFlowVision.MarketplacePublicPath)
-            .borrow<&BreathFlowVision.Marketplace{BreathFlowVision.MarketplacePublic}>()
+            .getCapability(ImperfectBreath.MarketplacePublicPath)
+            .borrow<&ImperfectBreath.Marketplace{ImperfectBreath.MarketplacePublic}>()
             ?? panic("Could not borrow a reference to the marketplace")
 
         let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
@@ -24,6 +24,11 @@ transaction(patternID: UInt64, amount: UFix64, marketplaceAddress: Address) {
     }
 
     execute {
-        self.marketplace.purchaseNFT(patternID: patternID, buyerCollection: self.buyerCollection, payment: <-self.flowTokenVault)
+        // Note: The contract's purchaseNFT function needs to be updated to accept payment
+        // For now, we'll deposit the payment back to the buyer's vault as a placeholder
+        self.marketplace.purchaseNFT(patternID: patternID, buyerCollection: self.buyerCollection)
+        signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+            ?? panic("Could not borrow buyer's FlowToken vault")
+        signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)!.deposit(from: <-self.flowTokenVault)
     }
 }

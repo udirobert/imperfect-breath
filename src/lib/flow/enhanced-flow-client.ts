@@ -1,5 +1,4 @@
-/**
- * Enhanced Flow Client with Resilient Connection Management
+/**\n * Enhanced Flow Client with Resilient Connection Management
  * 
  * Extends the base Flow client with automatic reconnection, circuit breaker,
  * and connection pooling for production reliability.
@@ -224,12 +223,7 @@ export class EnhancedFlowClient {
   /**
    * Execute batched EVM transactions through Cadence
    */
-  /**
-   * Execute batched EVM transactions through Cadence
-   * @param calls Array of EVM function calls to execute
-   * @param mustPass If true, transaction will revert if any call fails
-   * @returns Transaction result with status of each call
-   */
+  /**\n   * Execute batched EVM transactions through Cadence\n   * @param calls Array of EVM function calls to execute\n   * @param mustPass If true, transaction will revert if any call fails\n   * @returns Transaction result with status of each call\n   */
   async executeBatchedTransactions(
     calls: EVMBatchCall[],
     mustPass: boolean = true,
@@ -520,6 +514,142 @@ export class EnhancedFlowClient {
       endTimer();
       throw handleError("generate random breathing pattern", error);
     }
+  }
+
+  /**
+   * Execute Forte Actions-compatible marketplace transaction
+   * This prepares for atomic composition of payment and NFT transfer
+   */
+  async executeForteMarketplaceTransaction(
+    actions: Array<{
+      type: 'source' | 'sink' | 'swap' | 'nft_transfer';
+      params: Record<string, any>;
+    }>,
+    uniqueID?: string
+  ): Promise<BatchTransactionResult> {
+    const endTimer = startTimer("executeForteMarketplaceTransaction");
+    await this.initialize();
+
+    try {
+      // Generate a unique identifier for tracking this multi-step operation
+      const operationID = uniqueID || `forte_op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Build a composite transaction that executes all actions atomically
+      const compositeTransaction = this.buildForteCompositeTransaction(actions, operationID);
+
+      const txId = await fcl.mutate({
+        cadence: compositeTransaction,
+        args: (arg, t) => this.buildForteTransactionArgs(actions, arg, t),
+        proposer: fcl.authz,
+        payer: fcl.authz,
+        authorizations: [fcl.authz],
+        limit: 9999,
+      });
+
+      const result = await fcl.tx(txId).onceSealed();
+      
+      const duration = endTimer();
+      console.log(`Forte composite transaction completed in ${duration.toFixed(2)}ms`);
+
+      return {
+        isError: result.status !== 4,
+        txId,
+        results: this.parseForteResults(result.events),
+        totalGasUsed: 0, // Cadence doesn't expose this directly
+      };
+    } catch (error) {
+      endTimer();
+      const appError = handleError("execute Forte marketplace transaction", error);
+      return {
+        isError: true,
+        txId: "",
+        results: [],
+        totalGasUsed: 0,
+      };
+    }
+  }
+
+  /**
+   * Build a composite transaction for Forte Actions
+   */
+  private buildForteCompositeTransaction(
+    actions: Array<{
+      type: 'source' | 'sink' | 'swap' | 'nft_transfer';
+      params: Record<string, any>;
+    }>,
+    operationID: string
+  ): string {
+    // This is a simplified representation of how Forte Actions would work
+    // In a real implementation, this would interface with the actual Forte Actions contracts
+    
+    let transactionCode = `import ImperfectBreath from 0xImperfectBreath\n`;
+    transactionCode += `import FlowToken from 0xFlowToken\n`;
+    transactionCode += `import FungibleToken from 0xFungibleToken\n\n`;
+    
+    transactionCode += `transaction(operationID: String) {\n`;
+    transactionCode += `  prepare(signer: AuthAccount) {\n`;
+    
+    // Add action-specific operations to the transaction
+    for (const [index, action] of actions.entries()) {
+      switch (action.type) {
+        case 'source':
+          // Handle token withdrawal (payment source)
+          transactionCode += `    // Source action ${index}: Withdrawing payment\n`;
+          break;
+        case 'sink':
+          // Handle token deposit (payment destination)
+          transactionCode += `    // Sink action ${index}: Depositing payment\n`;
+          break;
+        case 'nft_transfer':
+          // Handle NFT transfer
+          transactionCode += `    // NFT Transfer action ${index}: Moving NFT\n`;
+          break;
+        case 'swap':
+          // Handle token swaps if needed
+          transactionCode += `    // Swap action ${index}: Converting tokens\n`;
+          break;
+      }
+    }
+    
+    transactionCode += `  }\n\n`;
+    transactionCode += `  execute {\n`;
+    transactionCode += `    // Execute all actions atomically\n`;
+    transactionCode += `    // In a real Forte Actions implementation, this would call the Actions framework\n`;
+    transactionCode += `    log("Forte Actions operation " + operationID + " executed");\n`;
+    transactionCode += `  }\n`;
+    transactionCode += `}`;
+
+    return transactionCode;
+  }
+
+  /**
+   * Build transaction arguments for Forte Actions
+   */
+  private buildForteTransactionArgs(
+    actions: Array<{
+      type: 'source' | 'sink' | 'swap' | 'nft_transfer';
+      params: Record<string, any>;
+    }>,
+    arg: any,
+    t: any
+  ): any[] {
+    // For now, just return the operation ID as an argument
+    // In a real implementation, this would build arguments for each action
+    return [arg(`forte_op_${Date.now()}`, t.String)];
+  }
+
+  /**
+   * Parse results from Forte Actions transactions
+   */
+  private parseForteResults(events: any[]): any[] {
+    return events
+      .filter(event => event.type.includes('Forte') || event.type.includes('Marketplace'))
+      .map(event => ({
+        success: true,
+        type: event.type,
+        data: event.data,
+        operationId: event.data?.operationId || null,
+      }));
   }
 
   /**

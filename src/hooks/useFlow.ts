@@ -1,5 +1,4 @@
-/**
- * Consolidated Flow Hook
+/**\n * Consolidated Flow Hook
  * Single source of truth for all Flow blockchain functionality
  *
  * @version 3.0.0
@@ -66,6 +65,7 @@ interface UseFlowReturn {
     royalties?: RoyaltyInfo[],
   ) => Promise<string>;
   transferNFT: (nftId: string, recipient: string) => Promise<string>;
+  purchaseNFT: (nftId: string, price: number, marketplaceAddress: string) => Promise<string>;
   getNFTs: (address?: string) => Promise<BreathingPatternNFT[]>;
   getNFT: (
     nftId: string,
@@ -338,6 +338,25 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
       setIsTransacting(true);
       try {
         return await nftClient.current.transferNFT(nftId, recipient);
+      } finally {
+        setIsTransacting(false);
+      }
+    },
+    [state.isConnected],
+  );
+
+  /**
+   * Purchase NFT from marketplace
+   */
+  const purchaseNFT = useCallback(
+    async (nftId: string, price: number, marketplaceAddress: string): Promise<string> => {
+      if (!state.isConnected) {
+        throw new Error("Not connected to Flow wallet");
+      }
+
+      setIsTransacting(true);
+      try {
+        return await nftClient.current.purchaseNFT(nftId, price, marketplaceAddress);
       } finally {
         setIsTransacting(false);
       }
@@ -652,6 +671,7 @@ export const useFlow = (config: UseFlowConfig = {}): UseFlowReturn => {
     // NFT operations
     mintBreathingPattern,
     transferNFT,
+    purchaseNFT,
     getNFTs,
     getNFT,
 

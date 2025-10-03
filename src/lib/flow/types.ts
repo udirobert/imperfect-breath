@@ -237,10 +237,11 @@ export interface FlowActions {
     metadata: NFTMetadata,
   ) => Promise<string>;
   transferNFT: (nftId: string, recipient: string) => Promise<string>;
+  purchaseNFT: (nftId: string, price: number, marketplaceAddress: string) => Promise<string>;
 
   // Marketplace operations
   listForSale: (nftId: string, price: number) => Promise<string>;
-  purchaseNFT: (listingId: string) => Promise<PurchaseResult>;
+  purchaseNFTFromMarketplace: (listingId: string) => Promise<PurchaseResult>;
   cancelListing: (listingId: string) => Promise<string>;
 
   // Batch operations
@@ -266,6 +267,16 @@ export interface BreathingSession {
   score: number;
   completedAt: string;
   metrics: SessionMetrics;
+}
+
+// Cross-network types
+export interface LensPost {
+  id: string;
+  content: string;
+  timestamp: string;
+  metadata: Record<string, any>;
+  transactionId?: string;
+  forteUniqueId?: string;
 }
 
 export interface SessionMetrics {

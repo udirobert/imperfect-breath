@@ -3,11 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSession } from "@/hooks/useSession";
+import { useCamera } from "@/contexts/CameraContext";
+import { useStableMetrics } from "@/hooks/useStableMetrics";
 
 import { mapPatternForAnimation } from "@/lib/session/pattern-mapper";
 import BreathingAnimation from "@/components/BreathingAnimation";
 import { SessionPreview } from "./SessionPreview";
 import { useTouchGestures } from "@/hooks/useTouchGestures";
+import VideoFeed from "../VideoFeed";
+import { VisionManager } from "./VisionManager";
+import { EnhancedSessionLayout } from "./EnhancedSessionLayout";
 import {
   BreathingPhaseName,
   BREATHING_PATTERNS,
@@ -26,6 +31,8 @@ import { cn } from "@/lib/utils";
 interface MobileBreathingInterfaceProps {
   onEndSession?: () => void;
   patternName?: string;
+  enableCamera?: boolean; // ENHANCEMENT: Add camera support for mobile
+  mode?: 'classic' | 'enhanced'; // ENHANCEMENT: Support enhanced mode
 }
 
 export const MobileBreathingInterface: React.FC<
