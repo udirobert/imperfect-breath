@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { RecommendationService } from "@/services/RecommendationService";
+import { PremiumAIInsights } from './PremiumAIInsights';
 import { Progress } from "../ui/progress";
 import {
   Trophy,
@@ -116,10 +117,52 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
       ];
     }
 
+    // ENHANCEMENT FIRST: Get AI-powered insights if vision data available
+  const getAIInsights = async () => {
+    if (sessionData.visionSessionId && sessionData.visionMetrics) {
+      try {
+        const { api } = await import('../../lib/api/unified-client');
+        
+        // HACKATHON: Use enhanced analysis (hide technical details from user)
+        const aiResponse = await api.ai.enhancedAnalysis({
+          session_data: {
+            ...sessionData,
+            patternName: sessionData.patternName,
+            difficulty: 'intermediate', // Could be derived from pattern
+          },
+          analysis_type: 'session'
+        });
+        
+        if (aiResponse.success && aiResponse.data?.result) {
+          return aiResponse.data.result;
+        }
+      } catch (error) {
+        console.warn('Personalized insights unavailable, continuing with standard recommendations:', error);
+      }
+    }
+    return null;
+  };
+
+  const getRecommendations = async () => {
     // ENHANCEMENT FIRST: Use centralized time-based recommendations
     try {
+      // HACKATHON: Get AI insights first
+      const aiInsights = await getAIInsights();
+      
       const timeRecommendations = await RecommendationService.getTimeBasedRecommendations();
       const recommendations = [];
+      
+      // ENHANCEMENT: Prioritize AI insights if available
+      if (aiInsights?.nextSteps) {
+        recommendations.push(...aiInsights.nextSteps.map((step: string) => ({
+          title: step,
+          description: "Personalized guidance based on your session",
+          icon: "✨",
+          priority: "high"
+        })));
+      }
+      
+      if (timeRecommendations.length > 0) {
       
       if (timeRecommendations.length > 0) {
         const topRec = timeRecommendations[0];
@@ -149,9 +192,22 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
 
   const impact = getImpactMessage();
   const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [aiInsights, setAIInsights] = useState<any>(null); // PREMIUM: AI insights state
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   
   useEffect(() => {
     getSmartRecommendations().then(setRecommendations).catch(console.error);
+    
+    // PREMIUM: Load AI insights seamlessly
+    if (sessionData.visionSessionId && sessionData.visionMetrics) {
+      setIsLoadingInsights(true);
+      getAIInsights()
+        .then(insights => {
+          if (insights) setAIInsights(insights);
+        })
+        .catch(console.error)
+        .finally(() => setIsLoadingInsights(false));
+    }
   }, [sessionResults.sessionId]);
   const duration = Math.round(metrics.duration / 60);
 
@@ -320,6 +376,79 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
 
   // Next steps recommendations
   if (celebrationStep === "next") {
+    return (
+      <div className="space-y-6">
+        {/* PREMIUM: AI Insights - Seamless integration */}
+        {aiInsights && (
+          <PremiumAIInsights
+            insights={aiInsights}
+            sessionGoal={sessionData.sessionGoal || 'general'}
+            patternName={sessionData.patternName}
+            className="mb-6"
+          />
+        )}
+        
+        {/* Loading state for AI insights */}
+        {isLoadingInsights && (
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-6 text-center">
+              <div className="animate-pulse flex items-center justify-center gap-3">
+                <Sparkles className="h-5 w-5 text-blue-500" />
+                <span className="text-blue-700 font-medium">Personalizing your insights...</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Smart Recommendations */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-blue-500" />
+              Continue Your Journey
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {recommendations.length > 0 ? (
+              recommendations.slice(0, 3).map((rec, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                  onClick={rec.action}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{rec.icon}</span>
+                    <div>
+                      <h4 className="font-medium text-gray-900">{rec.title}</h4>
+                      <p className="text-sm text-gray-600">{rec.description}</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400" />
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600 text-center py-4">
+                Keep practicing to unlock personalized recommendations!
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setCelebrationStep("impact")}
+            className="flex-1"
+          >
+            Back
+          </Button>
+          <Button onClick={onContinue} className="flex-1">
+            Continue
+          </Button>
+        </div>
+      </div>
+    );
+  }
     return (
       <div className="space-y-6">
         <div className="text-center">

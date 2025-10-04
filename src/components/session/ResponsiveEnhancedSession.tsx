@@ -173,7 +173,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   // Session controls component
   const controls = (
     <SessionControls
-      onEndSession={() => {
+      onEndSession={async () => {
         // Collect session metrics
         const sessionDuration = session.getSessionDuration?.() || 0;
         const cycleCount = session.metrics?.cycleCount || 0;
@@ -189,6 +189,8 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
           cameraUsed: !!cameraStream,
           sessionType: config.mode === "classic" ? "classic" : "enhanced",
           visionSessionId: sessionId,
+          patternName: config.pattern.name, // ENHANCEMENT: Include pattern info for AI
+          difficulty: config.pattern.difficulty || 'intermediate',
           visionMetrics: visionData ? {
             averageStillness: visionData.stillness,
             faceDetectionRate: visionData.presence,

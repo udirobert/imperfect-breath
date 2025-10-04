@@ -198,6 +198,7 @@ class VisionProcessingRequest(BaseModel):
     image_data: str  # base64 encoded image
     session_id: str
     timestamp: int
+    breathing_phase: Optional[str] = None  # ENHANCEMENT: Track breathing phase
     options: Dict[str, bool] = {
         "detect_face": True,
         "analyze_posture": True,
@@ -265,15 +266,75 @@ class SessionState:
             self.posture_history = deque(maxlen=50)  # posture tracking
         if self.created_at == 0.0:
             self.created_at = time.time()
+        
+        # ENHANCEMENT: Phase correlation tracking for AI analysis
+        self.phase_movement_map = {}  # breathing_phase -> [movement_values]
+        self.temporal_snapshots = []  # minute-by-minute progression
 
-    def add_frame_metrics(self, confidence: float, posture: float, movement: float, breathing: Optional[float] = None):
-        """Add metrics from a processed frame"""
+    def add_frame_metrics(self, confidence: float, posture: float, movement: float, breathing: Optional[float] = None, phase: str = None):
+        """Add metrics from a processed frame with phase correlation"""
         self.confidence_history.append(confidence)
         self.posture_history.append(posture)
         self.movement_history.append(movement)
         if breathing is not None:
             self.breathing_history.append(breathing)
+        
+        # ENHANCEMENT: Track movement by breathing phase
+        if phase:
+            if phase not in self.phase_movement_map:
+                self.phase_movement_map[phase] = []
+            self.phase_movement_map[phase].append(movement)
+        
+        # ENHANCEMENT: Temporal snapshots every 30 frames (~30 seconds at 1fps)
+        if len(self.movement_history) % 30 == 0:
+            self.temporal_snapshots.append({
+                'timestamp': time.time() - self.created_at,
+                'stillness': 100 - (movement * 100),
+                'confidence': confidence
+            })
 
+    def get_enhanced_summary(self) -> Dict[str, Any]:
+        """ENHANCEMENT: Rich session data for AI analysis"""
+        base_summary = self.get_session_summary()
+        
+        # Phase-specific analysis
+        phase_analysis = {}
+        for phase, movements in self.phase_movement_map.items():
+            if movements:
+                phase_analysis[phase] = {
+                    'avg_stillness': 100 - (sum(movements) / len(movements) * 100),
+                    'consistency': max(0, 1 - (np.std(movements) if len(movements) > 1 else 0)),
+                    'sample_count': len(movements)
+                }
+        
+        return {
+            **base_summary,
+            'phase_analysis': phase_analysis,
+            'temporal_progression': self.temporal_snapshots,
+            'movement_pattern': {
+                'peak_movement': max(self.movement_history) if self.movement_history else 0,
+                'stability_trend': self._calculate_stability_trend()
+            }
+        }
+    
+    def _calculate_stability_trend(self) -> str:
+        """Calculate if user is getting more or less stable over time"""
+        if len(self.temporal_snapshots) < 2:
+            return 'insufficient_data'
+        
+        first_half = self.temporal_snapshots[:len(self.temporal_snapshots)//2]
+        second_half = self.temporal_snapshots[len(self.temporal_snapshots)//2:]
+        
+        first_avg = sum(s['stillness'] for s in first_half) / len(first_half)
+        second_avg = sum(s['stillness'] for s in second_half) / len(second_half)
+        
+        if second_avg > first_avg + 5:
+            return 'improving'
+        elif second_avg < first_avg - 5:
+            return 'declining'
+        else:
+            return 'stable'
+    
     def get_session_summary(self) -> Dict[str, Any]:
         """Get aggregated session metrics for AI analysis"""
         duration = time.time() - self.created_at
@@ -566,7 +627,8 @@ class VisionProcessor:
                         confidence=metrics.confidence,
                         posture=metrics.posture_score,
                         movement=metrics.movement_level,
-                        breathing=metrics.breathing_rate
+                        breathing=metrics.breathing_rate,
+                        phase=request.breathing_phase  # ENHANCEMENT: Phase correlation
                     )
 
             # Calculate processing time
@@ -774,6 +836,48 @@ async def list_sessions():
     }
 
 # AGGRESSIVE CONSOLIDATION: Single AI analysis endpoint
+@app.post("/api/ai-analysis/enhanced", response_model=AIAnalysisResponse)
+async def enhanced_ai_analysis(request: AIAnalysisRequest):
+    """CONSOLIDATED: Single endpoint for enhanced analysis (hide technical details)"""
+    
+    # Get enhanced session data if available
+    session_id = request.session_data.get('visionSessionId')
+    enhanced_data = None
+    
+    if session_id and session_id in vision_processor.sessions:
+        session = vision_processor.sessions[session_id]
+        enhanced_data = session.get_enhanced_summary()
+        logger.info(f"Enhanced session data for {session_id}: {len(enhanced_data.get('phase_analysis', {}))} phases")
+    
+    try:
+        # HACKATHON: Use Cerebras by default (transparent to user)
+        if os.getenv('CEREBRAS_API_KEY') and enhanced_data:
+            from cerebras_client import call_cerebras_api, create_enhanced_prompt
+            
+            prompt = create_enhanced_prompt(enhanced_data, request.session_data)
+            result = await call_cerebras_api(prompt)
+            
+            return AIAnalysisResponse(
+                success=True,
+                provider="premium", # Hide technical provider name
+                analysis_type=request.analysis_type,
+                result=result,
+                cached=False
+            )
+        else:
+            # Fallback to existing AI analysis
+            fallback_response = await process_ai_analysis(request)
+            # Override provider name for consistency
+            fallback_response.provider = "premium"
+            return fallback_response
+            
+    except Exception as e:
+        logger.error(f"Enhanced analysis failed: {e}")
+        # Graceful fallback
+        fallback_response = await process_ai_analysis(request)
+        fallback_response.provider = "premium"
+        return fallback_response
+
 @app.post("/api/ai-analysis", response_model=AIAnalysisResponse)
 async def ai_analysis(request: AIAnalysisRequest):
     """DRY: Single AI analysis endpoint"""

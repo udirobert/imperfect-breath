@@ -32,9 +32,8 @@ const PERSISTENCE_CONFIG: MetricsConfig = {
 // ============================================================================
 
 export const useStableMetrics = (): StableMetricsResult => {
-  // CLEAN: Subscribe to smoothed metrics only (single source of truth)
-  const smoothedMetrics = useVisionStore(state => state.smoothedMetrics);
-  const detectionHistory = useVisionStore(state => state.detectionHistory);
+  // CLEAN: Subscribe to raw metrics and smooth locally (single source of truth)
+  const rawMetrics = useVisionStore(state => state.metrics);
   const isActive = useVisionStore(state => state.isActive);
   
   // PERFORMANT: Local state for persistence logic
@@ -45,16 +44,14 @@ export const useStableMetrics = (): StableMetricsResult => {
 
   // CLEAN: Memoized stability calculation
   const isStable = useMemo(() => {
-    if (!smoothedMetrics || !isActive) return false;
+    if (!rawMetrics || !isActive) return false;
     
-    // Check confidence and recent detection history
-    const hasGoodConfidence = smoothedMetrics.confidence >= PERSISTENCE_CONFIG.stabilityThreshold;
-    const recentDetections = detectionHistory.slice(-3); // Last 3 frames
-    const stableDetection = recentDetections.length >= 2 && 
-                           recentDetections.filter(Boolean).length >= 2;
+    // Check confidence and face detection
+    const hasGoodConfidence = rawMetrics.confidence >= PERSISTENCE_CONFIG.stabilityThreshold;
+    const stableDetection = rawMetrics.faceDetected;
     
-    return hasGoodConfidence && stableDetection && smoothedMetrics.faceDetected;
-  }, [smoothedMetrics, detectionHistory, isActive]);
+    return hasGoodConfidence && stableDetection;
+  }, [rawMetrics, isActive]);
 
   // LUXURY: Smooth value interpolation for ultra-smooth transitions
   const useSmoothValue = useCallback((
@@ -70,27 +67,27 @@ export const useStableMetrics = (): StableMetricsResult => {
   useEffect(() => {
     const now = Date.now();
     
-    if (isStable && smoothedMetrics && smoothedMetrics.faceDetected) {
+    if (isStable && rawMetrics && rawMetrics.faceDetected) {
       // HONEST: Apply gentle smoothing only to real data to prevent flashing
       setPersistentMetrics(prev => {
-        if (!prev) return smoothedMetrics;
+        if (!prev) return rawMetrics;
         
         // HONEST SMOOTHING: Only smooth when we have real data from both frames
-        if (prev.faceDetected && smoothedMetrics.faceDetected) {
+        if (prev.faceDetected && rawMetrics.faceDetected) {
           return {
-            ...smoothedMetrics,
+            ...rawMetrics,
             // Gentle smoothing to prevent UI flashing, but still reflects real changes
-            stillness: prev.stillness + (smoothedMetrics.stillness - prev.stillness) * 0.3,
-            presence: prev.presence + (smoothedMetrics.presence - prev.presence) * 0.4,
-            posture: prev.posture + (smoothedMetrics.posture - prev.posture) * 0.3,
-            restlessnessScore: smoothedMetrics.restlessnessScore ? 
-              prev.restlessnessScore + (smoothedMetrics.restlessnessScore - (prev.restlessnessScore || 0)) * 0.3 :
+            stillness: prev.stillness + (rawMetrics.stillness - prev.stillness) * 0.3,
+            presence: prev.presence + (rawMetrics.presence - prev.presence) * 0.4,
+            posture: prev.posture + (rawMetrics.posture - prev.posture) * 0.3,
+            restlessnessScore: rawMetrics.restlessnessScore ? 
+              prev.restlessnessScore + (rawMetrics.restlessnessScore - (prev.restlessnessScore || 0)) * 0.3 :
               prev.restlessnessScore,
           };
         }
         
         // If face detection state changed, use new data directly
-        return smoothedMetrics;
+        return rawMetrics;
       });
       
       setLastValidTime(now);
@@ -102,7 +99,7 @@ export const useStableMetrics = (): StableMetricsResult => {
       } else if (displayState === 'appearing') {
         setDisplayState('visible');
       }
-    } else if (!smoothedMetrics || !smoothedMetrics.faceDetected) {
+    } else if (!rawMetrics || !rawMetrics.faceDetected) {
       // HONEST: Graceful fade when face lost, but don't show fake data
       if (persistentMetrics && displayState === 'visible') {
         setDisplayState('fading');
@@ -118,7 +115,7 @@ export const useStableMetrics = (): StableMetricsResult => {
         setDisplayStartTime(null);
       }
     }
-  }, [isStable, smoothedMetrics, displayStartTime, displayState, persistentMetrics]);
+  }, [isStable, rawMetrics, displayStartTime, displayState, persistentMetrics]);
 
   // CLEAN: Display state management with minimum display time
   useEffect(() => {
@@ -167,10 +164,10 @@ export const useStableMetrics = (): StableMetricsResult => {
       confidence: metricsToUse?.confidence || 0,
       
       // Debug info
-      rawMetrics: smoothedMetrics,
+      rawMetrics: rawMetrics,
       hasValidData: !!metricsToUse,
     };
-  }, [persistentMetrics, smoothedMetrics, displayState, isStable]);
+  }, [persistentMetrics, rawMetrics, displayState, isStable]);
 
   return result;
 };

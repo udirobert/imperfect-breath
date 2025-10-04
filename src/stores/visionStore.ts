@@ -180,13 +180,18 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
                         const imageData = canvas.toDataURL('image/jpeg', 0.8);
 
-                        // Import API client dynamically
+                        // Make API call to backend
                         const { apiClient } = await import('../lib/api/unified-client');
+
+                        // Get current breathing phase from session store
+                        const { useSessionStore } = await import('./sessionStore');
+                        const currentPhase = useSessionStore.getState().metrics?.currentPhase;
 
                         // Make API call to backend
                         const response = await apiClient.processVision(visionState.config?.sessionId || 'default', {
                             image_data: imageData,
                             timestamp: Date.now(),
+                            breathing_phase: currentPhase, // ENHANCEMENT: Include breathing phase
                             options: {
                                 detect_face: visionState.config?.features?.detectFace ?? true,
                                 analyze_posture: visionState.config?.features?.analyzePosture ?? true,

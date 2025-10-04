@@ -420,6 +420,16 @@ export class UnifiedAPIClient {
   }
 
   /**
+   * Enhanced AI Analysis - HACKATHON: Cerebras integration
+   */
+  async enhancedAIAnalysis(data: any): Promise<APIResponse> {
+    return this.request('ai', '/api/ai-analysis/enhanced', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
    * Generate AI-powered breathing patterns
    */
   async generatePattern(provider: string, sessionData: any): Promise<APIResponse> {
@@ -920,6 +930,7 @@ export const apiClient = UnifiedAPIClient.getInstance();
 export const api = {
   ai: {
     analyzeSession: (provider: string, data: any) => apiClient.analyzeSession(provider, data),
+    enhancedAnalysis: (data: any) => apiClient.enhancedAIAnalysis(data), // HACKATHON: Enhanced analysis
     generatePattern: (provider: string, data: any) => apiClient.generatePattern(provider, data),
     testConnection: (provider: string) => apiClient.testAIConnection(provider),
     getProviders: () => apiClient.getAvailableAIProviders(),

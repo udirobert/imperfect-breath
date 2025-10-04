@@ -55,7 +55,7 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
   // CLEAN: Use vision store for state management with enhanced debugging
   const visionStore = useVisionStore();
   const isVisionActive = visionSelectors.isActive();
-  const visionMetrics = visionSelectors.hasMetrics() ? visionStore.smoothedMetrics : null; // PERFORMANT: Use smoothed metrics
+  const visionMetrics = visionSelectors.hasMetrics() ? visionStore.metrics : null; // PERFORMANT: Use raw metrics
   const visionError = useVisionStore((state) => state.error);
   const backendAvailable = useVisionStore((state) => state.backendAvailable);
 
