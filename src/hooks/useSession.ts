@@ -285,6 +285,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
         startSession();
       }, 1000);
     }
+    
+    // CRITICAL FIX: Ensure no return value that could be interpreted as cleanup function
+    return undefined;
   }, [initializeSession, requestCamera, setSessionReady, autoStart, enableVision, visionStore, targetFPS, setError, getSessionId]);
 
   const start = useCallback(() => {

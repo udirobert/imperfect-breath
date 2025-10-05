@@ -120,6 +120,9 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
     
     // Always call session.start() - it handles the ready transition internally
     session.start();
+    
+    // CRITICAL FIX: Ensure no return value that could be interpreted as cleanup function
+    return undefined;
   }, [session]);
 
   // Session info for display

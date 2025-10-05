@@ -53,7 +53,7 @@ const Results = () => {
   const { streak, totalMinutes, saveSession, history } = useSessionHistory();
   const {
     analyzeSession,
-    results: analyses,
+    results: analyses = [], // CRITICAL FIX: Provide default empty array to prevent TypeError
     isAnalyzing,
     error,
   } = useSecureAIAnalysis();
@@ -904,7 +904,8 @@ Check out Imperfect Breath!`;
                   </Card>
                 ) : (
                   <div className="space-y-4">
-                    {analyses.map((analysis, index) => (
+                    {/* SAFETY CHECK: Ensure analyses is an array before mapping */}
+                    {Array.isArray(analyses) && analyses.map((analysis, index) => (
                       <Card key={index}>
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
@@ -957,7 +958,8 @@ Check out Imperfect Breath!`;
               </TabsContent>
 
               <TabsContent value="scores" className="space-y-4">
-                {analyses.length > 0 && (
+                {/* SAFETY CHECK: Ensure analyses exists and has length before mapping */}
+                {Array.isArray(analyses) && analyses.length > 0 && (
                   <div className="grid gap-4">
                     {analyses.map((analysis, index) => (
                       <Card key={index}>
@@ -1111,7 +1113,7 @@ Check out Imperfect Breath!`;
               cycles: sessionData.cycleCount || sessionData.cycles,
               insights:
                 enhancedSessionData.sessionType !== "classic" &&
-                analyses.length > 0
+                Array.isArray(analyses) && analyses.length > 0
                   ? analyses.map((a) => a.analysis)
                   : [],
               timestamp: new Date().toISOString(),
