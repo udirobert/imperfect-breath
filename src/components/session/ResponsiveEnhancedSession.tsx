@@ -57,7 +57,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   modeConfig,
   onSessionComplete,
   onSessionExit,
-  sessionId,
+  sessionId: propSessionId, // Rename to avoid confusion
 }) => {
   const isMobile = useIsMobile();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -74,6 +74,9 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
     targetFPS: isMobile ? 0.5 : 1, // Slower FPS on mobile for performance
     videoElement: videoRef,
   });
+
+  // Use the stable session ID from the session store
+  const sessionId = session.getSessionId() || propSessionId;
 
   // ENHANCEMENT FIRST: Initialize session with proper config
   React.useEffect(() => {
@@ -179,8 +182,9 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
         let realVisionMetrics = null;
         if (modeConfig.enableVision && sessionId) {
           try {
+            console.log('📊 Fetching vision summary for session:', sessionId);
             const visionSummaryResponse = await fetch(
-              `${import.meta.env.VITE_HETZNER_SERVICE_URL || "http://localhost:8001"}/api/vision/session/${sessionId}/summary`
+              `${import.meta.env.VITE_HETZNER_SERVICE_URL || "http://localhost:8001"}/api/vision/sessions/${sessionId}/summary`
             );
             
             if (visionSummaryResponse.ok) {

@@ -31,6 +31,7 @@ export interface SessionState {
   phase: SessionPhase;
   config: SessionConfig | null;
   metrics: SessionMetrics;
+  sessionId: string | null; // Stable session ID
 
   // Media state
   cameraStream: MediaStream | null;
@@ -91,6 +92,7 @@ export interface SessionActions {
   // Utilities
   getSessionDuration: () => string;
   getCompletionPercentage: () => number;
+  getSessionId: () => string | null;
 }
 
 // ============================================================================
@@ -110,6 +112,7 @@ const initialState: SessionState = {
   phase: 'setup',
   config: null,
   metrics: initialMetrics,
+  sessionId: null,
   cameraStream: null,
   cameraPermissionGranted: false,
   audioEnabled: true,
@@ -130,13 +133,16 @@ export const useSessionStore = create<SessionState & SessionActions>()(
 
     // Session lifecycle actions
     initializeSession: (config) => {
+      const sessionId = `session_${Date.now()}`;
       set({
         config,
+        sessionId,
         phase: 'setup',
         metrics: { ...initialMetrics, startTime: Date.now() },
         error: null,
         warnings: [],
       });
+      console.log('🔧 Session initialized with ID:', sessionId);
     },
 
     setSessionReady: () => {
@@ -149,14 +155,19 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     startSession: () => {
       const state = get();
       if (state.config) {
+        const startTime = Date.now();
         set({
           phase: 'active',
           metrics: {
             ...state.metrics,
-            startTime: Date.now(),
+            startTime,
+            currentPhase: 'inhale', // Ensure we start with inhale
+            phaseProgress: 0,
+            cycleCount: 0,
           },
           error: null,
         });
+        console.log('🚀 Session started with timestamp:', startTime);
       }
     },
 
@@ -318,7 +329,13 @@ export const useSessionStore = create<SessionState & SessionActions>()(
 
       // Estimate completion based on typical 5-minute session
       const targetDuration = 300; // 5 minutes
-      return Math.min((metrics.duration / targetDuration) * 100, 100);
+      const percentage = Math.min((metrics.duration / targetDuration) * 100, 100);
+      // Fix floating point precision issues
+      return Math.round(percentage * 100) / 100;
+    },
+
+    getSessionId: () => {
+      return get().sessionId;
     },
   }))
 );

@@ -84,7 +84,7 @@ export const SessionProgressDisplay: React.FC<SessionProgressDisplayProps> =
           {/* Cycle & Progress - Relaxed spacing */}
           <div className="flex justify-center gap-6 text-sm text-muted-foreground">
             <span>Cycle {smoothCycle}</span>
-            <span>{Math.round(progressPercentage)}% complete</span>
+            <span>{Math.round(progressPercentage || 0)}% complete</span>
           </div>
         </div>
       );

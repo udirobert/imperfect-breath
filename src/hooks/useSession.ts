@@ -53,6 +53,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     setError,
     getSessionDuration,
     getCompletionPercentage,
+    getSessionId,
   } = useSessionStore();
 
   // Store state
@@ -213,18 +214,23 @@ export const useSession = (options: UseSessionOptions = {}) => {
     if (enableVision && sessionConfig.enableCamera) {
       console.log('🔍 useSession: Initializing vision store');
       try {
-        const stableSessionId = `session_${Date.now()}`;
-        await visionStore.initialize({
-          sessionId: stableSessionId,
-          targetFPS: targetFPS,
-          silentMode: false,
-          gracefulDegradation: false, // No fake data
-          features: {
-            detectFace: true,
-            analyzePosture: true,
-            trackMovement: true,
-          },
-        });
+        // Use the stable session ID from the session store
+        const sessionId = getSessionId();
+        if (sessionId) {
+          await visionStore.initialize({
+            sessionId,
+            targetFPS: targetFPS,
+            silentMode: false,
+            gracefulDegradation: false, // No fake data
+            features: {
+              detectFace: true,
+              analyzePosture: true,
+              trackMovement: true,
+            },
+          });
+        } else {
+          console.warn('⚠️ useSession: No session ID available for vision initialization');
+        }
       } catch (error) {
         console.warn('⚠️ useSession: Failed to initialize vision store:', error);
         setError(`Vision initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -248,7 +254,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
         start();
       }, 1000);
     }
-  }, [initializeSession, requestCamera, setSessionReady, autoStart, enableVision, visionStore, targetFPS, setError]);
+  }, [initializeSession, requestCamera, setSessionReady, autoStart, enableVision, visionStore, targetFPS, setError, getSessionId]);
 
   const start = useCallback(() => {
     // Check if session is properly initialized by checking the store directly
@@ -387,6 +393,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     // Utilities
     getSessionDuration,
     getCompletionPercentage,
+    getSessionId,
 
     // Camera state
     cameraStream: cameraContextStream,
