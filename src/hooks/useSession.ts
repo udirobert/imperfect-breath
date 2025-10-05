@@ -299,21 +299,18 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
     console.log('🚀 Starting session, current phase:', currentState.phase);
 
-    // Ensure we're in ready state before starting
-    if (currentState.phase !== 'ready') {
-      console.log('🔄 Moving to ready phase before starting session');
-      setSessionReady();
-      // Small delay to ensure state update
-      setTimeout(() => {
-        console.log('🚀 Starting session and breathing cycle');
-        startSession();
-        startBreathingCycle();
-      }, 100);
-    } else {
-      console.log('🚀 Starting session and breathing cycle (already ready)');
-      startSession();
+    // CRITICAL FIX: Simplified session start to prevent React Error #310
+    // Always set ready first, then start immediately
+    setSessionReady();
+    startSession();
+    
+    // Start breathing cycle after a minimal delay to ensure state is updated
+    const timerId = setTimeout(() => {
       startBreathingCycle();
-    }
+    }, 50);
+    
+    // Return cleanup function to prevent memory leaks
+    return () => clearTimeout(timerId);
   }, [startSession, setError, startBreathingCycle, setSessionReady]);
 
   const pause = useCallback(() => {
@@ -391,18 +388,19 @@ export const useSession = (options: UseSessionOptions = {}) => {
   // ========================================================================
 
   // ========================================================================
-  // CLEANUP - Proper resource management
+  // CLEANUP - Proper resource management (FIXED: Prevent React Error #310)
   // ========================================================================
 
   useEffect(() => {
     return () => {
-      console.log('🧹 useSession: Component unmounting, cleaning up resources');
-      stopBreathingCycle();
-      // Release camera reference instead of directly stopping stream
-      console.log('🧹 useSession: Releasing camera reference on component unmount');
-      releaseCameraStream();
+      // CRITICAL FIX: Use refs to avoid stale closure issues that cause React Error #310
+      if (phaseTimerRef.current) {
+        clearInterval(phaseTimerRef.current);
+        phaseTimerRef.current = undefined;
+      }
+      // Camera cleanup is handled by CameraContext - don't duplicate here
     };
-  }, []); // ENHANCEMENT FIRST: Only run cleanup on actual component unmount to prevent breathing cycle interruption
+  }, []); // CLEAN: Only cleanup timers on unmount, avoid stale closures
 
   // ========================================================================
   // PUBLIC API - Clean, simple interface
