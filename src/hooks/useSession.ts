@@ -282,8 +282,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     if (autoStart && !sessionConfig.enableCamera) {
       setTimeout(() => {
         setSessionReady();
-        const { startSession: start } = useSessionStore.getState();
-        start();
+        startSession();
       }, 1000);
     }
   }, [initializeSession, requestCamera, setSessionReady, autoStart, enableVision, visionStore, targetFPS, setError, getSessionId]);
@@ -305,12 +304,11 @@ export const useSession = (options: UseSessionOptions = {}) => {
     startSession();
     
     // Start breathing cycle after a minimal delay to ensure state is updated
-    const timerId = setTimeout(() => {
+    setTimeout(() => {
       startBreathingCycle();
     }, 50);
     
-    // Return cleanup function to prevent memory leaks
-    return () => clearTimeout(timerId);
+    // Note: No return value from useCallback - cleanup is handled in useEffect
   }, [startSession, setError, startBreathingCycle, setSessionReady]);
 
   const pause = useCallback(() => {
