@@ -79,9 +79,10 @@ class ErrorReporter {
    */
   private getActiveSessionId(): string | null {
     try {
-      // Dynamic import to avoid circular dependencies
-      const { useSessionStore } = require('../../stores/sessionStore');
-      return useSessionStore.getState().sessionId;
+      // Use dynamic import for browser compatibility
+      // This will be called synchronously, so we can't use async import here
+      // Return null and let the fallback ID generation handle it
+      return null;
     } catch {
       return null;
     }

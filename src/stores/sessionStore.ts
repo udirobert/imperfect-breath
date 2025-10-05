@@ -145,8 +145,12 @@ export const useSessionStore = create<SessionState & SessionActions>()(
       
       // MODULAR: Notify error reporter of new session
       try {
-        const { errorReporter } = require('../lib/errors/error-reporter');
-        errorReporter.updateSessionId(sessionId);
+        // Use dynamic import instead of require() for browser compatibility
+        import('../lib/errors/error-reporter').then(({ errorReporter }) => {
+          errorReporter.updateSessionId(sessionId);
+        }).catch(() => {
+          // Graceful fallback if error reporter not available
+        });
       } catch {
         // Graceful fallback if error reporter not available
       }

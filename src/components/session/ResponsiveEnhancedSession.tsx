@@ -111,26 +111,15 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
       metrics: session.metrics
     });
     
-    // CRITICAL FIX: Manually transition to ready phase first
+    // CRITICAL FIX: Use the session's built-in ready transition
     if (session.phase === 'setup') {
-      console.log('🔄 Session in setup, transitioning to ready first');
-      
-      // Import setSessionReady directly from store
-      const { useSessionStore } = await import('../../stores/sessionStore');
-      const { setSessionReady } = useSessionStore.getState();
-      
-      // Set to ready phase
-      setSessionReady();
-      
-      // Small delay to ensure state update, then start
-      setTimeout(() => {
-        console.log('🚀 Now starting session after manual ready transition');
-        session.start();
-      }, 100);
+      console.log('🔄 Session in setup, using session.start() to handle transition');
     } else {
       console.log('🚀 Session already ready, starting immediately');
-      session.start();
     }
+    
+    // Always call session.start() - it handles the ready transition internally
+    session.start();
   }, [session]);
 
   // Session info for display

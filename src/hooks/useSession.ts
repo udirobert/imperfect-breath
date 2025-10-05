@@ -380,6 +380,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
   // ========================================================================
 
   useEffect(() => {
+    // Only start if session is active, has config, and timer is not already running
     if (isActive && config?.pattern && !phaseTimerRef.current) {
       console.log('🔄 Session is active but breathing cycle not running, starting it now');
       startBreathingCycle();
@@ -387,7 +388,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
       console.log('⏹️ Session not active, stopping breathing cycle');
       stopBreathingCycle();
     }
-  }, [isActive, config, startBreathingCycle, stopBreathingCycle]);
+    
+    // Don't include startBreathingCycle in dependencies to prevent infinite loops
+  }, [isActive, config?.pattern]);
 
   // ========================================================================
   // CLEANUP - Proper resource management
