@@ -220,11 +220,17 @@ export const useSessionStore = create<SessionState & SessionActions>()(
 
         const roundedProgress = Math.round(progress);
 
-        // Always update if phase changed, or if progress changed significantly
-        if (state.metrics.currentPhase !== phase ||
-          Math.abs((state.metrics.phaseProgress || 0) - roundedProgress) >= 5 ||
-          state.metrics.duration !== currentDuration) {
+        // Debug logging for phase updates
+        const phaseChanged = state.metrics.currentPhase !== phase;
+        const progressChanged = Math.abs((state.metrics.phaseProgress || 0) - roundedProgress) >= 1; // Reduced threshold
+        const durationChanged = state.metrics.duration !== currentDuration;
 
+        if (phaseChanged) {
+          console.log(`🔄 Phase changed: ${state.metrics.currentPhase} → ${phase}`);
+        }
+
+        // Always update if phase changed, or if progress/duration changed
+        if (phaseChanged || progressChanged || durationChanged) {
           return {
             metrics: {
               ...state.metrics,
@@ -240,12 +246,16 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     },
 
     incrementCycle: () => {
-      set((state) => ({
-        metrics: {
-          ...state.metrics,
-          cycleCount: state.metrics.cycleCount + 1,
-        },
-      }));
+      set((state) => {
+        const newCycleCount = state.metrics.cycleCount + 1;
+        console.log(`🔄 Cycle incremented: ${state.metrics.cycleCount} → ${newCycleCount}`);
+        return {
+          metrics: {
+            ...state.metrics,
+            cycleCount: newCycleCount,
+          },
+        };
+      });
     },
 
     // Media management

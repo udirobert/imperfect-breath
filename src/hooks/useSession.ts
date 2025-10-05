@@ -158,7 +158,15 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
   const startBreathingCycle = useCallback(() => {
     if (!config?.pattern) {
+      console.warn('🚫 startBreathingCycle: No pattern config available');
       return;
+    }
+
+    // Clear any existing timer first
+    if (phaseTimerRef.current) {
+      console.log('🔄 startBreathingCycle: Clearing existing timer');
+      clearInterval(phaseTimerRef.current);
+      phaseTimerRef.current = undefined;
     }
 
     const { pattern } = config;
@@ -169,6 +177,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
       ...(pattern.hold_after_exhale ? [{ name: 'pause' as const, duration: pattern.hold_after_exhale }] : []),
     ];
 
+    console.log('🫁 startBreathingCycle: Starting with phases:', phases);
+
     let currentPhaseIndex = 0;
     let phaseStartTime = Date.now();
 
@@ -178,26 +188,38 @@ export const useSession = (options: UseSessionOptions = {}) => {
       const phaseElapsed = (now - phaseStartTime) / 1000;
       const progress = Math.min((phaseElapsed / currentPhase.duration) * 100, 100);
 
+      // Debug logging every 2 seconds to avoid spam
+      if (Math.floor(phaseElapsed) % 2 === 0 && progress < 5) {
+        console.log(`🫁 Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
+      }
+
       updateBreathPhase(currentPhase.name, progress);
 
       // Move to next phase
       if (phaseElapsed >= currentPhase.duration) {
+        console.log(`✅ Phase ${currentPhase.name} completed, moving to next phase`);
         currentPhaseIndex = (currentPhaseIndex + 1) % phases.length;
         phaseStartTime = now;
 
         // Increment cycle when returning to inhale
         if (currentPhaseIndex === 0) {
+          console.log('🔄 Cycle completed, incrementing cycle count');
           incrementCycle();
         }
       }
     };
 
+    // Start immediately
+    updatePhase();
+    
     // Update every 100ms for smooth progress
     phaseTimerRef.current = setInterval(updatePhase, 100);
+    console.log('⏰ Breathing cycle timer started');
   }, [config, updateBreathPhase, incrementCycle]);
 
   const stopBreathingCycle = useCallback(() => {
     if (phaseTimerRef.current) {
+      console.log('⏹️ Stopping breathing cycle timer');
       clearInterval(phaseTimerRef.current);
       phaseTimerRef.current = undefined;
     }
@@ -260,9 +282,12 @@ export const useSession = (options: UseSessionOptions = {}) => {
     // Check if session is properly initialized by checking the store directly
     const currentState = useSessionStore.getState();
     if (!currentState.config) {
+      console.error('❌ Session not properly initialized');
       setError('Session not properly initialized');
       return;
     }
+
+    console.log('🚀 Starting session, current phase:', currentState.phase);
 
     // Ensure we're in ready state before starting
     if (currentState.phase !== 'ready') {
@@ -270,10 +295,12 @@ export const useSession = (options: UseSessionOptions = {}) => {
       setSessionReady();
       // Small delay to ensure state update
       setTimeout(() => {
+        console.log('🚀 Starting session and breathing cycle');
         startSession();
         startBreathingCycle();
       }, 100);
     } else {
+      console.log('🚀 Starting session and breathing cycle (already ready)');
       startSession();
       startBreathingCycle();
     }
@@ -347,6 +374,20 @@ export const useSession = (options: UseSessionOptions = {}) => {
       }
     }
   }, [enableVision, visionMetrics, updateVisionMetrics]);
+
+  // ========================================================================
+  // BREATHING CYCLE SYNC - Ensure breathing cycle runs when session is active
+  // ========================================================================
+
+  useEffect(() => {
+    if (isActive && config?.pattern && !phaseTimerRef.current) {
+      console.log('🔄 Session is active but breathing cycle not running, starting it now');
+      startBreathingCycle();
+    } else if (!isActive && phaseTimerRef.current) {
+      console.log('⏹️ Session not active, stopping breathing cycle');
+      stopBreathingCycle();
+    }
+  }, [isActive, config, startBreathingCycle, stopBreathingCycle]);
 
   // ========================================================================
   // CLEANUP - Proper resource management
