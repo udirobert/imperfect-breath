@@ -44,6 +44,9 @@ import { EnhancedCustomPattern } from "../types/patterns";
 import { BreathingSessionPost } from "../components/social/BreathingSessionPost";
 import { SessionCompleteModal } from "../components/unified/SessionCompleteModal";
 
+// TEMPORARY: Debug component for AI analysis
+import { AIAnalysisDebugButton } from "../components/debug/AIAnalysisDebugButton";
+
 // Using consolidated formatTime from utils
 
 const Results = () => {
@@ -53,10 +56,17 @@ const Results = () => {
   const { streak, totalMinutes, saveSession, history } = useSessionHistory();
   const {
     analyzeSession,
-    results: analyses = [], // CRITICAL FIX: Provide default empty array to prevent TypeError
+    results: analysesRaw,
     isAnalyzing,
     error,
   } = useSecureAIAnalysis();
+  
+  // CRITICAL FIX: Multiple layers of safety to prevent TypeError
+  const analyses = useMemo(() => {
+    if (!analysesRaw) return [];
+    if (!Array.isArray(analysesRaw)) return [];
+    return analysesRaw;
+  }, [analysesRaw]);
   const hasSavedRef = useRef(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
 
@@ -95,6 +105,13 @@ const Results = () => {
       toast.error("No session data available for analysis");
       return;
     }
+    
+    console.log('🔍 AI Analysis Debug:', {
+      hetznerUrl: import.meta.env.VITE_HETZNER_SERVICE_URL,
+      configuredAiUrl: import.meta.env.VITE_HETZNER_SERVICE_URL || 'http://localhost:8001',
+      sessionData: sessionData,
+      hasVisionSessionId: !!sessionData.visionSessionId
+    });
 
     // UNIFIED DATA FLOW: Combine session + vision data (AGGRESSIVE CONSOLIDATION)
     let enhancedSessionData: SessionData = {
@@ -861,6 +878,11 @@ Check out Imperfect Breath!`;
                     <Brain className="mr-2 h-4 w-4" />
                     Get AI Analysis
                   </Button>
+                </div>
+                
+                {/* 🚧 TEMPORARY DEBUG BUTTON - Remove after debugging */}
+                <div className="mt-4">
+                  <AIAnalysisDebugButton />
                 </div>
                 {AIConfigManager.getConfiguredProviders().length === 0 && (
                   <Alert>

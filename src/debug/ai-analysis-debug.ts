@@ -54,6 +54,9 @@ export class AIAnalysisDebugger {
         configuredRetries: config.services.ai.retries,
         aiEndpoint: API_ENDPOINTS.ai.analysis,
         healthEndpoint: API_ENDPOINTS.ai.health,
+        isProduction: import.meta.env.PROD,
+        isDevelopment: import.meta.env.DEV,
+        currentUrl: window.location.origin
       };
       
       console.log('🔧 Environment Config:', envConfig);

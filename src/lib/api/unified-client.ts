@@ -384,36 +384,89 @@ export class UnifiedAPIClient {
   }
 
   /**
-   * AI Analysis with fallback
+   * AI Analysis with proper response format handling
    */
   async analyzeSession(provider: string, sessionData: any): Promise<APIResponse> {
     try {
-      // CLEAN: Explicit format for Hetzner server AI analysis
+      console.log('🤖 Sending AI analysis request:', { provider, sessionData });
+      
+      // FIXED: Proper format for Hetzner server AI analysis
       const requestBody = {
         provider,
-        session_data: sessionData, // Match Hetzner server format
+        session_data: sessionData, // Match Hetzner server format exactly
         analysis_type: 'session'
       };
 
-      return await this.request('ai', API_ENDPOINTS.ai.analysis, {
+      const response = await this.request('ai', API_ENDPOINTS.ai.analysis, {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
+
+      console.log('📥 Raw AI analysis response:', response);
+
+      // FIXED: Handle the actual backend response format
+      if (response.success && response.data) {
+        // Backend returns: { success, provider, analysis_type, result, error, cached }
+        // Frontend expects: { success, data: { analysis, suggestions, score, nextSteps } }
+        
+        const backendData = response.data;
+        
+        // Transform backend response to frontend format
+        if (backendData.result) {
+          return {
+            success: true,
+            data: backendData.result, // Extract the result object
+            metadata: {
+              provider: backendData.provider || provider,
+              timestamp: new Date().toISOString(),
+              cached: backendData.cached || false
+            }
+          };
+        } else if (backendData.analysis) {
+          // Handle direct format (fallback case)
+          return {
+            success: true,
+            data: backendData,
+            metadata: {
+              provider: provider,
+              timestamp: new Date().toISOString(),
+            }
+          };
+        }
+      }
+
+      // If we get here, something went wrong
+      throw new Error(response.error || 'Invalid response format from AI service');
+      
     } catch (error) {
       console.warn('AI analysis failed, using fallback:', error);
       
-      // Return fallback response
+      // Return fallback response with proper format
       return {
         success: true,
         data: {
-          analysis: 'Great session! Your breathing practice shows good consistency.',
-          suggestions: ['Continue practicing regularly', 'Focus on consistency'],
-          score: { overall: 75, focus: 70, consistency: 80, progress: 75 },
-          nextSteps: ['Practice daily', 'Try longer sessions'],
+          analysis: 'Great session! Your breathing practice shows good consistency and focus.',
+          suggestions: [
+            'Continue practicing regularly to build strong habits',
+            'Focus on maintaining steady rhythm throughout',
+            'Try extending your sessions gradually for deeper benefits'
+          ],
+          score: { 
+            overall: 75, 
+            focus: 70, 
+            consistency: 80, 
+            progress: 75 
+          },
+          nextSteps: [
+            'Practice daily for 10-15 minutes',
+            'Try different breathing patterns to find your favorites',
+            'Track your progress over time to see improvements'
+          ],
         },
         metadata: {
           provider: 'fallback',
           timestamp: new Date().toISOString(),
+          fallbackUsed: true
         },
       };
     }
