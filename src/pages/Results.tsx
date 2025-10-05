@@ -129,6 +129,12 @@ const Results = () => {
               `${cacheKey}_timestamp`,
               Date.now().toString()
             );
+          } else if (visionSummary.status === 404) {
+            // Handle 404 gracefully without throwing an error that would trigger the error boundary
+            console.warn("Vision summary not found on server, using session data only");
+            toast.warning("Vision data not available - using session data only");
+          } else {
+            throw new Error(`Vision API returned status ${visionSummary.status}`);
           }
         } else {
           // Check cache expiry (5 minutes)
@@ -150,6 +156,12 @@ const Results = () => {
                 `${cacheKey}_timestamp`,
                 Date.now().toString()
               );
+            } else if (visionSummary.status === 404) {
+              // Handle 404 gracefully without throwing an error that would trigger the error boundary
+              console.warn("Vision summary not found on server, using session data only");
+              toast.warning("Vision data not available - using session data only");
+            } else {
+              throw new Error(`Vision API returned status ${visionSummary.status}`);
             }
           }
         }

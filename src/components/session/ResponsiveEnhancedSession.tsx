@@ -102,9 +102,35 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   }, [sessionPhase]);
 
   // Handle session start from preparation flow
-  const handleSessionStart = React.useCallback((cameraEnabled: boolean) => {
+  const handleSessionStart = React.useCallback(async (cameraEnabled: boolean) => {
     console.log('🚀 Starting session with camera:', cameraEnabled);
-    session.start();
+    console.log('🔍 Current session state before start:', {
+      phase: session.phase,
+      config: !!session.config,
+      isActive: session.isActive,
+      metrics: session.metrics
+    });
+    
+    // CRITICAL FIX: Manually transition to ready phase first
+    if (session.phase === 'setup') {
+      console.log('🔄 Session in setup, transitioning to ready first');
+      
+      // Import setSessionReady directly from store
+      const { useSessionStore } = await import('../../stores/sessionStore');
+      const { setSessionReady } = useSessionStore.getState();
+      
+      // Set to ready phase
+      setSessionReady();
+      
+      // Small delay to ensure state update, then start
+      setTimeout(() => {
+        console.log('🚀 Now starting session after manual ready transition');
+        session.start();
+      }, 100);
+    } else {
+      console.log('🚀 Session already ready, starting immediately');
+      session.start();
+    }
   }, [session]);
 
   // Session info for display
