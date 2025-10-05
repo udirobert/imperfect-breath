@@ -259,7 +259,10 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   }
 
   // Show active session for ready/active/paused/complete phases
-  console.log('🎯 Showing active session phase:', sessionPhase);
+  // PERFORMANT: Reduced logging - only log phase changes, not every render
+  React.useEffect(() => {
+    console.log('🎯 Active session phase:', sessionPhase);
+  }, [sessionPhase]);
 
   // MOBILE: Special handling for mobile enhanced sessions
   if (isMobile && config.mode === 'enhanced') {

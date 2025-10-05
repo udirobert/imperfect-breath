@@ -230,12 +230,14 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                                 backendAvailable: true,
                             }));
 
-                            console.log('Real face tracking data:', {
-                                faceDetected,
-                                movementLevel: movementLevel.toFixed(3),
-                                stillness: metrics.stillness.toFixed(1),
-                                confidence: confidence.toFixed(2),
-                            });
+                            // PERFORMANT: Reduced logging - only log every 10th frame to avoid console spam
+                            if (get().frameCount % 10 === 0) {
+                                console.log('📊 Face tracking (every 10 frames):', {
+                                    faceDetected,
+                                    stillness: metrics.stillness.toFixed(1) + '%',
+                                    frames: get().frameCount,
+                                });
+                            }
                         } else {
                             // HONEST: Backend unavailable - clear state, no fake data
                             set({
