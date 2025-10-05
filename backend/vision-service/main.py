@@ -678,66 +678,61 @@ async def cleanup_inactive_sessions():
             logger.error(f"Error in cleanup task: {e}")
             await asyncio.sleep(60)
 
-# AI Analysis Configuration and Functions
-AI_CONFIG = {
-    "models": {
-        "google": "gemini-1.5-flash",
-        "openai": "gpt-4o-mini",
-        "anthropic": "claude-3-haiku-20240307",
-    },
-    "max_tokens": {
-        "session": 400,
-        "pattern": 300,
-    },
-    "cache": {
-        "enabled": True,
-        "ttl": 300,  # 5 minutes
-    },
-}
-
-# In-memory cache
+# PERFORMANT: Enhanced caching for AI responses
 ai_response_cache = {}
 
-def create_session_prompt(session_data: Dict[str, Any]) -> str:
-    """Create optimized prompt for session analysis with vision integration"""
-    vision_metrics = session_data.get('visionMetrics', {})
-    has_vision = bool(vision_metrics)
-
-    base_info = f"""Breathing Session Analysis:
-Pattern: {session_data.get('patternName', 'Unknown')}
-Duration: {session_data.get('sessionDuration', 0)}s
-Breathing Rate: {session_data.get('bpm', 0)}bpm
-Restlessness: {session_data.get('restlessnessScore', 0)}/100"""
-
-    if has_vision:
-        vision_info = f"""
-Vision Analysis (MediaPipe):
-- Face Detection Confidence: {vision_metrics.get('confidence', 0):.1f}
-- Posture Quality: {vision_metrics.get('postureScore', 0):.1f}/1.0
-- Movement Level: {vision_metrics.get('movementLevel', 0):.1f}/1.0
-- Stillness: {vision_metrics.get('stillnessPercentage', 0):.1f}%
-- Breathing Consistency: {vision_metrics.get('consistencyScore', 0):.1f}/100"""
-        analysis_note = "Provide analysis based on actual vision data from MediaPipe face detection."
-    else:
-        vision_info = "\nVision Analysis: Not available (camera not used)"
-        analysis_note = "Provide analysis based on session timing and user-reported metrics only."
-
-    return f"""{base_info}{vision_info}
-
-{analysis_note}
-
-JSON response:
-{{
-  "overallScore": number (0-100),
-  "suggestions": ["3 specific tips based on available data"],
-  "nextSteps": ["3 actionable improvements"],
-  "encouragement": "personalized message based on actual performance"
-}}"""
+# AGGRESSIVE CONSOLIDATION: Removed redundant AI_CONFIG and create_session_prompt
+# All AI configuration is now handled in cerebras_client.py
 
 async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
-    """Process AI analysis request with fallback"""
+    """ENHANCEMENT FIRST: Unified AI analysis with Cerebras integration"""
     try:
-        # For now, return a mock response since we don't have API keys in local dev
+        # CLEAN: Import Cerebras client
+        from cerebras_client import analyze_breathing_session, is_available as cerebras_available
+        
+        # Get enhanced session data if available
+        session_id = request.session_data.get('visionSessionId')
+        enhanced_data = None
+        
+        if session_id and session_id in vision_processor.sessions:
+            session = vision_processor.sessions[session_id]
+            enhanced_data = session.get_enhanced_summary()
+            logger.info(f"Enhanced session data for {session_id}: {len(enhanced_data.get('phase_analysis', {}))} phases")
+        
+        # ENHANCEMENT FIRST: Use Cerebras if available and configured
+        if cerebras_available() and enhanced_data:
+            try:
+                result = await analyze_breathing_session(enhanced_data, request.session_data)
+                
+                # CLEAN: Transform Cerebras response to match expected format
+                transformed_result = {
+                    "overallScore": result.get("overallScore", 85),
+                    "suggestions": [
+                        result.get("phaseInsights", {}).get("inhale", "Focus on smooth inhalation"),
+                        result.get("phaseInsights", {}).get("exhale", "Practice controlled exhalation"),
+                        result.get("phaseInsights", {}).get("hold", "Maintain comfortable breath holds")
+                    ],
+                    "nextSteps": result.get("nextSteps", [
+                        "Continue regular practice",
+                        "Try longer sessions gradually",
+                        "Focus on consistency"
+                    ]),
+                    "encouragement": result.get("encouragement", "Great work on your breathing practice!")
+                }
+                
+                return AIAnalysisResponse(
+                    success=True,
+                    provider="cerebras",
+                    analysis_type=request.analysis_type,
+                    result=transformed_result,
+                    cached=False
+                )
+                
+            except Exception as e:
+                logger.warning(f"Cerebras analysis failed, falling back to mock: {e}")
+                # Fall through to fallback
+        
+        # PERFORMANT: Fallback to mock response
         result = {
             "overallScore": 85,
             "suggestions": [
@@ -755,9 +750,10 @@ async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
 
         return AIAnalysisResponse(
             success=True,
-            provider=request.provider,
+            provider="fallback",
             analysis_type=request.analysis_type,
-            result=result
+            result=result,
+            cached=False
         )
 
     except Exception as e:
@@ -835,68 +831,34 @@ async def list_sessions():
         "active_count": len([s for s in sessions_info if s["is_active"]])
     }
 
-# AGGRESSIVE CONSOLIDATION: Single AI analysis endpoint
-@app.post("/api/ai-analysis/enhanced", response_model=AIAnalysisResponse)
-async def enhanced_ai_analysis(request: AIAnalysisRequest):
-    """CONSOLIDATED: Single endpoint for enhanced analysis (hide technical details)"""
-    
-    # Get enhanced session data if available
-    session_id = request.session_data.get('visionSessionId')
-    enhanced_data = None
-    
-    if session_id and session_id in vision_processor.sessions:
-        session = vision_processor.sessions[session_id]
-        enhanced_data = session.get_enhanced_summary()
-        logger.info(f"Enhanced session data for {session_id}: {len(enhanced_data.get('phase_analysis', {}))} phases")
-    
-    try:
-        # HACKATHON: Use Cerebras by default (transparent to user)
-        if os.getenv('CEREBRAS_API_KEY') and enhanced_data:
-            from cerebras_client import call_cerebras_api, create_enhanced_prompt
-            
-            prompt = create_enhanced_prompt(enhanced_data, request.session_data)
-            result = await call_cerebras_api(prompt)
-            
-            return AIAnalysisResponse(
-                success=True,
-                provider="premium", # Hide technical provider name
-                analysis_type=request.analysis_type,
-                result=result,
-                cached=False
-            )
-        else:
-            # Fallback to existing AI analysis
-            fallback_response = await process_ai_analysis(request)
-            # Override provider name for consistency
-            fallback_response.provider = "premium"
-            return fallback_response
-            
-    except Exception as e:
-        logger.error(f"Enhanced analysis failed: {e}")
-        # Graceful fallback
-        fallback_response = await process_ai_analysis(request)
-        fallback_response.provider = "premium"
-        return fallback_response
-
+# AGGRESSIVE CONSOLIDATION: Single unified AI analysis endpoint
 @app.post("/api/ai-analysis", response_model=AIAnalysisResponse)
 async def ai_analysis(request: AIAnalysisRequest):
-    """DRY: Single AI analysis endpoint"""
+    """DRY: Unified AI analysis endpoint with automatic Cerebras integration"""
     logger.info(f"AI analysis request: {request.provider} {request.analysis_type}")
     return await process_ai_analysis(request)
 
 # AGGRESSIVE CONSOLIDATION: Single health check endpoint
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """ENHANCED: Health check with Cerebras status"""
+    # CLEAN: Import Cerebras status
+    try:
+        from cerebras_client import get_status as cerebras_status
+        ai_status = cerebras_status()
+    except ImportError:
+        ai_status = {"available": False, "error": "cerebras_client not found"}
+    
     return {
         "status": "healthy",
         "timestamp": time.time(),
-        "port": 8001,
+        "port": CONFIG["port"],
         "services": {
             "vision": "active",
-            "ai_analysis": "active",
+            "ai_analysis": "active" if ai_status.get("available") else "fallback",
             "webhook": "active"
         },
+        "ai_integration": ai_status,
         "active_sessions": len(vision_processor.sessions)
     }
 
