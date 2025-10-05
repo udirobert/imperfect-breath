@@ -171,10 +171,10 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
     const { pattern } = config;
     const phases = [
-      { name: 'inhale' as const, duration: pattern.inhale },
-      ...(pattern.hold ? [{ name: 'hold' as const, duration: pattern.hold }] : []),
-      { name: 'exhale' as const, duration: pattern.exhale },
-      ...(pattern.hold_after_exhale ? [{ name: 'pause' as const, duration: pattern.hold_after_exhale }] : []),
+      { name: 'inhale' as const, duration: typeof pattern.phases?.inhale === 'number' && pattern.phases.inhale >= 0 ? pattern.phases.inhale : 4 },
+      ...(typeof pattern.phases?.hold === 'number' && pattern.phases.hold != null && pattern.phases.hold > 0 ? [{ name: 'hold' as const, duration: pattern.phases.hold }] : []),
+      { name: 'exhale' as const, duration: typeof pattern.phases?.exhale === 'number' && pattern.phases.exhale >= 0 ? pattern.phases.exhale : 4 },
+      ...(typeof pattern.phases?.hold_after_exhale === 'number' && pattern.phases.hold_after_exhale != null && pattern.phases.hold_after_exhale > 0 ? [{ name: 'pause' as const, duration: pattern.phases.hold_after_exhale }] : []),
     ];
 
     console.log('🫁 startBreathingCycle: Starting with phases:', phases);
