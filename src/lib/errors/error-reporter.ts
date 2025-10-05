@@ -65,7 +65,8 @@ class ErrorReporter {
 
   constructor(config: Partial<ErrorReportConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.sessionId = this.generateSessionId();
+    // DRY: Use session ID from session store if available, fallback to generated ID
+    this.sessionId = this.getActiveSessionId() || this.generateSessionId();
     this.metrics = this.initializeMetrics();
 
     // Setup global error handlers
@@ -73,10 +74,25 @@ class ErrorReporter {
   }
 
   /**
-   * Generate unique session ID
+   * Get active session ID from session store
+   * CLEAN: Single source of truth for session IDs
+   */
+  private getActiveSessionId(): string | null {
+    try {
+      // Dynamic import to avoid circular dependencies
+      const { useSessionStore } = require('../../stores/sessionStore');
+      return useSessionStore.getState().sessionId;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Generate unique session ID (fallback only)
+   * ORGANIZED: Different format for error reporting vs active sessions
    */
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
@@ -345,6 +361,14 @@ class ErrorReporter {
     if (additionalData) {
       // Store additional user context if needed
     }
+  }
+
+  /**
+   * Update session ID when a new session starts
+   * MODULAR: Allows error reporter to track session changes
+   */
+  updateSessionId(sessionId: string): void {
+    this.sessionId = sessionId;
   }
 
   /**

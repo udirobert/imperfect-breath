@@ -142,6 +142,15 @@ export const useSessionStore = create<SessionState & SessionActions>()(
         error: null,
         warnings: [],
       });
+      
+      // MODULAR: Notify error reporter of new session
+      try {
+        const { errorReporter } = require('../lib/errors/error-reporter');
+        errorReporter.updateSessionId(sessionId);
+      } catch {
+        // Graceful fallback if error reporter not available
+      }
+      
       console.log('🔧 Session initialized with ID:', sessionId);
     },
 

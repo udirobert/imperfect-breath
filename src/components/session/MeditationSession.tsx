@@ -58,8 +58,8 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   
   const isMobile = useIsMobile();
   
-  // STABLE SESSION ID - Only generate once per component mount
-  const sessionIdRef = useRef(`session_${Date.now()}`);
+  // AGGRESSIVE CONSOLIDATION: Remove duplicate session ID generation
+  // Session ID is now managed by sessionStore as single source of truth
   
   // Map the MeditationSessionConfig to ResponsiveEnhancedSession props
   const responsiveConfig = {
@@ -77,14 +77,13 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
     enableVision: config.mode === 'enhanced' || config.mode === 'mobile',
   };
   
-  // Delegate to the existing ResponsiveEnhancedSession component
+  // DRY: No sessionId prop needed - ResponsiveEnhancedSession gets it from sessionStore
   return (
     <ResponsiveEnhancedSession
       config={responsiveConfig}
       modeConfig={modeConfig}
       onSessionComplete={onSessionComplete}
       onSessionExit={onSessionExit}
-      sessionId={sessionIdRef.current}
     />
   );
 };

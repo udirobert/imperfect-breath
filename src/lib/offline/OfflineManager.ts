@@ -146,8 +146,10 @@ export class OfflineManager {
 
   /**
    * Save a breathing session offline
+   * CLEAN: Uses 'offline_' prefix to distinguish from active session IDs
    */
   saveSession(session: Omit<OfflineSession, 'id' | 'synced'>): string {
+    // ORGANIZED: Different ID format for offline storage vs active sessions
     const sessionId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const offlineSession: OfflineSession = {
       ...session,

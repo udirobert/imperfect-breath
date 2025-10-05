@@ -49,7 +49,7 @@ interface ResponsiveEnhancedSessionProps {
   };
   onSessionComplete: (metrics: any) => void;
   onSessionExit: () => void;
-  sessionId: string;
+  // AGGRESSIVE CONSOLIDATION: Remove sessionId prop - use sessionStore instead
 }
 
 export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps> = ({
@@ -57,7 +57,6 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   modeConfig,
   onSessionComplete,
   onSessionExit,
-  sessionId: propSessionId, // Rename to avoid confusion
 }) => {
   const isMobile = useIsMobile();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -75,8 +74,8 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
     videoElement: videoRef,
   });
 
-  // Use the stable session ID from the session store
-  const sessionId = session.getSessionId() || propSessionId;
+  // DRY: Single source of truth for session ID
+  const sessionId = session.getSessionId();
 
   // ENHANCEMENT FIRST: Initialize session with proper config
   React.useEffect(() => {
