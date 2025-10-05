@@ -219,9 +219,37 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
               };
             } else {
               console.warn('⚠️ Vision summary not available, using last frame data');
+              // FALLBACK: Use last available vision metrics from session
+              if (session.visionMetrics?.stillness) {
+                const lastFrameStillness = Math.round(session.visionMetrics.stillness);
+                console.log('🔄 Using last frame stillness:', lastFrameStillness);
+                realVisionMetrics = {
+                  averageStillness: lastFrameStillness,
+                  faceDetectionRate: Math.round((session.visionMetrics.presence || 0) * 100),
+                  postureScore: Math.round((session.visionMetrics.posture || 0) * 100),
+                  movementLevel: (100 - lastFrameStillness) / 100,
+                  totalFrames: 1,
+                  stillnessPercentage: lastFrameStillness,
+                  consistencyScore: 75, // Default consistency
+                };
+              }
             }
           } catch (error) {
             console.error('❌ Failed to fetch vision summary:', error);
+            // FALLBACK: Use last available vision metrics from session
+            if (session.visionMetrics?.stillness) {
+              const lastFrameStillness = Math.round(session.visionMetrics.stillness);
+              console.log('🔄 Using last frame stillness as fallback:', lastFrameStillness);
+              realVisionMetrics = {
+                averageStillness: lastFrameStillness,
+                faceDetectionRate: Math.round((session.visionMetrics.presence || 0) * 100),
+                postureScore: Math.round((session.visionMetrics.posture || 0) * 100),
+                movementLevel: (100 - lastFrameStillness) / 100,
+                totalFrames: 1,
+                stillnessPercentage: lastFrameStillness,
+                consistencyScore: 75, // Default consistency
+              };
+            }
           }
         }
 
