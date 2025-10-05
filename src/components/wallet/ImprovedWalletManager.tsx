@@ -1,1 +1,389 @@
-/**\n * Improved Wallet Manager - Clean, Responsive, Mobile-Optimized\n * \n * CLEAN: Better visual hierarchy and spacing\n * RESPONSIVE: Mobile-first design with proper text handling\n * UX: Clear status indicators and improved interactions\n * PERFORMANT: Efficient state management and loading states\n */\n\nimport { useEffect, useState } from \"react\";\nimport { useFlow } from \"../../hooks/useFlow\";\nimport { useLens } from \"../../hooks/useLens\";\nimport { useAuth } from \"../../hooks/useAuth\";\nimport { Button } from \"../ui/button\";\nimport { Badge } from \"../ui/badge\";\nimport { Avatar, AvatarFallback, AvatarImage } from \"../ui/avatar\";\nimport { Card, CardContent } from \"../ui/card\";\nimport {\n  DropdownMenu,\n  DropdownMenuContent,\n  DropdownMenuItem,\n  DropdownMenuLabel,\n  DropdownMenuSeparator,\n  DropdownMenuTrigger,\n} from \"../ui/dropdown-menu\";\nimport {\n  Wallet,\n  Users,\n  LogOut,\n  CheckCircle,\n  AlertCircle,\n  Copy,\n  ExternalLink,\n  Loader2,\n  ChevronDown,\n  Coins,\n  Zap\n} from \"lucide-react\";\nimport { toast } from \"sonner\";\nimport { ImprovedWalletConnection } from \"./ImprovedWalletConnection\";\nimport { cn } from \"@/lib/utils\";\n\ninterface WalletStatusProps {\n  isConnected: boolean;\n  isLoading?: boolean;\n  address?: string;\n  displayName?: string;\n  icon: React.ReactNode;\n  color: string;\n  onConnect: () => void;\n  onDisconnect: () => void;\n  children?: React.ReactNode;\n}\n\nconst WalletStatusCard: React.FC<WalletStatusProps> = ({\n  isConnected,\n  isLoading,\n  address,\n  displayName,\n  icon,\n  color,\n  onConnect,\n  onDisconnect,\n  children\n}) => {\n  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;\n  \n  if (!isConnected) {\n    return (\n      <Button\n        variant=\"outline\"\n        size=\"sm\"\n        onClick={onConnect}\n        disabled={isLoading}\n        className=\"flex items-center gap-2 min-w-[120px]\"\n      >\n        {isLoading ? (\n          <Loader2 className=\"h-4 w-4 animate-spin\" />\n        ) : (\n          icon\n        )}\n        <span className=\"truncate\">{displayName}</span>\n      </Button>\n    );\n  }\n\n  return (\n    <DropdownMenu>\n      <DropdownMenuTrigger asChild>\n        <Button\n          variant=\"outline\"\n          size=\"sm\"\n          className=\"flex items-center gap-2 min-w-[120px] max-w-[160px]\"\n        >\n          <div className=\"flex items-center gap-2 flex-1 min-w-0\">\n            <div className={cn(\n              \"w-5 h-5 rounded-full flex items-center justify-center text-white text-xs\",\n              color\n            )}>\n              {icon}\n            </div>\n            <span className=\"truncate text-sm\">\n              {address ? formatAddress(address) : displayName}\n            </span>\n            <CheckCircle className=\"h-3 w-3 text-green-500 flex-shrink-0\" />\n          </div>\n          <ChevronDown className=\"h-3 w-3 flex-shrink-0\" />\n        </Button>\n      </DropdownMenuTrigger>\n      <DropdownMenuContent align=\"end\" className=\"w-64\">\n        {children}\n      </DropdownMenuContent>\n    </DropdownMenu>\n  );\n};\n\nexport const ImprovedWalletManager = () => {\n  const {\n    user: flowUser,\n    connect: flowLogIn,\n    disconnect: flowLogOut,\n    executeTransaction,\n  } = useFlow();\n\n  const {\n    isAuthenticated,\n    authenticate,\n    logout,\n    currentAccount: session,\n  } = useLens();\n\n  const { hasWallet, wallet, isWeb3User, currentChain, blockchainEnabled } = useAuth();\n\n  const [isFlowSetupLoading, setIsFlowSetupLoading] = useState(false);\n  const [isLensAuthenticating, setIsLensAuthenticating] = useState(false);\n  const [showWalletDialog, setShowWalletDialog] = useState(false);\n\n  // Flow account setup effect\n  useEffect(() => {\n    if (flowUser?.loggedIn && !isFlowSetupLoading) {\n      const setupFlowAccount = async () => {\n        try {\n          setIsFlowSetupLoading(true);\n          const txCode = `\n            import ImperfectBreath from 0xImperfectBreath\n            transaction {\n                prepare(signer: AuthAccount) {\n                    if signer.borrow<&BreathFlowVision.Collection>(from: BreathFlowVision.CollectionStoragePath) == nil {\n                        signer.save(<-BreathFlowVision.createEmptyCollection(), to: BreathFlowVision.CollectionStoragePath)\n                        signer.link<&BreathFlowVision.Collection{BreathFlowVision.CollectionPublic}>(\n                            BreathFlowVision.CollectionPublicPath,\n                            target: BreathFlowVision.CollectionStoragePath\n                        )\n                    }\n                }\n            }\n          `;\n          await executeTransaction(txCode);\n          toast.success(\"Flow account ready for breathing NFTs!\");\n        } catch (error) {\n          console.error(\"Failed to set up Flow account:\", error);\n        } finally {\n          setIsFlowSetupLoading(false);\n        }\n      };\n      setupFlowAccount();\n    }\n  }, [flowUser?.loggedIn, executeTransaction, isFlowSetupLoading]);\n\n  // Handlers\n  const handleLensDisconnect = async () => {\n    try {\n      await logout();\n      toast.success(\"Disconnected from Lens Protocol\");\n    } catch (error) {\n      toast.error(\"Failed to disconnect from Lens\");\n    }\n  };\n\n  const handleFlowDisconnect = async () => {\n    try {\n      await flowLogOut();\n      toast.success(\"Disconnected Flow wallet\");\n    } catch (error) {\n      toast.error(\"Failed to disconnect Flow wallet\");\n    }\n  };\n\n  const handleLensLogin = async () => {\n    try {\n      setIsLensAuthenticating(true);\n      await authenticate();\n      toast.success(\"Connected to Lens Protocol\");\n    } catch (error) {\n      toast.error(\"Failed to connect to Lens\");\n    } finally {\n      setIsLensAuthenticating(false);\n    }\n  };\n\n  const handleCopyAddress = async (address: string, label: string) => {\n    try {\n      await navigator.clipboard.writeText(address);\n      toast.success(`${label} address copied`);\n    } catch (error) {\n      toast.error(\"Failed to copy address\");\n    }\n  };\n\n  const getLensDisplayName = () => {\n    if (session?.address) return `${session.address.slice(0, 6)}...`;\n    return \"Lens Profile\";\n  };\n\n  const getFlowAddress = () => {\n    if (!flowUser?.addr) return \"\";\n    return `${flowUser.addr.slice(0, 6)}...${flowUser.addr.slice(-4)}`;\n  };\n\n  // Connection status summary\n  const getConnectionSummary = () => {\n    const connections = [];\n    if (hasWallet && currentChain) connections.push(currentChain);\n    if (flowUser?.loggedIn) connections.push(\"Flow\");\n    if (isAuthenticated) connections.push(\"Lens\");\n    return connections.join(\" + \") || \"Not Connected\";\n  };\n\n  return (\n    <div className=\"space-y-4\">\n      {/* Main Wallet Connection */}\n      {blockchainEnabled && (\n        <div className=\"space-y-2\">\n          <div className=\"text-sm font-medium text-muted-foreground\">Primary Wallet</div>\n          {showWalletDialog ? (\n            <Card className=\"p-4\">\n              <ImprovedWalletConnection />\n              <Button \n                variant=\"ghost\" \n                size=\"sm\" \n                onClick={() => setShowWalletDialog(false)}\n                className=\"mt-2 w-full\"\n              >\n                Close\n              </Button>\n            </Card>\n          ) : (\n            <Button\n              variant=\"outline\"\n              onClick={() => setShowWalletDialog(true)}\n              className=\"w-full justify-start\"\n            >\n              <Wallet className=\"h-4 w-4 mr-2\" />\n              {hasWallet ? \"Manage Wallet\" : \"Connect Wallet\"}\n            </Button>\n          )}\n        </div>\n      )}\n\n      {/* Protocol Connections */}\n      <div className=\"space-y-2\">\n        <div className=\"text-sm font-medium text-muted-foreground\">Protocol Connections</div>\n        <div className=\"flex flex-col gap-2\">\n          {/* Flow Wallet */}\n          <WalletStatusCard\n            isConnected={flowUser?.loggedIn || false}\n            isLoading={isFlowSetupLoading}\n            address={flowUser?.addr}\n            displayName=\"Flow (NFTs)\"\n            icon={<Coins className=\"h-3 w-3\" />}\n            color=\"bg-green-500\"\n            onConnect={flowLogIn}\n            onDisconnect={handleFlowDisconnect}\n          >\n            <DropdownMenuLabel className=\"text-xs text-muted-foreground\">\n              Flow Blockchain • NFT Features\n            </DropdownMenuLabel>\n            <DropdownMenuItem disabled className=\"flex flex-col items-start space-y-1\">\n              <span className=\"font-medium\">Connected</span>\n              <code className=\"text-xs text-muted-foreground font-mono\">\n                {getFlowAddress()}\n              </code>\n            </DropdownMenuItem>\n            <DropdownMenuSeparator />\n            <DropdownMenuItem\n              onClick={() => handleCopyAddress(flowUser?.addr || \"\", \"Flow\")}\n            >\n              <Copy className=\"w-4 h-4 mr-2\" />\n              Copy Address\n            </DropdownMenuItem>\n            <DropdownMenuItem className=\"text-blue-600\">\n              <Zap className=\"w-4 h-4 mr-2\" />\n              Mint Breathing NFTs\n            </DropdownMenuItem>\n            <DropdownMenuSeparator />\n            <DropdownMenuItem\n              onClick={handleFlowDisconnect}\n              className=\"text-red-600\"\n            >\n              <LogOut className=\"w-4 h-4 mr-2\" />\n              Disconnect\n            </DropdownMenuItem>\n          </WalletStatusCard>\n\n          {/* Lens Protocol */}\n          <WalletStatusCard\n            isConnected={isAuthenticated}\n            isLoading={isLensAuthenticating}\n            address={session?.address}\n            displayName=\"Lens (Social)\"\n            icon={<Users className=\"h-3 w-3\" />}\n            color=\"bg-purple-500\"\n            onConnect={handleLensLogin}\n            onDisconnect={handleLensDisconnect}\n          >\n            <DropdownMenuLabel className=\"text-xs text-muted-foreground\">\n              Lens Protocol • Social Features\n            </DropdownMenuLabel>\n            <DropdownMenuItem disabled className=\"flex flex-col items-start space-y-1\">\n              <span className=\"font-medium\">{getLensDisplayName()}</span>\n              <div className=\"flex items-center gap-2\">\n                <Badge variant=\"secondary\" className=\"text-xs\">\n                  Authenticated\n                </Badge>\n                {session?.address && (\n                  <code className=\"text-xs text-muted-foreground font-mono\">\n                    {session.address.slice(0, 10)}...\n                  </code>\n                )}\n              </div>\n            </DropdownMenuItem>\n            <DropdownMenuSeparator />\n            {session?.address && (\n              <DropdownMenuItem\n                onClick={() => handleCopyAddress(session.address, \"Lens\")}\n              >\n                <Copy className=\"w-4 h-4 mr-2\" />\n                Copy Address\n              </DropdownMenuItem>\n            )}\n            <DropdownMenuItem className=\"text-blue-600\">\n              <Users className=\"w-4 h-4 mr-2\" />\n              Social Sharing\n            </DropdownMenuItem>\n            <DropdownMenuSeparator />\n            <DropdownMenuItem\n              onClick={handleLensDisconnect}\n              className=\"text-red-600\"\n            >\n              <LogOut className=\"w-4 h-4 mr-2\" />\n              Disconnect\n            </DropdownMenuItem>\n          </WalletStatusCard>\n        </div>\n      </div>\n\n      {/* Connection Status Summary */}\n      {(hasWallet || flowUser?.loggedIn || isAuthenticated) && (\n        <div className=\"pt-2 border-t\">\n          <div className=\"flex items-center justify-between\">\n            <span className=\"text-xs text-muted-foreground\">Status:</span>\n            <Badge variant=\"outline\" className=\"text-xs\">\n              {getConnectionSummary()}\n            </Badge>\n          </div>\n        </div>\n      )}\n    </div>\n  );\n};
+/**
+ * Improved Wallet Manager - Clean, Responsive, Mobile-Optimized
+ * 
+ * CLEAN: Better visual hierarchy and spacing
+ * RESPONSIVE: Mobile-first design with proper text handling
+ * UX: Clear status indicators and improved interactions
+ * PERFORMANT: Efficient state management and loading states
+ */
+
+import { useEffect, useState } from "react";
+import { useFlow } from "../../hooks/useFlow";
+import { useLens } from "../../hooks/useLens";
+import { useAuth } from "../../hooks/useAuth";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Card, CardContent } from "../ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import {
+  Wallet,
+  Users,
+  LogOut,
+  CheckCircle,
+  AlertCircle,
+  Copy,
+  ExternalLink,
+  Loader2,
+  ChevronDown,
+  Coins,
+  Zap
+} from "lucide-react";
+import { toast } from "sonner";
+import { ImprovedWalletConnection } from "./ImprovedWalletConnection";
+import { cn } from "@/lib/utils";
+
+interface WalletStatusProps {
+  isConnected: boolean;
+  isLoading?: boolean;
+  address?: string;
+  displayName?: string;
+  icon: React.ReactNode;
+  color: string;
+  onConnect: () => void;
+  onDisconnect: () => void;
+  children?: React.ReactNode;
+}
+
+const WalletStatusCard: React.FC<WalletStatusProps> = ({
+  isConnected,
+  isLoading,
+  address,
+  displayName,
+  icon,
+  color,
+  onConnect,
+  onDisconnect,
+  children
+}) => {
+  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  
+  if (!isConnected) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onConnect}
+        disabled={isLoading}
+        className="flex items-center gap-2 min-w-[120px]"
+      >
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          icon
+        )}
+        <span className="truncate">{displayName}</span>
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2 min-w-[120px] max-w-[160px]"
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className={cn(
+              "w-5 h-5 rounded-full flex items-center justify-center text-white text-xs",
+              color
+            )}>
+              {icon}
+            </div>
+            <span className="truncate text-sm">
+              {address ? formatAddress(address) : displayName}
+            </span>
+            <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+          </div>
+          <ChevronDown className="h-3 w-3 flex-shrink-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+export const ImprovedWalletManager = () => {
+  const {
+    user: flowUser,
+    connect: flowLogIn,
+    disconnect: flowLogOut,
+    executeTransaction,
+  } = useFlow();
+
+  const {
+    isAuthenticated,
+    authenticate,
+    logout,
+    currentAccount: session,
+  } = useLens();
+
+  const { hasWallet, wallet, isWeb3User, currentChain, blockchainEnabled } = useAuth();
+
+  const [isFlowSetupLoading, setIsFlowSetupLoading] = useState(false);
+  const [isLensAuthenticating, setIsLensAuthenticating] = useState(false);
+  const [showWalletDialog, setShowWalletDialog] = useState(false);
+
+  // FIXED: Flow account setup effect with proper cleanup to prevent React Error #310
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (flowUser?.loggedIn && !isFlowSetupLoading) {
+      const setupFlowAccount = async () => {
+        try {
+          if (!isMounted) return; // Early exit if unmounted
+          
+          setIsFlowSetupLoading(true);
+          const txCode = `
+            import ImperfectBreath from 0xImperfectBreath
+            transaction {
+                prepare(signer: AuthAccount) {
+                    if signer.borrow<&BreathFlowVision.Collection>(from: BreathFlowVision.CollectionStoragePath) == nil {
+                        signer.save(<-BreathFlowVision.createEmptyCollection(), to: BreathFlowVision.CollectionStoragePath)
+                        signer.link<&BreathFlowVision.Collection{BreathFlowVision.CollectionPublic}>(
+                            BreathFlowVision.CollectionPublicPath,
+                            target: BreathFlowVision.CollectionStoragePath
+                        )
+                    }
+                }
+            }
+          `;
+          
+          await executeTransaction(txCode);
+          
+          if (isMounted) {
+            toast.success("Flow account ready for breathing NFTs!");
+          }
+        } catch (error) {
+          console.error("Failed to set up Flow account:", error);
+          if (isMounted) {
+            toast.error("Failed to set up Flow account");
+          }
+        } finally {
+          if (isMounted) {
+            setIsFlowSetupLoading(false);
+          }
+        }
+      };
+      
+      setupFlowAccount();
+    }
+    
+    // Cleanup function to prevent React Error #310
+    return () => {
+      isMounted = false;
+    };
+  }, [flowUser?.loggedIn, executeTransaction, isFlowSetupLoading]);
+
+  // Handlers
+  const handleLensDisconnect = async () => {
+    try {
+      await logout();
+      toast.success("Disconnected from Lens Protocol");
+    } catch (error) {
+      toast.error("Failed to disconnect from Lens");
+    }
+  };
+
+  const handleFlowDisconnect = async () => {
+    try {
+      await flowLogOut();
+      toast.success("Disconnected Flow wallet");
+    } catch (error) {
+      toast.error("Failed to disconnect Flow wallet");
+    }
+  };
+
+  const handleLensLogin = async () => {
+    try {
+      setIsLensAuthenticating(true);
+      await authenticate();
+      toast.success("Connected to Lens Protocol");
+    } catch (error) {
+      toast.error("Failed to connect to Lens");
+    } finally {
+      setIsLensAuthenticating(false);
+    }
+  };
+
+  const handleCopyAddress = async (address: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      toast.success(`${label} address copied`);
+    } catch (error) {
+      toast.error("Failed to copy address");
+    }
+  };
+
+  const getLensDisplayName = () => {
+    if (session?.address) return `${session.address.slice(0, 6)}...`;
+    return "Lens Profile";
+  };
+
+  const getFlowAddress = () => {
+    if (!flowUser?.addr) return "";
+    return `${flowUser.addr.slice(0, 6)}...${flowUser.addr.slice(-4)}`;
+  };
+
+  // Connection status summary
+  const getConnectionSummary = () => {
+    const connections = [];
+    if (hasWallet && currentChain) connections.push(currentChain);
+    if (flowUser?.loggedIn) connections.push("Flow");
+    if (isAuthenticated) connections.push("Lens");
+    return connections.join(" + ") || "Not Connected";
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Main Wallet Connection */}
+      {blockchainEnabled && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">Primary Wallet</div>
+          {showWalletDialog ? (
+            <Card className="p-4">
+              <ImprovedWalletConnection />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowWalletDialog(false)}
+                className="mt-2 w-full"
+              >
+                Close
+              </Button>
+            </Card>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setShowWalletDialog(true)}
+              className="w-full justify-start"
+            >
+              <Wallet className="h-4 w-4 mr-2" />
+              {hasWallet ? "Manage Wallet" : "Connect Wallet"}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Protocol Connections */}
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-muted-foreground">Protocol Connections</div>
+        <div className="flex flex-col gap-2">
+          {/* Flow Wallet */}
+          <WalletStatusCard
+            isConnected={flowUser?.loggedIn || false}
+            isLoading={isFlowSetupLoading}
+            address={flowUser?.addr}
+            displayName="Flow (NFTs)"
+            icon={<Coins className="h-3 w-3" />}
+            color="bg-green-500"
+            onConnect={flowLogIn}
+            onDisconnect={handleFlowDisconnect}
+          >
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Flow Blockchain • NFT Features
+            </DropdownMenuLabel>
+            <DropdownMenuItem disabled className="flex flex-col items-start space-y-1">
+              <span className="font-medium">Connected</span>
+              <code className="text-xs text-muted-foreground font-mono">
+                {getFlowAddress()}
+              </code>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleCopyAddress(flowUser?.addr || "", "Flow")}
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Address
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-blue-600">
+              <Zap className="w-4 h-4 mr-2" />
+              Mint Breathing NFTs
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleFlowDisconnect}
+              className="text-red-600"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Disconnect
+            </DropdownMenuItem>
+          </WalletStatusCard>
+
+          {/* Lens Protocol */}
+          <WalletStatusCard
+            isConnected={isAuthenticated}
+            isLoading={isLensAuthenticating}
+            address={session?.address}
+            displayName="Lens (Social)"
+            icon={<Users className="h-3 w-3" />}
+            color="bg-purple-500"
+            onConnect={handleLensLogin}
+            onDisconnect={handleLensDisconnect}
+          >
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Lens Protocol • Social Features
+            </DropdownMenuLabel>
+            <DropdownMenuItem disabled className="flex flex-col items-start space-y-1">
+              <span className="font-medium">{getLensDisplayName()}</span>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  Authenticated
+                </Badge>
+                {session?.address && (
+                  <code className="text-xs text-muted-foreground font-mono">
+                    {session.address.slice(0, 10)}...
+                  </code>
+                )}
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {session?.address && (
+              <DropdownMenuItem
+                onClick={() => handleCopyAddress(session.address, "Lens")}
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Address
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem className="text-blue-600">
+              <Users className="w-4 h-4 mr-2" />
+              Social Sharing
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLensDisconnect}
+              className="text-red-600"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Disconnect
+            </DropdownMenuItem>
+          </WalletStatusCard>
+        </div>
+      </div>
+
+      {/* Connection Status Summary */}
+      {(hasWallet || flowUser?.loggedIn || isAuthenticated) && (
+        <div className="pt-2 border-t">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Status:</span>
+            <Badge variant="outline" className="text-xs">
+              {getConnectionSummary()}
+            </Badge>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
