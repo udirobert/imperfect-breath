@@ -3,10 +3,8 @@
   publish = "dist"
 
 [build.environment]
-  # Prevent Netlify from failing on RevenueCat publishable keys
-  SECRETS_SCAN_OMIT_KEYS = "VITE_REVENUECAT_ANDROID_KEY,VITE_REVENUECAT_IOS_KEY"
-  # SECURITY: Do not set VITE_REVENUECAT_* variables here - they get bundled into client code
-  # RevenueCat keys should be handled server-side or via secure runtime configuration
+  # Prevent Netlify from failing on RevenueCat publishable keys (these are public by design)
+  SECRETS_SCAN_OMIT_KEYS = "VITE_REVENUECAT_ANDROID_KEY"
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   VITE_APP_ENV = "production"

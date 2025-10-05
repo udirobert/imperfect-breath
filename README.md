@@ -53,9 +53,10 @@ MODEL_DOWNLOAD_ON_START=false python3 main.py &
 ## 🌟 Key Features
 
 ### 🤖 AI-Powered Coaching
-- Real-time breathing analysis via camera
-- Personalized guidance with Zen AI agent
-- Session metrics and progress insights
+- **Real-time analysis** via camera-based biometrics
+- **Personalized insights** powered by Cerebras & Llama AI models
+- **Zen AI agent** for adaptive guidance and encouragement
+- **Session intelligence** - Detailed metrics and progress tracking
 
 ### 📱 Progressive Web App
 - Works offline after first load
