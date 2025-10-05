@@ -159,13 +159,10 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
       pattern={config.pattern}
       isActive={session.isActive}
       cycleCount={session.metrics?.cycleCount || 0}
+      phaseProgress={session.metrics?.phaseProgress || 0}
       sessionInfo={{
         duration: sessionInfo.duration,
         progressPercentage: sessionInfo.progressPercentage,
-        stillnessScore: metrics.stillnessScore,
-        presenceScore: metrics.presenceScore,
-        confidenceScore: metrics.confidenceScore,
-        showMetrics: metrics.showMetrics,
       }}
     />
   );
@@ -177,7 +174,38 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
         // Collect session metrics
         const sessionDuration = session.getSessionDuration?.() || 0;
         const cycleCount = session.metrics?.cycleCount || 0;
-        const visionData = session.visionMetrics;
+
+        // HONEST UX: Fetch REAL aggregated vision metrics from Hetzner API
+        let realVisionMetrics = null;
+        if (modeConfig.enableVision && sessionId) {
+          try {
+            const visionSummaryResponse = await fetch(
+              `${import.meta.env.VITE_HETZNER_SERVICE_URL || "http://localhost:8001"}/api/vision/session/${sessionId}/summary`
+            );
+            
+            if (visionSummaryResponse.ok) {
+              const visionSummary = await visionSummaryResponse.json();
+              console.log('✅ Fetched real vision summary:', visionSummary);
+              
+              // Calculate real stillness from movement (inverse relationship)
+              const realStillness = Math.round((1 - visionSummary.avg_movement_level) * 100);
+              
+              realVisionMetrics = {
+                averageStillness: realStillness,
+                faceDetectionRate: Math.round(visionSummary.avg_confidence * 100),
+                postureScore: Math.round(visionSummary.avg_posture_score * 100),
+                movementLevel: visionSummary.avg_movement_level,
+                totalFrames: visionSummary.total_frames,
+                stillnessPercentage: visionSummary.stillness_percentage,
+                consistencyScore: visionSummary.consistency_score,
+              };
+            } else {
+              console.warn('⚠️ Vision summary not available, using last frame data');
+            }
+          } catch (error) {
+            console.error('❌ Failed to fetch vision summary:', error);
+          }
+        }
 
         const sessionMetrics = {
           duration: typeof sessionDuration === "string"
@@ -185,18 +213,18 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
             : sessionDuration,
           cycleCount,
           breathHoldTime: 0,
-          stillnessScore: visionData?.stillness,
+          // HONEST: Use real aggregated stillness, not last frame
+          stillnessScore: realVisionMetrics?.averageStillness || null,
+          restlessnessScore: realVisionMetrics ? (100 - realVisionMetrics.averageStillness) : null,
           cameraUsed: !!cameraStream,
           sessionType: config.mode === "classic" ? "classic" : "enhanced",
           visionSessionId: sessionId,
-          patternName: config.pattern.name, // ENHANCEMENT: Include pattern info for AI
-          difficulty: config.pattern.difficulty || 'intermediate',
-          visionMetrics: visionData ? {
-            averageStillness: visionData.stillness,
-            faceDetectionRate: visionData.presence,
-            postureScore: visionData.posture,
-          } : undefined,
+          patternName: config.pattern.name,
+          difficulty: 'intermediate',
+          visionMetrics: realVisionMetrics,
         };
+
+        console.log('📊 Session metrics with real vision data:', sessionMetrics);
 
         session.complete();
         onSessionComplete(sessionMetrics);

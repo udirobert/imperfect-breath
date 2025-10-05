@@ -7,6 +7,7 @@ import {
   shouldShowRhythmIndicator,
 } from "../lib/breathing-phase-config";
 import { getQualityColor } from "../utils/quality";
+import { getAffirmationForCycle } from "../lib/affirmations";
 
 interface BreathingAnimationProps {
   phase:
@@ -39,14 +40,10 @@ interface BreathingAnimationProps {
   emotionalState?: "calm" | "focused" | "energized" | "peaceful";
   sessionQuality?: number;
   
-  // INTEGRATED: Session progress information
+  // ENHANCEMENT FIRST: Session progress information (cleaned up - no duplicate metrics)
   sessionInfo?: {
     duration?: string;
     progressPercentage?: number;
-    stillnessScore?: number;
-    presenceScore?: number;
-    confidenceScore?: number;
-    showMetrics?: boolean;
   };
 }
 
@@ -217,43 +214,32 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       );
     };
     
-    // INTEGRATED: Session footer component
+    // ENHANCEMENT FIRST: Session footer with affirmations (replaces duplicate metrics)
     const SessionFooter = () => {
       if (!sessionInfo || !isActive) return null;
+      
+      // Get affirmation based on cycle count
+      const affirmation = useMemo(() => {
+        return getAffirmationForCycle(cycleCount);
+      }, [cycleCount]);
       
       return (
         <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 w-full max-w-md">
           <div className="bg-gradient-to-r from-slate-50/90 to-slate-100/90 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm rounded-xl px-4 py-3 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
             <div className="space-y-2">
-              {/* Primary metrics line */}
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">
-                  Cycle {cycleCount}
-                </span>
-                {sessionInfo.showMetrics && sessionInfo.stillnessScore !== undefined && (
-                  <span className={cn(
-                    "font-medium",
-                    sessionInfo.stillnessScore >= 80 ? "text-green-600 dark:text-green-400" :
-                    sessionInfo.stillnessScore >= 60 ? "text-blue-600 dark:text-blue-400" :
-                    sessionInfo.stillnessScore >= 40 ? "text-yellow-600 dark:text-yellow-400" :
-                    "text-orange-600 dark:text-orange-400"
-                  )}>
-                    Stillness {sessionInfo.stillnessScore}%
-                  </span>
-                )}
-                <span className="text-slate-600 dark:text-slate-400">
-                  {Math.round(sessionInfo.progressPercentage || 0)}% complete
-                </span>
+              {/* Minimal progress info */}
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>Cycle {cycleCount}</span>
+                <span>•</span>
+                <span>{Math.round(sessionInfo.progressPercentage || 0)}% complete</span>
               </div>
               
-              {/* Secondary metrics line - only when stable */}
-              {sessionInfo.showMetrics && sessionInfo.presenceScore !== undefined && sessionInfo.confidenceScore !== undefined && (
-                <div className="flex items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
-                  <span>Presence {sessionInfo.presenceScore}%</span>
-                  <span>•</span>
-                  <span>Confidence {sessionInfo.confidenceScore}%</span>
-                </div>
-              )}
+              {/* ENHANCEMENT: Affirmation - main focus */}
+              <div className="text-center py-2">
+                <p className="text-sm font-light text-slate-700 dark:text-slate-300 tracking-wide leading-relaxed italic">
+                  {affirmation.text}
+                </p>
+              </div>
             </div>
           </div>
         </div>
