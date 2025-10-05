@@ -150,6 +150,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
       setError(errorMessage);
       return null;
     }
+    
+    // CRITICAL FIX: Ensure no return value that could be interpreted as cleanup function
+    return undefined;
   }, [requestCameraStream, setCameraStream, setCameraPermission, setVisionActive, setError, videoElement, enableVision, visionStore, cameraError]);
 
   // ========================================================================
@@ -184,6 +187,17 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
     const updatePhase = () => {
       try {
+        // CRITICAL SAFETY CHECK: Stop timer if session is no longer active
+        const currentState = useSessionStore.getState();
+        if (currentState.phase === 'complete' || currentState.phase === 'setup') {
+          console.log('🚨 SAFETY: Session not active, stopping breathing cycle timer');
+          if (phaseTimerRef.current) {
+            clearInterval(phaseTimerRef.current);
+            phaseTimerRef.current = undefined;
+          }
+          return;
+        }
+
         const now = Date.now();
         const currentPhase = phases[currentPhaseIndex];
         const phaseElapsed = (now - phaseStartTime) / 1000;
@@ -191,12 +205,12 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
         // CRITICAL DEBUG: Always log first few updates to see if timer is working
         if (phaseElapsed < 2) {
-          console.log(`🫁 TIMER WORKING - Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
+          console.log(`🫑 TIMER WORKING - Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
         }
 
         // Debug logging every 2 seconds to avoid spam
         if (Math.floor(phaseElapsed) % 2 === 0 && progress < 5) {
-          console.log(`🫁 Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
+          console.log(`🫑 Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
         }
 
         console.log(`🔄 Calling updateBreathPhase with: ${currentPhase.name}, ${progress.toFixed(1)}%`);
@@ -229,9 +243,12 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
   const stopBreathingCycle = useCallback(() => {
     if (phaseTimerRef.current) {
-      console.log('⏹️ Stopping breathing cycle timer');
+      console.log('⏹️ Stopping breathing cycle timer:', phaseTimerRef.current);
       clearInterval(phaseTimerRef.current);
       phaseTimerRef.current = undefined;
+      console.log('✅ Breathing cycle timer stopped and cleared');
+    } else {
+      console.log('⚠️ stopBreathingCycle called but no timer was running');
     }
   }, []);
 
@@ -384,9 +401,16 @@ export const useSession = (options: UseSessionOptions = {}) => {
   }, [enableVision, visionMetrics, updateVisionMetrics]);
 
   // ========================================================================
-  // BREATHING CYCLE SYNC - REMOVED to prevent multiple timer conflicts
-  // The breathing cycle is now started only from the session.start() method
+  // CRITICAL FIX: Stop breathing cycle when session completes
   // ========================================================================
+  
+  useEffect(() => {
+    // CRITICAL: Stop breathing cycle when session phase changes to complete
+    if (phase === 'complete') {
+      console.log('🚨 Session phase is complete, force stopping breathing cycle');
+      stopBreathingCycle();
+    }
+  }, [phase, stopBreathingCycle]);
 
   // ========================================================================
   // CLEANUP - Proper resource management (FIXED: Prevent React Error #310)
