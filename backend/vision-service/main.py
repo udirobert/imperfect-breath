@@ -699,25 +699,37 @@ async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
             enhanced_data = session.get_enhanced_summary()
             logger.info(f"Enhanced session data for {session_id}: {len(enhanced_data.get('phase_analysis', {}))} phases")
         
-        # ENHANCEMENT FIRST: Use Cerebras if available and configured
+        # ENHANCEMENT FIRST: Use Cerebras if available and configured with proper response alignment
         if cerebras_available() and enhanced_data:
             try:
                 result = await analyze_breathing_session(enhanced_data, request.session_data)
                 
-                # CLEAN: Transform Cerebras response to match expected format
+                # ENHANCEMENT FIRST: Transform Cerebras response to match frontend expectations with proper structure
+                # DRY: Single source of truth for response transformation
                 transformed_result = {
-                    "overallScore": result.get("overallScore", 85),
-                    "suggestions": [
-                        result.get("phaseInsights", {}).get("inhale", "Focus on smooth inhalation"),
-                        result.get("phaseInsights", {}).get("exhale", "Practice controlled exhalation"),
-                        result.get("phaseInsights", {}).get("hold", "Maintain comfortable breath holds")
-                    ],
+                    "analysis": result.get("encouragement", "Great work on your breathing practice!"),  # Map encouragement to analysis
+                    "suggestions": (
+                        [result.get("phaseInsights", {}).get("inhale", "Focus on smooth inhalation"),
+                         result.get("phaseInsights", {}).get("exhale", "Practice controlled exhalation"),
+                         result.get("phaseInsights", {}).get("hold", "Maintain comfortable breath holds")] 
+                        if result.get("phaseInsights") and isinstance(result.get("phaseInsights"), dict) 
+                        else result.get("suggestions", [
+                            "Focus on smooth inhalation",
+                            "Practice controlled exhalation", 
+                            "Maintain comfortable breath holds"
+                        ])
+                    ),
+                    "score": {
+                        "overall": result.get("overallScore", 85),
+                        "focus": result.get("phaseInsights", {}).get("inhaleScore", result.get("overallScore", 75)),
+                        "consistency": result.get("consistencyScore", result.get("overallScore", 75)), 
+                        "progress": result.get("progressScore", result.get("overallScore", 75))
+                    },
                     "nextSteps": result.get("nextSteps", [
                         "Continue regular practice",
                         "Try longer sessions gradually",
                         "Focus on consistency"
-                    ]),
-                    "encouragement": result.get("encouragement", "Great work on your breathing practice!")
+                    ])
                 }
                 
                 return AIAnalysisResponse(
@@ -732,20 +744,25 @@ async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
                 logger.warning(f"Cerebras analysis failed, falling back to mock: {e}")
                 # Fall through to fallback
         
-        # PERFORMANT: Fallback to mock response
+        # PERFORMANT: Fallback to mock response with proper structure alignment
         result = {
-            "overallScore": 85,
+            "analysis": f"Excellent {request.analysis_type} analysis! Your breathing shows good control and focus.",  # Map encouragement to analysis
             "suggestions": [
                 "Great breathing consistency!",
-                "Try extending your exhale slightly",
+                "Try extending your exhale slightly", 
                 "Focus on relaxing your shoulders"
             ],
+            "score": {
+                "overall": 85,
+                "focus": 80,
+                "consistency": 85,
+                "progress": 75
+            },
             "nextSteps": [
                 "Practice daily for 10 minutes",
                 "Try the 4-7-8 pattern next",
                 "Track your progress over time"
-            ],
-            "encouragement": f"Excellent {request.analysis_type} analysis! Your breathing shows good control and focus."
+            ]
         }
 
         return AIAnalysisResponse(
