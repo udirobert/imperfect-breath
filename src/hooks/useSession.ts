@@ -183,29 +183,39 @@ export const useSession = (options: UseSessionOptions = {}) => {
     let phaseStartTime = Date.now();
 
     const updatePhase = () => {
-      const now = Date.now();
-      const currentPhase = phases[currentPhaseIndex];
-      const phaseElapsed = (now - phaseStartTime) / 1000;
-      const progress = Math.min((phaseElapsed / currentPhase.duration) * 100, 100);
+      try {
+        const now = Date.now();
+        const currentPhase = phases[currentPhaseIndex];
+        const phaseElapsed = (now - phaseStartTime) / 1000;
+        const progress = Math.min((phaseElapsed / currentPhase.duration) * 100, 100);
 
-      // Debug logging every 2 seconds to avoid spam
-      if (Math.floor(phaseElapsed) % 2 === 0 && progress < 5) {
-        console.log(`🫁 Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
-      }
-
-      updateBreathPhase(currentPhase.name, progress);
-
-      // Move to next phase
-      if (phaseElapsed >= currentPhase.duration) {
-        console.log(`✅ Phase ${currentPhase.name} completed, moving to next phase`);
-        currentPhaseIndex = (currentPhaseIndex + 1) % phases.length;
-        phaseStartTime = now;
-
-        // Increment cycle when returning to inhale
-        if (currentPhaseIndex === 0) {
-          console.log('🔄 Cycle completed, incrementing cycle count');
-          incrementCycle();
+        // CRITICAL DEBUG: Always log first few updates to see if timer is working
+        if (phaseElapsed < 2) {
+          console.log(`🫁 TIMER WORKING - Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
         }
+
+        // Debug logging every 2 seconds to avoid spam
+        if (Math.floor(phaseElapsed) % 2 === 0 && progress < 5) {
+          console.log(`🫁 Phase: ${currentPhase.name}, Progress: ${progress.toFixed(1)}%, Elapsed: ${phaseElapsed.toFixed(1)}s`);
+        }
+
+        console.log(`🔄 Calling updateBreathPhase with: ${currentPhase.name}, ${progress.toFixed(1)}%`);
+        updateBreathPhase(currentPhase.name, progress);
+
+        // Move to next phase
+        if (phaseElapsed >= currentPhase.duration) {
+          console.log(`✅ Phase ${currentPhase.name} completed, moving to next phase`);
+          currentPhaseIndex = (currentPhaseIndex + 1) % phases.length;
+          phaseStartTime = now;
+
+          // Increment cycle when returning to inhale
+          if (currentPhaseIndex === 0) {
+            console.log('🔄 Cycle completed, incrementing cycle count');
+            incrementCycle();
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error in updatePhase:', error);
       }
     };
 
@@ -376,21 +386,9 @@ export const useSession = (options: UseSessionOptions = {}) => {
   }, [enableVision, visionMetrics, updateVisionMetrics]);
 
   // ========================================================================
-  // BREATHING CYCLE SYNC - Ensure breathing cycle runs when session is active
+  // BREATHING CYCLE SYNC - REMOVED to prevent multiple timer conflicts
+  // The breathing cycle is now started only from the session.start() method
   // ========================================================================
-
-  useEffect(() => {
-    // Only start if session is active, has config, and timer is not already running
-    if (isActive && config?.pattern && !phaseTimerRef.current) {
-      console.log('🔄 Session is active but breathing cycle not running, starting it now');
-      startBreathingCycle();
-    } else if (!isActive && phaseTimerRef.current) {
-      console.log('⏹️ Session not active, stopping breathing cycle');
-      stopBreathingCycle();
-    }
-    
-    // Don't include startBreathingCycle in dependencies to prevent infinite loops
-  }, [isActive, config?.pattern]);
 
   // ========================================================================
   // CLEANUP - Proper resource management
