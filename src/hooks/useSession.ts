@@ -401,7 +401,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
       console.log('🧹 useSession: Releasing camera reference on component unmount');
       releaseCameraStream();
     };
-  }, [releaseCameraStream]); // Empty dependency array - only run on unmount
+  }, []); // ENHANCEMENT FIRST: Only run cleanup on actual component unmount to prevent breathing cycle interruption
 
   // ========================================================================
   // PUBLIC API - Clean, simple interface
