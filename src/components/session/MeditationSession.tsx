@@ -58,6 +58,9 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
   
   const isMobile = useIsMobile();
   
+  // STABLE SESSION ID - Only generate once per component mount
+  const sessionIdRef = useRef(`session_${Date.now()}`);
+  
   // Map the MeditationSessionConfig to ResponsiveEnhancedSession props
   const responsiveConfig = {
     pattern: {
@@ -66,16 +69,13 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       benefits: config.pattern.benefits,
       description: config.pattern.description || `A ${config.pattern.difficulty} breathing technique with proven benefits.`
     },
-    mode: config.mode,
+    mode: (config.mode === 'mobile' ? 'enhanced' : config.mode) as 'classic' | 'enhanced',
   };
   
   const modeConfig = {
     enableCamera: config.mode !== 'classic',
     enableVision: config.mode === 'enhanced' || config.mode === 'mobile',
   };
-  
-  // Generate a session ID if needed
-  const sessionId = `session_${Date.now()}`;
   
   // Delegate to the existing ResponsiveEnhancedSession component
   return (
@@ -84,7 +84,7 @@ export const MeditationSession: React.FC<MeditationSessionProps> = ({
       modeConfig={modeConfig}
       onSessionComplete={onSessionComplete}
       onSessionExit={onSessionExit}
-      sessionId={sessionId}
+      sessionId={sessionIdRef.current}
     />
   );
 };

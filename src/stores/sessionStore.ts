@@ -198,21 +198,24 @@ export const useSessionStore = create<SessionState & SessionActions>()(
           Math.floor((Date.now() - state.metrics.startTime) / 1000) :
           state.metrics.duration;
 
-        // Only update if values actually changed
-        if (state.metrics.currentPhase === phase &&
-          Math.abs(state.metrics.phaseProgress - progress) < 1 &&
-          state.metrics.duration === currentDuration) {
-          return state; // No significant change
+        const roundedProgress = Math.round(progress);
+
+        // Always update if phase changed, or if progress changed significantly
+        if (state.metrics.currentPhase !== phase ||
+          Math.abs((state.metrics.phaseProgress || 0) - roundedProgress) >= 5 ||
+          state.metrics.duration !== currentDuration) {
+
+          return {
+            metrics: {
+              ...state.metrics,
+              currentPhase: phase,
+              phaseProgress: roundedProgress,
+              duration: currentDuration,
+            },
+          };
         }
 
-        return {
-          metrics: {
-            ...state.metrics,
-            currentPhase: phase,
-            phaseProgress: Math.round(progress), // Round to prevent micro-updates
-            duration: currentDuration,
-          },
-        };
+        return state; // No significant change
       });
     },
 
@@ -247,11 +250,10 @@ export const useSessionStore = create<SessionState & SessionActions>()(
       set((state) => {
         // Only update if metrics actually changed
         const currentMetrics = state.visionMetrics;
-        if (currentMetrics &&
-          currentMetrics.stillness === metrics?.stillness &&
-          currentMetrics.presence === metrics?.presence &&
-          currentMetrics.posture === metrics?.posture &&
-          currentMetrics.restlessnessScore === metrics?.restlessnessScore) {
+        if (currentMetrics && metrics &&
+          currentMetrics.stillness === metrics.stillness &&
+          currentMetrics.presence === metrics.presence &&
+          currentMetrics.posture === metrics.posture) {
           return state; // No change, don't trigger re-render
         }
         return { visionMetrics: metrics };
