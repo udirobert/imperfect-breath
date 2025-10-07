@@ -1023,14 +1023,6 @@ Check out Imperfect Breath!`;
                       </Card>
                     )}
                   </div>
-                ) : (
-                  <Card>
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">
-                        No performance scores available. Complete an AI analysis to see detailed metrics.
-                      </p>
-                    </CardContent>
-                  </Card>
                 )}
               </TabsContent>
 
@@ -1108,7 +1100,7 @@ Check out Imperfect Breath!`;
                   </Card>
                 )}
               </TabsContent>
-              </Tabs>
+            </Tabs>
             </AIAnalysisErrorBoundary>
           </div>
         )}
@@ -1197,13 +1189,7 @@ Check out Imperfect Breath!`;
                   ? 0
                   : sessionData.breathHoldTime,
               cycles: sessionData.cycleCount || sessionData.cycles,
-              insights:
-                enhancedSessionData.sessionType !== "classic" &&
-                Array.isArray(analyses) && analyses.length > 0
-                  ? analyses.map((a) => a.analysis)
-                  : [],
-              timestamp: new Date().toISOString(),
-              id: `session-${Date.now()}`,
+              completedAt: new Date().toISOString(),
             }}
             onPublished={(txHash) => {
               if (typeof txHash === "string" && txHash.startsWith("twitter")) {
