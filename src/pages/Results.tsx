@@ -50,6 +50,10 @@ import { AIAnalysisDebugButton } from "../components/debug/AIAnalysisDebugButton
 // ENHANCED: Error boundary for AI analysis
 import { AIAnalysisErrorBoundary } from "../components/error/AIAnalysisErrorBoundary";
 
+// ENHANCED: Dr. Breathe AI Analysis Display
+import { EnhancedAIAnalysisDisplay } from "../components/ai/EnhancedAIAnalysisDisplay";
+import { EnhancedAnalysisService, EnhancedAnalysisRequest } from "../lib/ai/enhanced-analysis-service";
+
 // Using consolidated formatTime from utils
 
 const Results = () => {
@@ -940,164 +944,85 @@ Check out Imperfect Breath!`;
         {enhancedSessionData.sessionType !== "classic" && showAIAnalysis && (
           <div className="mb-8 w-full max-w-4xl">
             <AIAnalysisErrorBoundary>
-              <Tabs defaultValue="analysis" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="analysis">AI Analysis</TabsTrigger>
-                <TabsTrigger value="scores">Performance Scores</TabsTrigger>
-              </TabsList>
+              {isAnalyzing ? (
+                <Card>
+                  <CardContent className="flex items-center justify-center p-8">
+                    <div className="text-center space-y-4">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                      <p>Dr. Breathe is analyzing your session...</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : error ? (
+                <Card>
+                  <CardContent className="p-6">
+                    <Alert>
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  </CardContent>
+                </Card>
+              ) : analyses.length > 0 ? (
+                (() => {
+                  // Use existing service to transform and enhance the analysis data
+                  const rawAnalysis = analyses[0];
+                  const transformedSessionData = EnhancedAnalysisService.transformSessionData({
+                    patternName: sessionData.patternName || 'Breathing Session',
+                    sessionDuration: sessionData.sessionDuration || 300,
+                    breathHoldTime: sessionData.breathHoldTime || 0,
+                    restlessnessScore: sessionData.restlessnessScore || 50,
+                    bpm: sessionData.bpm,
+                    landmarks: sessionData.landmarks,
+                    timestamp: sessionData.timestamp,
+                    visionMetrics: (enhancedSessionData as any).visionMetrics || undefined
+                  });
 
-              <TabsContent value="analysis" className="space-y-4">
-                {isAnalyzing ? (
-                  <Card>
-                    <CardContent className="flex items-center justify-center p-8">
-                      <div className="text-center space-y-4">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                        <p>Analyzing your session with AI...</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : error ? (
-                  <Card>
-                    <CardContent className="p-6">
-                      <Alert>
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {/* ENHANCED: Comprehensive safety with fallback UI */}
-                    {analyses.length > 0 ? analyses.map((analysis, index) => (
-                      <Card key={index}>
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-center gap-2">
-                            <Brain className="w-5 h-5" />
-                            {
-                              AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider
-                              )?.name
-                            }{" "}
-                            Analysis
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="prose prose-sm max-w-none">
-                            <p className="whitespace-pre-wrap">
-                              {analysis.analysis}
-                            </p>
-                          </div>
+                  const context = EnhancedAnalysisService.prepareAnalysisContext({
+                    sessionData: transformedSessionData
+                  });
 
-                          {analysis.suggestions.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold mb-2">
-                                Suggestions:
-                              </h4>
-                              <ul className="list-disc list-inside space-y-1 text-sm">
-                                {analysis.suggestions.map((suggestion, i) => (
-                                  <li key={i}>{suggestion}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                  const enhancedAnalysis = EnhancedAnalysisService.validateAndEnhanceResponse(rawAnalysis, context);
 
-                          {analysis.nextSteps.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold mb-2">
-                                Next Steps:
-                              </h4>
-                              <ul className="list-disc list-inside space-y-1 text-sm">
-                                {analysis.nextSteps.map((step, i) => (
-                                  <li key={i}>{step}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )) : (
-                      <Card>
-                        <CardContent className="p-6 text-center">
-                          <p className="text-muted-foreground">
-                            No AI analysis results available. Try the analysis again or check your connection.
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                )}
-              </TabsContent>
+                  return (
+                    <EnhancedAIAnalysisDisplay
+                      analysis={enhancedAnalysis}
+                      patternName={sessionData.patternName || "Breathing Session"}
+                      onSendChatMessage={async (message: string) => {
+                        // Handle chat messages with contextual Dr. Breathe responses
+                        try {
+                          // Generate contextual responses based on the user's message and session data
+                          const lowerMessage = message.toLowerCase();
 
-              <TabsContent value="scores" className="space-y-4">
-                {/* ENHANCED: Robust validation with fallback */}
-                {analyses.length > 0 ? (
-                  <div className="grid gap-4">
-                    {analyses.map((analysis, index) => (
-                      <Card key={index}>
-                        <CardHeader>
-                          <CardTitle className="flex items-center justify-center gap-2">
-                            <TrendingUp className="w-5 h-5" />
-                            {analysis.providerDisplayName || analysis.provider}{" "}
-                            Scores
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="text-center space-y-2">
-                              <Badge
-                                variant={getScoreBadgeVariant(
-                                  analysis.score.overall
-                                )}
-                              >
-                                {analysis.score.overall}/100
-                              </Badge>
-                              <p className="text-sm font-medium">Overall</p>
-                            </div>
-                            <div className="text-center space-y-2">
-                              <Badge
-                                variant={getScoreBadgeVariant(
-                                  analysis.score.focus
-                                )}
-                              >
-                                {analysis.score.focus}/100
-                              </Badge>
-                              <p className="text-sm font-medium">Focus</p>
-                            </div>
-                            <div className="text-center space-y-2">
-                              <Badge
-                                variant={getScoreBadgeVariant(
-                                  analysis.score.consistency
-                                )}
-                              >
-                                {analysis.score.consistency}/100
-                              </Badge>
-                              <p className="text-sm font-medium">Consistency</p>
-                            </div>
-                            <div className="text-center space-y-2">
-                              <Badge
-                                variant={getScoreBadgeVariant(
-                                  analysis.score.progress
-                                )}
-                              >
-                                {analysis.score.progress}/100
-                              </Badge>
-                              <p className="text-sm font-medium">Progress</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">
-                        No performance scores available. Complete an AI analysis to see detailed metrics.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
+                          if (lowerMessage.includes('stillness') || lowerMessage.includes('focus')) {
+                            return `Great question about stillness! Based on your ${Math.round(sessionData.restlessnessScore || 50)}% stillness score in this session, you're showing ${sessionData.restlessnessScore < 30 ? 'excellent' : sessionData.restlessnessScore < 60 ? 'good' : 'developing'} body awareness. Try finding a comfortable seated position with your feet flat on the floor, and focus on the natural pause between breaths. What specific aspect of stillness would you like to work on?\n\n— Dr. Breathe, Your Breathing Coach`;
+                          }
+
+                          if (lowerMessage.includes('breath') || lowerMessage.includes('breathing')) {
+                            return `I'd be happy to help with your breathing technique! For ${sessionData.patternName || 'your chosen pattern'}, focus on maintaining a smooth, steady rhythm throughout each phase. Your breath hold time of ${formatTime(sessionData.breathHoldTime || 0)} shows ${sessionData.breathHoldTime > 30 ? 'developing' : 'beginning'} breath control. Remember, the key is consistency over intensity. What breathing challenges are you experiencing?\n\n— Dr. Breathe, Your Breathing Coach`;
+                          }
+
+                          if (lowerMessage.includes('session') || lowerMessage.includes('practice')) {
+                            return `Excellent dedication to your practice! Your ${formatTime(sessionData.sessionDuration || 0)} session with ${sessionData.cycleCount || 0} cycles completed shows real commitment to mindful breathing. This regular practice will help you develop better stress resilience and mental clarity over time. How are you feeling about your progress so far?\n\n— Dr. Breathe, Your Breathing Coach`;
+                          }
+
+                          // Default contextual response
+                          return `Thank you for your question about "${message}"! I'm here to support your breathing journey every step of the way. Based on your ${sessionData.patternName || 'breathing'} session, you're developing valuable mindfulness skills that will benefit both your mental and physical wellbeing. Could you tell me more about what specific aspect of your practice you'd like to explore further?\n\n— Dr. Breathe, Your Breathing Coach`;
+                        } catch (error) {
+                          console.error('Failed to generate Dr. Breathe response:', error);
+                          return "I appreciate your question! While I'm having a moment of technical difficulty, I want you to know that every question about your breathing practice is valuable. Please feel free to ask again.\n\n— Dr. Breathe, Your Breathing Coach";
+                        }
+                      }}
+                    />
+                  );
+                })()
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground">
+                      No AI analysis results available. Try the analysis again or check your connection.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </AIAnalysisErrorBoundary>
           </div>
         )}

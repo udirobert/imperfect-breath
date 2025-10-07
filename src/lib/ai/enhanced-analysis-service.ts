@@ -6,16 +6,16 @@
  */
 
 import { SessionData } from './config';
-import { 
-  generateEnhancedSystemPrompt, 
-  generateSessionAnalysisPrompt, 
+import {
+  generateEnhancedSystemPrompt,
+  generateSessionAnalysisPrompt,
   generateFollowUpQuestions,
   EnhancedSessionData,
-  AnalysisContext 
+  AnalysisContext
 } from './enhanced-prompts';
-import { 
-  getPatternExpertise, 
-  assessExperienceLevel 
+import {
+  getPatternExpertise,
+  assessExperienceLevel
 } from './breathing-expertise';
 
 export interface EnhancedAnalysisRequest {
@@ -26,6 +26,8 @@ export interface EnhancedAnalysisRequest {
 }
 
 export interface EnhancedAnalysisResponse {
+  provider: string;
+  providerDisplayName?: string;
   analysis: string;
   suggestions: string[];
   score: {
@@ -51,17 +53,17 @@ export class EnhancedAnalysisService {
    */
   static prepareAnalysisContext(request: EnhancedAnalysisRequest): AnalysisContext {
     const { sessionData, previousSessions, userGoals } = request;
-    
+
     // Get pattern expertise
     const patternExpertise = getPatternExpertise(sessionData.patternName);
-    
+
     // Assess experience level
     const experienceLevel = assessExperienceLevel({
       sessionDuration: sessionData.sessionDuration,
       cycleCount: sessionData.cycleCount,
-      stillnessScore: sessionData.stillnessScore ?? 
+      stillnessScore: sessionData.stillnessScore ??
         (sessionData.restlessnessScore ? Math.max(0, 100 - sessionData.restlessnessScore) : undefined),
-      consistencyScore: sessionData.visionMetrics?.consistencyScore ? 
+      consistencyScore: sessionData.visionMetrics?.consistencyScore ?
         sessionData.visionMetrics.consistencyScore * 100 : undefined
     });
 
@@ -94,13 +96,13 @@ export class EnhancedAnalysisService {
    */
   static transformSessionData(sessionData: SessionData): EnhancedSessionData {
     // Calculate derived metrics
-    const stillnessScore = sessionData.restlessnessScore !== undefined ? 
+    const stillnessScore = sessionData.restlessnessScore !== undefined ?
       Math.max(0, 100 - sessionData.restlessnessScore) : undefined;
 
     return {
       ...sessionData,
       stillnessScore,
-      consistencyScore: sessionData.visionMetrics?.consistencyScore ? 
+      consistencyScore: sessionData.visionMetrics?.consistencyScore ?
         sessionData.visionMetrics.consistencyScore * 100 : undefined,
       // Add any other derived metrics here
     };
@@ -110,13 +112,15 @@ export class EnhancedAnalysisService {
    * Validate and enhance AI response
    */
   static validateAndEnhanceResponse(
-    rawResponse: any, 
+    rawResponse: any,
     context: AnalysisContext
   ): EnhancedAnalysisResponse {
     const { patternExpertise, experienceLevel } = context;
 
     // Ensure response has all required fields
     const enhancedResponse: EnhancedAnalysisResponse = {
+      provider: rawResponse.provider || 'openai',
+      providerDisplayName: rawResponse.providerDisplayName || 'OpenAI',
       analysis: rawResponse.analysis || 'Analysis completed successfully.',
       suggestions: Array.isArray(rawResponse.suggestions) ? rawResponse.suggestions : [
         'Continue practicing regularly',
@@ -134,12 +138,12 @@ export class EnhancedAnalysisService {
         'Try different breathing patterns',
         'Track your progress over time'
       ],
-      scientificInsights: rawResponse.scientificInsights || 
-        (patternExpertise ? patternExpertise.scientificBasis : 
-         'Regular breathing practice supports nervous system regulation and stress reduction.'),
-      patternSpecificGuidance: rawResponse.patternSpecificGuidance || 
-        (patternExpertise ? patternExpertise.adaptations[experienceLevel] : 
-         'Focus on maintaining a comfortable, sustainable rhythm.'),
+      scientificInsights: rawResponse.scientificInsights ||
+        (patternExpertise ? patternExpertise.scientificBasis :
+          'Regular breathing practice supports nervous system regulation and stress reduction.'),
+      patternSpecificGuidance: rawResponse.patternSpecificGuidance ||
+        (patternExpertise ? patternExpertise.adaptations[experienceLevel] :
+          'Focus on maintaining a comfortable, sustainable rhythm.'),
       experienceLevel,
       followUpQuestions: rawResponse.followUpQuestions,
       progressTrends: rawResponse.progressTrends
@@ -153,7 +157,7 @@ export class EnhancedAnalysisService {
    */
   static generatePerformanceInsights(sessionData: EnhancedSessionData): string[] {
     const insights: string[] = [];
-    
+
     // Stillness insights
     if (sessionData.stillnessScore !== undefined) {
       if (sessionData.stillnessScore >= 90) {
@@ -219,11 +223,11 @@ export class EnhancedAnalysisService {
    * Generate progressive recommendations based on performance
    */
   static generateProgressiveRecommendations(
-    sessionData: EnhancedSessionData, 
+    sessionData: EnhancedSessionData,
     experienceLevel: 'beginner' | 'intermediate' | 'advanced'
   ): string[] {
     const recommendations: string[] = [];
-    
+
     // Experience-based recommendations
     if (experienceLevel === 'beginner') {
       recommendations.push('Focus on establishing a regular daily practice routine.');
@@ -275,16 +279,16 @@ export async function performEnhancedAnalysis(
 }> {
   // Prepare analysis context
   const context = EnhancedAnalysisService.prepareAnalysisContext(request);
-  
+
   // Generate enhanced prompts
   const prompts = EnhancedAnalysisService.generateEnhancedPrompts(context);
-  
+
   // Generate performance insights
   const insights = EnhancedAnalysisService.generatePerformanceInsights(request.sessionData);
-  
+
   // Generate progressive recommendations
   const recommendations = EnhancedAnalysisService.generateProgressiveRecommendations(
-    request.sessionData, 
+    request.sessionData,
     context.experienceLevel
   );
 
