@@ -4,7 +4,7 @@
  */
 
 import type { EnhancedCustomPattern } from "../../../types/patterns";
-import type { CustomPattern } from "../../../lib/ai/providers";
+import type { CustomPattern } from "../../../types/patterns"; // CLEAN: Direct import from types
 
 export type PatternCardVariant = "marketplace" | "social" | "library" | "mobile";
 export type PatternCardSize = "compact" | "standard" | "expanded";

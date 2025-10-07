@@ -7,7 +7,7 @@
 
 import React from "react";
 import { PatternCard as UnifiedPatternCard } from "../composite/PatternCard";
-import type { CustomPattern } from "@/lib/ai/providers";
+import type { CustomPattern } from "@/types/patterns"; // CLEAN: Direct import from types
 
 interface PatternCardProps {
   pattern: CustomPattern & {

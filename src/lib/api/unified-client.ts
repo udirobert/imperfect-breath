@@ -383,17 +383,19 @@ export class UnifiedAPIClient {
   }
 
   /**
-   * AI Analysis with proper response format handling
+   * AI Analysis with enhanced prompt system and proper response format handling
    */
   async analyzeSession(provider: string, sessionData: any): Promise<APIResponse> {
     try {
-      console.log('🤖 Sending AI analysis request:', { provider, sessionData });
+      console.log('🤖 Sending enhanced AI analysis request:', { provider, sessionData });
 
-      // FIXED: Proper format for Hetzner server AI analysis
+      // ENHANCED: Use sophisticated prompt system for better analysis
       const requestBody = {
         provider,
         session_data: sessionData, // Match Hetzner server format exactly
-        analysis_type: 'session'
+        analysis_type: 'session',
+        enhanced_prompts: true, // Flag to use enhanced prompt system
+        include_expertise: true // Include pattern-specific expertise
       };
 
       const response = await this.request('ai', API_ENDPOINTS.ai.analysis, {

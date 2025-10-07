@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BREATHING_PATTERNS } from "@/lib/breathingPatterns";
-import type { CustomPattern } from "@/lib/ai/providers";
+import type { CustomPattern } from "@/types/patterns"; // CLEAN: Direct import from types
 
 // CLEAN: Import centralized recommendation logic (DRY principle)
 import { RecommendationService } from "@/services/RecommendationService";

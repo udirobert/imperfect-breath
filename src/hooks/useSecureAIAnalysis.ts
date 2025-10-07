@@ -1,11 +1,19 @@
 import { useState, useCallback } from 'react';
 import { api } from '../lib/api/unified-client';
 import type { SecureAIProvider, AIAnalysisResponse, SessionData } from '../lib/ai/config';
+import { EnhancedAnalysisService, performEnhancedAnalysis } from '../lib/ai/enhanced-analysis-service';
+import type { EnhancedAnalysisResponse } from '../lib/ai/enhanced-analysis-service';
 
 interface SecureAIAnalysisResult extends AIAnalysisResponse {
   provider: string;
   error?: string;
   providerDisplayName?: string;
+  // Enhanced fields
+  scientificInsights?: string;
+  patternSpecificGuidance?: string;
+  experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
+  followUpQuestions?: string[];
+  progressTrends?: string[];
 }
 
 // HELPER: Maps actual provider identifiers to user-friendly display names
@@ -69,13 +77,29 @@ export const useSecureAIAnalysis = () => {
     setError(null);
 
     try {
-      console.log('🤖 Starting AI analysis with data:', sessionData);
+      console.log('🤖 Starting enhanced AI analysis with data:', sessionData);
 
-      // SMART PROVIDER SELECTION: Try Cerebras first (if available), fallback to Hetzner
-      // Remove hardcoded 'openai' - let backend decide what actually runs
-      const response = await api.ai.analyzeSession('auto', sessionData); // 'auto' tells backend to choose best option
+      // ENHANCED: Prepare session data with enhanced analysis service
+      const enhancedSessionData = EnhancedAnalysisService.transformSessionData(sessionData);
+      
+      // Generate enhanced analysis context and prompts
+      const enhancedAnalysis = await performEnhancedAnalysis({
+        sessionData: enhancedSessionData,
+        includeFollowUpQuestions: true
+      });
 
-      console.log('📥 AI analysis response:', response);
+      console.log('🧠 Enhanced analysis context prepared:', enhancedAnalysis.context);
+
+      // Send enhanced request to backend
+      const response = await api.ai.analyzeSession('auto', {
+        ...sessionData,
+        enhancedPrompts: enhancedAnalysis.prompts,
+        analysisContext: enhancedAnalysis.context,
+        performanceInsights: enhancedAnalysis.insights,
+        progressiveRecommendations: enhancedAnalysis.recommendations
+      });
+
+      console.log('📥 Enhanced AI analysis response:', response);
 
       if (response.success && response.data) {
         // Normalize the response format
@@ -88,15 +112,20 @@ export const useSecureAIAnalysis = () => {
 
         const providerName = getProviderDisplayName(actualProvider);
 
+        // ENHANCED: Validate and enhance the response with our analysis service
+        const enhancedResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
+          normalizedData,
+          enhancedAnalysis.context
+        );
+
         const result: SecureAIAnalysisResult = {
-          ...normalizedData,
+          ...enhancedResponse,
           provider: actualProvider,
-          // Add display name for UI
           providerDisplayName: providerName,
         };
 
         setResults([result]);
-        console.log(`✅ ${providerName} analysis successful:`, result);
+        console.log(`✅ ${providerName} enhanced analysis successful:`, result);
       } else {
         const errorMsg = response.error || 'Analysis failed - no data returned';
         setError(errorMsg);
@@ -107,13 +136,27 @@ export const useSecureAIAnalysis = () => {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMsg);
 
-      // Provide fallback result so user isn't left with nothing
+      // ENHANCED: Provide intelligent fallback with pattern-specific guidance
+      const enhancedSessionData = EnhancedAnalysisService.transformSessionData(sessionData);
+      const fallbackAnalysis = await performEnhancedAnalysis({
+        sessionData: enhancedSessionData,
+        includeFollowUpQuestions: false
+      });
+
+      const fallbackResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
+        {
+          analysis: 'Great session! Your breathing practice shows good consistency and focus.',
+          suggestions: fallbackAnalysis.recommendations.slice(0, 3),
+          score: { overall: 75, focus: 70, consistency: 80, progress: 75 },
+          nextSteps: ['Practice daily for 10-15 minutes', 'Try different breathing patterns', 'Track your progress over time']
+        },
+        fallbackAnalysis.context
+      );
+
       setResults([{
+        ...fallbackResponse,
         provider: 'fallback',
-        analysis: 'Great session! Your breathing practice shows good consistency.',
-        suggestions: ['Continue practicing regularly', 'Focus on consistency', 'Try longer sessions gradually'],
-        score: { overall: 75, focus: 70, consistency: 80, progress: 75 },
-        nextSteps: ['Practice daily for 10 minutes', 'Try different breathing patterns', 'Track your progress over time'],
+        providerDisplayName: 'Enhanced Fallback Analysis',
         error: `Analysis failed: ${errorMsg}`
       }]);
     } finally {
