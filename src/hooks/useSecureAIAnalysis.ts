@@ -13,7 +13,7 @@ export const useSecureAIAnalysis = () => {
   const [error, setError] = useState<string | null>(null);
 
   const analyzeWithProvider = useCallback(async (
-    provider: SecureAIProvider, 
+    provider: SecureAIProvider,
     sessionData: SessionData
   ): Promise<SecureAIAnalysisResult> => {
     try {
@@ -54,18 +54,21 @@ export const useSecureAIAnalysis = () => {
 
     try {
       console.log('🤖 Starting AI analysis with data:', sessionData);
-      
+
       // FIXED: Single provider call - backend handles provider selection internally
       const response = await api.ai.analyzeSession('openai', sessionData);
-      
+
       console.log('📥 AI analysis response:', response);
-      
+
       if (response.success && response.data) {
+        // Normalize the response format - backend returns {result: {analysis, suggestions, ...}} but we want just {analysis, suggestions, ...}
+        const normalizedData = response.data.result ? response.data.result : response.data;
+
         const result: SecureAIAnalysisResult = {
-          ...response.data,
-          provider: response.metadata?.provider || 'openai'
+          ...normalizedData,
+          provider: response.metadata?.provider || response.data.provider || 'openai'
         };
-        
+
         setResults([result]);
         console.log('✅ AI analysis successful:', result);
       } else {
@@ -77,7 +80,7 @@ export const useSecureAIAnalysis = () => {
       console.error('❌ AI analysis error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMsg);
-      
+
       // Provide fallback result so user isn't left with nothing
       setResults([{
         provider: 'fallback',
@@ -96,7 +99,7 @@ export const useSecureAIAnalysis = () => {
     try {
       // Test single connection since backend handles multiple providers
       const isHealthy = await api.ai.testConnection('openai');
-      
+
       return [{
         provider: 'openai',
         name: 'Hetzner AI Service',

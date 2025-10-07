@@ -71,15 +71,16 @@ const Results = () => {
       console.log('🔍 AI Analysis: No valid analyses data available');
       return [];
     }
-    
-    // CLEAN: Filter out any invalid entries
-    const validAnalyses = analysesRaw.filter(analysis => 
-      analysis && 
-      typeof analysis === 'object' && 
-      analysis.provider && 
-      analysis.analysis
+
+    // CLEAN: Filter out any invalid entries - check for provider and analysis content
+    const validAnalyses = analysesRaw.filter(analysis =>
+      analysis &&
+      typeof analysis === 'object' &&
+      analysis.provider &&
+      analysis.analysis && // Should have the actual analysis text
+      analysis.score // Should have scores
     );
-    
+
     console.log('🔍 AI Analysis: Processed analyses:', validAnalyses.length);
     return validAnalyses;
   }, [analysesRaw]);
