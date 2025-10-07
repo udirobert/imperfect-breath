@@ -38,7 +38,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     hold_after_exhale: 4,
     benefits: ['Stress reduction', 'Improved focus', 'Mental clarity']
   },
-  
+
   relaxation: {
     id: 'relaxation',
     name: 'Relaxation Breath',
@@ -49,18 +49,18 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     hold_after_exhale: 0,
     benefits: ['Anxiety relief', 'Better sleep', 'Relaxation', 'Stress reduction']
   },
-  
+
   wim_hof: {
     id: 'wim_hof',
     name: 'Wim Hof Method',
     description: 'Powerful breathing technique for energy and immune system strength',
-    inhale: 2,
+    inhale: 6,
     hold: 0,
-    exhale: 1,
+    exhale: 6,
     hold_after_exhale: 0,
     benefits: ['Energy increase', 'Immune system boost', 'Cold tolerance']
   },
-  
+
   energy: {
     id: 'energy',
     name: 'Energy Breath',
@@ -71,7 +71,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     hold_after_exhale: 1,
     benefits: ['Energy boost', 'Increased alertness', 'Morning activation']
   },
-  
+
   sleep: {
     id: 'sleep',
     name: 'Sleep Breath',
@@ -82,7 +82,7 @@ export const BREATHING_PATTERNS: Record<string, BreathingPattern> = {
     hold_after_exhale: 3,
     benefits: ['Improved sleep quality', 'Reduced insomnia', 'Evening relaxation']
   },
-  
+
   mindfulness: {
     id: 'mindfulness',
     name: 'Mindfulness Breath',
@@ -113,7 +113,7 @@ export function getAllPatterns(): BreathingPattern[] {
  * Get patterns filtered by benefit
  */
 export function getPatternsByBenefit(benefit: string): BreathingPattern[] {
-  return Object.values(BREATHING_PATTERNS).filter(pattern => 
+  return Object.values(BREATHING_PATTERNS).filter(pattern =>
     pattern.benefits.some(b => b.toLowerCase().includes(benefit.toLowerCase()))
   );
 }
