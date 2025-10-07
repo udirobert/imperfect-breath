@@ -970,7 +970,7 @@ Check out Imperfect Breath!`;
                     {analyses.length > 0 ? analyses.map((analysis, index) => (
                       <Card key={index}>
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
+                          <CardTitle className="flex items-center justify-center gap-2">
                             <Brain className="w-5 h-5" />
                             {
                               AI_PROVIDERS.find(
@@ -1034,13 +1034,9 @@ Check out Imperfect Breath!`;
                     {analyses.map((analysis, index) => (
                       <Card key={index}>
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
+                          <CardTitle className="flex items-center justify-center gap-2">
                             <TrendingUp className="w-5 h-5" />
-                            {
-                              AI_PROVIDERS.find(
-                                (p) => p.id === analysis.provider
-                              )?.name
-                            }{" "}
+                            {analysis.providerDisplayName || analysis.provider}{" "}
                             Scores
                           </CardTitle>
                         </CardHeader>

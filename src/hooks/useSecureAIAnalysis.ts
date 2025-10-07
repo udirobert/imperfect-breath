@@ -5,7 +5,23 @@ import type { SecureAIProvider, AIAnalysisResponse, SessionData } from '../lib/a
 interface SecureAIAnalysisResult extends AIAnalysisResponse {
   provider: string;
   error?: string;
+  providerDisplayName?: string;
 }
+
+// HELPER: Maps actual provider identifiers to user-friendly display names
+const getProviderDisplayName = (providerId: string): string => {
+  const displayNames: Record<string, string> = {
+    'cerebras': 'Cerebras AI Analysis',
+    'openai': 'OpenAI GPT Analysis',
+    'anthropic': 'Claude AI Analysis',
+    'google': 'Google Gemini Analysis',
+    'fallback': 'Basic Analysis',
+    'hetzner': 'Hetzner AI Service',
+    'auto': 'Smart AI Analysis'
+  };
+
+  return displayNames[providerId] || `${providerId.charAt(0).toUpperCase()}${providerId.slice(1)} Analysis`;
+};
 
 export const useSecureAIAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -55,22 +71,32 @@ export const useSecureAIAnalysis = () => {
     try {
       console.log('🤖 Starting AI analysis with data:', sessionData);
 
-      // FIXED: Single provider call - backend handles provider selection internally
-      const response = await api.ai.analyzeSession('openai', sessionData);
+      // SMART PROVIDER SELECTION: Try Cerebras first (if available), fallback to Hetzner
+      // Remove hardcoded 'openai' - let backend decide what actually runs
+      const response = await api.ai.analyzeSession('auto', sessionData); // 'auto' tells backend to choose best option
 
       console.log('📥 AI analysis response:', response);
 
       if (response.success && response.data) {
-        // Normalize the response format - backend returns {result: {analysis, suggestions, ...}} but we want just {analysis, suggestions, ...}
+        // Normalize the response format
         const normalizedData = response.data.result ? response.data.result : response.data;
+
+        // USE ACTUAL PROVIDER FROM RESPONSE - no more lying to users!
+        const actualProvider = response.metadata?.provider ||
+          response.data.provider ||
+          'fallback';
+
+        const providerName = getProviderDisplayName(actualProvider);
 
         const result: SecureAIAnalysisResult = {
           ...normalizedData,
-          provider: response.metadata?.provider || response.data.provider || 'openai'
+          provider: actualProvider,
+          // Add display name for UI
+          providerDisplayName: providerName,
         };
 
         setResults([result]);
-        console.log('✅ AI analysis successful:', result);
+        console.log(`✅ ${providerName} analysis successful:`, result);
       } else {
         const errorMsg = response.error || 'Analysis failed - no data returned';
         setError(errorMsg);
