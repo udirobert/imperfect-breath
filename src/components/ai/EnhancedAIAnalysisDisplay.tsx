@@ -62,6 +62,7 @@ interface EnhancedAIAnalysisProps {
     scientificInsights?: string;
     patternSpecificGuidance?: string;
     experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
+    encouragement?: string;
     followUpQuestions?: string[];
     progressTrends?: string[];
   };
@@ -183,6 +184,15 @@ export const EnhancedAIAnalysisDisplay: React.FC<EnhancedAIAnalysisProps> = ({
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Encouragement Message */}
+          {analysis.encouragement && (
+            <div className="bg-gradient-to-r from-green-50 to-teal-50 p-4 rounded-lg border border-green-200 text-center">
+              <p className="text-green-800 font-medium text-lg">
+                {analysis.encouragement}
+              </p>
+            </div>
+          )}
+
           {/* Main Analysis */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
             <div className="prose prose-sm max-w-none text-gray-700">

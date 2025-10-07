@@ -40,6 +40,7 @@ export interface EnhancedAnalysisResponse {
   scientificInsights: string;
   patternSpecificGuidance: string;
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+  encouragement?: string;
   followUpQuestions?: string[];
   progressTrends?: string[];
 }
@@ -116,37 +117,39 @@ export class EnhancedAnalysisService {
     context: AnalysisContext
   ): EnhancedAnalysisResponse {
     const { patternExpertise, experienceLevel } = context;
+    const result = rawResponse.result || rawResponse;
 
     // Ensure response has all required fields
     const enhancedResponse: EnhancedAnalysisResponse = {
-      provider: rawResponse.provider || 'openai',
-      providerDisplayName: rawResponse.providerDisplayName || 'OpenAI',
-      analysis: rawResponse.analysis || 'Analysis completed successfully.',
-      suggestions: Array.isArray(rawResponse.suggestions) ? rawResponse.suggestions : [
+      provider: result.provider || 'openai',
+      providerDisplayName: result.providerDisplayName || 'OpenAI',
+      analysis: result.analysis || result.insights || 'Analysis completed successfully.',
+      suggestions: Array.isArray(result.suggestions) ? result.suggestions : [
         'Continue practicing regularly',
         'Focus on maintaining steady rhythm',
         'Gradually increase session duration'
       ],
       score: {
-        overall: rawResponse.score?.overall || 75,
-        focus: rawResponse.score?.focus || 70,
-        consistency: rawResponse.score?.consistency || 75,
-        progress: rawResponse.score?.progress || 80
+        overall: result.score?.overall || 75,
+        focus: result.score?.focus || 70,
+        consistency: result.score?.consistency || 75,
+        progress: result.score?.progress || 80
       },
-      nextSteps: Array.isArray(rawResponse.nextSteps) ? rawResponse.nextSteps : [
+      nextSteps: Array.isArray(result.nextSteps) ? result.nextSteps : [
         'Practice daily for 10-15 minutes',
         'Try different breathing patterns',
         'Track your progress over time'
       ],
-      scientificInsights: rawResponse.scientificInsights ||
+      scientificInsights: result.scientificInsights ||
         (patternExpertise ? patternExpertise.scientificBasis :
           'Regular breathing practice supports nervous system regulation and stress reduction.'),
-      patternSpecificGuidance: rawResponse.patternSpecificGuidance ||
+      patternSpecificGuidance: result.patternSpecificGuidance ||
         (patternExpertise ? patternExpertise.adaptations[experienceLevel] :
           'Focus on maintaining a comfortable, sustainable rhythm.'),
       experienceLevel,
-      followUpQuestions: rawResponse.followUpQuestions,
-      progressTrends: rawResponse.progressTrends
+      encouragement: result.encouragement || 'Great job on your breathing practice!',
+      followUpQuestions: Array.isArray(result.followUpQuestions) ? result.followUpQuestions : generateFollowUpQuestions(context),
+      progressTrends: result.progressTrends
     };
 
     return enhancedResponse;
