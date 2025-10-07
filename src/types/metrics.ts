@@ -60,7 +60,7 @@ export interface SessionMetrics {
   // Phase tracking
   currentPhase?: BreathPhase;
   phaseProgress?: number; // 0-100
-  startTime?: number;
+  startTime?: Date; // FIXED: Use Date object for proper serialization
 }
 
 // ============================================================================

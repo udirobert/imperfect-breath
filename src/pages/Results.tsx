@@ -47,6 +47,9 @@ import { SessionCompleteModal } from "../components/unified/SessionCompleteModal
 // TEMPORARY: Debug component for AI analysis
 import { AIAnalysisDebugButton } from "../components/debug/AIAnalysisDebugButton";
 
+// ENHANCED: Error boundary for AI analysis
+import { AIAnalysisErrorBoundary } from "../components/error/AIAnalysisErrorBoundary";
+
 // Using consolidated formatTime from utils
 
 const Results = () => {
@@ -61,11 +64,24 @@ const Results = () => {
     error,
   } = useSecureAIAnalysis();
   
-  // CRITICAL FIX: Multiple layers of safety to prevent TypeError
+  // ENHANCED: Robust safety checks with comprehensive validation
   const analyses = useMemo(() => {
-    if (!analysesRaw) return [];
-    if (!Array.isArray(analysesRaw)) return [];
-    return analysesRaw;
+    // AGGRESSIVE CONSOLIDATION: Single validation chain
+    if (!analysesRaw || !Array.isArray(analysesRaw)) {
+      console.log('🔍 AI Analysis: No valid analyses data available');
+      return [];
+    }
+    
+    // CLEAN: Filter out any invalid entries
+    const validAnalyses = analysesRaw.filter(analysis => 
+      analysis && 
+      typeof analysis === 'object' && 
+      analysis.provider && 
+      analysis.analysis
+    );
+    
+    console.log('🔍 AI Analysis: Processed analyses:', validAnalyses.length);
+    return validAnalyses;
   }, [analysesRaw]);
   const hasSavedRef = useRef(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
@@ -123,20 +139,29 @@ const Results = () => {
       landmarks: 68,
     };
 
-    // If vision was used, get actual vision metrics from Hetzner server
+    // ENHANCED: Robust vision data integration with proper validation
     if (sessionData.visionSessionId && sessionData.cameraUsed !== false) {
       try {
+        console.log('🔍 Vision Analysis: Fetching data for session:', sessionData.visionSessionId);
+        
         // PERFORMANT: Cache vision data fetches to avoid redundant requests
         const cacheKey = `vision_summary_${sessionData.visionSessionId}`;
         let visionData = sessionStorage.getItem(cacheKey);
 
         if (!visionData) {
+          // ENHANCED: Add timeout and better error handling
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
           const visionSummary = await fetch(
             `${
               import.meta.env.VITE_HETZNER_SERVICE_URL ||
               "http://localhost:8001"
-            }${createEndpoint.visionSessionSummary(sessionData.visionSessionId)}`
+            }${createEndpoint.visionSessionSummary(sessionData.visionSessionId)}`,
+            { signal: controller.signal }
           );
+          
+          clearTimeout(timeoutId);
 
           if (visionSummary.ok) {
             visionData = await visionSummary.text();
@@ -212,11 +237,22 @@ const Results = () => {
           );
         }
       } catch (error) {
+        // ENHANCED: Better error categorization and user feedback
+        const isTimeoutError = error instanceof Error && error.name === 'AbortError';
+        const isNetworkError = error instanceof Error && error.message.includes('fetch');
+        
         console.warn(
           "Failed to fetch vision data, using session data only:",
-          error
+          { error: error instanceof Error ? error.message : error, isTimeoutError, isNetworkError }
         );
-        toast.warning("Using session data only - vision metrics unavailable");
+        
+        if (isTimeoutError) {
+          toast.warning("Vision analysis timed out - using session data only");
+        } else if (isNetworkError) {
+          toast.warning("Network error - using session data only");
+        } else {
+          toast.warning("Vision metrics unavailable - using session data only");
+        }
       }
     }
 
@@ -858,49 +894,52 @@ Check out Imperfect Breath!`;
         {/* AI Analysis Section - Only for enhanced sessions */}
         {enhancedSessionData.sessionType !== "classic" && !showAIAnalysis && (
           <div className="mb-8 w-full max-w-4xl">
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <Brain className="w-5 h-5" />
-                  AI-Powered Insights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-center">
-                <p className="text-muted-foreground">
-                  Get personalized feedback and improvement suggestions based on
-                  your session performance.
-                </p>
-                <div className="flex gap-2 justify-center">
-                  <Button
-                    onClick={handleAIAnalysis}
-                    disabled={!sessionData.patternName}
-                  >
-                    <Brain className="mr-2 h-4 w-4" />
-                    Get AI Analysis
-                  </Button>
-                </div>
-                
-                {/* 🚧 TEMPORARY DEBUG BUTTON - Remove after debugging */}
-                <div className="mt-4">
-                  <AIAnalysisDebugButton />
-                </div>
-                {AIConfigManager.getConfiguredProviders().length === 0 && (
-                  <Alert>
-                    <AlertDescription>
-                      You have 1 free AI analysis available! Configure your own
-                      AI providers in settings for unlimited analysis.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
+            <AIAnalysisErrorBoundary>
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="flex items-center justify-center gap-2">
+                    <Brain className="w-5 h-5" />
+                    AI-Powered Insights
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-center">
+                  <p className="text-muted-foreground">
+                    Get personalized feedback and improvement suggestions based on
+                    your session performance.
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      onClick={handleAIAnalysis}
+                      disabled={!sessionData.patternName}
+                    >
+                      <Brain className="mr-2 h-4 w-4" />
+                      Get AI Analysis
+                    </Button>
+                  </div>
+                  
+                  {/* 🚧 TEMPORARY DEBUG BUTTON - Remove after debugging */}
+                  <div className="mt-4">
+                    <AIAnalysisDebugButton />
+                  </div>
+                  {AIConfigManager.getConfiguredProviders().length === 0 && (
+                    <Alert>
+                      <AlertDescription>
+                        You have 1 free AI analysis available! Configure your own
+                        AI providers in settings for unlimited analysis.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </AIAnalysisErrorBoundary>
           </div>
         )}
 
         {/* AI Analysis Results - Only for enhanced sessions */}
         {enhancedSessionData.sessionType !== "classic" && showAIAnalysis && (
           <div className="mb-8 w-full max-w-4xl">
-            <Tabs defaultValue="analysis" className="w-full">
+            <AIAnalysisErrorBoundary>
+              <Tabs defaultValue="analysis" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="analysis">AI Analysis</TabsTrigger>
                 <TabsTrigger value="scores">Performance Scores</TabsTrigger>
@@ -926,8 +965,8 @@ Check out Imperfect Breath!`;
                   </Card>
                 ) : (
                   <div className="space-y-4">
-                    {/* SAFETY CHECK: Ensure analyses is an array before mapping */}
-                    {Array.isArray(analyses) && analyses.map((analysis, index) => (
+                    {/* ENHANCED: Comprehensive safety with fallback UI */}
+                    {analyses.length > 0 ? analyses.map((analysis, index) => (
                       <Card key={index}>
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
@@ -974,14 +1013,30 @@ Check out Imperfect Breath!`;
                           )}
                         </CardContent>
                       </Card>
-                    ))}
+                    )) : (
+                      <Card>
+                        <CardContent className="p-6 text-center">
+                          <p className="text-muted-foreground">
+                            No AI analysis results available. Try the analysis again or check your connection.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
+                ) : (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <p className="text-muted-foreground">
+                        No performance scores available. Complete an AI analysis to see detailed metrics.
+                      </p>
+                    </CardContent>
+                  </Card>
                 )}
               </TabsContent>
 
               <TabsContent value="scores" className="space-y-4">
-                {/* SAFETY CHECK: Ensure analyses exists and has length before mapping */}
-                {Array.isArray(analyses) && analyses.length > 0 && (
+                {/* ENHANCED: Robust validation with fallback */}
+                {analyses.length > 0 ? (
                   <div className="grid gap-4">
                     {analyses.map((analysis, index) => (
                       <Card key={index}>
@@ -1043,9 +1098,18 @@ Check out Imperfect Breath!`;
                       </Card>
                     ))}
                   </div>
+                ) : (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <p className="text-muted-foreground">
+                        No performance scores available. Complete an AI analysis to see detailed metrics.
+                      </p>
+                    </CardContent>
+                  </Card>
                 )}
               </TabsContent>
-            </Tabs>
+              </Tabs>
+            </AIAnalysisErrorBoundary>
           </div>
         )}
 

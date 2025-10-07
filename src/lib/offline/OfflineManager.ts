@@ -96,13 +96,31 @@ export class OfflineManager {
       if (stored) {
         const data = JSON.parse(stored);
         
-        // Safely convert date strings back to Date objects
+        // ENHANCED: Robust date parsing with comprehensive validation
         const safeParseDate = (dateValue: any): Date => {
           if (!dateValue) return new Date();
+          
+          // CLEAN: Handle different date formats
+          if (dateValue instanceof Date) {
+            return isNaN(dateValue.getTime()) ? new Date() : dateValue;
+          }
+          
           try {
-            const parsed = new Date(dateValue);
-            return isNaN(parsed.getTime()) ? new Date() : parsed;
+            // Handle timestamp numbers
+            if (typeof dateValue === 'number') {
+              const parsed = new Date(dateValue);
+              return isNaN(parsed.getTime()) ? new Date() : parsed;
+            }
+            
+            // Handle date strings
+            if (typeof dateValue === 'string') {
+              const parsed = new Date(dateValue);
+              return isNaN(parsed.getTime()) ? new Date() : parsed;
+            }
+            
+            return new Date();
           } catch {
+            console.warn('Invalid date value encountered:', dateValue);
             return new Date();
           }
         };
@@ -262,23 +280,36 @@ export class OfflineManager {
   private async syncSessionToServer(session: OfflineSession): Promise<void> {
     // This would integrate with your actual API
     
-    // Safely convert dates to ISO strings with validation
-    const safeToISOString = (date: Date | undefined | null): string | undefined => {
+    // ENHANCED: Comprehensive date validation and conversion
+    const safeToISOString = (date: Date | undefined | null | number | string): string | undefined => {
       if (!date) return undefined;
+      
       try {
-        // Check if date is valid
-        if (date instanceof Date && !isNaN(date.getTime())) {
-          return date.toISOString();
+        let validDate: Date;
+        
+        // CLEAN: Handle different input types
+        if (date instanceof Date) {
+          validDate = date;
+        } else if (typeof date === 'number') {
+          validDate = new Date(date);
+        } else if (typeof date === 'string') {
+          validDate = new Date(date);
+        } else {
+          console.warn('Unexpected date type during sync:', typeof date, date);
+          return undefined;
         }
-        // Try to create a valid date if it's a string or number
-        const validDate = new Date(date);
-        if (!isNaN(validDate.getTime())) {
-          return validDate.toISOString();
+        
+        // Validate the resulting date
+        if (isNaN(validDate.getTime())) {
+          console.warn('Invalid date value during sync:', date);
+          return undefined;
         }
+        
+        return validDate.toISOString();
       } catch (error) {
-        console.warn('Invalid date encountered during sync:', date, error);
+        console.warn('Date conversion error during sync:', { date, error });
+        return undefined;
       }
-      return undefined;
     };
 
     const startTimeISO = safeToISOString(session.startTime);

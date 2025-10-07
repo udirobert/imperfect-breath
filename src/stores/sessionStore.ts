@@ -138,7 +138,7 @@ export const useSessionStore = create<SessionState & SessionActions>()(
         config,
         sessionId,
         phase: 'setup',
-        metrics: { ...initialMetrics, startTime: Date.now() },
+        metrics: { ...initialMetrics, startTime: new Date() },
         error: null,
         warnings: [],
       });
@@ -168,7 +168,7 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     startSession: () => {
       const state = get();
       if (state.config) {
-        const startTime = Date.now();
+        const startTime = new Date();
         set({
           phase: 'active',
           metrics: {
@@ -219,7 +219,7 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     updateBreathPhase: (phase, progress) => {
       set((state) => {
         const currentDuration = state.metrics.startTime ?
-          Math.floor((Date.now() - state.metrics.startTime) / 1000) :
+          Math.floor((Date.now() - state.metrics.startTime.getTime()) / 1000) :
           state.metrics.duration;
 
         const roundedProgress = Math.round(progress);
