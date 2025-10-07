@@ -107,3 +107,4 @@ supabase/.temp/
 .zencoder/
 .qodo/
 .claude/
+.aider*
