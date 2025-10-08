@@ -90,9 +90,9 @@ export const useSecureAIAnalysis = () => {
 
       console.log('🧠 Enhanced analysis context prepared:', enhancedAnalysis.context);
 
-      // Send enhanced request to backend
+      // Send enhanced request to backend with all session data
       const response = await api.ai.analyzeSession('auto', {
-        ...sessionData,
+        ...sessionData, // Include all session data
         enhancedPrompts: enhancedAnalysis.prompts,
         analysisContext: enhancedAnalysis.context,
         performanceInsights: enhancedAnalysis.insights,
@@ -143,11 +143,17 @@ export const useSecureAIAnalysis = () => {
         includeFollowUpQuestions: false
       });
 
+      // Use the enhanced session data which includes cycleCount
       const fallbackResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
         {
-          analysis: 'Great session! Your breathing practice shows good consistency and focus.',
+          analysis: `Based on your actual session data: You completed ${enhancedSessionData.cycleCount || 0} cycles with ${enhancedSessionData.restlessnessScore !== undefined ? Math.max(0, 100 - enhancedSessionData.restlessnessScore) : 'N/A'}% stillness. This shows good focus and commitment to your practice.`,
           suggestions: fallbackAnalysis.recommendations.slice(0, 3),
-          score: { overall: 75, focus: 70, consistency: 80, progress: 75 },
+          score: { 
+            overall: enhancedSessionData.restlessnessScore !== undefined ? Math.min(100, Math.max(30, 100 - enhancedSessionData.restlessnessScore)) : 70,
+            focus: enhancedSessionData.restlessnessScore !== undefined ? Math.min(100, Math.max(30, 100 - enhancedSessionData.restlessnessScore)) : 70,
+            consistency: enhancedSessionData.cycleCount !== undefined ? Math.min(100, Math.max(30, (enhancedSessionData.cycleCount || 0) * 10)) : 60,
+            progress: enhancedSessionData.cycleCount !== undefined ? Math.min(100, Math.max(30, (enhancedSessionData.cycleCount || 0) * 15)) : 50
+          },
           nextSteps: ['Practice daily for 10-15 minutes', 'Try different breathing patterns', 'Track your progress over time']
         },
         fallbackAnalysis.context

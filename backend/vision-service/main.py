@@ -744,23 +744,47 @@ async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
                 logger.warning(f"Cerebras analysis failed, falling back to mock: {e}")
                 # Fall through to fallback
         
-        # PERFORMANT: Fallback to mock response with proper structure alignment
+        # PERFORMANT: Fallback to mock response with actual session data
+        session_data = request.session_data
+        pattern_name = session_data.get('patternName', 'Breathing Session')
+        session_duration = session_data.get('sessionDuration', 0)
+        restlessness_score = session_data.get('restlessnessScore', 50)
+        stillness_score = 100 - restlessness_score if restlessness_score is not None else 70
+        cycle_count = session_data.get('cycleCount', 0)
+        target_cycles = session_data.get('targetCycles', 10)
+        
+        # Generate personalized analysis based on actual session data
+        if cycle_count >= target_cycles * 0.8:
+            performance_comment = "Excellent cycle completion shows strong focus and endurance."
+        elif cycle_count >= target_cycles * 0.6:
+            performance_comment = "Good cycle completion rate with room for building endurance."
+        else:
+            performance_comment = "Developing cycle completion - consider setting more achievable targets."
+        
+        if stillness_score >= 80:
+            stillness_comment = "Exceptional stillness demonstrates advanced body awareness."
+        elif stillness_score >= 70:
+            stillness_comment = "Good stillness control shows developing mind-body connection."
+        else:
+            stillness_comment = "Focus on finding a comfortable, stable position to improve stillness."
+        
         result = {
-            "analysis": f"Excellent {request.analysis_type} analysis! Your breathing shows good control and focus.",  # Map encouragement to analysis
+            "analysis": f"Excellent session analysis! Your {pattern_name} shows good control and focus. {performance_comment} {stillness_comment}",
+            "encouragement": f"Great job on your {pattern_name} practice!",
             "suggestions": [
-                "Great breathing consistency!",
-                "Try extending your exhale slightly", 
-                "Focus on relaxing your shoulders"
+                "Great breathing consistency!" if stillness_score >= 70 else "Try to minimize movement for better focus",
+                "Try extending your exhale slightly" if session_duration < 300 else "Maintain your good session length",
+                "Focus on relaxing your shoulders" if stillness_score < 75 else "Keep up the good posture work"
             ],
             "score": {
-                "overall": 85,
-                "focus": 80,
-                "consistency": 85,
-                "progress": 75
+                "overall": min(100, max(50, int((stillness_score + (cycle_count/target_cycles)*100)/2))),
+                "focus": min(100, max(50, stillness_score)),
+                "consistency": min(100, max(50, (cycle_count/target_cycles)*100)),
+                "progress": min(100, max(50, cycle_count * 10))  # Simple progression based on cycles
             },
             "nextSteps": [
-                "Practice daily for 10 minutes",
-                "Try the 4-7-8 pattern next",
+                "Practice daily for 10 minutes" if session_duration < 600 else "Maintain your consistent practice",
+                "Try the 4-7-8 pattern next" if pattern_name != "4-7-8" else "Try a different pattern for variety",
                 "Track your progress over time"
             ]
         }

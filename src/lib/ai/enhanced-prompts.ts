@@ -102,14 +102,25 @@ Timestamp: ${sessionData.timestamp || 'Current session'}
     if (completionRate !== null) {
       prompt += ` (${completionRate}% completion rate)`;
     }
+  } else if (sessionData.sessionDuration && sessionData.patternName) {
+    // Estimate cycles based on pattern and duration if not explicitly provided
+    const estimatedCycles = Math.floor(sessionData.sessionDuration / 60); // Rough estimate
+    prompt += `\n• Estimated Cycles: ${estimatedCycles} (based on session duration)`;
   }
 
   if (stillnessScore !== null) {
     prompt += `\n• Stillness Score: ${stillnessScore}% (${getStillnessAssessment(stillnessScore)})`;
+  } else if (sessionData.restlessnessScore !== undefined) {
+    const estimatedStillness = Math.max(0, 100 - sessionData.restlessnessScore);
+    prompt += `\n• Stillness Score: ${estimatedStillness}% (${getStillnessAssessment(estimatedStillness)})`;
   }
 
   if (sessionData.breathHoldTime > 0) {
     prompt += `\n• Best Breath Hold: ${sessionData.breathHoldTime} seconds`;
+  } else if (sessionData.bpm) {
+    // Estimate breath hold from BPM if available
+    const estimatedHold = Math.round(60 / sessionData.bpm);
+    prompt += `\n• Estimated Breath Hold: ${estimatedHold} seconds (based on ${sessionData.bpm} BPM)`;
   }
 
   // Vision metrics if available

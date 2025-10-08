@@ -52,7 +52,10 @@ import { AIAnalysisErrorBoundary } from "../components/error/AIAnalysisErrorBoun
 
 // ENHANCED: Dr. Breathe AI Analysis Display
 import { EnhancedAIAnalysisDisplay } from "../components/ai/EnhancedAIAnalysisDisplay";
-import { EnhancedAnalysisService, EnhancedAnalysisRequest } from "../lib/ai/enhanced-analysis-service";
+import {
+  EnhancedAnalysisService,
+  EnhancedAnalysisRequest,
+} from "../lib/ai/enhanced-analysis-service";
 
 // Using consolidated formatTime from utils
 
@@ -67,25 +70,26 @@ const Results = () => {
     isAnalyzing,
     error,
   } = useSecureAIAnalysis();
-  
+
   // ENHANCED: Robust safety checks with comprehensive validation
   const analyses = useMemo(() => {
     // AGGRESSIVE CONSOLIDATION: Single validation chain
     if (!analysesRaw || !Array.isArray(analysesRaw)) {
-      console.log('🔍 AI Analysis: No valid analyses data available');
+      console.log("🔍 AI Analysis: No valid analyses data available");
       return [];
     }
 
     // CLEAN: Filter out any invalid entries - check for provider and analysis content
-    const validAnalyses = analysesRaw.filter(analysis =>
-      analysis &&
-      typeof analysis === 'object' &&
-      analysis.provider &&
-      analysis.analysis && // Should have the actual analysis text
-      analysis.score // Should have scores
+    const validAnalyses = analysesRaw.filter(
+      (analysis) =>
+        analysis &&
+        typeof analysis === "object" &&
+        analysis.provider &&
+        analysis.analysis && // Should have the actual analysis text
+        analysis.score // Should have scores
     );
 
-    console.log('🔍 AI Analysis: Processed analyses:', validAnalyses.length);
+    console.log("🔍 AI Analysis: Processed analyses:", validAnalyses.length);
     return validAnalyses;
   }, [analysesRaw]);
   const hasSavedRef = useRef(false);
@@ -126,12 +130,13 @@ const Results = () => {
       toast.error("No session data available for analysis");
       return;
     }
-    
-    console.log('🔍 AI Analysis Debug:', {
+
+    console.log("🔍 AI Analysis Debug:", {
       hetznerUrl: import.meta.env.VITE_HETZNER_SERVICE_URL,
-      configuredAiUrl: import.meta.env.VITE_HETZNER_SERVICE_URL || 'http://localhost:8001',
+      configuredAiUrl:
+        import.meta.env.VITE_HETZNER_SERVICE_URL || "http://localhost:8001",
       sessionData: sessionData,
-      hasVisionSessionId: !!sessionData.visionSessionId
+      hasVisionSessionId: !!sessionData.visionSessionId,
     });
 
     // UNIFIED DATA FLOW: Combine session + vision data (AGGRESSIVE CONSOLIDATION)
@@ -147,8 +152,11 @@ const Results = () => {
     // ENHANCED: Robust vision data integration with proper validation
     if (sessionData.visionSessionId && sessionData.cameraUsed !== false) {
       try {
-        console.log('🔍 Vision Analysis: Fetching data for session:', sessionData.visionSessionId);
-        
+        console.log(
+          "🔍 Vision Analysis: Fetching data for session:",
+          sessionData.visionSessionId
+        );
+
         // PERFORMANT: Cache vision data fetches to avoid redundant requests
         const cacheKey = `vision_summary_${sessionData.visionSessionId}`;
         let visionData = sessionStorage.getItem(cacheKey);
@@ -157,15 +165,17 @@ const Results = () => {
           // ENHANCED: Add timeout and better error handling
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-          
+
           const visionSummary = await fetch(
             `${
               import.meta.env.VITE_HETZNER_SERVICE_URL ||
               "http://localhost:8001"
-            }${createEndpoint.visionSessionSummary(sessionData.visionSessionId)}`,
+            }${createEndpoint.visionSessionSummary(
+              sessionData.visionSessionId
+            )}`,
             { signal: controller.signal }
           );
-          
+
           clearTimeout(timeoutId);
 
           if (visionSummary.ok) {
@@ -178,10 +188,16 @@ const Results = () => {
             );
           } else if (visionSummary.status === 404) {
             // Handle 404 gracefully without throwing an error that would trigger the error boundary
-            console.warn("Vision summary not found on server, using session data only");
-            toast.warning("Vision data not available - using session data only");
+            console.warn(
+              "Vision summary not found on server, using session data only"
+            );
+            toast.warning(
+              "Vision data not available - using session data only"
+            );
           } else {
-            throw new Error(`Vision API returned status ${visionSummary.status}`);
+            throw new Error(
+              `Vision API returned status ${visionSummary.status}`
+            );
           }
         } else {
           // Check cache expiry (5 minutes)
@@ -194,7 +210,9 @@ const Results = () => {
               `${
                 import.meta.env.VITE_HETZNER_SERVICE_URL ||
                 "http://localhost:8001"
-              }${createEndpoint.visionSessionSummary(sessionData.visionSessionId)}`
+              }${createEndpoint.visionSessionSummary(
+                sessionData.visionSessionId
+              )}`
             );
             if (visionSummary.ok) {
               visionData = await visionSummary.text();
@@ -205,10 +223,16 @@ const Results = () => {
               );
             } else if (visionSummary.status === 404) {
               // Handle 404 gracefully without throwing an error that would trigger the error boundary
-              console.warn("Vision summary not found on server, using session data only");
-              toast.warning("Vision data not available - using session data only");
+              console.warn(
+                "Vision summary not found on server, using session data only"
+              );
+              toast.warning(
+                "Vision data not available - using session data only"
+              );
             } else {
-              throw new Error(`Vision API returned status ${visionSummary.status}`);
+              throw new Error(
+                `Vision API returned status ${visionSummary.status}`
+              );
             }
           }
         }
@@ -243,14 +267,17 @@ const Results = () => {
         }
       } catch (error) {
         // ENHANCED: Better error categorization and user feedback
-        const isTimeoutError = error instanceof Error && error.name === 'AbortError';
-        const isNetworkError = error instanceof Error && error.message.includes('fetch');
-        
-        console.warn(
-          "Failed to fetch vision data, using session data only:",
-          { error: error instanceof Error ? error.message : error, isTimeoutError, isNetworkError }
-        );
-        
+        const isTimeoutError =
+          error instanceof Error && error.name === "AbortError";
+        const isNetworkError =
+          error instanceof Error && error.message.includes("fetch");
+
+        console.warn("Failed to fetch vision data, using session data only:", {
+          error: error instanceof Error ? error.message : error,
+          isTimeoutError,
+          isNetworkError,
+        });
+
         if (isTimeoutError) {
           toast.warning("Vision analysis timed out - using session data only");
         } else if (isNetworkError) {
@@ -340,14 +367,19 @@ Focused breathing practice with Imperfect Breath 🌬️`;
       }
 
       // Fallback to native sharing for enhanced sessions
-      const actualStillness = sessionData.restlessnessScore !== undefined 
-        ? Math.max(0, 100 - sessionData.restlessnessScore)
-        : null;
-      
+      const actualStillness =
+        sessionData.restlessnessScore !== undefined
+          ? Math.max(0, 100 - sessionData.restlessnessScore)
+          : null;
+
       const summary = `I just completed a mindful breathing session!
 - Duration: ${formatTime(sessionData.sessionDuration || 0)}
-- Cycles: ${sessionData.cycleCount || 0}${actualStillness !== null ? `
-- Stillness: ${actualStillness}%` : ''}
+- Cycles: ${sessionData.cycleCount || 0}${
+        actualStillness !== null
+          ? `
+- Stillness: ${actualStillness}%`
+          : ""
+      }
 Check out Imperfect Breath!`;
 
       if (navigator.share) {
@@ -909,8 +941,8 @@ Check out Imperfect Breath!`;
                 </CardHeader>
                 <CardContent className="space-y-4 text-center">
                   <p className="text-muted-foreground">
-                    Get personalized feedback and improvement suggestions based on
-                    your session performance.
+                    Get personalized feedback and improvement suggestions based
+                    on your session performance.
                   </p>
                   <div className="flex gap-2 justify-center">
                     <Button
@@ -921,7 +953,7 @@ Check out Imperfect Breath!`;
                       Get AI Analysis
                     </Button>
                   </div>
-                  
+
                   {/* 🚧 TEMPORARY DEBUG BUTTON - Remove after debugging */}
                   <div className="mt-4">
                     <AIAnalysisDebugButton />
@@ -929,8 +961,8 @@ Check out Imperfect Breath!`;
                   {AIConfigManager.getConfiguredProviders().length === 0 && (
                     <Alert>
                       <AlertDescription>
-                        You have 1 free AI analysis available! Configure your own
-                        AI providers in settings for unlimited analysis.
+                        You have 1 free AI analysis available! Configure your
+                        own AI providers in settings for unlimited analysis.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -965,49 +997,144 @@ Check out Imperfect Breath!`;
                 (() => {
                   // Use existing service to transform and enhance the analysis data
                   const rawAnalysis = analyses[0];
-                  const transformedSessionData = EnhancedAnalysisService.transformSessionData({
-                    patternName: sessionData.patternName || 'Breathing Session',
-                    sessionDuration: sessionData.sessionDuration || 300,
-                    breathHoldTime: sessionData.breathHoldTime || 0,
-                    restlessnessScore: sessionData.restlessnessScore || 50,
-                    bpm: sessionData.bpm,
-                    landmarks: sessionData.landmarks,
-                    timestamp: sessionData.timestamp,
-                    visionMetrics: (enhancedSessionData as any).visionMetrics || undefined
-                  });
+                  const transformedSessionData =
+                    EnhancedAnalysisService.transformSessionData({
+                      patternName:
+                        sessionData.patternName || "Breathing Session",
+                      sessionDuration: sessionData.sessionDuration || 0,
+                      breathHoldTime: sessionData.breathHoldTime || 0,
+                      restlessnessScore: sessionData.restlessnessScore,
+                      bpm: sessionData.bpm,
+                      landmarks: sessionData.landmarks,
+                      timestamp: sessionData.timestamp,
+                      visionMetrics:
+                        (enhancedSessionData as any).visionMetrics || undefined,
+                      cycleCount: sessionData.cycleCount,
+                      targetCycles: sessionData.targetCycles,
+                      // Include all available session data
+                      ...sessionData,
+                    });
 
-                  const context = EnhancedAnalysisService.prepareAnalysisContext({
-                    sessionData: transformedSessionData
-                  });
+                  const context =
+                    EnhancedAnalysisService.prepareAnalysisContext({
+                      sessionData: transformedSessionData,
+                    });
 
-                  const enhancedAnalysis = EnhancedAnalysisService.validateAndEnhanceResponse(rawAnalysis, context);
+                  const enhancedAnalysis =
+                    EnhancedAnalysisService.validateAndEnhanceResponse(
+                      rawAnalysis,
+                      context
+                    );
 
                   return (
                     <EnhancedAIAnalysisDisplay
                       analysis={enhancedAnalysis}
-                      patternName={sessionData.patternName || "Breathing Session"}
+                      patternName={
+                        sessionData.patternName || "Breathing Session"
+                      }
                       onSendChatMessage={async (message: string) => {
                         // Handle chat messages with contextual Dr. Breathe responses
                         try {
-                          // Generate contextual responses based on the user's message and session data
+                          // Generate contextual responses based on the user's message and actual session data
                           const lowerMessage = message.toLowerCase();
 
-                          if (lowerMessage.includes('stillness') || lowerMessage.includes('focus')) {
-                            return `Great question about stillness! Based on your ${Math.round(sessionData.restlessnessScore || 50)}% stillness score in this session, you're showing ${sessionData.restlessnessScore < 30 ? 'excellent' : sessionData.restlessnessScore < 60 ? 'good' : 'developing'} body awareness. Try finding a comfortable seated position with your feet flat on the floor, and focus on the natural pause between breaths. What specific aspect of stillness would you like to work on?\n\n— Dr. Breathe, Your Breathing Coach`;
+                          // Use actual session data for more personalized responses
+                          if (
+                            lowerMessage.includes("stillness") ||
+                            lowerMessage.includes("focus") ||
+                            lowerMessage.includes("stats")
+                          ) {
+                            const stillnessScore =
+                              sessionData.restlessnessScore !== undefined
+                                ? Math.max(
+                                    0,
+                                    100 - sessionData.restlessnessScore
+                                  )
+                                : undefined;
+
+                            if (stillnessScore !== undefined) {
+                              return `Based on your actual session data, your stillness score was ${stillnessScore}%. This indicates ${
+                                stillnessScore >= 80
+                                  ? "excellent"
+                                  : stillnessScore >= 70
+                                  ? "good"
+                                  : "developing"
+                              } body awareness and focus. To improve this score, try finding a more comfortable seated position and focus on minimizing movement during your breathing cycles.\n\n— Dr. Breathe, Your Breathing Coach`;
+                            }
                           }
 
-                          if (lowerMessage.includes('breath') || lowerMessage.includes('breathing')) {
-                            return `I'd be happy to help with your breathing technique! For ${sessionData.patternName || 'your chosen pattern'}, focus on maintaining a smooth, steady rhythm throughout each phase. Your breath hold time of ${formatTime(sessionData.breathHoldTime || 0)} shows ${sessionData.breathHoldTime > 30 ? 'developing' : 'beginning'} breath control. Remember, the key is consistency over intensity. What breathing challenges are you experiencing?\n\n— Dr. Breathe, Your Breathing Coach`;
+                          if (
+                            lowerMessage.includes("breath") ||
+                            lowerMessage.includes("breathing")
+                          ) {
+                            const breathHoldTime =
+                              sessionData.breathHoldTime || 0;
+                            return `Looking at your session data, your breath hold time was ${breathHoldTime} seconds. This shows ${
+                              breathHoldTime > 30
+                                ? "developing"
+                                : breathHoldTime > 15
+                                ? "beginning"
+                                : "emerging"
+                            } breath control. For ${
+                              sessionData.patternName || "your chosen pattern"
+                            }, focus on maintaining a smooth, steady rhythm throughout each phase. What specific aspect of your breathing would you like to improve?\n\n— Dr. Breathe, Your Breathing Coach`;
                           }
 
-                          if (lowerMessage.includes('session') || lowerMessage.includes('practice')) {
-                            return `Excellent dedication to your practice! Your ${formatTime(sessionData.sessionDuration || 0)} session with ${sessionData.cycleCount || 0} cycles completed shows real commitment to mindful breathing. This regular practice will help you develop better stress resilience and mental clarity over time. How are you feeling about your progress so far?\n\n— Dr. Breathe, Your Breathing Coach`;
+                          if (
+                            lowerMessage.includes("session") ||
+                            lowerMessage.includes("practice") ||
+                            lowerMessage.includes("duration")
+                          ) {
+                            const duration = sessionData.sessionDuration || 0;
+                            const cycles = sessionData.cycleCount || 0;
+
+                            return `Based on your actual session data, you practiced for ${Math.floor(
+                              duration / 60
+                            )} minutes and ${
+                              duration % 60
+                            } seconds, completing ${cycles} breathing cycles. This shows real commitment to mindful breathing. Your ${cycles} completed cycles demonstrate ${
+                              cycles >= 10
+                                ? "excellent"
+                                : cycles >= 5
+                                ? "good"
+                                : "solid"
+                            } endurance. This regular practice will help you develop better stress resilience and mental clarity over time. How are you feeling about your progress so far?\n\n— Dr. Breathe, Your Breathing Coach`;
                           }
 
-                          // Default contextual response
-                          return `Thank you for your question about "${message}"! I'm here to support your breathing journey every step of the way. Based on your ${sessionData.patternName || 'breathing'} session, you're developing valuable mindfulness skills that will benefit both your mental and physical wellbeing. Could you tell me more about what specific aspect of your practice you'd like to explore further?\n\n— Dr. Breathe, Your Breathing Coach`;
+                          if (
+                            lowerMessage.includes("cycle") ||
+                            lowerMessage.includes("cycles")
+                          ) {
+                            const cycles = sessionData.cycleCount || 0;
+                            const target = sessionData.targetCycles || 10;
+                            const completionRate = Math.round(
+                              (cycles / target) * 100
+                            );
+
+                            return `Looking at your session data, you completed ${cycles} out of ${target} target cycles (${completionRate}% completion rate). This shows ${
+                              completionRate >= 80
+                                ? "excellent"
+                                : completionRate >= 60
+                                ? "good"
+                                : "solid"
+                            } focus and endurance. To improve your cycle completion, try gradually increasing your target as you build stamina rather than pushing too hard too fast.\n\n— Dr. Breathe, Your Breathing Coach`;
+                          }
+
+                          // Default contextual response using actual data
+                          return `Thank you for your question about "${message}"! Based on your actual session data from your ${
+                            sessionData.patternName || "breathing"
+                          } practice, I can see you completed ${
+                            sessionData.cycleCount || 0
+                          } cycles with a stillness score of ${
+                            sessionData.restlessnessScore !== undefined
+                              ? Math.max(0, 100 - sessionData.restlessnessScore)
+                              : "N/A"
+                          }%. These metrics show you're developing valuable mindfulness skills that will benefit both your mental and physical wellbeing. Could you tell me more about what specific aspect of your practice you'd like to explore further?\n\n— Dr. Breathe, Your Breathing Coach`;
                         } catch (error) {
-                          console.error('Failed to generate Dr. Breathe response:', error);
+                          console.error(
+                            "Failed to generate Dr. Breathe response:",
+                            error
+                          );
                           return "I appreciate your question! While I'm having a moment of technical difficulty, I want you to know that every question about your breathing practice is valuable. Please feel free to ask again.\n\n— Dr. Breathe, Your Breathing Coach";
                         }
                       }}
@@ -1018,7 +1145,8 @@ Check out Imperfect Breath!`;
                 <Card>
                   <CardContent className="p-6 text-center">
                     <p className="text-muted-foreground">
-                      No AI analysis results available. Try the analysis again or check your connection.
+                      No AI analysis results available. Try the analysis again
+                      or check your connection.
                     </p>
                   </CardContent>
                 </Card>

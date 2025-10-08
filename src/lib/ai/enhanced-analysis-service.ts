@@ -116,38 +116,49 @@ export class EnhancedAnalysisService {
     rawResponse: any,
     context: AnalysisContext
   ): EnhancedAnalysisResponse {
-    const { patternExpertise, experienceLevel } = context;
+    const { patternExpertise, experienceLevel, sessionData } = context;
     const result = rawResponse.result || rawResponse;
 
-    // Ensure response has all required fields
+    // Calculate actual scores based on session data if not provided by AI
+    const stillnessScore = sessionData.stillnessScore ?? 
+      (sessionData.restlessnessScore !== undefined ? Math.max(0, 100 - sessionData.restlessnessScore) : 70);
+    
+    const cycleCompletionRate = sessionData.targetCycles && sessionData.cycleCount !== undefined ? 
+      (sessionData.cycleCount / sessionData.targetCycles) * 100 : 50;
+    
+    const durationScore = sessionData.sessionDuration ? 
+      Math.min(100, Math.max(30, (sessionData.sessionDuration / 600) * 100)) : 50;
+
+    // Ensure response has all required fields with actual data
     const enhancedResponse: EnhancedAnalysisResponse = {
       provider: result.provider || 'openai',
       providerDisplayName: result.providerDisplayName || 'OpenAI',
-      analysis: result.analysis || result.insights || 'Analysis completed successfully.',
+      analysis: result.analysis || result.insights || 
+        `Based on your actual session data: You completed ${sessionData.cycleCount || 0} cycles with ${Math.round(stillnessScore)}% stillness. ${cycleCompletionRate >= 80 ? 'Excellent cycle completion!' : cycleCompletionRate >= 60 ? 'Good cycle completion with room for improvement.' : 'Focus on building endurance for better cycle completion.'}`,
       suggestions: Array.isArray(result.suggestions) ? result.suggestions : [
-        'Continue practicing regularly',
-        'Focus on maintaining steady rhythm',
-        'Gradually increase session duration'
+        stillnessScore >= 70 ? 'Maintain your good stillness' : 'Work on minimizing movement',
+        durationScore >= 70 ? 'Keep up your good session length' : 'Try gradually extending sessions',
+        cycleCompletionRate >= 70 ? 'Great cycle completion!' : 'Focus on completing more cycles'
       ],
       score: {
-        overall: result.score?.overall || 75,
-        focus: result.score?.focus || 70,
-        consistency: result.score?.consistency || 75,
-        progress: result.score?.progress || 80
+        overall: result.score?.overall || Math.min(100, Math.max(30, Math.round((stillnessScore + cycleCompletionRate + durationScore) / 3))),
+        focus: result.score?.focus || Math.min(100, Math.max(30, Math.round(stillnessScore))),
+        consistency: result.score?.consistency || Math.min(100, Math.max(30, Math.round(cycleCompletionRate))),
+        progress: result.score?.progress || Math.min(100, Math.max(30, Math.round(sessionData.cycleCount || 0) * 10))
       },
       nextSteps: Array.isArray(result.nextSteps) ? result.nextSteps : [
-        'Practice daily for 10-15 minutes',
-        'Try different breathing patterns',
-        'Track your progress over time'
+        durationScore < 70 ? 'Practice daily for 10-15 minutes' : 'Maintain your consistent practice',
+        cycleCompletionRate < 70 ? 'Try to complete more cycles' : 'Increase cycle targets gradually',
+        stillnessScore < 70 ? 'Focus on posture and stillness' : 'Continue developing your stillness'
       ],
       scientificInsights: result.scientificInsights ||
         (patternExpertise ? patternExpertise.scientificBasis :
           'Regular breathing practice supports nervous system regulation and stress reduction.'),
       patternSpecificGuidance: result.patternSpecificGuidance ||
         (patternExpertise ? patternExpertise.adaptations[experienceLevel] :
-          'Focus on maintaining a comfortable, sustainable rhythm.'),
+          `Focus on maintaining a comfortable, sustainable rhythm for ${sessionData.patternName || 'your breathing pattern'}.`),
       experienceLevel,
-      encouragement: result.encouragement || 'Great job on your breathing practice!',
+      encouragement: result.encouragement || `Great job on your ${sessionData.patternName || 'breathing'} practice! Based on your actual data: ${Math.round(stillnessScore)}% stillness and ${sessionData.cycleCount || 0} cycles completed.`,
       followUpQuestions: Array.isArray(result.followUpQuestions) ? result.followUpQuestions : generateFollowUpQuestions(context),
       progressTrends: result.progressTrends
     };
