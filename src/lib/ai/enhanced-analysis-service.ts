@@ -120,11 +120,14 @@ export class EnhancedAnalysisService {
     const result = rawResponse.result || rawResponse;
 
     // Calculate actual scores based on session data if not provided by AI
-    const stillnessScore = sessionData.stillnessScore ?? 
-      (sessionData.restlessnessScore !== undefined ? Math.max(0, 100 - sessionData.restlessnessScore) : 70);
+    const restlessnessScore = sessionData.restlessnessScore;
+    const stillnessScore = restlessnessScore !== undefined ? 
+      Math.max(0, 100 - restlessnessScore) : 70;
     
-    const cycleCompletionRate = sessionData.targetCycles && sessionData.cycleCount !== undefined ? 
-      (sessionData.cycleCount / sessionData.targetCycles) * 100 : 50;
+    const cycleCount = sessionData.cycleCount || 0;
+    const targetCycles = sessionData.targetCycles || 10;
+    const cycleCompletionRate = targetCycles > 0 ? 
+      (cycleCount / targetCycles) * 100 : 0;
     
     const durationScore = sessionData.sessionDuration ? 
       Math.min(100, Math.max(30, (sessionData.sessionDuration / 600) * 100)) : 50;
@@ -134,7 +137,7 @@ export class EnhancedAnalysisService {
       provider: result.provider || 'openai',
       providerDisplayName: result.providerDisplayName || 'OpenAI',
       analysis: result.analysis || result.insights || 
-        `Based on your actual session data: You completed ${sessionData.cycleCount || 0} cycles with ${Math.round(stillnessScore)}% stillness. ${cycleCompletionRate >= 80 ? 'Excellent cycle completion!' : cycleCompletionRate >= 60 ? 'Good cycle completion with room for improvement.' : 'Focus on building endurance for better cycle completion.'}`,
+        `Based on your actual session data: You completed ${cycleCount} cycles with ${Math.round(stillnessScore)}% stillness. ${cycleCompletionRate >= 80 ? 'Excellent cycle completion!' : cycleCompletionRate >= 60 ? 'Good cycle completion with room for improvement.' : 'Focus on building endurance for better cycle completion.'}`,
       suggestions: Array.isArray(result.suggestions) ? result.suggestions : [
         stillnessScore >= 70 ? 'Maintain your good stillness' : 'Work on minimizing movement',
         durationScore >= 70 ? 'Keep up your good session length' : 'Try gradually extending sessions',
@@ -144,7 +147,7 @@ export class EnhancedAnalysisService {
         overall: result.score?.overall || Math.min(100, Math.max(30, Math.round((stillnessScore + cycleCompletionRate + durationScore) / 3))),
         focus: result.score?.focus || Math.min(100, Math.max(30, Math.round(stillnessScore))),
         consistency: result.score?.consistency || Math.min(100, Math.max(30, Math.round(cycleCompletionRate))),
-        progress: result.score?.progress || Math.min(100, Math.max(30, Math.round(sessionData.cycleCount || 0) * 10))
+        progress: result.score?.progress || Math.min(100, Math.max(30, Math.round(cycleCount * 10)))
       },
       nextSteps: Array.isArray(result.nextSteps) ? result.nextSteps : [
         durationScore < 70 ? 'Practice daily for 10-15 minutes' : 'Maintain your consistent practice',
@@ -158,7 +161,7 @@ export class EnhancedAnalysisService {
         (patternExpertise ? patternExpertise.adaptations[experienceLevel] :
           `Focus on maintaining a comfortable, sustainable rhythm for ${sessionData.patternName || 'your breathing pattern'}.`),
       experienceLevel,
-      encouragement: result.encouragement || `Great job on your ${sessionData.patternName || 'breathing'} practice! Based on your actual data: ${Math.round(stillnessScore)}% stillness and ${sessionData.cycleCount || 0} cycles completed.`,
+      encouragement: result.encouragement || `Great job on your ${sessionData.patternName || 'breathing'} practice! Based on your actual data: ${Math.round(stillnessScore)}% stillness and ${cycleCount} cycles completed.`,
       followUpQuestions: Array.isArray(result.followUpQuestions) ? result.followUpQuestions : generateFollowUpQuestions(context),
       progressTrends: result.progressTrends
     };

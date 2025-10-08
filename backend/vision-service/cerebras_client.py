@@ -7,7 +7,7 @@ Follows core principles: DRY, CLEAN, PERFORMANT, MODULAR
 import os
 import json
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, AsyncGenerator
 import logging
 from dataclasses import dataclass
 
@@ -119,6 +119,47 @@ class CerebrasClient:
         except Exception as e:
             logger.error(f"Cerebras analysis failed: {e}")
             raise
+    
+    async def analyze_session_streaming(self, session_data: Dict[str, Any], context: Dict[str, Any]) -> AsyncGenerator[str, None]:
+        """ENHANCEMENT FIRST: Enhanced session analysis with streaming responses"""
+        client = self._get_client()
+        if not client:
+            raise Exception("Cerebras not configured or SDK not available")
+        
+        try:
+            # CLEAN: Use structured outputs for reliable JSON responses
+            schema = self._get_analysis_schema()
+            prompt = self._create_enhanced_prompt(session_data, context)
+            
+            # PERFORMANT: Use streaming with structured outputs
+            stream = await asyncio.to_thread(
+                client.chat.completions.create,
+                model=self.config.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert meditation coach providing personalized breathing session analysis."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=self.config.max_tokens,
+                temperature=self.config.temperature,
+                stream=True,  # Enable streaming
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "session_analysis",
+                        "strict": True,
+                        "schema": schema
+                    }
+                }
+            )
+            
+            # Yield each chunk as it arrives
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+                    
+        except Exception as e:
+            logger.error(f"Cerebras streaming analysis failed: {e}")
+            yield json.dumps({"error": str(e)})
     
     def _get_analysis_schema(self) -> Dict[str, Any]:
         """ORGANIZED: JSON schema for structured outputs"""
@@ -247,6 +288,11 @@ client = CerebrasClient(config)
 async def analyze_breathing_session(session_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
     """ENHANCEMENT FIRST: Main entry point for session analysis"""
     return await client.analyze_session(session_data, context)
+
+async def analyze_breathing_session_streaming(session_data: Dict[str, Any], context: Dict[str, Any]) -> AsyncGenerator[str, None]:
+    """ENHANCEMENT FIRST: Main entry point for streaming session analysis"""
+    async for chunk in client.analyze_session_streaming(session_data, context):
+        yield chunk
 
 def is_available() -> bool:
     """MODULAR: Check if Cerebras integration is available"""

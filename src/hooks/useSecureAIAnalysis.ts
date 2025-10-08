@@ -90,9 +90,100 @@ export const useSecureAIAnalysis = () => {
 
       console.log('🧠 Enhanced analysis context prepared:', enhancedAnalysis.context);
 
-      // Send enhanced request to backend with all session data
+      // Try streaming first, fallback to regular analysis
+      try {
+        // Check if streaming is supported
+        if (api.ai.analyzeSessionStreaming) {
+          console.log('🔄 Starting streaming AI analysis');
+          
+          // Use streaming API
+          const stream = await api.ai.analyzeSessionStreaming('auto', {
+            ...sessionData,
+            enhancedPrompts: enhancedAnalysis.prompts,
+            analysisContext: enhancedAnalysis.context,
+            performanceInsights: enhancedAnalysis.insights,
+            progressiveRecommendations: enhancedAnalysis.recommendations
+          });
+
+          const reader = stream.getReader();
+          let accumulatedData = '';
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              
+              if (done) {
+                break;
+              }
+              
+              // Process streaming data
+              accumulatedData += value;
+              
+              // Try to parse complete JSON objects from the stream
+              try {
+                // Handle Server-Sent Events format
+                const lines = accumulatedData.split('\n\n');
+                
+                // Process all complete lines
+                for (let i = 0; i < lines.length - 1; i++) {
+                  const line = lines[i].trim();
+                  if (line.startsWith('data: ')) {
+                    const data = line.substring(6);
+                    
+                    if (data === '[DONE]') {
+                      console.log('✅ Streaming analysis completed');
+                      break;
+                    }
+                    
+                    // Try to parse the JSON data
+                    const parsed = JSON.parse(data);
+                    
+                    if (parsed.error) {
+                      throw new Error(parsed.error);
+                    }
+                    
+                    // Transform the response
+                    const actualProvider = parsed.metadata?.provider || 'auto';
+                    const providerName = getProviderDisplayName(actualProvider);
+                    
+                    // ENHANCED: Validate and enhance the response with our analysis service
+                    const enhancedResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
+                      parsed,
+                      enhancedAnalysis.context
+                    );
+
+                    const result: SecureAIAnalysisResult = {
+                      ...enhancedResponse,
+                      provider: actualProvider,
+                      providerDisplayName: providerName,
+                    };
+
+                    setResults([result]);
+                    console.log(`✅ ${providerName} streaming analysis updated:`, result);
+                  }
+                }
+                
+                // Keep the last incomplete line
+                accumulatedData = lines[lines.length - 1];
+              } catch (parseError) {
+                // Continue accumulating data until we have complete JSON
+                console.log('🔄 Accumulating streaming data...');
+              }
+            }
+            
+            // If we successfully streamed, we're done
+            return;
+          } finally {
+            reader.releaseLock();
+          }
+        }
+      } catch (streamError) {
+        console.warn('Streaming analysis failed, falling back to regular analysis:', streamError);
+      }
+
+      // Send enhanced request to backend (fallback to non-streaming)
       const response = await api.ai.analyzeSession('auto', {
-        ...sessionData, // Include all session data
+        ...sessionData,
         enhancedPrompts: enhancedAnalysis.prompts,
         analysisContext: enhancedAnalysis.context,
         performanceInsights: enhancedAnalysis.insights,
@@ -144,17 +235,27 @@ export const useSecureAIAnalysis = () => {
       });
 
       // Use the enhanced session data which includes cycleCount
+      const cycleCount = enhancedSessionData.cycleCount || 0;
+      const targetCycles = enhancedSessionData.targetCycles || 10;
+      const completionRate = targetCycles > 0 ? (cycleCount / targetCycles) * 100 : 0;
+      const stillnessScore = enhancedSessionData.restlessnessScore !== undefined ? 
+        Math.max(0, 100 - enhancedSessionData.restlessnessScore) : 70;
+
       const fallbackResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
         {
-          analysis: `Based on your actual session data: You completed ${enhancedSessionData.cycleCount || 0} cycles with ${enhancedSessionData.restlessnessScore !== undefined ? Math.max(0, 100 - enhancedSessionData.restlessnessScore) : 'N/A'}% stillness. This shows good focus and commitment to your practice.`,
+          analysis: `Based on your actual session data: You completed ${cycleCount} cycles with ${Math.round(stillnessScore)}% stillness. ${completionRate >= 80 ? 'Excellent cycle completion!' : completionRate >= 60 ? 'Good cycle completion with room for improvement.' : 'Focus on building endurance for better cycle completion.'}`,
           suggestions: fallbackAnalysis.recommendations.slice(0, 3),
           score: { 
-            overall: enhancedSessionData.restlessnessScore !== undefined ? Math.min(100, Math.max(30, 100 - enhancedSessionData.restlessnessScore)) : 70,
-            focus: enhancedSessionData.restlessnessScore !== undefined ? Math.min(100, Math.max(30, 100 - enhancedSessionData.restlessnessScore)) : 70,
-            consistency: enhancedSessionData.cycleCount !== undefined ? Math.min(100, Math.max(30, (enhancedSessionData.cycleCount || 0) * 10)) : 60,
-            progress: enhancedSessionData.cycleCount !== undefined ? Math.min(100, Math.max(30, (enhancedSessionData.cycleCount || 0) * 15)) : 50
+            overall: Math.min(100, Math.max(30, Math.round((stillnessScore + completionRate + (enhancedSessionData.sessionDuration ? (enhancedSessionData.sessionDuration / 600) * 100 : 50)) / 3))),
+            focus: Math.min(100, Math.max(30, Math.round(stillnessScore))),
+            consistency: Math.min(100, Math.max(30, Math.round(completionRate))),
+            progress: Math.min(100, Math.max(30, Math.round(cycleCount * 10)))
           },
-          nextSteps: ['Practice daily for 10-15 minutes', 'Try different breathing patterns', 'Track your progress over time']
+          nextSteps: [
+            enhancedSessionData.sessionDuration && enhancedSessionData.sessionDuration < 600 ? 'Practice daily for 10-15 minutes' : 'Maintain your consistent practice',
+            completionRate < 70 ? 'Try to complete more cycles' : 'Increase cycle targets gradually',
+            stillnessScore < 70 ? 'Focus on posture and stillness' : 'Continue developing your stillness'
+          ]
         },
         fallbackAnalysis.context
       );

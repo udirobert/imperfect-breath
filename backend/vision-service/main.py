@@ -748,15 +748,20 @@ async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
         session_data = request.session_data
         pattern_name = session_data.get('patternName', 'Breathing Session')
         session_duration = session_data.get('sessionDuration', 0)
-        restlessness_score = session_data.get('restlessnessScore', 50)
-        stillness_score = 100 - restlessness_score if restlessness_score is not None else 70
+        restlessness_score = session_data.get('restlessnessScore')
         cycle_count = session_data.get('cycleCount', 0)
         target_cycles = session_data.get('targetCycles', 10)
         
+        # Calculate stillness score correctly
+        stillness_score = 100 - restlessness_score if restlessness_score is not None else 70
+        
+        # Calculate completion rate
+        completion_rate = (cycle_count / target_cycles * 100) if target_cycles > 0 else 0
+        
         # Generate personalized analysis based on actual session data
-        if cycle_count >= target_cycles * 0.8:
+        if completion_rate >= 80:
             performance_comment = "Excellent cycle completion shows strong focus and endurance."
-        elif cycle_count >= target_cycles * 0.6:
+        elif completion_rate >= 60:
             performance_comment = "Good cycle completion rate with room for building endurance."
         else:
             performance_comment = "Developing cycle completion - consider setting more achievable targets."
@@ -770,22 +775,22 @@ async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
         
         result = {
             "analysis": f"Excellent session analysis! Your {pattern_name} shows good control and focus. {performance_comment} {stillness_comment}",
-            "encouragement": f"Great job on your {pattern_name} practice!",
+            "encouragement": f"Great job on your {pattern_name} practice! Based on your actual data: {stillness_score}% stillness and {cycle_count} cycles completed.",
             "suggestions": [
                 "Great breathing consistency!" if stillness_score >= 70 else "Try to minimize movement for better focus",
-                "Try extending your exhale slightly" if session_duration < 300 else "Maintain your good session length",
+                "Try extending your session duration" if session_duration < 300 else "Maintain your good session length",
                 "Focus on relaxing your shoulders" if stillness_score < 75 else "Keep up the good posture work"
             ],
             "score": {
-                "overall": min(100, max(50, int((stillness_score + (cycle_count/target_cycles)*100)/2))),
-                "focus": min(100, max(50, stillness_score)),
-                "consistency": min(100, max(50, (cycle_count/target_cycles)*100)),
-                "progress": min(100, max(50, cycle_count * 10))  # Simple progression based on cycles
+                "overall": min(100, max(30, int((stillness_score + completion_rate + (session_duration/600*100 if session_duration else 50))/3))),
+                "focus": min(100, max(30, stillness_score)),
+                "consistency": min(100, max(30, completion_rate)),
+                "progress": min(100, max(30, cycle_count * 10))  # Simple progression based on cycles
             },
             "nextSteps": [
                 "Practice daily for 10 minutes" if session_duration < 600 else "Maintain your consistent practice",
-                "Try the 4-7-8 pattern next" if pattern_name != "4-7-8" else "Try a different pattern for variety",
-                "Track your progress over time"
+                f"Try to complete {min(target_cycles + 2, 20)} cycles next time" if completion_rate < 80 else "Increase cycle targets gradually",
+                "Focus on posture and stillness" if stillness_score < 70 else "Continue developing your stillness"
             ]
         }
 
@@ -878,6 +883,57 @@ async def ai_analysis(request: AIAnalysisRequest):
     """DRY: Unified AI analysis endpoint with automatic Cerebras integration"""
     logger.info(f"AI analysis request: {request.provider} {request.analysis_type}")
     return await process_ai_analysis(request)
+
+# ADD STREAMING ENDPOINT
+@app.post("/api/ai-analysis-stream")
+async def ai_analysis_streaming(request: AIAnalysisRequest):
+    """Streaming AI analysis endpoint with automatic Cerebras integration"""
+    logger.info(f"Streaming AI analysis request: {request.provider} {request.analysis_type}")
+    
+    # Import streaming function
+    try:
+        from cerebras_client import analyze_breathing_session_streaming, is_available as cerebras_available
+        
+        # Get enhanced session data if available
+        session_id = request.session_data.get('visionSessionId')
+        enhanced_data = None
+        
+        if session_id and session_id in vision_processor.sessions:
+            session = vision_processor.sessions[session_id]
+            enhanced_data = session.get_enhanced_summary()
+            logger.info(f"Enhanced session data for {session_id}: {len(enhanced_data.get('phase_analysis', {}))} phases")
+        
+        # Use streaming if Cerebras is available
+        if cerebras_available() and enhanced_data:
+            return StreamingResponse(
+                stream_analysis_response(enhanced_data, request.session_data),
+                media_type="text/event-stream"
+            )
+        else:
+            # Fallback to regular response if streaming not available
+            result = await process_ai_analysis(request)
+            return result
+            
+    except Exception as e:
+        logger.error(f"Streaming AI analysis failed: {e}")
+        # Fallback to regular response on error
+        return await process_ai_analysis(request)
+
+async def stream_analysis_response(enhanced_data: dict, session_data: dict):
+    """Stream the AI analysis response"""
+    try:
+        from cerebras_client import analyze_breathing_session_streaming
+        
+        # Stream the response
+        async for chunk in analyze_breathing_session_streaming(enhanced_data, session_data):
+            yield f"data: {chunk}\n\n"
+            
+        # Send completion message
+        yield "data: [DONE]\n\n"
+        
+    except Exception as e:
+        logger.error(f"Error in streaming response: {e}")
+        yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
 
 # AGGRESSIVE CONSOLIDATION: Single health check endpoint
 @app.get("/health")

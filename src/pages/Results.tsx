@@ -140,7 +140,7 @@ const Results = () => {
     });
 
     // UNIFIED DATA FLOW: Combine session + vision data (AGGRESSIVE CONSOLIDATION)
-    let enhancedSessionData: SessionData = {
+    let enhancedSessionData: any = {
       breathHoldTime: sessionData.breathHoldTime || 0,
       restlessnessScore: sessionData.restlessnessScore || 0,
       patternName: sessionData.patternName,
@@ -148,6 +148,14 @@ const Results = () => {
       timestamp: new Date().toISOString(),
       landmarks: 68,
     };
+
+    // Add cycle data if available (using any type to avoid TS errors)
+    if (sessionData.cycleCount !== undefined) {
+      (enhancedSessionData as any).cycleCount = sessionData.cycleCount;
+    }
+    if (sessionData.targetCycles !== undefined) {
+      (enhancedSessionData as any).targetCycles = sessionData.targetCycles;
+    }
 
     // ENHANCED: Robust vision data integration with proper validation
     if (sessionData.visionSessionId && sessionData.cameraUsed !== false) {
@@ -199,96 +207,40 @@ const Results = () => {
               `Vision API returned status ${visionSummary.status}`
             );
           }
-        } else {
-          // Check cache expiry (5 minutes)
-          const timestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
-          if (timestamp && Date.now() - parseInt(timestamp) > 300000) {
-            sessionStorage.removeItem(cacheKey);
-            sessionStorage.removeItem(`${cacheKey}_timestamp`);
-            // Refetch
-            const visionSummary = await fetch(
-              `${
-                import.meta.env.VITE_HETZNER_SERVICE_URL ||
-                "http://localhost:8001"
-              }${createEndpoint.visionSessionSummary(
-                sessionData.visionSessionId
-              )}`
+        }
+
+        // Parse and integrate vision data
+        if (visionData) {
+          try {
+            const parsedVisionData = JSON.parse(visionData);
+            console.log(
+              "📊 Enhanced session data with vision metrics:",
+              parsedVisionData
             );
-            if (visionSummary.ok) {
-              visionData = await visionSummary.text();
-              sessionStorage.setItem(cacheKey, visionData);
-              sessionStorage.setItem(
-                `${cacheKey}_timestamp`,
-                Date.now().toString()
-              );
-            } else if (visionSummary.status === 404) {
-              // Handle 404 gracefully without throwing an error that would trigger the error boundary
-              console.warn(
-                "Vision summary not found on server, using session data only"
-              );
-              toast.warning(
-                "Vision data not available - using session data only"
-              );
-            } else {
-              throw new Error(
-                `Vision API returned status ${visionSummary.status}`
-              );
-            }
+
+            // ENHANCEMENT FIRST: Merge vision data with session data
+            enhancedSessionData = {
+              ...enhancedSessionData,
+              ...parsedVisionData,
+              visionSessionId: sessionData.visionSessionId,
+            };
+          } catch (parseError) {
+            console.warn(
+              "Failed to parse vision data, using session data only:",
+              parseError
+            );
           }
         }
-
-        if (visionData) {
-          const parsedVisionData = JSON.parse(visionData);
-
-          // Map vision metrics to AI analysis format (DRY: Single source of truth)
-          enhancedSessionData = {
-            ...enhancedSessionData,
-            restlessnessScore: Math.round(
-              (1 - parsedVisionData.avg_movement_level) * 100
-            ),
-            bpm:
-              parsedVisionData.avg_breathing_rate ||
-              enhancedSessionData.breathHoldTime,
-            landmarks: parsedVisionData.total_frames,
-            // Add vision-specific data for AI analysis
-            visionMetrics: {
-              confidence: parsedVisionData.avg_confidence,
-              postureScore: parsedVisionData.avg_posture_score,
-              movementLevel: parsedVisionData.avg_movement_level,
-              stillnessPercentage: parsedVisionData.stillness_percentage,
-              consistencyScore: parsedVisionData.consistency_score,
-            },
-          };
-
-          console.log(
-            "Enhanced session data with vision metrics:",
-            enhancedSessionData
-          );
-        }
       } catch (error) {
-        // ENHANCED: Better error categorization and user feedback
-        const isTimeoutError =
-          error instanceof Error && error.name === "AbortError";
-        const isNetworkError =
-          error instanceof Error && error.message.includes("fetch");
-
-        console.warn("Failed to fetch vision data, using session data only:", {
-          error: error instanceof Error ? error.message : error,
-          isTimeoutError,
-          isNetworkError,
-        });
-
-        if (isTimeoutError) {
-          toast.warning("Vision analysis timed out - using session data only");
-        } else if (isNetworkError) {
-          toast.warning("Network error - using session data only");
-        } else {
-          toast.warning("Vision metrics unavailable - using session data only");
-        }
+        console.warn(
+          "Vision data fetch failed, continuing with session data:",
+          error
+        );
+        toast.warning("Vision analysis unavailable - using session data only");
       }
     }
 
-    setShowAIAnalysis(true);
+    // Use the existing analyzeSession function from the hook
     await analyzeSession(enhancedSessionData);
   };
 
@@ -1042,7 +994,8 @@ Check out Imperfect Breath!`;
                           if (
                             lowerMessage.includes("stillness") ||
                             lowerMessage.includes("focus") ||
-                            lowerMessage.includes("stats")
+                            lowerMessage.includes("stats") ||
+                            lowerMessage.includes("how was my")
                           ) {
                             const stillnessScore =
                               sessionData.restlessnessScore !== undefined
@@ -1059,7 +1012,9 @@ Check out Imperfect Breath!`;
                                   : stillnessScore >= 70
                                   ? "good"
                                   : "developing"
-                              } body awareness and focus. To improve this score, try finding a more comfortable seated position and focus on minimizing movement during your breathing cycles.\n\n— Dr. Breathe, Your Breathing Coach`;
+                              } body awareness and focus. You completed ${
+                                sessionData.cycleCount || 0
+                              } cycles with a ${stillnessScore}% stillness score. To improve this score, try finding a more comfortable seated position and focus on minimizing movement during your breathing cycles.\n\n— Dr. Breathe, Your Breathing Coach`;
                             }
                           }
 
@@ -1077,22 +1032,43 @@ Check out Imperfect Breath!`;
                                 : "emerging"
                             } breath control. For ${
                               sessionData.patternName || "your chosen pattern"
-                            }, focus on maintaining a smooth, steady rhythm throughout each phase. What specific aspect of your breathing would you like to improve?\n\n— Dr. Breathe, Your Breathing Coach`;
+                            }, you completed ${
+                              sessionData.cycleCount || 0
+                            } cycles with a ${
+                              sessionData.restlessnessScore !== undefined
+                                ? Math.max(
+                                    0,
+                                    100 - sessionData.restlessnessScore
+                                  )
+                                : "N/A"
+                            }% stillness score. Focus on maintaining a smooth, steady rhythm throughout each phase. What specific aspect of your breathing would you like to improve?\n\n— Dr. Breathe, Your Breathing Coach`;
                           }
 
                           if (
                             lowerMessage.includes("session") ||
                             lowerMessage.includes("practice") ||
-                            lowerMessage.includes("duration")
+                            lowerMessage.includes("duration") ||
+                            lowerMessage.includes("how was my")
                           ) {
                             const duration = sessionData.sessionDuration || 0;
                             const cycles = sessionData.cycleCount || 0;
+                            const stillnessScore =
+                              sessionData.restlessnessScore !== undefined
+                                ? Math.max(
+                                    0,
+                                    100 - sessionData.restlessnessScore
+                                  )
+                                : undefined;
 
                             return `Based on your actual session data, you practiced for ${Math.floor(
                               duration / 60
                             )} minutes and ${
                               duration % 60
-                            } seconds, completing ${cycles} breathing cycles. This shows real commitment to mindful breathing. Your ${cycles} completed cycles demonstrate ${
+                            } seconds, completing ${cycles} breathing cycles${
+                              stillnessScore !== undefined
+                                ? ` with a ${stillnessScore}% stillness score`
+                                : ""
+                            }. This shows real commitment to mindful breathing. Your ${cycles} completed cycles demonstrate ${
                               cycles >= 10
                                 ? "excellent"
                                 : cycles >= 5
@@ -1103,21 +1079,98 @@ Check out Imperfect Breath!`;
 
                           if (
                             lowerMessage.includes("cycle") ||
-                            lowerMessage.includes("cycles")
+                            lowerMessage.includes("cycles") ||
+                            lowerMessage.includes("improve")
                           ) {
                             const cycles = sessionData.cycleCount || 0;
                             const target = sessionData.targetCycles || 10;
                             const completionRate = Math.round(
                               (cycles / target) * 100
                             );
+                            const stillnessScore =
+                              sessionData.restlessnessScore !== undefined
+                                ? Math.max(
+                                    0,
+                                    100 - sessionData.restlessnessScore
+                                  )
+                                : undefined;
 
-                            return `Looking at your session data, you completed ${cycles} out of ${target} target cycles (${completionRate}% completion rate). This shows ${
+                            return `Looking at your session data, you completed ${cycles} out of ${target} target cycles (${completionRate}% completion rate)${
+                              stillnessScore !== undefined
+                                ? ` with a ${stillnessScore}% stillness score`
+                                : ""
+                            }. This shows ${
                               completionRate >= 80
                                 ? "excellent"
                                 : completionRate >= 60
                                 ? "good"
                                 : "solid"
                             } focus and endurance. To improve your cycle completion, try gradually increasing your target as you build stamina rather than pushing too hard too fast.\n\n— Dr. Breathe, Your Breathing Coach`;
+                          }
+
+                          if (
+                            lowerMessage.includes("recommend") ||
+                            lowerMessage.includes("improve") ||
+                            lowerMessage.includes("next step")
+                          ) {
+                            const cycles = sessionData.cycleCount || 0;
+                            const target = sessionData.targetCycles || 10;
+                            const completionRate = Math.round(
+                              (cycles / target) * 100
+                            );
+                            const stillnessScore =
+                              sessionData.restlessnessScore !== undefined
+                                ? Math.max(
+                                    0,
+                                    100 - sessionData.restlessnessScore
+                                  )
+                                : undefined;
+                            const duration = sessionData.sessionDuration || 0;
+
+                            const recommendations = [];
+
+                            if (completionRate < 80) {
+                              recommendations.push(
+                                "Gradually increase your target cycles as you build endurance"
+                              );
+                            }
+
+                            if (
+                              stillnessScore !== undefined &&
+                              stillnessScore < 70
+                            ) {
+                              recommendations.push(
+                                "Focus on finding a more comfortable, stable position to improve stillness"
+                              );
+                            }
+
+                            if (duration < 300) {
+                              recommendations.push(
+                                "Try extending your sessions to at least 5 minutes for deeper benefits"
+                              );
+                            }
+
+                            if (recommendations.length === 0) {
+                              recommendations.push(
+                                "Continue with your current excellent practice routine"
+                              );
+                              recommendations.push(
+                                "Try a different breathing pattern to challenge yourself"
+                              );
+                              recommendations.push(
+                                "Share your progress with the community for motivation"
+                              );
+                            }
+
+                            return `Based on your session data (completed ${cycles} cycles with ${
+                              stillnessScore !== undefined
+                                ? `${stillnessScore}% stillness`
+                                : "N/A stillness"
+                            }), here are my recommendations for improvement:\n\n${recommendations
+                              .map((rec, i) => `${i + 1}. ${rec}`)
+                              .join(
+                                "\n"
+                              )}\n\n— Dr. Breathe, Your Breathing Coach`;
                           }
 
                           // Default contextual response using actual data

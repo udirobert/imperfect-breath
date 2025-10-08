@@ -490,6 +490,67 @@ export class UnifiedAPIClient {
   }
 
   /**
+   * Stream AI analysis results
+   */
+  async analyzeSessionStreaming(provider: string, sessionData: any): Promise<ReadableStream<string>> {
+    try {
+      // Create a readable stream
+      const stream = new ReadableStream<string>({
+        async start(controller) {
+          try {
+            // Make request to streaming endpoint
+            const response = await fetch(`${config.services.ai.url}/api/ai-analysis-stream`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                provider,
+                session_data: sessionData,
+                analysis_type: 'session'
+              }),
+            });
+
+            if (!response.body) {
+              throw new Error('No response body');
+            }
+
+            // Read the stream
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                  controller.close();
+                  break;
+                }
+
+                // Decode the chunk and enqueue it
+                const chunk = decoder.decode(value, { stream: true });
+                controller.enqueue(chunk);
+              }
+            } catch (error) {
+              controller.error(error);
+            } finally {
+              reader.releaseLock();
+            }
+          } catch (error) {
+            controller.error(error);
+          }
+        }
+      });
+
+      return stream;
+    } catch (error) {
+      console.error('Streaming analysis failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Enhanced AI Analysis - HACKATHON: Cerebras integration
    */
   async enhancedAIAnalysis(data: any): Promise<APIResponse> {
@@ -1003,6 +1064,8 @@ export const api = {
     testConnection: (provider: string) => apiClient.testAIConnection(provider),
     getProviders: () => apiClient.getAvailableAIProviders(),
     getProviderInfo: (provider: string) => apiClient.getAIProviderInfo(provider),
+    // ADD STREAMING METHOD
+    analyzeSessionStreaming: (provider: string, data: any) => apiClient.analyzeSessionStreaming(provider, data),
   },
   vision: {
     process: (sessionId: string, data: any) => apiClient.processVision(sessionId, data),
