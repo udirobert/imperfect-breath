@@ -52,6 +52,7 @@ import { AIAnalysisErrorBoundary } from "../components/error/AIAnalysisErrorBoun
 
 // ENHANCED: Dr. Breathe AI Analysis Display
 import { EnhancedAIAnalysisDisplay } from "../components/ai/EnhancedAIAnalysisDisplay";
+import { StreamingIndicator } from "../components/ai/StreamingIndicator";
 import {
   EnhancedAnalysisService,
   EnhancedAnalysisRequest,
@@ -69,6 +70,7 @@ const Results = () => {
     results: analysesRaw,
     isAnalyzing,
     error,
+    streamingState,
   } = useSecureAIAnalysis();
 
   // ENHANCED: Robust safety checks with comprehensive validation
@@ -241,7 +243,7 @@ const Results = () => {
     }
 
     // Use the existing analyzeSession function from the hook
-    await analyzeSession(enhancedSessionData);
+    await analyzeSession('auto', enhancedSessionData);
   };
 
   // Using consolidated formatTime from utils
@@ -929,14 +931,23 @@ Check out Imperfect Breath!`;
           <div className="mb-8 w-full max-w-4xl">
             <AIAnalysisErrorBoundary>
               {isAnalyzing ? (
-                <Card>
-                  <CardContent className="flex items-center justify-center p-8">
-                    <div className="text-center space-y-4">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                      <p>Dr. Breathe is analyzing your session...</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="space-y-4">
+                  {/* Streaming Indicator */}
+                  <StreamingIndicator 
+                    streamingState={streamingState}
+                    className="mb-4"
+                  />
+                  
+                  {/* Fallback Loading State */}
+                  <Card>
+                    <CardContent className="flex items-center justify-center p-8">
+                      <div className="text-center space-y-4">
+                        <Loader2 className="w-8 h-8 animate-spin mx-auto" />
+                        <p>Dr. Breathe is analyzing your session...</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               ) : error ? (
                 <Card>
                   <CardContent className="p-6">

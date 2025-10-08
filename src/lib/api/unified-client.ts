@@ -493,61 +493,154 @@ export class UnifiedAPIClient {
    * Stream AI analysis results
    */
   async analyzeSessionStreaming(provider: string, sessionData: any): Promise<ReadableStream<string>> {
-    try {
-      // Create a readable stream
-      const stream = new ReadableStream<string>({
-        async start(controller) {
-          try {
-            // Make request to streaming endpoint
-            const response = await fetch(`${config.services.ai.url}/api/ai-analysis-stream`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                provider,
-                session_data: sessionData,
-                analysis_type: 'session'
-              }),
-            });
-
-            if (!response.body) {
-              throw new Error('No response body');
-            }
-
-            // Read the stream
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
+    const maxRetries = 3;
+    const timeoutMs = 30000; // 30 seconds
+    const retryDelays = [1000, 2000, 4000]; // Progressive backoff
+    
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Create a readable stream with enhanced error handling
+        const stream = new ReadableStream<string>({
+          async start(controller) {
+            let timeoutId: NodeJS.Timeout | null = null;
+            let abortController: AbortController | null = null;
+            
             try {
-              while (true) {
-                const { done, value } = await reader.read();
-                
-                if (done) {
-                  controller.close();
-                  break;
-                }
+              // Set up timeout and abort controller
+              abortController = new AbortController();
+              timeoutId = setTimeout(() => {
+                abortController?.abort();
+                controller.error(new Error(`Streaming timeout after ${timeoutMs}ms`));
+              }, timeoutMs);
 
-                // Decode the chunk and enqueue it
-                const chunk = decoder.decode(value, { stream: true });
-                controller.enqueue(chunk);
+              // Make request to streaming endpoint with abort signal
+              const response = await fetch(`${config.services.ai.url}/api/ai-analysis-stream`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  provider,
+                  session_data: sessionData,
+                  analysis_type: 'session',
+                  streaming_config: {
+                    timeout: timeoutMs,
+                    chunk_size: 1024,
+                    buffer_size: 4096
+                  }
+                }),
+                signal: abortController.signal
+              });
+
+              // Clear timeout on successful response
+              if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+
+              if (!response.body) {
+                throw new Error('No response body received from streaming endpoint');
+              }
+
+              // Read the stream with enhanced error handling
+              const reader = response.body.getReader();
+              const decoder = new TextDecoder();
+              let bytesReceived = 0;
+              let lastActivity = Date.now();
+              const activityTimeout = 10000; // 10 seconds of inactivity
+
+              // Set up activity monitoring
+              const activityCheck = setInterval(() => {
+                if (Date.now() - lastActivity > activityTimeout) {
+                  clearInterval(activityCheck);
+                  controller.error(new Error('Stream inactive for too long'));
+                }
+              }, 1000);
+
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  
+                  if (done) {
+                    clearInterval(activityCheck);
+                    controller.close();
+                    console.log(`✅ Streaming completed successfully. Total bytes: ${bytesReceived}`);
+                    break;
+                  }
+
+                  // Update activity tracking
+                  lastActivity = Date.now();
+                  bytesReceived += value.length;
+
+                  // Decode the chunk and enqueue it
+                  const chunk = decoder.decode(value, { stream: true });
+                  
+                  // Validate chunk before enqueueing
+                  if (chunk.trim()) {
+                    controller.enqueue(chunk);
+                  }
+                }
+              } catch (readError) {
+                clearInterval(activityCheck);
+                console.error('Stream reading error:', readError);
+                controller.error(readError);
+              } finally {
+                reader.releaseLock();
               }
             } catch (error) {
-              controller.error(error);
-            } finally {
-              reader.releaseLock();
+              // Clear timeout on error
+              if (timeoutId) {
+                clearTimeout(timeoutId);
+              }
+              
+              console.error(`Streaming attempt ${attempt + 1} failed:`, error);
+              
+              // Don't retry on abort (user cancelled)
+              if (error instanceof Error && error.name === 'AbortError') {
+                controller.error(new Error('Streaming cancelled by user'));
+                return;
+              }
+              
+              // Store error for potential retry
+              lastError = error instanceof Error ? error : new Error(String(error));
+              
+              // If this is not the last attempt, we'll retry
+              if (attempt < maxRetries) {
+                console.log(`Will retry streaming in ${retryDelays[attempt]}ms...`);
+                controller.error(new Error(`Streaming failed, retrying... (${attempt + 1}/${maxRetries})`));
+                return;
+              }
+              
+              // Final attempt failed
+              controller.error(lastError);
             }
-          } catch (error) {
-            controller.error(error);
           }
-        }
-      });
+        });
 
-      return stream;
-    } catch (error) {
-      console.error('Streaming analysis failed:', error);
-      throw error;
+        return stream;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.error(`Streaming setup attempt ${attempt + 1} failed:`, lastError);
+        
+        // If this is not the last attempt, wait and retry
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+          continue;
+        }
+        
+        // All attempts failed, throw the last error
+        throw lastError;
+      }
     }
+    
+    // This should never be reached, but TypeScript requires it
+    throw lastError || new Error('Streaming failed after all retry attempts');
   }
 
   /**
@@ -1064,7 +1157,6 @@ export const api = {
     testConnection: (provider: string) => apiClient.testAIConnection(provider),
     getProviders: () => apiClient.getAvailableAIProviders(),
     getProviderInfo: (provider: string) => apiClient.getAIProviderInfo(provider),
-    // ADD STREAMING METHOD
     analyzeSessionStreaming: (provider: string, data: any) => apiClient.analyzeSessionStreaming(provider, data),
   },
   vision: {

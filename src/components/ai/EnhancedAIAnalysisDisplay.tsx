@@ -37,6 +37,7 @@ import {
   Loader2,
   User,
 } from 'lucide-react';
+import { AIPersona } from '../../lib/ai/personas';
 
 interface ChatMessage {
   id: string;
@@ -65,6 +66,9 @@ interface EnhancedAIAnalysisProps {
     encouragement?: string;
     followUpQuestions?: string[];
     progressTrends?: string[];
+    // Persona-specific fields
+    persona?: AIPersona;
+    personaSpecificInsights?: string[];
   };
   patternName: string;
   onSendChatMessage?: (message: string) => Promise<string>;
@@ -214,6 +218,27 @@ export const EnhancedAIAnalysisDisplay: React.FC<EnhancedAIAnalysisProps> = ({
                   <Badge key={index} variant="outline" className="text-green-700 border-green-300">
                     {trend}
                   </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Persona-Specific Insights */}
+          {analysis.persona && analysis.personaSpecificInsights && analysis.personaSpecificInsights.length > 0 && (
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="text-2xl">{analysis.persona.avatar.emoji}</div>
+                <div>
+                  <h4 className="font-semibold text-amber-800">{analysis.persona.name}'s Perspective</h4>
+                  <p className="text-sm text-amber-600">{analysis.persona.personality.communication}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {analysis.personaSpecificInsights.map((insight, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-amber-800 text-sm leading-relaxed">{insight}</p>
+                  </div>
                 ))}
               </div>
             </div>

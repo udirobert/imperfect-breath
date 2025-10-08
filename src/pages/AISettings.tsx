@@ -29,11 +29,15 @@ import { toast } from "sonner";
 import { IntegrationStatus } from "@/components/integration/IntegrationStatus";
 import { SystemHealthMonitor } from "@/components/monitoring/SystemHealthMonitor";
 import { apiClient } from "@/lib/api/unified-client";
+import PersonaSelector from "@/components/ai/PersonaSelector";
+import { PersonaType } from "@/lib/ai/personas";
 
 const AISettings = () => {
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<Record<string, boolean>>({});
+  const [selectedPersona, setSelectedPersona] = useState<PersonaType>('dr_breathe');
+  const [userTier, setUserTier] = useState<'free' | 'premium'>('free'); // TODO: Get from auth context
   const [trialStatus, setTrialStatus] = useState<{
     usageCount: number;
     isExhausted: boolean;
@@ -241,13 +245,22 @@ const AISettings = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="providers" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="personas" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="personas">AI Coaches</TabsTrigger>
           <TabsTrigger value="providers">API Providers</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="system">System Health</TabsTrigger>
           <TabsTrigger value="about">About AI Analysis</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="personas" className="space-y-6">
+          <PersonaSelector
+            selectedPersona={selectedPersona}
+            userTier={userTier}
+            onPersonaSelect={setSelectedPersona}
+          />
+        </TabsContent>
 
         <TabsContent value="providers" className="space-y-6">
           <div className="grid gap-6">

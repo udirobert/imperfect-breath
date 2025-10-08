@@ -3,6 +3,10 @@ import { api } from '../lib/api/unified-client';
 import type { SecureAIProvider, AIAnalysisResponse, SessionData } from '../lib/ai/config';
 import { EnhancedAnalysisService, performEnhancedAnalysis } from '../lib/ai/enhanced-analysis-service';
 import type { EnhancedAnalysisResponse } from '../lib/ai/enhanced-analysis-service';
+import { AI_PERSONAS, type AIPersona } from '../lib/ai/personas';
+import { useAIFeatureAccess } from './useSubscriptionAccess';
+import { providerFallbackManager } from '../lib/ai/provider-fallback';
+import { streamingMetricsManager } from '../lib/ai/streaming-metrics';
 
 interface SecureAIAnalysisResult extends AIAnalysisResponse {
   provider: string;
@@ -16,65 +20,91 @@ interface SecureAIAnalysisResult extends AIAnalysisResponse {
   progressTrends?: string[];
 }
 
-// HELPER: Maps actual provider identifiers to user-friendly display names
-const getProviderDisplayName = (providerId: string): string => {
-  const displayNames: Record<string, string> = {
-    'cerebras': 'Cerebras AI Analysis',
-    'openai': 'OpenAI GPT Analysis',
-    'anthropic': 'Claude AI Analysis',
-    'google': 'Google Gemini Analysis',
-    'fallback': 'Basic Analysis',
-    'hetzner': 'Hetzner AI Service',
-    'auto': 'Smart AI Analysis'
+// Enhanced streaming state interface
+interface StreamingState {
+  isStreaming: boolean;
+  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  progress: {
+    bytesReceived: number;
+    chunksProcessed: number;
+    estimatedProgress: number; // 0-100
   };
+  retryAttempt: number;
+  maxRetries: number;
+}
 
-  return displayNames[providerId] || `${providerId.charAt(0).toUpperCase()}${providerId.slice(1)} Analysis`;
+const getProviderDisplayName = (providerId: string): string => {
+  const providerNames: Record<string, string> = {
+    'openai': 'OpenAI GPT',
+    'anthropic': 'Anthropic Claude',
+    'google': 'Google Gemini',
+    'cerebras': 'Cerebras Llama',
+    'auto': 'Auto-Select',
+    'fallback': 'Enhanced Fallback'
+  };
+  
+  return providerNames[providerId] || providerId;
 };
 
 export const useSecureAIAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<SecureAIAnalysisResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // Enhanced streaming state
+  const [streamingState, setStreamingState] = useState<StreamingState>({
+    isStreaming: false,
+    connectionStatus: 'disconnected',
+    progress: {
+      bytesReceived: 0,
+      chunksProcessed: 0,
+      estimatedProgress: 0
+    },
+    retryAttempt: 0,
+    maxRetries: 3
+  });
 
-  const analyzeWithProvider = useCallback(async (
-    provider: SecureAIProvider,
-    sessionData: SessionData
-  ): Promise<SecureAIAnalysisResult> => {
-    try {
-      const response = await api.ai.analyzeSession(provider, {
-        pattern: sessionData.patternName,
-        duration: sessionData.sessionDuration,
-        averageBpm: sessionData.bpm,
-        consistencyScore: sessionData.visionMetrics?.consistencyScore,
-        restlessnessScore: sessionData.restlessnessScore,
-        breathHoldDuration: sessionData.breathHoldTime
-      });
-
-      if (!response.success) {
-        throw new Error(response.error || 'Analysis failed');
-      }
-
-      return {
-        ...response.data,
-        provider: api.ai.getProviderInfo(provider)?.name || provider
-      };
-    } catch (error) {
-      console.error(`${provider} analysis failed:`, error);
-      return {
-        provider: api.ai.getProviderInfo(provider)?.name || provider,
-        analysis: 'Analysis failed - using fallback response',
-        suggestions: ['Continue practicing regularly', 'Focus on consistency'],
-        score: { overall: 0, focus: 0, consistency: 0, progress: 0 },
-        nextSteps: ['Try again later', 'Check your connection'],
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
+  const resetStreamingState = useCallback(() => {
+    setStreamingState({
+      isStreaming: false,
+      connectionStatus: 'disconnected',
+      progress: {
+        bytesReceived: 0,
+        chunksProcessed: 0,
+        estimatedProgress: 0
+      },
+      retryAttempt: 0,
+      maxRetries: 3
+    });
   }, []);
 
-  const analyzeSession = useCallback(async (sessionData: SessionData) => {
+  const updateStreamingProgress = useCallback((update: Partial<StreamingState>) => {
+    setStreamingState(prev => ({
+      ...prev,
+      ...update,
+      progress: {
+        ...prev.progress,
+        ...update.progress
+      }
+    }));
+  }, []);
+
+  const analyzeSession = useCallback(async (
+    provider: SecureAIProvider,
+    sessionData: SessionData
+  ) => {
+    // Check subscription access for AI analysis
+    const { canUseAIAnalysis, canUseStreamingFeedback, subscriptionTier } = useAIFeatureAccess();
+    
+    if (!canUseAIAnalysis) {
+      setError('AI analysis requires a Premium or Pro subscription');
+      return;
+    }
+
     setIsAnalyzing(true);
-    setResults([]);
     setError(null);
+    setResults([]);
+    resetStreamingState();
 
     try {
       console.log('🤖 Starting enhanced AI analysis with data:', sessionData);
@@ -88,125 +118,238 @@ export const useSecureAIAnalysis = () => {
         includeFollowUpQuestions: true
       });
 
-      console.log('🧠 Enhanced analysis context prepared:', enhancedAnalysis.context);
+      // Add missing persona and userTier to context
+      const enhancedContext = {
+        ...enhancedAnalysis.context,
+        persona: AI_PERSONAS.dr_breathe, // Default persona
+        userTier: subscriptionTier as 'free' | 'premium' | 'pro'
+      };
 
-      // Try streaming first, fallback to regular analysis
-      try {
-        // Check if streaming is supported
-        if (api.ai.analyzeSessionStreaming) {
-          console.log('🔄 Starting streaming AI analysis');
-          
-          // Use streaming API
-          const stream = await api.ai.analyzeSessionStreaming('auto', {
-            ...sessionData,
-            enhancedPrompts: enhancedAnalysis.prompts,
-            analysisContext: enhancedAnalysis.context,
-            performanceInsights: enhancedAnalysis.insights,
-            progressiveRecommendations: enhancedAnalysis.recommendations
-          });
+      console.log('🧠 Enhanced analysis context prepared:', enhancedContext);
 
-          const reader = stream.getReader();
-          let accumulatedData = '';
-          
+      // Use provider fallback manager for intelligent provider selection
+      let selectedProvider: SecureAIProvider;
+      if (provider === 'auto') {
+        selectedProvider = await providerFallbackManager.getOptimalProvider(canUseStreamingFeedback);
+      } else {
+        selectedProvider = provider;
+      }
+
+      console.log(`🔄 Selected provider: ${selectedProvider}`);
+
+      // Create metrics collector for this session
+      const sessionId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const metricsCollector = streamingMetricsManager.createCollector(
+        sessionId,
+        undefined, // userId - could be added from context
+        selectedProvider,
+        'ai/analyze-session-streaming'
+      );
+
+      // Execute analysis with fallback support
+      await providerFallbackManager.executeWithFallback(async (fallbackProvider) => {
+        // Try streaming first, fallback to regular analysis
+        if (canUseStreamingFeedback) {
           try {
-            while (true) {
-              const { done, value } = await reader.read();
+            // Check if streaming is supported
+            if (api.ai.analyzeSessionStreaming) {
+              console.log('🔄 Starting streaming AI analysis');
               
-              if (done) {
-                break;
-              }
+              // Start metrics collection
+              metricsCollector.startCollection();
               
-              // Process streaming data
-              accumulatedData += value;
+              // Update streaming state
+              updateStreamingProgress({
+                isStreaming: true,
+                connectionStatus: 'connecting',
+                progress: { 
+                  bytesReceived: 0,
+                  chunksProcessed: 0,
+                  estimatedProgress: 5 
+                }
+              });
               
-              // Try to parse complete JSON objects from the stream
+              // Use streaming API with fallback provider
+              const stream = await api.ai.analyzeSessionStreaming(fallbackProvider, {
+                ...sessionData,
+                enhancedPrompts: enhancedAnalysis.prompts,
+                analysisContext: enhancedContext,
+                performanceInsights: enhancedAnalysis.insights,
+                progressiveRecommendations: enhancedAnalysis.recommendations
+              });
+
+              // Record connection established
+              metricsCollector.recordConnectionEstablished();
+
+              updateStreamingProgress({
+                connectionStatus: 'connected',
+                progress: { 
+                  bytesReceived: 0,
+                  chunksProcessed: 0,
+                  estimatedProgress: 10 
+                }
+              });
+
+              const reader = stream.getReader();
+              let accumulatedData = '';
+              let chunksProcessed = 0;
+              let bytesReceived = 0;
+              let firstByteReceived = false;
+              
               try {
-                // Handle Server-Sent Events format
-                const lines = accumulatedData.split('\n\n');
+                while (true) {
+                  const { done, value } = await reader.read();
+                  
+                  if (done) {
+                    updateStreamingProgress({
+                      connectionStatus: 'disconnected',
+                      progress: { 
+                        bytesReceived,
+                        chunksProcessed,
+                        estimatedProgress: 100 
+                      }
+                    });
+                    
+                    // Finalize metrics collection
+                    const metrics = metricsCollector.endCollection(true);
+                    console.log('📊 Streaming metrics:', metrics);
+                    
+                    break;
+                  }
+                  
+                  // Record first byte if this is the first chunk
+                  if (!firstByteReceived) {
+                    metricsCollector.recordFirstByte();
+                    firstByteReceived = true;
+                  }
+                  
+                  // Record chunk received
+                  metricsCollector.recordChunkReceived(value.length);
+                  
+                  // Update progress tracking
+                  bytesReceived += value.length;
+                  chunksProcessed++;
+                  const estimatedProgress = Math.min(95, 10 + (chunksProcessed * 5));
                 
-                // Process all complete lines
-                for (let i = 0; i < lines.length - 1; i++) {
-                  const line = lines[i].trim();
-                  if (line.startsWith('data: ')) {
-                    const data = line.substring(6);
+                  updateStreamingProgress({
+                    progress: {
+                      bytesReceived,
+                      chunksProcessed,
+                      estimatedProgress
+                    }
+                  });
+                  
+                  // Process streaming data
+                  accumulatedData += value;
+                  
+                  // Try to parse complete JSON objects from the stream
+                  try {
+                    const lines = accumulatedData.split('\n');
                     
-                    if (data === '[DONE]') {
-                      console.log('✅ Streaming analysis completed');
-                      break;
+                    for (let i = 0; i < lines.length - 1; i++) {
+                      const line = lines[i].trim();
+                      if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+                        const jsonStr = line.substring(6);
+                        const parsed = JSON.parse(jsonStr);
+                        
+                        // Get provider info
+                        const actualProvider = parsed.provider || 'auto';
+                        const providerName = getProviderDisplayName(actualProvider);
+                        
+                        // Validate and enhance the response
+                        const enhancedResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
+                          parsed,
+                          enhancedContext
+                        );
+
+                        const result: SecureAIAnalysisResult = {
+                          ...enhancedResponse,
+                          provider: actualProvider,
+                          providerDisplayName: providerName,
+                        };
+
+                        setResults([result]);
+                        console.log(`✅ ${providerName} streaming analysis updated:`, result);
+                        
+                        // Update progress to near completion
+                        updateStreamingProgress({
+                          progress: { 
+                            bytesReceived,
+                            chunksProcessed,
+                            estimatedProgress: 90 
+                          }
+                        });
+                      }
                     }
                     
-                    // Try to parse the JSON data
-                    const parsed = JSON.parse(data);
-                    
-                    if (parsed.error) {
-                      throw new Error(parsed.error);
-                    }
-                    
-                    // Transform the response
-                    const actualProvider = parsed.metadata?.provider || 'auto';
-                    const providerName = getProviderDisplayName(actualProvider);
-                    
-                    // ENHANCED: Validate and enhance the response with our analysis service
-                    const enhancedResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
-                      parsed,
-                      enhancedAnalysis.context
-                    );
-
-                    const result: SecureAIAnalysisResult = {
-                      ...enhancedResponse,
-                      provider: actualProvider,
-                      providerDisplayName: providerName,
-                    };
-
-                    setResults([result]);
-                    console.log(`✅ ${providerName} streaming analysis updated:`, result);
+                    // Keep the last incomplete line
+                    accumulatedData = lines[lines.length - 1];
+                  } catch (parseError) {
+                    // Continue accumulating data until we have complete JSON
+                    console.log('🔄 Accumulating streaming data...');
                   }
                 }
                 
-                // Keep the last incomplete line
-                accumulatedData = lines[lines.length - 1];
-              } catch (parseError) {
-                // Continue accumulating data until we have complete JSON
-                console.log('🔄 Accumulating streaming data...');
+                // If we successfully streamed, we're done
+                resetStreamingState();
+                return;
+              } catch (streamError) {
+                console.error('Stream reading error:', streamError);
+                
+                // Record error in metrics
+                metricsCollector.recordError(streamError instanceof Error ? streamError.message : 'Unknown stream error');
+                
+                updateStreamingProgress({
+                  connectionStatus: 'error'
+                });
+                
+                // Finalize metrics with error
+                const metrics = metricsCollector.endCollection(false);
+                console.log('📊 Streaming metrics (with error):', metrics);
+                
+                // Throw error to trigger fallback
+                throw streamError;
+              } finally {
+                reader.releaseLock();
               }
             }
+          } catch (streamError) {
+            console.warn('Streaming analysis failed, falling back to regular analysis:', streamError);
             
-            // If we successfully streamed, we're done
-            return;
-          } finally {
-            reader.releaseLock();
+            // Record retry in metrics if collector exists
+            if (metricsCollector) {
+              metricsCollector.recordRetry();
+            }
+            
+            updateStreamingProgress({
+              connectionStatus: 'error'
+            });
+            
+            // Set a brief delay to show the error state
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
-      } catch (streamError) {
-        console.warn('Streaming analysis failed, falling back to regular analysis:', streamError);
-      }
 
-      // Send enhanced request to backend (fallback to non-streaming)
-      const response = await api.ai.analyzeSession('auto', {
-        ...sessionData,
-        enhancedPrompts: enhancedAnalysis.prompts,
-        analysisContext: enhancedAnalysis.context,
-        performanceInsights: enhancedAnalysis.insights,
-        progressiveRecommendations: enhancedAnalysis.recommendations
-      });
+        // Reset streaming state for fallback
+        resetStreamingState();
 
-      console.log('📥 Enhanced AI analysis response:', response);
+        // Fallback to regular analysis with fallback provider
+        const response = await api.ai.analyzeSession(fallbackProvider, {
+          ...sessionData,
+          enhancedPrompts: enhancedAnalysis.prompts,
+          analysisContext: enhancedContext,
+          performanceInsights: enhancedAnalysis.insights,
+          progressiveRecommendations: enhancedAnalysis.recommendations
+        });
 
-      if (response.success && response.data) {
-        // Normalize the response format
-        const normalizedData = response.data.result ? response.data.result : response.data;
-
-        // USE ACTUAL PROVIDER FROM RESPONSE - no more lying to users!
-        const actualProvider = response.metadata?.provider ||
-          response.data.provider ||
-          'fallback';
-
+        // Get provider info
+        const actualProvider = fallbackProvider;
         const providerName = getProviderDisplayName(actualProvider);
 
-        // ENHANCED: Validate and enhance the response with our analysis service
+        // Validate and enhance the response
         const enhancedResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
-          normalizedData,
-          enhancedAnalysis.context
+          response,
+          enhancedContext
         );
 
         const result: SecureAIAnalysisResult = {
@@ -216,37 +359,46 @@ export const useSecureAIAnalysis = () => {
         };
 
         setResults([result]);
-        console.log(`✅ ${providerName} enhanced analysis successful:`, result);
-      } else {
-        const errorMsg = response.error || 'Analysis failed - no data returned';
-        setError(errorMsg);
-        console.error('❌ AI analysis failed:', errorMsg);
-      }
+        console.log(`✅ ${providerName} analysis completed:`, result);
+      });
     } catch (error) {
       console.error('❌ AI analysis error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
       setError(errorMsg);
 
-      // ENHANCED: Provide intelligent fallback with pattern-specific guidance
+      // ENHANCED: Intelligent fallback analysis
       const enhancedSessionData = EnhancedAnalysisService.transformSessionData(sessionData);
-      const fallbackAnalysis = await performEnhancedAnalysis({
+      const fallbackContext = {
         sessionData: enhancedSessionData,
-        includeFollowUpQuestions: false
-      });
+        persona: AI_PERSONAS.dr_breathe,
+        userTier: 'free' as const
+      };
 
-      // Use the enhanced session data which includes cycleCount
-      const cycleCount = enhancedSessionData.cycleCount || 0;
-      const targetCycles = enhancedSessionData.targetCycles || 10;
-      const completionRate = targetCycles > 0 ? (cycleCount / targetCycles) * 100 : 0;
-      const stillnessScore = enhancedSessionData.restlessnessScore !== undefined ? 
-        Math.max(0, 100 - enhancedSessionData.restlessnessScore) : 70;
+      // Generate intelligent fallback based on session data
+      const cycleCount = (sessionData as any).cycleCount || 0;
+      const stillnessScore = 100 - ((sessionData as any).restlessnessScore || 50);
+      const completionRate = (sessionData as any).targetCycles ? 
+        Math.min(100, (cycleCount / (sessionData as any).targetCycles) * 100) : 75;
 
       const fallbackResponse = EnhancedAnalysisService.validateAndEnhanceResponse(
         {
-          analysis: `Based on your actual session data: You completed ${cycleCount} cycles with ${Math.round(stillnessScore)}% stillness. ${completionRate >= 80 ? 'Excellent cycle completion!' : completionRate >= 60 ? 'Good cycle completion with room for improvement.' : 'Focus on building endurance for better cycle completion.'}`,
-          suggestions: fallbackAnalysis.recommendations.slice(0, 3),
-          score: { 
-            overall: Math.min(100, Math.max(30, Math.round((stillnessScore + completionRate + (enhancedSessionData.sessionDuration ? (enhancedSessionData.sessionDuration / 600) * 100 : 50)) / 3))),
+          provider: 'fallback',
+          analysis: `Based on your session data: You completed ${cycleCount} breathing cycles with a stillness score of ${stillnessScore}%. ${
+            completionRate > 80 ? 'Excellent completion rate!' : 
+            completionRate > 60 ? 'Good progress on your breathing practice.' :
+            'Keep practicing to improve your completion rate.'
+          } Your breathing pattern shows ${
+            stillnessScore > 80 ? 'excellent focus and stillness' :
+            stillnessScore > 60 ? 'good concentration with room for improvement' :
+            'developing focus - try to minimize movement during practice'
+          }.`,
+          suggestions: [
+            stillnessScore < 70 ? 'Focus on maintaining stillness throughout your practice' : 'Continue developing your excellent stillness',
+            completionRate < 80 ? 'Try to complete more breathing cycles in each session' : 'Consider increasing your cycle targets',
+            'Practice daily for consistent improvement'
+          ],
+          score: {
+            overall: Math.min(100, Math.max(40, Math.round((stillnessScore + completionRate) / 2))),
             focus: Math.min(100, Math.max(30, Math.round(stillnessScore))),
             consistency: Math.min(100, Math.max(30, Math.round(completionRate))),
             progress: Math.min(100, Math.max(30, Math.round(cycleCount * 10)))
@@ -257,7 +409,11 @@ export const useSecureAIAnalysis = () => {
             stillnessScore < 70 ? 'Focus on posture and stillness' : 'Continue developing your stillness'
           ]
         },
-        fallbackAnalysis.context
+        {
+          ...fallbackContext,
+          patternExpertise: null, // No specific pattern expertise for fallback analysis
+          experienceLevel: 'beginner'
+        }
       );
 
       setResults([{
@@ -268,8 +424,9 @@ export const useSecureAIAnalysis = () => {
       }]);
     } finally {
       setIsAnalyzing(false);
+      resetStreamingState();
     }
-  }, []);
+  }, [resetStreamingState, updateStreamingProgress]);
 
   const testConnections = useCallback(async () => {
     try {
@@ -292,7 +449,7 @@ export const useSecureAIAnalysis = () => {
   }, []);
 
   const generatePattern = useCallback(async (
-    provider: SecureAIProvider,
+    provider: SecureAIProvider | 'auto',
     sessionData: Partial<SessionData> & { experienceLevel?: string }
   ) => {
     try {
@@ -320,7 +477,11 @@ export const useSecureAIAnalysis = () => {
     testConnections,
     isAnalyzing,
     results,
-    error
+    error,
+    // Enhanced streaming state
+    streamingState,
+    resetStreamingState,
+    updateStreamingProgress
   };
 };
 

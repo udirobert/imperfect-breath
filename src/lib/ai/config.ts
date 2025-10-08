@@ -118,6 +118,11 @@ export const AI_CONFIG = {
       name: 'Anthropic Claude',
       model: 'claude-3-haiku-20240307',
       enabled: true
+    },
+    auto: {
+      name: 'Auto-Select',
+      model: 'auto-select',
+      enabled: true
     }
   },
 
@@ -162,6 +167,41 @@ export class AIConfigManager {
    */
   static isSecureStorageSupported(): boolean {
     return TieredStorageManager.isSecureStorageSupported();
+  }
+
+  /**
+   * Get API key for a provider
+   */
+  static async getApiKey(provider: string): Promise<string | null> {
+    try {
+      return await TieredStorageManager.getAPIKey(provider);
+    } catch (error) {
+      console.warn(`Failed to get API key for ${provider}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Set API key for a provider
+   */
+  static async setApiKey(provider: string, apiKey: string): Promise<void> {
+    try {
+      await TieredStorageManager.setAPIKey(provider, apiKey);
+    } catch (error) {
+      console.error(`Failed to set API key for ${provider}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove API key for a provider
+   */
+  static removeApiKey(provider: string): void {
+    try {
+      TieredStorageManager.removeAPIKey(provider);
+    } catch (error) {
+      console.warn(`Failed to remove API key for ${provider}:`, error);
+    }
   }
 }
 

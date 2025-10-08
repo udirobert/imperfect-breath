@@ -15,7 +15,7 @@ import {
 } from "@revenuecat/purchases-capacitor";
 
 // Type definitions for better type safety
-interface SubscriptionStatus {
+export interface SubscriptionStatus {
   tier: string;
   isActive: boolean;
   expiresAt?: Date;
@@ -80,6 +80,8 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     features: [
       "All Basic features",
       "AI coaching with Zen agent",
+      "AI session analysis with scientific insights",
+      "Streaming AI feedback during sessions",
       "Cloud synchronization",
       "Advanced breathing patterns",
       "Detailed session analytics",
@@ -95,6 +97,8 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     description: "Web3 features, NFTs, and instructor tools",
     features: [
       "All Premium features",
+      "Advanced AI analysis with persona insights",
+      "Real-time streaming performance metrics",
       "NFT creation and minting",
       "Web3 social features",
       "Instructor certification",
@@ -378,6 +382,10 @@ export class RevenueCatService {
     // Feature mapping
     const featureMap: { [key: string]: string[] } = {
       ai_coaching: ["premium", "pro"],
+      ai_analysis: ["premium", "pro"],
+      streaming_feedback: ["premium", "pro"],
+      streaming_metrics: ["pro"],
+      persona_insights: ["pro"],
       cloud_sync: ["premium", "pro"],
       custom_patterns: ["premium", "pro"],
       nft_creation: ["pro"],

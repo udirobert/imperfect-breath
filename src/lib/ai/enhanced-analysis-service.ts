@@ -17,12 +17,25 @@ import {
   getPatternExpertise,
   assessExperienceLevel
 } from './breathing-expertise';
+import {
+  PersonaType,
+  AIPersona,
+  getPersona,
+  getRecommendedPersona,
+  generatePersonaSystemPrompt
+} from './personas';
+import {
+  ScientificBackingService,
+  ScientificBacking
+} from './scientific-backing-service';
 
 export interface EnhancedAnalysisRequest {
   sessionData: EnhancedSessionData;
   previousSessions?: EnhancedSessionData[];
   userGoals?: string[];
   includeFollowUpQuestions?: boolean;
+  selectedPersona?: PersonaType;
+  userTier?: 'free' | 'premium' | 'pro';
 }
 
 export interface EnhancedAnalysisResponse {
@@ -43,6 +56,23 @@ export interface EnhancedAnalysisResponse {
   encouragement?: string;
   followUpQuestions?: string[];
   progressTrends?: string[];
+  // Persona-specific fields
+  persona: AIPersona;
+  personaSpecificInsights?: string[];
+  scientificBacking?: {
+    sources: Array<{
+      title: string;
+      url: string;
+      authors?: string[];
+      journal?: string;
+      year?: number;
+      relevanceScore: number;
+      summary: string;
+    }>;
+    claims: string[];
+    confidence?: number;
+    lastUpdated?: string;
+  };
 }
 
 /**
@@ -52,8 +82,12 @@ export class EnhancedAnalysisService {
   /**
    * Prepare enhanced analysis context from session data
    */
-  static prepareAnalysisContext(request: EnhancedAnalysisRequest): AnalysisContext {
-    const { sessionData, previousSessions, userGoals } = request;
+  static prepareAnalysisContext(request: EnhancedAnalysisRequest): AnalysisContext & { persona: AIPersona; userTier: 'free' | 'premium' | 'pro' } {
+    const { sessionData, previousSessions, userGoals, selectedPersona, userTier = 'free' } = request;
+
+    // Determine the persona to use
+    const personaId = selectedPersona || getRecommendedPersona(userGoals || [], sessionData, userTier);
+    const persona = getPersona(personaId);
 
     // Get pattern expertise
     const patternExpertise = getPatternExpertise(sessionData.patternName);
@@ -73,20 +107,25 @@ export class EnhancedAnalysisService {
       patternExpertise,
       experienceLevel,
       previousSessions,
-      userGoals
+      userGoals,
+      persona,
+      userTier
     };
   }
 
   /**
    * Generate enhanced prompts for AI analysis
    */
-  static generateEnhancedPrompts(context: AnalysisContext): {
+  static generateEnhancedPrompts(context: AnalysisContext & { persona: AIPersona; userTier: 'free' | 'premium' | 'pro' }): {
     systemPrompt: string;
     analysisPrompt: string;
     followUpQuestions: string[];
   } {
+    // Use persona-specific system prompt instead of generic one
+    const systemPrompt = generatePersonaSystemPrompt(context.persona);
+    
     return {
-      systemPrompt: generateEnhancedSystemPrompt(),
+      systemPrompt,
       analysisPrompt: generateSessionAnalysisPrompt(context),
       followUpQuestions: generateFollowUpQuestions(context)
     };
@@ -114,9 +153,9 @@ export class EnhancedAnalysisService {
    */
   static validateAndEnhanceResponse(
     rawResponse: any,
-    context: AnalysisContext
+    context: AnalysisContext & { persona: AIPersona; userTier: 'free' | 'premium' | 'pro' }
   ): EnhancedAnalysisResponse {
-    const { patternExpertise, experienceLevel, sessionData } = context;
+    const { patternExpertise, experienceLevel, sessionData, persona } = context;
     const result = rawResponse.result || rawResponse;
 
     // Calculate actual scores based on session data if not provided by AI
@@ -132,10 +171,14 @@ export class EnhancedAnalysisService {
     const durationScore = sessionData.sessionDuration ? 
       Math.min(100, Math.max(30, (sessionData.sessionDuration / 600) * 100)) : 50;
 
+    // Generate persona-specific insights
+    const personaSpecificInsights = this.generatePersonaSpecificInsights(sessionData, context.persona);
+
     // Ensure response has all required fields with actual data
     const enhancedResponse: EnhancedAnalysisResponse = {
       provider: result.provider || 'openai',
       providerDisplayName: result.providerDisplayName || 'OpenAI',
+      persona,
       analysis: result.analysis || result.insights || 
         `Based on your actual session data: You completed ${cycleCount} cycles with ${Math.round(stillnessScore)}% stillness. ${cycleCompletionRate >= 80 ? 'Excellent cycle completion!' : cycleCompletionRate >= 60 ? 'Good cycle completion with room for improvement.' : 'Focus on building endurance for better cycle completion.'}`,
       suggestions: Array.isArray(result.suggestions) ? result.suggestions : [
@@ -166,8 +209,44 @@ export class EnhancedAnalysisService {
       progressTrends: result.progressTrends
     };
 
+    // Add persona-specific fields
+    enhancedResponse.persona = context.persona;
+    enhancedResponse.personaSpecificInsights = [this.generatePersonaSpecificInsights(sessionData, context.persona)];
+    
+    // Add basic scientific backing (Perplexity integration will be added separately)
+    enhancedResponse.scientificBacking = {
+      sources: [],
+      claims: [enhancedResponse.scientificInsights],
+      confidence: 75,
+      lastUpdated: new Date().toISOString()
+    };
+
     return enhancedResponse;
   }
+
+  /**
+   * Generate persona-specific insights based on the selected AI coach
+   */
+  static generatePersonaSpecificInsights(sessionData: EnhancedSessionData, persona: AIPersona): string {
+     const { stillnessScore = 0, cycleCount = 0, patternName = 'breathing practice' } = sessionData;
+     
+     switch (persona.id) {
+       case 'zen':
+         return `🌸 From Zen's perspective: Your ${patternName} session shows beautiful harmony between breath and blockchain wellness. The ${Math.round(stillnessScore)}% stillness reflects your growing connection to the present moment. Each of your ${cycleCount} cycles is like minting a moment of peace on the wellness blockchain! 🧘‍♀️✨`;
+         
+       case 'dr_breathe':
+         return `🔬 Dr. Breathe's clinical analysis: Your session demonstrates measurable physiological benefits. The ${Math.round(stillnessScore)}% stillness score indicates effective parasympathetic activation, while completing ${cycleCount} cycles suggests improved respiratory control and vagal tone regulation.`;
+         
+       case 'performance':
+         return `🏆 Coach Peak's performance insight: Outstanding effort! Your ${Math.round(stillnessScore)}% stillness shows elite-level focus control. Those ${cycleCount} cycles are building your respiratory fitness foundation. You're training your breath like an athlete - keep pushing those performance boundaries!`;
+         
+       case 'mindful':
+         return `🕯️ Sage Serenity's wisdom: In the gentle rhythm of your ${patternName}, I see the ancient dance of breath and consciousness. Your ${Math.round(stillnessScore)}% stillness speaks to a deepening awareness, while each of your ${cycleCount} cycles carries you closer to inner harmony. The path of mindful breathing unfolds naturally.`;
+         
+       default:
+         return `Your ${patternName} practice shows meaningful progress with ${Math.round(stillnessScore)}% stillness and ${cycleCount} completed cycles.`;
+     }
+   }
 
   /**
    * Generate performance insights based on metrics

@@ -261,7 +261,17 @@ export const BREATHING_EXPERTISE: Record<string, BreathingPatternExpertise> = {
  * Get expertise for a specific breathing pattern
  */
 export function getPatternExpertise(patternName: string): BreathingPatternExpertise | null {
-  return BREATHING_EXPERTISE[patternName] || null;
+  // First try direct lookup by name
+  if (BREATHING_EXPERTISE[patternName]) {
+    return BREATHING_EXPERTISE[patternName];
+  }
+  
+  // If not found, try to find by matching the name or id
+  const expertise = Object.values(BREATHING_EXPERTISE).find(
+    pattern => pattern.name === patternName || pattern.id === patternName
+  );
+  
+  return expertise || null;
 }
 
 /**

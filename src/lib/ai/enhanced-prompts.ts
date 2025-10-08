@@ -23,6 +23,7 @@ export interface AnalysisContext {
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
   previousSessions?: EnhancedSessionData[];
   userGoals?: string[];
+  userTier?: 'free' | 'premium' | 'pro';
 }
 
 /**
