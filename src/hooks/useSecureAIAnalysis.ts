@@ -51,6 +51,9 @@ export const useSecureAIAnalysis = () => {
   const [results, setResults] = useState<SecureAIAnalysisResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   
+  // Move hook call to top level to fix React error #321
+  const { canUseAIAnalysis, canUseStreamingFeedback, subscriptionTier } = useAIFeatureAccess();
+  
   // Enhanced streaming state
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
@@ -93,9 +96,7 @@ export const useSecureAIAnalysis = () => {
     provider: SecureAIProvider,
     sessionData: SessionData
   ) => {
-    // Check subscription access for AI analysis
-    const { canUseAIAnalysis, canUseStreamingFeedback, subscriptionTier } = useAIFeatureAccess();
-    
+    // Check subscription access for AI analysis (values from hook at top level)
     if (!canUseAIAnalysis) {
       setError('AI analysis requires a Premium or Pro subscription');
       return;
@@ -426,7 +427,7 @@ export const useSecureAIAnalysis = () => {
       setIsAnalyzing(false);
       resetStreamingState();
     }
-  }, [resetStreamingState, updateStreamingProgress]);
+  }, [resetStreamingState, updateStreamingProgress, canUseAIAnalysis, canUseStreamingFeedback, subscriptionTier]);
 
   const testConnections = useCallback(async () => {
     try {
