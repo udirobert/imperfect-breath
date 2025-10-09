@@ -1,10 +1,13 @@
 /**
- * Subscription Access Hook
- * Provides easy access to subscription status and feature availability
+ * Enhanced Subscription Access Hook
+ * ENHANCEMENT: Improved error handling and developer overrides
+ * CLEAN: Centralized subscription logic with graceful fallbacks
+ * MODULAR: Composable subscription access patterns
  */
 
 import { useState, useEffect } from 'react';
 import { revenueCat, type SubscriptionStatus } from '@/lib/monetization/revenueCat';
+import { getDeveloperOverride } from '@/lib/monetization/revenueCatConfig';
 
 export interface SubscriptionAccess {
   subscriptionStatus: SubscriptionStatus | null;
@@ -40,6 +43,14 @@ export const useSubscriptionAccess = (): SubscriptionAccess => {
   };
 
   const hasFeatureAccess = (feature: string): boolean => {
+    // ENHANCEMENT: Check developer override first
+    const developerOverride = getDeveloperOverride();
+    if (developerOverride.enabled) {
+      // If features array includes 'all' or the specific feature, grant access
+      return developerOverride.features.includes('all') || 
+             developerOverride.features.includes(feature);
+    }
+
     if (!subscriptionStatus) return false;
     
     // Feature access mapping based on subscription tiers

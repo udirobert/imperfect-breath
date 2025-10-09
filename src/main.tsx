@@ -1,6 +1,5 @@
-import "./polyfills"; // Must be first import
-import React from "react"; // Explicitly import React to ensure it's available
-import ReactDOM from "react-dom"; // Explicitly import ReactDOM to ensure it's available
+import React from "react";
+import ReactDOM from "react-dom/client";
 import { createRoot } from "react-dom/client";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -9,8 +8,12 @@ import { WalletProvider } from "./lib/wallet/wallet-context";
 import { GlobalErrorBoundary, SessionStartupErrorBoundary } from "./lib/errors/error-boundary";
 import { config } from "./lib/wagmi/config";
 import { queryClient } from "./lib/query/config";
-import App from "./App";
+import App from "./App.tsx";
 import "./index.css";
+import "./polyfills.ts";
+
+// ENHANCEMENT: Initialize developer commands in development
+import "./lib/developer/console-commands";
 import { runEnvironmentChecks } from "./utils/environment-check";
 import { optimizeForMobile } from "./utils/mobile-detection";
 
