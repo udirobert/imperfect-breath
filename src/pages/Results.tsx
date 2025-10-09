@@ -38,6 +38,8 @@ import { API_ENDPOINTS, createEndpoint } from "../config/api-endpoints";
 import { toast } from "sonner";
 import { useAuth } from "../hooks/useAuth";
 import { useLens } from "../hooks/useLens";
+import { useAIFeatureAccess } from "../hooks/useSubscriptionAccess";
+import InlineUpgrade from "../components/monetization/InlineUpgrade";
 import { formatTime } from "../lib/utils/formatters";
 
 import { EnhancedCustomPattern } from "../types/patterns";
@@ -65,6 +67,7 @@ const Results = () => {
   const { user } = useAuth();
   const { isAuthenticated: isLensAuthenticated } = useLens();
   const { streak, totalMinutes, saveSession, history } = useSessionHistory();
+  const { canUseAIAnalysis } = useAIFeatureAccess();
   const {
     analyzeSession,
     results: analysesRaw,
@@ -128,11 +131,22 @@ const Results = () => {
   ]);
 
   const handleAIAnalysis = async () => {
+    console.log("🚀 handleAIAnalysis called - starting debug trace");
+    
     if (!sessionData.patternName) {
+      console.error("❌ No session data available for analysis");
       toast.error("No session data available for analysis");
       return;
     }
 
+    // Check subscription access first - no longer show popup, just prevent action
+    if (!canUseAIAnalysis) {
+      console.log('❌ AI Analysis blocked - insufficient subscription tier');
+      // Don't show popup, the inline upgrade component will handle this
+      return;
+    }
+
+    console.log("✅ Session data validation passed");
     console.log("🔍 AI Analysis Debug:", {
       hetznerUrl: import.meta.env.VITE_HETZNER_SERVICE_URL,
       configuredAiUrl:
@@ -243,7 +257,14 @@ const Results = () => {
     }
 
     // Use the existing analyzeSession function from the hook
-    await analyzeSession('auto', enhancedSessionData);
+    console.log("🤖 About to call analyzeSession with enhanced data:", enhancedSessionData);
+    try {
+      await analyzeSession('auto', enhancedSessionData);
+      console.log("✅ analyzeSession completed successfully");
+    } catch (error) {
+      console.error("❌ analyzeSession failed:", error);
+      toast.error("AI analysis failed. Please try again.");
+    }
   };
 
   // Using consolidated formatTime from utils
@@ -899,14 +920,32 @@ Check out Imperfect Breath!`;
                     on your session performance.
                   </p>
                   <div className="flex gap-2 justify-center">
-                    <Button
-                      onClick={handleAIAnalysis}
-                      disabled={!sessionData.patternName}
-                    >
-                      <Brain className="mr-2 h-4 w-4" />
-                      Get AI Analysis
-                    </Button>
+                    {canUseAIAnalysis ? (
+                      <Button
+                        onClick={handleAIAnalysis}
+                        disabled={!sessionData.patternName}
+                      >
+                        <Brain className="mr-2 h-4 w-4" />
+                        Get AI Analysis
+                      </Button>
+                    ) : (
+                      <InlineUpgrade 
+                        feature="ai_analysis" 
+                        variant="minimal"
+                        className="w-auto"
+                      />
+                    )}
                   </div>
+
+                  {/* Enhanced subscription status with inline upgrade */}
+                  {!canUseAIAnalysis && (
+                    <div className="mt-4">
+                      <InlineUpgrade 
+                        feature="ai_analysis" 
+                        variant="banner"
+                      />
+                    </div>
+                  )}
 
                   {/* 🚧 TEMPORARY DEBUG BUTTON - Remove after debugging */}
                   <div className="mt-4">

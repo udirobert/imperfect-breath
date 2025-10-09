@@ -82,6 +82,21 @@ export const useSubscriptionAccess = (): SubscriptionAccess => {
 export const useAIFeatureAccess = () => {
   const { hasFeatureAccess, subscriptionStatus, isLoading } = useSubscriptionAccess();
   
+  // Development override - allow all AI features in development mode
+  const isDev = import.meta.env.DEV || import.meta.env.VITE_APP_ENV === 'development';
+  
+  if (isDev) {
+    return {
+      canUseAICoaching: true,
+      canUseAIAnalysis: true,
+      canUseStreamingFeedback: true,
+      canUseStreamingMetrics: true,
+      canUsePersonaInsights: true,
+      subscriptionTier: 'pro' as const, // Grant pro access in development
+      isLoading: false,
+    };
+  }
+  
   return {
     canUseAICoaching: hasFeatureAccess('ai_coaching'),
     canUseAIAnalysis: hasFeatureAccess('ai_analysis'),
