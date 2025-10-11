@@ -31,6 +31,7 @@ import type { CustomPattern } from "@/types/patterns"; // CLEAN: Direct import f
 // CLEAN: Import centralized recommendation logic (DRY principle)
 import { RecommendationService } from "@/services/RecommendationService";
 import { MoodBasedRecommendations } from "./MoodBasedRecommendations";
+import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 
 // Goal-based categories - ORGANIZED without duplication
 const WELLNESS_CATEGORIES = {
@@ -226,7 +227,7 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
                     className="text-xs bg-gradient-to-r from-amber-500 to-orange-500"
                   >
                     <Star className="w-3 h-3 mr-1" />
-                    {recommendationData.badge || "Perfect match"}
+                    {recommendationData.badge || "Recommended"}
                   </Badge>
                 )}
               </CardTitle>
@@ -298,7 +299,7 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
           Select from our curated collection or your personal library
         </p>
         
-        {/* ENHANCEMENT: Mood-based recommendations for user delight */}
+        {/* ENHANCEMENT FIRST: Enhanced mood-based recommendations */}
         {showMoodSelector && (
           <MoodBasedRecommendations
             variant="compact"
@@ -351,7 +352,7 @@ export const PatternSelection: React.FC<PatternSelectionProps> = ({
                     <div className="flex items-center gap-2 mb-1">
                       <div className="font-semibold">{pattern.name}</div>
                       <Badge variant="secondary" className="text-xs">
-                        {rec.badge || "Perfect match"}
+                        {rec.badge || "Recommended"}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">

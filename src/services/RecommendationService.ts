@@ -27,7 +27,7 @@ export interface EnhancedRecommendation extends PatternRecommendation {
  * PERFORMANT: Cached recommendation service
  */
 export class RecommendationService {
-  private static cache = getCache();
+  protected static cache = getCache();
   
   /**
    * Get recommendations based on user mood (ENHANCEMENT FIRST)
@@ -55,7 +55,7 @@ export class RecommendationService {
         return recommendations.map((rec, index) => ({
           ...rec,
           matchPercentage: Math.round((rec.confidence * 100) - (index * 3)),
-          badge: this.generateClearBadge(rec, index),
+          badge: this.generateClearBadge(rec, index, userMood),
           explanation: this.generateClearExplanation(rec)
         }));
       },
@@ -96,14 +96,34 @@ export class RecommendationService {
   
   /**
    * CLEAN: Generate clear, helpful badges instead of confusing percentages
+   * ENHANCEMENT FIRST: Now supports enhanced context for better badges
    */
-  private static generateClearBadge(rec: PatternRecommendation, index: number): string {
+  private static generateClearBadge(rec: PatternRecommendation, index: number, context?: any): string {
     if (index === 0 && rec.confidence >= 0.9) {
-      return "Perfect match";
+      return "Perfect for you";
+    }
+    
+    // ENHANCEMENT: Context-aware badges when available
+    if (context) {
+      if (context.energyLevel && context.energyLevel <= 2 && rec.patternId === "energy") {
+        return "Energy boost";
+      }
+      
+      if (context.stressLevel && context.stressLevel >= 4 && rec.patternId === "box") {
+        return "Stress relief";
+      }
+      
+      if (context.sleepQuality === "poorly" && rec.patternId === "relaxation") {
+        return "Rest & restore";
+      }
+      
+      if (context.availableTime && parseInt(context.availableTime.toString()) <= 2 && rec.timeToEffect.includes("30 seconds")) {
+        return "Quick relief";
+      }
     }
     
     if (rec.confidence >= 0.85) {
-      return "Great for you";
+      return "Great match";
     }
     
     if (rec.confidence >= 0.7) {

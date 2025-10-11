@@ -29,6 +29,8 @@ import {
   SmartPatternRecommendations,
   type RecommendationContext,
 } from "@/lib/recommendations/SmartPatternRecommendations";
+import { ContextCollector, type UserContext } from "@/components/context/ContextCollector";
+import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 
 interface MoodOption {
   id: string;
@@ -118,6 +120,8 @@ export const MoodBasedRecommendations: React.FC<
   MoodBasedRecommendationsProps
 > = ({ onRecommendationsUpdate, className, variant = "compact" }) => {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [showContextCollector, setShowContextCollector] = useState(false);
+  const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>(
     [],
   );
@@ -132,34 +136,38 @@ export const MoodBasedRecommendations: React.FC<
     return "Good night";
   };
 
-  // Handle mood selection
-  const handleMoodSelect = async (moodOption: MoodOption) => {
+  // Handle mood selection - now triggers context collection
+  const handleMoodSelect = (moodOption: MoodOption) => {
     setSelectedMood(moodOption.id);
+    setShowContextCollector(true);
+  };
+
+  // ENHANCEMENT FIRST: Handle enhanced context completion
+  const handleContextComplete = async (context: UserContext) => {
+    setUserContext(context);
+    setShowContextCollector(false);
     setIsLoading(true);
 
     try {
-      // Create recommendation context based on user's mood
-      const context: RecommendationContext = {
-        timeOfDay: new Date().getHours(),
-        userGoal: moodOption.goal,
-        currentMood: moodOption.mood,
-        userLevel: "beginner", // Could be made dynamic
-        sessionType: "classic",
+      // Create enhanced recommendation context
+      const enhancedContext: RecommendationContext = {
+        timeOfDay: context.timeOfDay || new Date().getHours(),
+        userGoal: context.moodGoal,
+        currentMood: context.mood as any,
+        userLevel: "beginner", // Could be made dynamic based on session history
+        sessionType: "enhanced", // Enhanced because we have more context
       };
 
-      // Get personalized recommendations
+      // Get personalized recommendations with enhanced context
       const newRecommendations =
-        SmartPatternRecommendations.getRecommendations(context);
+        SmartPatternRecommendations.getRecommendations(enhancedContext);
 
-      // Add match percentages for display
+      // CLEAN: Generate contextual badges with enhanced context
       const enhancedRecommendations = newRecommendations.map((rec, index) => ({
         ...rec,
-        matchPercentage: Math.round(rec.confidence * 100 - index * 5), // Slight decrease for ranking
-        explanation: `${rec.reason} • ${rec.timeToEffect} to effect`,
-        badge:
-          index === 0
-            ? "optimal time"
-            : `${Math.round(rec.confidence * 100 - index * 5)}% match`,
+        matchPercentage: Math.round(rec.confidence * 100 - index * 2), // Better scoring with more context
+        explanation: generateEnhancedExplanation(rec, context),
+        badge: generateEnhancedBadge(rec, index, context),
       }));
 
       setRecommendations(enhancedRecommendations);
@@ -171,12 +179,109 @@ export const MoodBasedRecommendations: React.FC<
     }
   };
 
+  // CLEAN: Generate enhanced badges with full context
+  const generateEnhancedBadge = (rec: any, index: number, context: UserContext): string => {
+    if (index === 0 && rec.confidence >= 0.9) {
+      return "Perfect for you";
+    }
+    
+    // Context-aware badges
+    if (context.energyLevel && context.energyLevel <= 2 && rec.patternId === "energy") {
+      return "Energy boost";
+    }
+    
+    if (context.stressLevel && context.stressLevel >= 4 && rec.patternId === "box") {
+      return "Stress relief";
+    }
+    
+    if (context.sleepQuality === "poorly" && rec.patternId === "relaxation") {
+      return "Rest & restore";
+    }
+    
+    if (context.availableTime && parseInt(context.availableTime.toString()) <= 2 && rec.timeToEffect.includes("30 seconds")) {
+      return "Quick relief";
+    }
+    
+    // Time-based badges
+    const hour = context.timeOfDay || new Date().getHours();
+    if (hour >= 6 && hour < 12 && rec.patternId === "energy") {
+      return "Morning boost";
+    }
+    if (hour >= 18 && rec.patternId === "relaxation") {
+      return "Evening calm";
+    }
+    
+    // Confidence-based fallback
+    if (rec.confidence >= 0.85) {
+      return "Great match";
+    }
+    if (rec.confidence >= 0.7) {
+      return "Good option";
+    }
+    
+    return "Recommended";
+  };
+
+  // CLEAN: Generate enhanced explanations with context
+  const generateEnhancedExplanation = (rec: any, context: UserContext): string => {
+    const parts = [rec.reason];
+    
+    if (context.energyLevel && context.energyLevel <= 2 && rec.patternId === "energy") {
+      parts.push("Perfect for low energy");
+    }
+    
+    if (context.stressLevel && context.stressLevel >= 4) {
+      parts.push("Designed for high stress");
+    }
+    
+    if (context.availableTime) {
+      const timeNum = parseInt(context.availableTime.toString());
+      if (timeNum <= 2) {
+        parts.push("Fits your time");
+      } else if (timeNum >= 10) {
+        parts.push("Deep session available");
+      }
+    }
+    
+    parts.push(`${rec.timeToEffect} to effect`);
+    
+    return parts.join(" � ");
+  };
+
   // Reset selection
   const handleReset = () => {
     setSelectedMood(null);
+    setShowContextCollector(false);
+    setUserContext(null);
     setRecommendations([]);
     onRecommendationsUpdate([]);
   };
+
+  // Handle back from context collector
+  const handleBackFromContext = () => {
+    setShowContextCollector(false);
+    setSelectedMood(null);
+  };
+
+  // ENHANCEMENT FIRST: Show context collector when needed
+  if (showContextCollector && selectedMood) {
+    const selectedMoodOption = MOOD_OPTIONS.find(m => m.id === selectedMood);
+    return (
+      <ContextCollector
+        initialMood={selectedMood}
+        onContextComplete={(context) => {
+          const enhancedContext = {
+            ...context,
+            mood: selectedMood,
+            moodGoal: selectedMoodOption?.goal,
+          };
+          handleContextComplete(enhancedContext);
+        }}
+        onBack={handleBackFromContext}
+        className={className}
+      />
+    );
+  }
 
   if (variant === "compact") {
     return (
@@ -186,7 +291,7 @@ export const MoodBasedRecommendations: React.FC<
           <div className="text-sm text-muted-foreground">
             {getTimeGreeting()}! How are you feeling?
           </div>
-          {selectedMood && (
+          {(selectedMood || recommendations.length > 0) && (
             <Button
               variant="ghost"
               size="sm"
@@ -199,7 +304,7 @@ export const MoodBasedRecommendations: React.FC<
         </div>
 
         {/* Mood Selection - Compact */}
-        {!selectedMood ? (
+        {!selectedMood && recommendations.length === 0 ? (
           <div className="flex flex-wrap gap-2">
             {MOOD_OPTIONS.map((mood) => {
               const Icon = mood.icon;
@@ -225,40 +330,48 @@ export const MoodBasedRecommendations: React.FC<
               );
             })}
           </div>
-        ) : (
-          /* Selected Mood Display */
-          <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-            {(() => {
-              const selectedMoodOption = MOOD_OPTIONS.find(
-                (m) => m.id === selectedMood,
-              );
-              if (!selectedMoodOption) return null;
-              const Icon = selectedMoodOption.icon;
-              return (
-                <>
-                  <div
-                    className={cn(
-                      "w-4 h-4 rounded-full flex items-center justify-center text-white",
-                      selectedMoodOption.color,
-                    )}
-                  >
-                    <Icon className="h-2.5 w-2.5" />
-                  </div>
-                  <span className="text-sm font-medium">
-                    {selectedMoodOption.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    • {selectedMoodOption.description}
-                  </span>
-                  {recommendations.length > 0 && (
-                    <Badge variant="secondary" className="text-xs ml-auto">
-                      <Sparkles className="h-2.5 w-2.5 mr-1" />
-                      {recommendations.length} matches
-                    </Badge>
-                  )}
-                </>
-              );
-            })()}
+        ) : null}
+
+        {/* ENHANCEMENT FIRST: Show recommendations with new RecommendationCard */}
+        {recommendations.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Perfect for you</span>
+              <Badge variant="secondary" className="text-xs">
+                {recommendations.length} matches
+              </Badge>
+            </div>
+            <div className="space-y-2">
+              {recommendations.map((rec, index) => (
+                <RecommendationCard
+                  key={rec.patternId}
+                  patternId={rec.patternId}
+                  pattern={rec.pattern}
+                  confidence={rec.confidence}
+                  reason={rec.reason}
+                  timeToEffect={rec.timeToEffect}
+                  badge={rec.badge}
+                  explanation={rec.explanation}
+                  priority={index === 0 ? "high" : "medium"}
+                  variant="compact"
+                  onClick={() => {
+                    // Handle pattern selection - could emit event or navigate
+                    console.log("Selected pattern:", rec.patternId);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {isLoading && (
+          <div className="text-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">
+              Finding your perfect patterns...
+            </p>
           </div>
         )}
       </div>
@@ -276,13 +389,15 @@ export const MoodBasedRecommendations: React.FC<
               {getTimeGreeting()}! How are you feeling?
             </h3>
             <p className="text-sm text-muted-foreground">
-              Tell us how you're feeling to get personalized breathing
-              recommendations
+              {recommendations.length > 0 
+                ? "Here are your personalized recommendations"
+                : "Tell us how you're feeling to get personalized breathing recommendations"
+              }
             </p>
           </div>
 
           {/* Mood Selection Grid */}
-          {!selectedMood ? (
+          {!selectedMood && recommendations.length === 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {MOOD_OPTIONS.map((mood) => {
                 const Icon = mood.icon;
@@ -356,47 +471,44 @@ export const MoodBasedRecommendations: React.FC<
                 </Button>
               </div>
 
-              {/* Recommendations */}
+              {/* ENHANCEMENT FIRST: Enhanced Recommendations Display */}
               {isLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    Finding perfect patterns...
+                    Analyzing your context for perfect matches...
                   </p>
                 </div>
               ) : recommendations.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Recommended for you</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Perfect for you</span>
+                    </div>
                     <Badge variant="secondary" className="text-xs">
-                      {recommendations.length} matches
+                      {recommendations.length} personalized matches
                     </Badge>
                   </div>
                   <div className="grid gap-3">
                     {recommendations.map((rec, index) => (
-                      <div
+                      <RecommendationCard
                         key={rec.patternId}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">
-                              {rec.pattern.name}
-                            </span>
-                            <Badge
-                              variant={index === 0 ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {rec.badge}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {rec.explanation}
-                          </p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
+                        patternId={rec.patternId}
+                        pattern={rec.pattern}
+                        confidence={rec.confidence}
+                        reason={rec.reason}
+                        timeToEffect={rec.timeToEffect}
+                        badge={rec.badge}
+                        explanation={rec.explanation}
+                        bestFor={rec.pattern.benefits?.slice(0, 2)}
+                        priority={index === 0 ? "high" : index === 1 ? "medium" : "low"}
+                        variant="detailed"
+                        onClick={() => {
+                          // Handle pattern selection
+                          console.log("Selected pattern:", rec.patternId);
+                        }}
+                      />
                     ))}
                   </div>
                 </div>
