@@ -68,12 +68,12 @@ export class BlockchainPaymentHandler {
       throw new Error('Flow wallet not connected');
     }
 
-    // Use Flow's native payment capabilities
-    const txHash = await this.authState.flow.purchaseNFT({
-      itemId: request.metadata.itemId,
-      amount: request.amount,
-      currency: request.currency,
-    });
+    // Use Flow's native payment capabilities with correct signature
+    const txHash = await this.authState.flow.purchaseNFT(
+      request.metadata.itemId || '',
+      request.amount,
+      request.metadata.creatorAddress || ''
+    );
 
     return {
       success: true,

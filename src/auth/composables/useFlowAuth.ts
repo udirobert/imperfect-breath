@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as fcl from "@onflow/fcl";
+import { revenueCatAuthIntegration } from "../../lib/monetization/revenueCatAuthIntegration";
+
+// Flow user type definition
+interface FlowUser {
+  loggedIn: boolean;
+  addr: string | null;
+  services?: unknown[];
+  [key: string]: unknown;
+}
 
 // Singleton pattern to prevent multiple FCL subscriptions
 class FlowAuthManager {
   private static instance: FlowAuthManager;
-  private user: any = null;
-  private subscribers: Set<(user: any) => void> = new Set();
+  private user: unknown = null;
+  private subscribers: Set<(user: unknown) => void> = new Set();
   private isInitialized = false;
-  private unsubscribe: Function | null = null;
+  private unsubscribe: (() => void) | null = null;
 
   static getInstance(): FlowAuthManager {
     if (!FlowAuthManager.instance) {
@@ -26,13 +35,13 @@ class FlowAuthManager {
     this.isInitialized = true;
     
     // Single FCL subscription for entire app
-    this.unsubscribe = fcl.currentUser.subscribe((user: any) => {
+    this.unsubscribe = fcl.currentUser.subscribe(async (user: unknown) => {
       this.user = user;
-      this.notifySubscribers(user);
+      await this.notifySubscribers(user);
     });
   }
 
-  subscribe(callback: (user: any) => void): () => void {
+  subscribe(callback: (user: unknown) => void): () => void {
     this.subscribers.add(callback);
     
     // Immediately call with current user if available
@@ -45,7 +54,17 @@ class FlowAuthManager {
     };
   }
 
-  private notifySubscribers(user: any) {
+  private async notifySubscribers(user: unknown) {
+    // Sync with RevenueCat when user logs in
+    const userObj = user as { loggedIn?: boolean; addr?: string };
+    if (userObj?.loggedIn && userObj?.addr) {
+      try {
+        await revenueCatAuthIntegration.handleFlowAuth(userObj.addr!, false);
+      } catch (error) {
+        console.error('Failed to sync Flow user with RevenueCat:', error);
+      }
+    }
+    
     this.subscribers.forEach(callback => callback(user));
   }
 
@@ -78,12 +97,12 @@ class FlowAuthManager {
     }
     this.subscribers.clear();
     this.isInitialized = false;
-    FlowAuthManager.instance = null as any;
+    FlowAuthManager.instance = null as unknown as FlowAuthManager;
   }
 }
 
 export const useFlowAuth = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<unknown>(null);
   const [isLoading, setIsLoading] = useState(true);
   const managerRef = useRef<FlowAuthManager>();
 
@@ -136,19 +155,21 @@ export const useFlowAuth = () => {
     }
   }, []);
 
+  const flowUser = user as FlowUser | null;
+  
   return {
     // Flow user state
     user,
     isLoading,
-    isLoggedIn: !!user?.loggedIn,
-    address: user?.addr || null,
+    isLoggedIn: !!flowUser?.loggedIn,
+    address: flowUser?.addr || null,
     
     // Flow user info object
-    flowUser: user?.loggedIn
+    flowUser: flowUser?.loggedIn && flowUser.addr
       ? {
-          address: user.addr,
-          loggedIn: user.loggedIn,
-          services: user.services,
+          address: flowUser.addr,
+          loggedIn: flowUser.loggedIn,
+          services: flowUser.services || [],
         }
       : null,
 
@@ -157,8 +178,8 @@ export const useFlowAuth = () => {
     logout,
     
     // Helper properties
-    hasFlowAccount: !!user?.loggedIn,
-    flowAddress: user?.addr || null,
+    hasFlowAccount: !!flowUser?.loggedIn,
+    flowAddress: flowUser?.addr || null,
   };
 };
 

@@ -95,14 +95,14 @@ const createBreathingPatternAction: Action = {
     ]
   ],
   validate: async (runtime: IAgentRuntime, message: Memory) => {
-    const text = message.content.text.toLowerCase();
+    const text = message?.content?.text?.toLowerCase() || '';
     return text.includes("create") && (text.includes("breathing") || text.includes("pattern"));
   },
   handler: async (
     runtime: IAgentRuntime,
     message: Memory,
     state?: State,
-    options?: any,
+    options?: unknown,
     callback?: HandlerCallback
   ) => {
     if (!callback) return;
@@ -190,7 +190,7 @@ const createBreathingPatternAction: Action = {
       
       // Store pattern in state for potential NFT minting
       if (state) {
-        (state as any).customPattern = pattern;
+        (state as Record<string, unknown>).customPattern = pattern;
       }
       
       const response = `I've created a personalized ${pattern.name} for you! 🌬️
@@ -261,7 +261,7 @@ const analyzeSessionAction: Action = {
     runtime: IAgentRuntime,
     message: Memory,
     state?: State,
-    options?: any,
+    options?: unknown,
     callback?: HandlerCallback
   ) => {
     if (!callback) return;
@@ -396,7 +396,7 @@ const mintPatternNFTAction: Action = {
     runtime: IAgentRuntime,
     message: Memory,
     state?: State,
-    options?: any,
+    options?: unknown,
     callback?: HandlerCallback
   ) => {
     if (!callback) return;
@@ -404,9 +404,16 @@ const mintPatternNFTAction: Action = {
     try {
       elizaLogger.info("Minting breathing pattern NFT");
       
-      // Get pattern from state or use default
-      const pattern = (state as any)?.customPattern || BREATHING_PATTERNS["4-7-8"];
-      
+      // Get pattern from state or use a default
+      const pattern = (state as Record<string, unknown>)?.customPattern as BreathingPattern || {
+        name: "Default Breathing Pattern",
+        description: "A simple breathing pattern for general wellness",
+        phases: { inhale: 4, hold: 4, exhale: 6 },
+        difficulty: 'beginner' as const,
+        benefits: ["Promotes relaxation", "Supports wellness"],
+        category: 'custom' as const
+      };
+
       // Call real Flow blockchain API for minting
       // Create proper NFT minting request
       const mintRequest = {
@@ -462,7 +469,7 @@ Would you like me to help you with any of these next steps? Your wellness journe
 
       // Store NFT info in state
       if (state) {
-        (state as any).mintedNFT = {
+        (state as Record<string, unknown>).mintedNFT = {
           id: nftId,
           transactionId: transactionId,
           pattern: pattern
@@ -524,7 +531,7 @@ const recommendPatternAction: Action = {
     runtime: IAgentRuntime,
     message: Memory,
     state?: State,
-    options?: any,
+    options?: unknown,
     callback?: HandlerCallback
   ) => {
     if (!callback) return;
@@ -586,7 +593,7 @@ ${recommendedPattern.benefits.map(benefit => `• ${benefit}`).join('\n')}
 Would you like me to guide you through a practice session, or would you prefer to mint this pattern as your personal NFT for future use? ✨`;
 
       if (state) {
-        (state as any).recommendedPattern = recommendedPattern;
+        (state as Record<string, unknown>).recommendedPattern = recommendedPattern;
       }
 
       callback({

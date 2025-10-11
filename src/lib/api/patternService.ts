@@ -56,8 +56,16 @@ export async function getPurchasedPatterns(userId?: string): Promise<Marketplace
     }
   }
   
-  // For now, return empty array - license manager needs to be implemented with unified client
-  // TODO: Implement license manager that uses unified client
-  console.warn("License manager not yet implemented with unified client");
-  return [];
+  // License manager implementation using unified client
+  try {
+    const response = await apiClient.request('patterns', `/purchased?userId=${userId}`);
+    if (response.success && response.data) {
+      return response.data as MarketplacePattern[];
+    }
+    console.warn("No purchased patterns found for user");
+    return [];
+  } catch (error) {
+    console.error("Failed to fetch purchased patterns:", error);
+    return [];
+  }
 }

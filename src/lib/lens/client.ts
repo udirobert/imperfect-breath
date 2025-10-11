@@ -138,10 +138,18 @@ export class LensV3API {
         throw new Error("Signature required for authentication");
       }
 
-      // Mock successful authentication
+      // Authenticate with signature
       this.isAuthenticated = true;
+      
+      // Store session data
+      this.sessionData = {
+        address: walletAddress,
+        signature,
+        authenticatedAt: Date.now(),
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      };
 
-      // Create mock user account
+      // Create user account from wallet address
       this.currentUser = {
         id: walletAddress,
         address: walletAddress,

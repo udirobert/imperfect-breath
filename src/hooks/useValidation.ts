@@ -20,42 +20,44 @@ export const useValidation = () => {
 
   const validateField = useCallback((
     fieldName: string,
-    value: any,
+    value: unknown,
     validator: string,
-    options?: any
+    options?: { provider?: string; maxLength?: number; min?: number; max?: number; allowDecimals?: boolean }
   ): ValidationResult => {
     let result: ValidationResult;
+    const stringValue = String(value);
+    const numericValue = typeof value === 'number' ? value : Number(value);
 
     switch (validator) {
       case 'email':
-        result = InputValidator.validateEmail(value);
+        result = InputValidator.validateEmail(stringValue);
         break;
       case 'url':
-        result = InputValidator.validateURL(value);
+        result = InputValidator.validateURL(stringValue);
         break;
       case 'flowAddress':
-        result = InputValidator.validateFlowAddress(value);
+        result = InputValidator.validateFlowAddress(stringValue);
         break;
       case 'ethereumAddress':
-        result = InputValidator.validateEthereumAddress(value);
+        result = InputValidator.validateEthereumAddress(stringValue);
         break;
       case 'apiKey':
-        result = InputValidator.validateAPIKey(value, options?.provider);
+        result = InputValidator.validateAPIKey(stringValue, options?.provider);
         break;
       case 'username':
-        result = InputValidator.validateUsername(value);
+        result = InputValidator.validateUsername(stringValue);
         break;
       case 'breathingPatternName':
-        result = InputValidator.validateBreathingPatternName(value);
+        result = InputValidator.validateBreathingPatternName(stringValue);
         break;
       case 'textInput':
-        result = InputValidator.validateTextInput(value, options?.maxLength);
+        result = InputValidator.validateTextInput(stringValue, options?.maxLength);
         break;
       case 'number':
-        result = InputValidator.validateNumber(value, options?.min, options?.max, options?.allowDecimals);
+        result = InputValidator.validateNumber(numericValue, options?.min, options?.max, options?.allowDecimals);
         break;
       default:
-        result = { isValid: true, errors: [], sanitizedValue: value };
+        result = { isValid: true, errors: [], sanitizedValue: stringValue };
     }
 
     // Update validation state
@@ -73,7 +75,7 @@ export const useValidation = () => {
   }, []);
 
   const validateFields = useCallback((
-    fields: Record<string, { value: any; validator: string; options?: any }>
+    fields: Record<string, { value: unknown; validator: string; options?: unknown }>
   ) => {
     setValidationState(prev => ({ ...prev, isValidating: true }));
 
@@ -88,26 +90,28 @@ export const useValidation = () => {
     return result;
   }, []);
 
-  const sanitizeValue = useCallback((value: any, sanitizer: string): any => {
+  const sanitizeValue = useCallback((value: unknown, sanitizer: string): string | number => {
     switch (sanitizer) {
       case 'text':
-        return DataSanitizer.sanitizeText(value);
+        return DataSanitizer.sanitizeText(String(value));
       case 'html':
-        return DataSanitizer.sanitizeText(value, { allowHTML: true });
+        return DataSanitizer.sanitizeText(String(value), { allowHTML: true });
       case 'apiKey':
-        return DataSanitizer.sanitizeAPIKey(value);
+        return DataSanitizer.sanitizeAPIKey(String(value));
       case 'address':
-        return DataSanitizer.sanitizeAddress(value);
+        return DataSanitizer.sanitizeAddress(String(value));
       case 'username':
-        return DataSanitizer.sanitizeUsername(value);
+        return DataSanitizer.sanitizeUsername(String(value));
       case 'email':
-        return DataSanitizer.sanitizeEmail(value);
+        return DataSanitizer.sanitizeEmail(String(value));
       case 'url':
-        return DataSanitizer.sanitizeURL(value);
+        return DataSanitizer.sanitizeURL(String(value));
       case 'number':
-        return DataSanitizer.sanitizeNumber(value);
+        const numResult = DataSanitizer.sanitizeNumber(value);
+        return numResult !== null ? numResult : String(value);
       case 'integer':
-        return DataSanitizer.sanitizeNumber(value, false);
+        const intResult = DataSanitizer.sanitizeNumber(value, false);
+        return intResult !== null ? intResult : String(value);
       default:
         return DataSanitizer.sanitizeText(String(value));
     }

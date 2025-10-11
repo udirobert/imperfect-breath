@@ -367,43 +367,29 @@ export const useSessionStore = create<SessionState & SessionActions>()(
 // SELECTORS - Optimized state access
 // ============================================================================
 
-export const sessionSelectors = {
-  // Core state
-  isActive: () => useSessionStore((state) => state.phase === 'active'),
-  isPaused: () => useSessionStore((state) => state.phase === 'paused'),
-  isComplete: () => useSessionStore((state) => state.phase === 'complete'),
-
-  // Session info
-  currentMode: () => useSessionStore((state) => state.config?.mode || 'basic'),
-  currentPattern: () => useSessionStore((state) => state.config?.pattern),
-
-  // Media state
-  hasCameraStream: () => useSessionStore((state) => !!state.cameraStream),
-  canUseCamera: () => useSessionStore((state) =>
-    state.cameraPermissionGranted && !!state.cameraStream
-  ),
-
-  // Vision state
-  hasVisionMetrics: () => useSessionStore((state) => !!state.visionMetrics),
-  visionReady: () => useSessionStore((state) =>
-    state.visionActive && !!state.visionMetrics
-  ),
-
-  // Performance state
-  isOptimalPerformance: () => useSessionStore((state) =>
-    state.performanceMode === 'optimal'
-  ),
-
-  // Pattern performance state
-  currentPatternId: () => useSessionStore((state) => state.metrics.patternId),
-  patternCompletionRate: () => useSessionStore((state) => state.metrics.completionRate),
-  patternEngagement: () => useSessionStore((state) => state.metrics.userEngagement),
-  patternEffectiveness: () => useSessionStore((state) => state.metrics.effectivenessScore),
-
-  // Error state
-  hasError: () => useSessionStore((state) => !!state.error),
-  hasWarnings: () => useSessionStore((state) => state.warnings.length > 0),
-};
+// Custom hooks for session selectors
+export const useSessionIsActive = () => useSessionStore((state) => state.phase === 'active');
+export const useSessionIsPaused = () => useSessionStore((state) => state.phase === 'paused');
+export const useSessionIsComplete = () => useSessionStore((state) => state.phase === 'complete');
+export const useSessionCurrentMode = () => useSessionStore((state) => state.config?.mode || 'basic');
+export const useSessionCurrentPattern = () => useSessionStore((state) => state.config?.pattern);
+export const useSessionHasCameraStream = () => useSessionStore((state) => !!state.cameraStream);
+export const useSessionCanUseCamera = () => useSessionStore((state) =>
+  state.cameraPermissionGranted && !!state.cameraStream
+);
+export const useSessionHasVisionMetrics = () => useSessionStore((state) => !!state.visionMetrics);
+export const useSessionVisionReady = () => useSessionStore((state) =>
+  state.visionActive && !!state.visionMetrics
+);
+export const useSessionIsOptimalPerformance = () => useSessionStore((state) =>
+  state.performanceMode === 'optimal'
+);
+export const useSessionCurrentPatternId = () => useSessionStore((state) => state.metrics.patternId);
+export const useSessionPatternCompletionRate = () => useSessionStore((state) => state.metrics.completionRate);
+export const useSessionPatternEngagement = () => useSessionStore((state) => state.metrics.userEngagement);
+export const useSessionPatternEffectiveness = () => useSessionStore((state) => state.metrics.effectivenessScore);
+export const useSessionHasError = () => useSessionStore((state) => !!state.error);
+export const useSessionHasWarnings = () => useSessionStore((state) => state.warnings.length > 0);
 
 // ============================================================================
 // HOOKS - Clean, focused hooks for components

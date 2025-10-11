@@ -189,7 +189,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
         <Alert variant="destructive" className="text-xs">
           <AlertCircle className="h-3 w-3" />
           <AlertDescription>
-            {useLoadingStore((state) => state.loadingErrors[operationId])}
+            {loadingStore.loadingErrors[operationId]}
           </AlertDescription>
         </Alert>
       )}

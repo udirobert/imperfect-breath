@@ -103,6 +103,7 @@ export interface BreathingSession {
   cycles?: number;
   completedAt: string;
   userId?: string;
+  restlessnessScore?: number;
 }
 
 // Community stats

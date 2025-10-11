@@ -59,7 +59,7 @@ export function checkWalletEnvironment() {
   // Check for multiple providers
   const providers = [];
   if (window.ethereum) providers.push('window.ethereum');
-  if (((window as unknown as Record<string, unknown>).web3 as any)?.currentProvider) providers.push('window.web3.currentProvider');
+  if (((window as unknown as Record<string, unknown>).web3 as Record<string, unknown>)?.currentProvider) providers.push('window.web3.currentProvider');
   if ((window as unknown as Record<string, unknown>).__originalEthereum) providers.push('__originalEthereum (backup)');
   
   if (providers.length > 1) {

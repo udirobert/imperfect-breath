@@ -121,7 +121,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                     </h2>
                     {user && (
                       <p className="text-sm text-slate-500 truncate">
-                        {user.email}
+                        {user?.email}
                       </p>
                     )}
                   </div>

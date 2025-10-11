@@ -10,7 +10,7 @@ import { Mail, Wallet, Zap, Users, Coins } from "lucide-react";
 import type { AuthFeatures } from "./useAuth";
 
 export interface AuthMethod {
-  id: 'guest' | 'email' | 'wallet';
+  id: 'guest' | 'email' | 'wallet' | 'lens' | 'flow';
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -73,6 +73,38 @@ export const AUTH_METHODS: Record<string, AuthMethod> = {
     priority: 3,
     requiresInput: false,
   },
+
+  lens: {
+    id: 'lens',
+    title: 'Social Profile',
+    description: 'Decentralized social with Lens Protocol',
+    icon: Users,
+    benefits: [
+      'Decentralized identity',
+      'Social features',
+      'Community building',
+      'Profile portability'
+    ],
+    features: { lens: true, blockchain: true },
+    priority: 4,
+    requiresInput: false,
+  },
+
+  flow: {
+    id: 'flow',
+    title: 'Flow Account',
+    description: 'Consumer-friendly Web3 experience',
+    icon: Coins,
+    benefits: [
+      'Low transaction costs',
+      'NFT capabilities',
+      'Walletless onboarding',
+      'Forte automation'
+    ],
+    features: { flow: true, blockchain: true },
+    priority: 5,
+    requiresInput: false,
+  },
 };
 
 /**
@@ -91,21 +123,21 @@ export const getRecommendedAuthMethods = (
   switch (context?.type) {
     case 'nft-purchase':
     case 'creator-tools':
-      // Prioritize wallet for blockchain features
-      return [AUTH_METHODS.wallet, AUTH_METHODS.email, AUTH_METHODS.guest];
+      // Prioritize blockchain-enabled methods for NFT features
+      return [AUTH_METHODS.wallet, AUTH_METHODS.flow, AUTH_METHODS.lens, AUTH_METHODS.email, AUTH_METHODS.guest];
       
     case 'social-share':
-      // Social features benefit from both wallet and email
-      return [AUTH_METHODS.email, AUTH_METHODS.wallet, AUTH_METHODS.guest];
+      // Social features benefit from Lens and wallet
+      return [AUTH_METHODS.lens, AUTH_METHODS.wallet, AUTH_METHODS.flow, AUTH_METHODS.email, AUTH_METHODS.guest];
       
     case 'progress-tracking':
       // Progress tracking needs persistent auth
-      return [AUTH_METHODS.email, AUTH_METHODS.wallet, AUTH_METHODS.guest];
+      return [AUTH_METHODS.email, AUTH_METHODS.lens, AUTH_METHODS.wallet, AUTH_METHODS.flow, AUTH_METHODS.guest];
       
     case 'profile':
     default:
       // Default: progressive enhancement path
-      return [AUTH_METHODS.guest, AUTH_METHODS.email, AUTH_METHODS.wallet];
+      return [AUTH_METHODS.guest, AUTH_METHODS.email, AUTH_METHODS.wallet, AUTH_METHODS.lens, AUTH_METHODS.flow];
   }
 };
 

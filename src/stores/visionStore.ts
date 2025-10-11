@@ -201,9 +201,9 @@ export const useVisionStore = create<VisionState & VisionActions>()(
 
                         const processingTime = performance.now() - startTime;
 
-                        if (response.success && response.data && !response.data.fallback) {
+                        if (response.success && response.data && !response.data?.fallback) {
                             // HONEST: Real backend data only - apply to actual face tracking
-                            const backendMetrics = response.data.metrics;
+                            const backendMetrics = response.data?.metrics;
                             
                             const movementLevel = backendMetrics?.movement_level ?? 0;
                             const confidence = backendMetrics?.confidence ?? 0;
@@ -350,16 +350,14 @@ export const useVisionStore = create<VisionState & VisionActions>()(
 // SELECTORS - Honest state access
 // ============================================================================
 
-export const visionSelectors = {
-    isActive: () => useVisionStore((state) => state.isActive),
-    isReady: () => useVisionStore((state) => state.isReady),
-    hasMetrics: () => useVisionStore((state) => !!state.metrics),
-    hasError: () => useVisionStore((state) => !!state.error),
-    isBackendAvailable: () => useVisionStore((state) => state.backendAvailable),
-    // HONEST: Only show real metrics when available
-    restlessnessScore: () => useVisionStore((state) => state.metrics?.restlessnessScore || 0),
-    stillnessScore: () => useVisionStore((state) => state.metrics?.stillness || 0),
-};
+// Custom hooks for vision selectors
+export const useVisionIsActive = () => useVisionStore((state) => state.isActive);
+export const useVisionIsReady = () => useVisionStore((state) => state.isReady);
+export const useVisionHasMetrics = () => useVisionStore((state) => !!state.metrics);
+export const useVisionHasError = () => useVisionStore((state) => !!state.error);
+export const useVisionIsBackendAvailable = () => useVisionStore((state) => state.backendAvailable);
+export const useVisionRestlessnessScore = () => useVisionStore((state) => state.metrics?.restlessnessScore || 0);
+export const useVisionStillnessScore = () => useVisionStore((state) => state.metrics?.stillness || 0);
 
 // ============================================================================
 // HOOKS - Clean, focused hooks for components

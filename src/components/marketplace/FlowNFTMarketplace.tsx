@@ -281,12 +281,11 @@ export const FlowNFTMarketplace: React.FC = () => {
     async (nft: FlowNFTWithMetadata) => {
       try {
         const session: BreathingSession = {
-          id: nft.id,
           patternName: nft.name,
           duration: nft.attributes.estimatedDuration,
           breathHoldTime: nft.attributes.hold,
           restlessnessScore: 0, // No restlessness score available in this context
-          timestamp: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
         };
 
         await shareBreathingSession(session);

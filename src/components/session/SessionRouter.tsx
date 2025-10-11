@@ -20,14 +20,14 @@ interface SessionRouterProps {
   onSessionExit?: () => void;
 
   // Legacy props for backward compatibility
-  config?: any;
-  sessionFlow?: any;
-  sessionState?: any;
+  config?: Record<string, unknown>;
+  sessionFlow?: Record<string, unknown>;
+  sessionState?: Record<string, unknown>;
   isReady?: boolean;
   isActive?: boolean;
-  onInitialize?: any;
-  onStart?: any;
-  onComplete?: any;
+  onInitialize?: () => void;
+  onStart?: () => void;
+  onComplete?: (metrics: SessionMetrics) => void;
 }
 
 export const SessionRouter: React.FC<SessionRouterProps> = ({

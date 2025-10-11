@@ -139,7 +139,7 @@ const VideoFeed = ({
      // Attempt to play the video; ignore errors (e.g., autoplay restrictions)
      videoRef.current.play().catch(() => {});
    }
- }, [videoRef, videoRef.current, stream]);
+ }, [stream]);
 
   return (
     <div className={`relative ${className}`} style={{ overflow: "hidden", backgroundColor: "black" }}>

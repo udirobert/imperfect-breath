@@ -86,8 +86,8 @@ class CameraManager {
     try {
       // Check if getUserMedia is available
       this.state.isAvailable = !!(
-        navigator.mediaDevices && 
-        navigator.mediaDevices.getUserMedia
+        navigator?.mediaDevices && 
+        navigator?.mediaDevices?.getUserMedia
       );
 
       if (!this.state.isAvailable) {

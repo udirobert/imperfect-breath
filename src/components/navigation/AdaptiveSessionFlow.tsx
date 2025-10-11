@@ -190,7 +190,7 @@ export const AdaptiveSessionFlow: React.FC<AdaptiveSessionFlowProps> = ({
 
   // Show contextual guidance for enhanced (after pattern selection)
   if (flowState === "guidance-enhanced") {
-    const selectedPattern = JSON.parse(localStorage.getItem("selectedPattern") || "{}");
+    const selectedPattern = JSON.parse(localStorage.getItem("selectedPattern") || JSON.stringify({ name: "Box Breathing" }));
     return (
       <div className={`max-w-2xl mx-auto ${className}`}>
         <div className="mb-6 text-center">

@@ -30,7 +30,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
   const getVideoId = (url: string): string | null => {
     // YouTube URL patterns
     const youtubeRegex =
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^"&?/\s]{11})/;
     const match = url.match(youtubeRegex);
     return match ? match[1] : null;
   };

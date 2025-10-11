@@ -56,7 +56,8 @@ export interface UnifiedPattern {
     audio?: boolean;
     video?: boolean;
     guidedAudio?: boolean;
-  } | any; // Allow any for compatibility with existing Json types
+    [key: string]: unknown;
+  }
 }
 
 // Variant-specific configurations
@@ -74,18 +75,18 @@ export interface PatternCardConfig {
 }
 
 export interface PatternCardProps {
-  pattern: UnifiedPattern | any; // Allow any pattern type for compatibility
+  pattern: UnifiedPattern | Record<string, unknown>;
   variant?: PatternCardVariant;
   size?: PatternCardSize;
   customConfig?: Partial<PatternCardConfig>;
   className?: string;
   
   // Action handlers - context-aware with flexible types
-  onPlay?: (pattern: any) => void | Promise<void>;
-  onPreview?: (pattern: any) => void | Promise<void>;
-  onLicense?: (pattern: any) => void | Promise<void>;
+  onPlay?: (pattern: UnifiedPattern | Record<string, unknown>) => void | Promise<void>;
+  onPreview?: (pattern: UnifiedPattern | Record<string, unknown>) => void | Promise<void>;
+  onLicense?: (pattern: UnifiedPattern | Record<string, unknown>) => void | Promise<void>;
   onLike?: (patternId: string) => void | Promise<void>;
-  onShare?: (pattern: any) => void | Promise<void>;
+  onShare?: (pattern: UnifiedPattern | Record<string, unknown>) => void | Promise<void>;
   onComment?: (patternId: string, comment: string) => void | Promise<void>;
   onBookmark?: (patternId: string) => void | Promise<void>;
   onReport?: (patternId: string, reason: string) => void | Promise<void>;

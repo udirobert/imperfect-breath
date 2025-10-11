@@ -71,6 +71,11 @@ export interface FilterSystemProps {
   isLoading?: boolean;
   
   // Callbacks
-  onFiltersChange?: (filters: any) => void;
+  onFiltersChange?: (filters: {
+    category?: string;
+    quickFilters?: string[];
+    search?: string;
+    sort?: string;
+  }) => void;
   onReset?: () => void;
 }

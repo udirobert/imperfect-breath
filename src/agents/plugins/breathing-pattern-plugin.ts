@@ -33,6 +33,13 @@ interface BreathingSession {
   timestamp: Date;
 }
 
+interface NFTResult {
+  tokenId: number;
+  contractAddress: string;
+  transactionHash: string;
+  network: string;
+}
+
 // Predefined breathing patterns
 const BREATHING_PATTERNS: BreathingPattern[] = [
   {
@@ -107,7 +114,7 @@ const createBreathingPatternAction: Action = {
     return text.includes("create") &&
            (text.includes("breathing") || text.includes("pattern") || text.includes("technique"));
   },
-  handler: async (runtime: Runtime, message: Message, state: any, options: any, callback?: Callback): Promise<boolean> => {
+  handler: async (runtime: Runtime, message: Message, state: Record<string, unknown>, options: Record<string, unknown>, callback?: Callback): Promise<boolean> => {
     try {
       // Extract user preferences from message
       const userInput = message.content.text;
@@ -189,7 +196,7 @@ const analyzeBreathingSessionAction: Action = {
     return (text.includes("analyze") || text.includes("feedback") || text.includes("review")) &&
            (text.includes("breathing") || text.includes("session") || text.includes("practice"));
   },
-  handler: async (runtime: Runtime, message: Message, state: any, options: any, callback?: Callback): Promise<boolean> => {
+  handler: async (runtime: Runtime, message: Message, state: Record<string, unknown>, options: Record<string, unknown>, callback?: Callback): Promise<boolean> => {
     try {
       // Extract session data from message or state
       const sessionData = extractSessionData(message.content.text);
@@ -270,10 +277,10 @@ const mintBreathingNFTAction: Action = {
     return (text.includes("mint") || text.includes("nft") || text.includes("blockchain")) &&
            (text.includes("pattern") || text.includes("breathing"));
   },
-  handler: async (runtime: Runtime, message: Message, state: any, options: any, callback?: Callback): Promise<boolean> => {
+  handler: async (runtime: Runtime, message: Message, state: Record<string, unknown>, options: Record<string, unknown>, callback?: Callback): Promise<boolean> => {
     try {
       // Get pattern from state or create new one
-      const pattern = state?.pattern || extractPatternFromMessage(message.content.text);
+      const pattern = (state?.pattern as BreathingPattern) || extractPatternFromMessage(message.content.text);
       
       if (!pattern) {
         if (callback) {
@@ -344,7 +351,7 @@ Your breathing pattern is now a true digital asset that you own forever! Want me
 
 // Provider: Breathing Pattern Recommendations
 const breathingPatternProvider: Provider = {
-  get: async (runtime: Runtime, message: Message, state: any): Promise<string> => {
+  get: async (runtime: Runtime, message: Message, state: Record<string, unknown>): Promise<string> => {
     const userNeeds = extractUserNeeds(message.content.text);
     const recommendations = getPatternRecommendations(userNeeds);
     
@@ -393,8 +400,15 @@ const breathingKnowledgeEvaluator: Evaluator = {
 };
 
 // Helper functions
-function extractBreathingPreferences(text: string): any {
-  const preferences: any = {
+interface BreathingPreferences {
+  goal: string;
+  experience: string;
+  timeAvailable: number;
+  specificNeeds: string[];
+}
+
+function extractBreathingPreferences(text: string): BreathingPreferences {
+  const preferences: BreathingPreferences = {
     goal: 'general wellness',
     experience: 'beginner',
     timeAvailable: 5,
@@ -414,7 +428,7 @@ function extractBreathingPreferences(text: string): any {
   return preferences;
 }
 
-function generateCustomPattern(preferences: any): BreathingPattern {
+function generateCustomPattern(preferences: BreathingPreferences): BreathingPattern {
   const basePatterns = {
     relaxation: { inhale: 4, hold: 7, exhale: 8, rest: 2 },
     focus: { inhale: 4, hold: 4, exhale: 4, rest: 4 },
@@ -428,7 +442,7 @@ function generateCustomPattern(preferences: any): BreathingPattern {
     name: `Custom ${preferences.goal.charAt(0).toUpperCase() + preferences.goal.slice(1)} Pattern`,
     description: `Personalized breathing pattern designed for ${preferences.goal}`,
     ...base,
-    difficulty: preferences.experience as any,
+    difficulty: preferences.experience as 'beginner' | 'intermediate' | 'advanced',
     benefits: getBenefitsForGoal(preferences.goal),
     tags: [preferences.goal, preferences.experience, 'custom']
   };
@@ -445,7 +459,13 @@ function getBenefitsForGoal(goal: string): string[] {
   return benefitMap[goal] || ["Improves overall well-being"];
 }
 
-function extractSessionData(text: string): any {
+interface SessionData {
+  duration: number;
+  pattern: string;
+  quality: number;
+}
+
+function extractSessionData(text: string): SessionData {
   // Simple extraction - in real implementation would be more sophisticated
   const durationMatch = text.match(/(\d+)\s*minutes?/);
   const patternMatch = text.match(/(\d+-\d+-\d+(?:-\d+)?)/);
@@ -457,7 +477,14 @@ function extractSessionData(text: string): any {
   };
 }
 
-function generateBreathingAnalysis(sessionData: any): any {
+interface BreathingAnalysis {
+  qualityScore: number;
+  positives: string[];
+  improvements: string[];
+  recommendations: string[];
+}
+
+function generateBreathingAnalysis(sessionData: SessionData): BreathingAnalysis {
   return {
     qualityScore: sessionData.quality,
     positives: [
@@ -477,7 +504,7 @@ function generateBreathingAnalysis(sessionData: any): any {
   };
 }
 
-async function simulateMintNFT(pattern: BreathingPattern): Promise<any> {
+async function simulateMintNFT(pattern: BreathingPattern): Promise<NFTResult> {
   // Simulate NFT minting - in real implementation would call Flow client
   // When implementing for production, you would import and use the consolidated clients
   return {
@@ -505,7 +532,13 @@ function getPatternRecommendations(needs: string[]): BreathingPattern[] {
   ).slice(0, 3);
 }
 
-function assessBreathingKnowledge(text: string): any {
+interface KnowledgeAssessment {
+  score: number;
+  feedback: string;
+  suggestions: string[];
+}
+
+function assessBreathingKnowledge(text: string): KnowledgeAssessment {
   return {
     score: 0.9,
     feedback: "Demonstrates strong understanding of breathing techniques and their applications",

@@ -86,7 +86,7 @@ export function LensSocialHub() {
       breathHoldTime: 4,
       restlessnessScore: 15,
       cycles: 10,
-      timestamp: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
     });
   };
 
@@ -206,7 +206,7 @@ export function LensSocialHub() {
             </span>
           </div>
           {currentAccount.metadata?.bio && (
-            <p className="mt-2 text-sm">{currentAccount.metadata.bio}</p>
+            <p className="mt-2 text-sm">{currentAccount.metadata?.bio}</p>
           )}
         </CardContent>
       </Card>
@@ -266,7 +266,7 @@ export function LensSocialHub() {
               </span>
               {post.author.metadata?.name && (
                 <span className="text-xs text-muted-foreground">
-                  {post.author.metadata.name}
+                  {post.author.metadata?.name}
                 </span>
               )}
             </div>

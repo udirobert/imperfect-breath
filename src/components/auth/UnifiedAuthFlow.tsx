@@ -32,6 +32,20 @@ const LazyWalletAuth = React.lazy(() =>
   }))
 );
 
+// PERFORMANT: Lazy load Lens auth component
+const LazyLensAuth = React.lazy(() => 
+  import("@/auth/components/LensAuth").then(module => ({
+    default: module.LensAuth
+  }))
+);
+
+// PERFORMANT: Lazy load Flow auth component
+const LazyFlowAuth = React.lazy(() => 
+  import("@/auth/components/FlowAuth").then(module => ({
+    default: module.FlowAuth
+  }))
+);
+
 interface UnifiedAuthFlowProps {
   // MODULAR: Support different auth feature combinations
   features?: AuthFeatures;
@@ -133,6 +147,18 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
       setAuthStep('authenticate');
       return;
     }
+
+    if (methodId === 'lens') {
+      // Lens auth - trigger authentication directly
+      handleLensAuth();
+      return;
+    }
+
+    if (methodId === 'flow') {
+      // Flow auth - trigger authentication directly
+      handleFlowAuth();
+      return;
+    }
     
     // Email auth - show form
     setAuthStep('authenticate');
@@ -148,6 +174,56 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
     performance.trackError(error, 'wallet-auth');
     setError(error);
   }, [performance]);
+
+  const handleLensAuth = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Use the Lens auth from the auth hook
+      if (auth.refreshLensProfile) {
+        await auth.refreshLensProfile();
+        performance.completeAuthFlow(true, 'lens');
+        preferences.trackAuthSuccess('lens');
+        onComplete?.('lens');
+      } else {
+        throw new Error('Lens authentication not available');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Lens authentication failed";
+      performance.trackError(errorMessage, 'lens-auth');
+      setError(errorMessage);
+    }
+
+    setIsLoading(false);
+  }, [auth, onComplete, performance, preferences]);
+
+  const handleFlowAuth = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Use the Flow auth from the auth hook
+      if (auth.loginFlow) {
+        const result = await auth.loginFlow();
+        if (result.success) {
+          performance.completeAuthFlow(true, 'flow');
+          preferences.trackAuthSuccess('flow');
+          onComplete?.('flow');
+        } else {
+          throw new Error(result.error || 'Flow authentication failed');
+        }
+      } else {
+        throw new Error('Flow authentication not available');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Flow authentication failed";
+      performance.trackError(errorMessage, 'flow-auth');
+      setError(errorMessage);
+    }
+
+    setIsLoading(false);
+  }, [auth, onComplete, performance, preferences]);
   
   const handleEmailAuth = async () => {
     if (!email || !password) {
@@ -201,7 +277,7 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
             You're signed in and ready to go.
           </p>
           <div className="space-y-2">
-            {auth.user?.email && (
+            {auth.user && typeof auth.user === 'object' && auth.user !== null && 'email' in auth.user && auth.user.email && typeof auth.user.email === 'string' && (
               <div className="flex items-center justify-between text-sm">
                 <span>Email:</span>
                 <span className="text-muted-foreground">{auth.user.email}</span>
@@ -212,6 +288,22 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
                 <span>Wallet:</span>
                 <span className="text-muted-foreground">
                   {auth.walletAddress?.slice(0, 6)}...{auth.walletAddress?.slice(-4)}
+                </span>
+              </div>
+            )}
+            {auth.hasLensProfile && (
+              <div className="flex items-center justify-between text-sm">
+                <span>Lens:</span>
+                <span className="text-muted-foreground">
+                  {auth.lensHandle || 'Connected'}
+                </span>
+              </div>
+            )}
+            {auth.hasFlowAccount && (
+              <div className="flex items-center justify-between text-sm">
+                <span>Flow:</span>
+                <span className="text-muted-foreground">
+                  {auth.flowAddress ? `${auth.flowAddress.slice(0, 6)}...${auth.flowAddress.slice(-4)}` : 'Connected'}
                 </span>
               </div>
             )}
@@ -324,6 +416,64 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
           onError={handleWalletAuthError}
           className={className}
           preload={preferences.shouldPreloadWallet}
+        />
+      </Suspense>
+    );
+  }
+  
+  // CLEAN: Lens authentication (when lens method selected)
+  if (selectedMethod === 'lens' && authStep === 'authenticate') {
+    return (
+      <Suspense fallback={
+        <Card className={cn("w-full max-w-md mx-auto", className)}>
+          <CardContent className="flex items-center justify-center p-8">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-muted-foreground">Loading Lens authentication...</span>
+            </div>
+          </CardContent>
+        </Card>
+      }>
+        <LazyLensAuth
+          onSuccess={() => {
+            performance.completeAuthFlow(true, 'lens');
+            preferences.trackAuthSuccess('lens');
+            onComplete?.('lens');
+          }}
+          onError={(error) => {
+            performance.trackError(error, 'lens-auth');
+            setError(error);
+          }}
+          className={className}
+        />
+      </Suspense>
+    );
+  }
+
+  // CLEAN: Flow authentication (when flow method selected)
+  if (selectedMethod === 'flow' && authStep === 'authenticate') {
+    return (
+      <Suspense fallback={
+        <Card className={cn("w-full max-w-md mx-auto", className)}>
+          <CardContent className="flex items-center justify-center p-8">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="text-muted-foreground">Loading Flow authentication...</span>
+            </div>
+          </CardContent>
+        </Card>
+      }>
+        <LazyFlowAuth
+          onSuccess={() => {
+            performance.completeAuthFlow(true, 'flow');
+            preferences.trackAuthSuccess('flow');
+            onComplete?.('flow');
+          }}
+          onError={(error) => {
+            performance.trackError(error, 'flow-auth');
+            setError(error);
+          }}
+          className={className}
         />
       </Suspense>
     );

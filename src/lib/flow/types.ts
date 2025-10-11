@@ -267,6 +267,7 @@ export interface BreathingSession {
   score: number;
   completedAt: string;
   metrics: SessionMetrics;
+  timestamp?: Date; // Optional for backward compatibility
 }
 
 // Cross-network types

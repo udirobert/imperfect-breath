@@ -109,13 +109,20 @@ export const ImprovedWalletConnection: React.FC = () => {
       console.error('Failed to switch network:', error);
       toast.error(`Failed to switch to ${SUPPORTED_NETWORKS[networkId].name}`);
     }
-  };\n\n  const formatAddress = (addr: string) => {
+  };
+
+  const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };\n\n  const openExplorer = () => {
+  };
+
+  const openExplorer = () => {
     if (address && chain?.blockExplorers?.default?.url) {
       window.open(`${chain.blockExplorers.default.url}/address/${address}`, '_blank');
     }
-  };\n\n  // Connection Dialog\n  if (!isConnected) {
+  };
+
+  // Connection Dialog
+  if (!isConnected) {
     return (
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
@@ -160,11 +167,167 @@ export const ImprovedWalletConnection: React.FC = () => {
         </DialogContent>
       </Dialog>
     );
-  }\n\n  // Connected State\n  return (\n    <Card className=\"w-full max-w-md mx-auto\">\n      <CardHeader className=\"pb-3\">\n        <CardTitle className=\"flex items-center justify-between text-lg\">\n          <div className=\"flex items-center gap-2\">\n            <div className={cn(\n              \"w-8 h-8 rounded-full flex items-center justify-center text-white\",\n              isOnSupportedNetwork ? currentNetwork.color : \"bg-gray-500\"\n            )}>\n              {isOnSupportedNetwork ? currentNetwork.icon : <Wallet className=\"h-4 w-4\" />}\n            </div>\n            <span>Wallet Connected</span>\n          </div>\n          <Badge \n            variant={isOnSupportedNetwork ? \"default\" : \"destructive\"}\n            className=\"flex items-center gap-1\"\n          >\n            {isOnSupportedNetwork ? (\n              <CheckCircle className=\"h-3 w-3\" />\n            ) : (\n              <XCircle className=\"h-3 w-3\" />\n            )}\n            {isOnSupportedNetwork ? currentNetwork.shortName : 'Unsupported'}\n          </Badge>\n        </CardTitle>\n      </CardHeader>\n\n      <CardContent className=\"space-y-4\">\n        {/* Address Section */}\n        <div className=\"space-y-3\">\n          <div className=\"flex items-center justify-between p-3 bg-muted/50 rounded-lg\">\n            <div>\n              <div className=\"text-sm font-medium\">Address</div>\n              <code className=\"text-sm text-muted-foreground font-mono\">\n                {formatAddress(address!)}\n              </code>\n            </div>\n            <Button\n              variant=\"ghost\"\n              size=\"sm\"\n              onClick={copyAddress}\n              className=\"h-8 w-8 p-0\"\n            >\n              <Copy className=\"h-3 w-3\" />\n            </Button>\n          </div>\n\n          <div className=\"flex items-center justify-between p-3 bg-muted/50 rounded-lg\">\n            <div>\n              <div className=\"text-sm font-medium\">Network</div>\n              <div className=\"text-sm text-muted-foreground\">\n                {chain?.name || 'Unknown Network'}\n              </div>\n            </div>\n            <Button\n              variant=\"ghost\"\n              size=\"sm\"\n              onClick={() => setIsNetworkDialogOpen(true)}\n              className=\"h-8 px-2\"\n            >\n              <RefreshCw className=\"h-3 w-3 mr-1\" />\n              Switch\n            </Button>\n          </div>\n        </div>\n\n        {/* Network Status */}\n        {!isOnSupportedNetwork && (
+  }
+
+  // Connected State
+  return (
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between text-lg">
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-white",
+              isOnSupportedNetwork ? currentNetwork.color : "bg-gray-500"
+            )}>
+              {isOnSupportedNetwork ? currentNetwork.icon : <Wallet className="h-4 w-4" />}
+            </div>
+            <span>Wallet Connected</span>
+          </div>
+          <Badge 
+            variant={isOnSupportedNetwork ? "default" : "destructive"}
+            className="flex items-center gap-1"
+          >
+            {isOnSupportedNetwork ? (
+              <CheckCircle className="h-3 w-3" />
+            ) : (
+              <XCircle className="h-3 w-3" />
+            )}
+            {isOnSupportedNetwork ? currentNetwork.shortName : 'Unsupported'}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* Address Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div>
+              <div className="text-sm font-medium">Address</div>
+              <code className="text-sm text-muted-foreground font-mono">
+                {formatAddress(address!)}
+              </code>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={copyAddress}
+              className="h-8 w-8 p-0"
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div>
+              <div className="text-sm font-medium">Network</div>
+              <div className="text-sm text-muted-foreground">
+                {chain?.name || 'Unknown Network'}
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsNetworkDialogOpen(true)}
+              className="h-8 px-2"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Switch
+            </Button>
+          </div>
+        </div>
+
+        {/* Network Status */}
+        {!isOnSupportedNetwork && (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               You're on an unsupported network. Switch to a supported network to access all features.
             </AlertDescription>
           </Alert>
-        )}\n\n        {/* Features Available */}\n        {isOnSupportedNetwork && (\n          <div className=\"space-y-2\">\n            <div className=\"text-sm font-medium\">Available Features</div>\n            <div className=\"flex flex-wrap gap-1\">\n              {currentNetwork.features.map((feature) => (\n                <Badge key={feature} variant=\"secondary\" className=\"text-xs\">\n                  {feature}\n                </Badge>\n              ))}\n            </div>\n          </div>\n        )}\n\n        {/* Actions */}\n        <div className=\"flex gap-2\">\n          <Button\n            variant=\"outline\"\n            size=\"sm\"\n            onClick={openExplorer}\n            className=\"flex-1\"\n            disabled={!chain?.blockExplorers?.default?.url}\n          >\n            <ExternalLink className=\"h-3 w-3 mr-1\" />\n            Explorer\n          </Button>\n          <Button\n            variant=\"destructive\"\n            size=\"sm\"\n            onClick={handleDisconnect}\n            className=\"flex-1\"\n          >\n            Disconnect\n          </Button>\n        </div>\n\n        {/* Network Switch Dialog */}\n        <Dialog open={isNetworkDialogOpen} onOpenChange={setIsNetworkDialogOpen}>\n          <DialogContent className=\"sm:max-w-md\">\n            <DialogHeader>\n              <DialogTitle>Switch Network</DialogTitle>\n            </DialogHeader>\n            <div className=\"space-y-3\">\n              <p className=\"text-sm text-muted-foreground\">\n                Choose a network to access different features and capabilities.\n              </p>\n              {Object.values(SUPPORTED_NETWORKS).map((network) => {\n                const isCurrentNetwork = chain?.id === network.id;\n                return (\n                  <Button\n                    key={network.id}\n                    variant={isCurrentNetwork ? \"default\" : \"outline\"}\n                    className=\"w-full justify-between h-auto p-4\"\n                    onClick={() => handleNetworkSwitch(network.id)}\n                    disabled={isCurrentNetwork || isSwitching}\n                  >\n                    <div className=\"flex items-center gap-3\">\n                      <div className={cn(\n                        \"w-8 h-8 rounded-full flex items-center justify-center text-white\",\n                        network.color\n                      )}>\n                        {network.icon}\n                      </div>\n                      <div className=\"text-left\">\n                        <div className=\"font-medium\">{network.name}</div>\n                        <div className=\"text-xs text-muted-foreground\">\n                          {network.features.join(' • ')}\n                        </div>\n                      </div>\n                    </div>\n                    {isCurrentNetwork ? (\n                      <CheckCircle className=\"h-4 w-4\" />\n                    ) : (\n                      <ChevronRight className=\"h-4 w-4\" />\n                    )}\n                  </Button>\n                );\n              })}\n            </div>\n          </DialogContent>\n        </Dialog>\n      </CardContent>\n    </Card>\n  );\n};
+        )}
+
+        {/* Features Available */}
+        {isOnSupportedNetwork && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Available Features</div>
+            <div className="flex flex-wrap gap-1">
+              {currentNetwork.features.map((feature) => (
+                <Badge key={feature} variant="secondary" className="text-xs">
+                  {feature}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openExplorer}
+            className="flex-1"
+            disabled={!chain?.blockExplorers?.default?.url}
+          >
+            <ExternalLink className="h-3 w-3 mr-1" />
+            Explorer
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDisconnect}
+            className="flex-1"
+          >
+            Disconnect
+          </Button>
+        </div>
+
+        {/* Network Switch Dialog */}
+        <Dialog open={isNetworkDialogOpen} onOpenChange={setIsNetworkDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Switch Network</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Choose a network to access different features and capabilities.
+              </p>
+              {Object.values(SUPPORTED_NETWORKS).map((network) => {
+                const isCurrentNetwork = chain?.id === network.id;
+                return (
+                  <Button
+                    key={network.id}
+                    variant={isCurrentNetwork ? "default" : "outline"}
+                    className="w-full justify-between h-auto p-4"
+                    onClick={() => handleNetworkSwitch(network.id)}
+                    disabled={isCurrentNetwork || isSwitching}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-white",
+                        network.color
+                      )}>
+                        {network.icon}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium">{network.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {network.features.join(' • ')}
+                        </div>
+                      </div>
+                    </div>
+                    {isCurrentNetwork ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+};

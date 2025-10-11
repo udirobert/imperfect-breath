@@ -219,9 +219,7 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       if (!sessionInfo || !isActive) return null;
       
       // Get affirmation based on cycle count
-      const affirmation = useMemo(() => {
-        return getAffirmationForCycle(cycleCount);
-      }, [cycleCount]);
+      const affirmation = getAffirmationForCycle(cycleCount);
       
       return (
         <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 w-full max-w-md">

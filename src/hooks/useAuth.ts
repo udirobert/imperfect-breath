@@ -3,6 +3,7 @@ import { supabase } from "../integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 import { User, UserRole } from "../types/blockchain";
 import { useWalletStatus, useWalletActions } from "./useWallet";
+import { revenueCatAuthIntegration } from "../lib/monetization/revenueCatAuthIntegration";
 
 // Blockchain features configuration
 const BLOCKCHAIN_FEATURES_ENABLED = true;
@@ -66,7 +67,7 @@ export const useAuth = () => {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (session?.user) {
+    if (session?.user?.id) {
       await fetchProfile(session.user.id);
     }
   }, [session, fetchProfile]);
@@ -74,12 +75,25 @@ export const useAuth = () => {
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
+      
+      // Initialize RevenueCat auth integration
+      await revenueCatAuthIntegration.initialize();
+      
       const {
         data: { session },
       } = await supabase.auth.getSession();
       setSession(session);
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        if (session.user?.id) {
+          await fetchProfile(session.user.id);
+        }
+        // Sync user with RevenueCat
+        if (session.user?.id && session.user?.email) {
+          await revenueCatAuthIntegration.handleEmailAuth(
+            session.user.id,
+            session.user.email
+          );
+        }
       }
       setLoading(false);
     };
@@ -92,9 +106,20 @@ export const useAuth = () => {
       async (_event: string, session: Session | null) => {
         setSession(session);
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          if (session.user?.id) {
+            await fetchProfile(session.user.id);
+          }
+          // Sync user with RevenueCat on auth state change
+          if (session.user?.id && session.user?.email) {
+            await revenueCatAuthIntegration.handleEmailAuth(
+              session.user.id,
+              session.user.email
+            );
+          }
         } else {
           setProfile(null);
+          // Logout from RevenueCat when user logs out
+          await revenueCatAuthIntegration.handleLogout();
         }
       },
     );
@@ -128,15 +153,25 @@ export const useAuth = () => {
 
   const logout = useCallback(async () => {
     try {
+      // Logout from RevenueCat first
+      await revenueCatAuthIntegration.handleLogout();
+      
+      // Disconnect wallet
+      if (isConnected) {
+        disconnect();
+      }
+      
+      // Sign out from Supabase
       if (session) {
         await supabase.auth.signOut();
       }
       setSession(null);
+      setProfile(null);
     } catch (error) {
       console.error("Logout error:", error);
       throw error;
     }
-  }, [session]);
+  }, [session, isConnected, disconnect]);
 
   // Enhanced wallet connection with ConnectKit
   const connectWallet = useCallback(async () => {
@@ -160,6 +195,10 @@ export const useAuth = () => {
         await connectWallet();
         return;
       }
+
+      // Sync wallet with RevenueCat
+      const userId = session?.user?.id || address; // Use session user ID if available, otherwise use address
+      await revenueCatAuthIntegration.handleWalletAuth(userId, address, chainId ? parseInt(chainId, 16) : undefined);
 
       // Create or link wallet to existing profile
       if (session?.user) {
@@ -186,12 +225,12 @@ export const useAuth = () => {
       console.error("Wallet login failed:", error);
       throw error;
     }
-  }, [address, session, chainId, openConnectModal, refreshProfile]);
+  }, [address, session, chainId, connectWallet, refreshProfile]);
 
   const user = session?.user
     ? {
-        id: session.user.id,
-        email: session.user.email,
+        id: session.user?.id,
+        email: session.user?.email || '',
         ...profile, // Spread profile details into user object
         wallet: isConnected
           ? {
@@ -202,12 +241,12 @@ export const useAuth = () => {
             }
           : null,
         profile: {
-          username: session.user.user_metadata?.username,
-          name: session.user.user_metadata?.display_name,
-          avatar: session.user.user_metadata?.avatar_url,
+          username: session.user?.user_metadata?.username,
+          name: session.user?.user_metadata?.display_name,
+          avatar: session.user?.user_metadata?.avatar_url,
         },
-        createdAt: session.user.created_at,
-        updatedAt: session.user.updated_at,
+        createdAt: session.user?.created_at,
+        updatedAt: session.user?.updated_at,
       }
     : null;
 
@@ -219,21 +258,7 @@ export const useAuth = () => {
     loading,
     loginWithEmail,
     signUpWithEmail,
-    logout: useCallback(async () => {
-      try {
-        if (session) {
-          await supabase.auth.signOut();
-        }
-        if (isConnected) {
-          disconnect();
-        }
-        setSession(null);
-        setProfile(null);
-      } catch (error) {
-        console.error("Logout error:", error);
-        throw error;
-      }
-    }, [session, isConnected, disconnect]),
+    logout,
     refreshProfile,
 
     // Enhanced blockchain features

@@ -40,7 +40,7 @@ import {
 import { formatDuration, formatCount } from "../../../lib/utils/formatters";
 
 import { SocialActions } from "../../social/SocialActions";
-import type { PatternCardProps } from "./types";
+import type { PatternCardProps, UnifiedPattern } from "./types";
 import {
   VARIANT_CONFIGS,
   SIZE_STYLES,
@@ -346,7 +346,7 @@ export const PatternCard: React.FC<PatternCardProps> = ({
                     await result;
                   }
                 }}
-                onShare={async (pat: any) => {
+                onShare={async (pat: UnifiedPattern | Record<string, unknown>) => {
                   const result = onShare(pat);
                   if (result instanceof Promise) {
                     await result;

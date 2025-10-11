@@ -33,7 +33,7 @@ interface AuthPerformanceMetrics {
 interface PerformanceEvent {
   type: 'auth_start' | 'method_select' | 'component_load' | 'auth_complete' | 'error' | 'retry';
   timestamp: number;
-  data?: any;
+  data?: unknown;
 }
 
 const DEFAULT_METRICS: AuthPerformanceMetrics = {
@@ -60,18 +60,18 @@ export const useAuthPerformance = () => {
 
   // PERFORMANT: Detect slow connection
   useEffect(() => {
-    const connection = (navigator as any).connection;
+    const connection = (navigator as { connection?: { effectiveType?: string; downlink?: number } }).connection;
     if (connection) {
       const isSlowConnection = connection.effectiveType === 'slow-2g' || 
                               connection.effectiveType === '2g' ||
-                              connection.downlink < 1;
+                              (connection.downlink !== undefined && connection.downlink < 1);
       
       setMetrics(prev => ({ ...prev, isSlowConnection }));
     }
   }, []);
 
   // CLEAN: Add performance event
-  const addEvent = useCallback((type: PerformanceEvent['type'], data?: any) => {
+  const addEvent = useCallback((type: PerformanceEvent['type'], data?: unknown) => {
     const event: PerformanceEvent = {
       type,
       timestamp: performance.now(),

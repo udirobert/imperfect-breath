@@ -38,7 +38,7 @@ interface SessionConfig {
 const usePatternInitialization = (location: ReturnType<typeof useLocation>) => {
   return useMemo(() => {
     // 1. Try navigation state (preview)
-    if (location.state?.previewPattern) return location.state.previewPattern;
+    if (location.state?.previewPattern) return location.state?.previewPattern;
 
     // 2. Try localStorage
     try {

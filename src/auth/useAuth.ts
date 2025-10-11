@@ -12,7 +12,7 @@ export interface AuthFeatures {
 
 export interface AuthState {
   // Core auth (always available)
-  user: any;
+  user: unknown;
   isAuthenticated: boolean;
   isLoading: boolean;
   
@@ -28,7 +28,7 @@ export interface AuthState {
   flowUser?: {
     address: string;
     loggedIn: boolean;
-    services: any[];
+    services: unknown[];
   } | null;
   
   // Lens auth (optional)
@@ -72,14 +72,10 @@ export const useAuth = (features: AuthFeatures = {}) => {
   // Use the enhanced auth hook without blockchain features first
   const baseAuth = useEnhancedAuth();
   
-  // Conditional blockchain auth
-  const blockchainAuth = features.blockchain ? useBlockchainAuth() : null;
-  
-  // Conditional Flow auth
-  const flowAuth = features.flow ? useFlowAuth() : null;
-  
-  // Conditional Lens auth (requires blockchain)
-  const lensAuth = (features.lens && features.blockchain) ? useLensAuth() : null;
+  // Always call hooks, but conditionally use their values
+  const blockchainAuth = useBlockchainAuth();
+  const flowAuth = useFlowAuth();
+  const lensAuth = useLensAuth();
 
   // Compose auth state
   const authState: AuthState = useMemo(() => ({
@@ -87,24 +83,24 @@ export const useAuth = (features: AuthFeatures = {}) => {
     user: baseAuth.user,
     isAuthenticated: baseAuth.isAuthenticated,
     isLoading: baseAuth.loading ||
-               (blockchainAuth?.isConnecting) ||
-               (flowAuth?.isLoading) ||
-               (lensAuth?.isLoading) ||
+               (features.blockchain && blockchainAuth?.isConnecting) ||
+               (features.flow && flowAuth?.isLoading) ||
+               (features.lens && lensAuth?.isLoading) ||
                false,
     
     // Conditional blockchain state
-    ...(features.blockchain && blockchainAuth && {
-      wallet: blockchainAuth.wallet,
+    ...(features.blockchain && {
+      wallet: blockchainAuth?.wallet,
     }),
     
     // Conditional Flow state
-    ...(features.flow && flowAuth && {
-      flowUser: flowAuth.flowUser,
+    ...(features.flow && {
+      flowUser: flowAuth?.flowUser,
     }),
     
     // Conditional Lens state
-    ...(features.lens && lensAuth && {
-      lensProfile: lensAuth.lensProfile,
+    ...(features.lens && {
+      lensProfile: lensAuth?.lensProfile,
     }),
   }), [
     baseAuth.user,
@@ -159,21 +155,21 @@ export const useAuth = (features: AuthFeatures = {}) => {
     },
     
     // Conditional blockchain actions
-    ...(features.blockchain && blockchainAuth && {
-      connectWallet: blockchainAuth.connectWallet,
-      disconnectWallet: blockchainAuth.disconnectWallet,
+    ...(features.blockchain && {
+      connectWallet: blockchainAuth?.connectWallet,
+      disconnectWallet: blockchainAuth?.disconnectWallet,
     }),
     
     // Conditional Flow actions
-    ...(features.flow && flowAuth && {
-      loginFlow: flowAuth.login,
-      logoutFlow: flowAuth.logout,
+    ...(features.flow && {
+      loginFlow: flowAuth?.login,
+      logoutFlow: flowAuth?.logout,
     }),
     
     // Conditional Lens actions
-    ...(features.lens && lensAuth && {
-      refreshLensProfile: lensAuth.refreshProfile,
-      clearLensProfile: lensAuth.clearProfile,
+    ...(features.lens && {
+      refreshLensProfile: lensAuth?.refreshProfile,
+      clearLensProfile: lensAuth?.clearProfile,
     }),
   }), [
     baseAuth.loginWithEmail,

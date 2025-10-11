@@ -494,22 +494,19 @@ export const usePreferencesStore = create<UserPreferences & PreferencesActions>(
 // SELECTORS - Optimized state access
 // ============================================================================
 
-export const preferencesSelectors = {
-    visionPreferences: () => usePreferencesStore((state) => state.vision),
-    audioPreferences: () => usePreferencesStore((state) => state.audio),
-    performancePreferences: () => usePreferencesStore((state) => state.performance),
-    uiPreferences: () => usePreferencesStore((state) => state.ui),
-    sessionPreferences: () => usePreferencesStore((state) => state.session),
-    accessibilityPreferences: () => usePreferencesStore((state) => state.accessibility),
-    patternPreferences: () => usePreferencesStore((state) => state.patterns),
-
-    // Specific selectors
-    showFaceMesh: () => usePreferencesStore((state) => state.vision.showFaceMesh),
-    enableVoiceGuidance: () => usePreferencesStore((state) => state.audio.enableVoiceGuidance),
-    theme: () => usePreferencesStore((state) => state.ui.theme),
-    qualityLevel: () => usePreferencesStore((state) => state.performance.qualityLevel),
-    defaultSessionDuration: () => usePreferencesStore((state) => state.session.defaultSessionDuration),
-};
+// Custom hooks for preferences selectors
+export const usePreferencesVision = () => usePreferencesStore((state) => state.vision);
+export const usePreferencesAudio = () => usePreferencesStore((state) => state.audio);
+export const usePreferencesPerformance = () => usePreferencesStore((state) => state.performance);
+export const usePreferencesUI = () => usePreferencesStore((state) => state.ui);
+export const usePreferencesSession = () => usePreferencesStore((state) => state.session);
+export const usePreferencesAccessibility = () => usePreferencesStore((state) => state.accessibility);
+export const usePreferencesPatterns = () => usePreferencesStore((state) => state.patterns);
+export const usePreferencesShowFaceMesh = () => usePreferencesStore((state) => state.vision.showFaceMesh);
+export const usePreferencesEnableVoiceGuidance = () => usePreferencesStore((state) => state.audio.enableVoiceGuidance);
+export const usePreferencesTheme = () => usePreferencesStore((state) => state.ui.theme);
+export const usePreferencesQualityLevel = () => usePreferencesStore((state) => state.performance.qualityLevel);
+export const usePreferencesDefaultSessionDuration = () => usePreferencesStore((state) => state.session.defaultSessionDuration);
 
 // ============================================================================
 // HOOKS - Clean, focused hooks for components

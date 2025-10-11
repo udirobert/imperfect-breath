@@ -43,8 +43,8 @@ interface UserContext {
  * to the on-chain actions across Flow and Lens protocols
  */
 export class AIBreathingCoach {
-  private flowClient: any; // Will be replaced with actual EnhancedFlowClient
-  private lensClient: any; // Will be replaced with actual LensBreathingClient
+  private flowClient: unknown; // Will be replaced with actual EnhancedFlowClient
+  private lensClient: unknown; // Will be replaced with actual LensBreathingClient
   
   constructor() {
     // Initialize clients (placeholder for now)
@@ -140,7 +140,7 @@ export class AIBreathingCoach {
    * Handles the identified intent and orchestrates appropriate actions
    */
   private async handleIntent(
-    intent: any, 
+    intent: { primary: string; [key: string]: unknown }, 
     message: string, 
     userContext: UserContext
   ): Promise<string> {
@@ -417,7 +417,7 @@ export class AIBreathingCoach {
   }
   
   
-  private async simulateSocialPost(data: any): Promise<LensSocialResult> {
+  private async simulateSocialPost(data: { profileId?: string; [key: string]: unknown }): Promise<LensSocialResult> {
     elizaLogger.info("Simulating social post");
     return {
       publicationId: `pub-${Math.random().toString(36).substr(2, 9)}`,
@@ -431,13 +431,13 @@ export class AIBreathingCoach {
     return `listing-${Math.random().toString(36).substr(2, 8)}`;
   }
   
-  private async simulateBatchTransaction(transactions: any[]): Promise<string> {
+  private async simulateBatchTransaction(transactions: Record<string, unknown>[]): Promise<string> {
     elizaLogger.info("Simulating batch transaction");
     return `batch-${Math.random().toString(36).substr(2, 8)}`;
   }
   
   
-  private async simulateAchievementShare(achievement: any): Promise<LensSocialResult> {
+  private async simulateAchievementShare(achievement: Record<string, unknown>): Promise<LensSocialResult> {
     elizaLogger.info("Simulating achievement share");
     return this.simulateSocialPost(achievement);
   }

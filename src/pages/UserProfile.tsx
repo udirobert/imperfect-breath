@@ -66,7 +66,7 @@ const UserProfilePage = () => {
               <FollowButton address={currentAccount.address} />
             </div>
           )}
-          <p className="mt-2">{user.email}</p>
+          <p className="mt-2">{user?.email}</p>
         </div>
       </div>
 

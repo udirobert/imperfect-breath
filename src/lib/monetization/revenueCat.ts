@@ -4,15 +4,61 @@
  * ENHANCEMENT: Adds monetization capabilities to Imperfect Breath
  * CLEAN: Centralized subscription logic with clear separation of concerns
  * MODULAR: Composable subscription tiers and purchase handling
+ * WEB COMPATIBLE: Includes fallback for web browsers with mock implementation
  */
 
 import React from "react";
-import {
-  Purchases,
-  PurchasesOffering,
-  CustomerInfo,
-  PurchasesPackage,
-} from "@revenuecat/purchases-capacitor";
+
+// Type definitions for RevenueCat interfaces (for web compatibility)
+interface PurchasesOfferingType {
+  monthly?: unknown[];
+  annual?: unknown[];
+  lifetime?: unknown[];
+}
+
+interface CustomerInfoType {
+  activeSubscriptions: string[];
+  allPurchasedProductIdentifiers: string[];
+  entitlements: {
+    active: { [key: string]: unknown };
+  };
+}
+
+interface PurchasesPackageType {
+  identifier: string;
+  packageType: string;
+  product: unknown;
+}
+
+// Conditional import for RevenueCat - only available on mobile platforms
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Purchases: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let PurchasesOffering: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let CustomerInfo: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let PurchasesPackage: any = null;
+
+// Check if we're in a mobile environment before importing
+const isMobile = typeof window !== "undefined" && 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).Capacitor && 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ['ios', 'android'].includes((window as any).Capacitor.getPlatform());
+
+if (isMobile) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const revenueCatModule = require("@revenuecat/purchases-capacitor");
+    Purchases = revenueCatModule.Purchases;
+    PurchasesOffering = revenueCatModule.PurchasesOffering;
+    CustomerInfo = revenueCatModule.CustomerInfo;
+    PurchasesPackage = revenueCatModule.PurchasesPackage;
+  } catch (error) {
+    console.warn("RevenueCat Capacitor plugin not available:", error);
+  }
+}
 
 // Type definitions for better type safety
 export interface SubscriptionStatus {
@@ -24,7 +70,7 @@ export interface SubscriptionStatus {
 
 interface PurchaseResult {
   success: boolean;
-  customerInfo?: CustomerInfo;
+  customerInfo?: CustomerInfoType;
   error?: string;
 }
 
@@ -161,9 +207,10 @@ export const PURCHASE_ITEMS: PurchaseItem[] = [
 export class RevenueCatService {
   private static instance: RevenueCatService;
   private isInitialized = false;
-  private currentOfferings: PurchasesOffering | null = null;
-  private customerInfo: CustomerInfo | null = null;
+  private currentOfferings: PurchasesOfferingType | null = null;
+  private customerInfo: CustomerInfoType | null = null;
   private secureConfig: SecureRevenueCatConfig | null = null;
+  private isWebPlatform = false;
 
   private constructor() {}
 
@@ -179,6 +226,21 @@ export class RevenueCatService {
    */
   public async initialize(): Promise<boolean> {
     try {
+      // Check if we're on web platform
+      this.isWebPlatform = !isMobile;
+      
+      if (this.isWebPlatform) {
+        console.info("Running on web platform - using mock RevenueCat implementation");
+        this.isInitialized = true;
+        // Initialize with mock data for web
+        this.customerInfo = {
+          activeSubscriptions: [],
+          allPurchasedProductIdentifiers: [],
+          entitlements: { active: {} }
+        };
+        return true;
+      }
+
       // Load secure configuration
       this.secureConfig = await loadRevenueCatConfig();
       
@@ -193,10 +255,18 @@ export class RevenueCatService {
 
       // Determine platform and get appropriate API key
       const platform = this.getPlatform();
-      const apiKey = getRevenueCatKeyForPlatform(this.secureConfig.config, platform);
+      
+      // Skip API key validation for web platform
+      if (platform === "web") {
+        console.info("Web platform detected - using mock implementation");
+        this.isInitialized = true;
+        return true;
+      }
+      
+      const apiKey = getRevenueCatKeyForPlatform(this.secureConfig.config, platform as "ios" | "android");
 
       // Validate the API key
-      if (!isValidRevenueCatKey(apiKey, platform)) {
+      if (!isValidRevenueCatKey(apiKey, platform as "ios" | "android")) {
         console.warn(
           `Invalid RevenueCat API key for ${platform} platform. Using demo mode.`
         );
@@ -241,6 +311,16 @@ export class RevenueCatService {
    */
   public async loadOfferings(): Promise<void> {
     try {
+      if (this.isWebPlatform) {
+        // Mock offerings for web
+        this.currentOfferings = {
+          monthly: [],
+          annual: [],
+          lifetime: []
+        };
+        return;
+      }
+      
       const offerings = await Purchases.getOfferings();
       this.currentOfferings = offerings.current;
     } catch (error) {
@@ -401,24 +481,22 @@ export class RevenueCatService {
   /**
    * Get available packages for purchase
    */
-  public getAvailablePackages(): PurchasesPackage[] {
-    if (!this.currentOfferings) {
-      return [];
-    }
+  public getAvailablePackages(): PurchasesPackageType[] {
+    if (!this.currentOfferings) return [];
 
-    const packages: PurchasesPackage[] = [];
+    const allPackages: PurchasesPackageType[] = [];
 
     if (Array.isArray(this.currentOfferings.monthly)) {
-      packages.push(...this.currentOfferings.monthly);
+      allPackages.push(...this.currentOfferings.monthly);
     }
     if (Array.isArray(this.currentOfferings.annual)) {
-      packages.push(...this.currentOfferings.annual);
+      allPackages.push(...this.currentOfferings.annual);
     }
     if (Array.isArray(this.currentOfferings.lifetime)) {
-      packages.push(...this.currentOfferings.lifetime);
+      allPackages.push(...this.currentOfferings.lifetime);
     }
 
-    return packages;
+    return allPackages;
   }
 
   /**
@@ -428,7 +506,18 @@ export class RevenueCatService {
     [key: string]: string;
   }): Promise<void> {
     try {
+      if (this.isWebPlatform) {
+        console.log("Mock: Setting user attributes on web platform:", attributes);
+        return;
+      }
+      
+      if (!this.isInitialized || !Purchases) {
+        console.warn("RevenueCat not initialized, cannot set user attributes");
+        return;
+      }
+
       await Purchases.setAttributes(attributes);
+      console.log("User attributes set successfully");
     } catch (error) {
       console.error("Failed to set user attributes:", error);
     }
@@ -474,7 +563,7 @@ export class RevenueCatService {
    * Check if RevenueCat is available and properly configured
    */
   public isRevenueCatAvailable(): boolean {
-    return this.secureConfig?.isAvailable === true && this.isInitialized;
+    return this.isWebPlatform || (this.secureConfig?.isAvailable === true && this.isInitialized);
   }
 
   /**
@@ -486,32 +575,39 @@ export class RevenueCatService {
     error?: string;
   } {
     return {
-      isAvailable: this.secureConfig?.isAvailable === true,
+      isAvailable: this.isWebPlatform || this.secureConfig?.isAvailable === true,
       isInitialized: this.isInitialized,
-      error: this.secureConfig?.error
+      error: this.isWebPlatform ? undefined : this.secureConfig?.error
     };
   }
 
   // Private helper methods
-  private getPlatform(): "ios" | "android" {
+  private getPlatform(): "ios" | "android" | "web" {
     // For Capacitor, we can check the platform
     if (
       typeof window !== "undefined" &&
       (window as unknown as { Capacitor?: { getPlatform(): string } }).Capacitor
     ) {
-      return (
+      const platform = (
         window as unknown as { Capacitor: { getPlatform(): string } }
-      ).Capacitor.getPlatform() === "ios"
-        ? "ios"
-        : "android";
+      ).Capacitor.getPlatform();
+      
+      if (platform === "ios") return "ios";
+      if (platform === "android") return "android";
     }
-    return "android"; // Default to Android
+    
+    // Default to web for browser environments
+    if (typeof window !== "undefined" && !isMobile) {
+      return "web";
+    }
+    
+    return "android"; // Default fallback
   }
 
-  private findPackage(packageId: string): PurchasesPackage | null {
+  private findPackage(packageId: string): PurchasesPackageType | null {
     if (!this.currentOfferings) return null;
 
-    const allPackages: PurchasesPackage[] = [];
+    const allPackages: PurchasesPackageType[] = [];
 
     if (Array.isArray(this.currentOfferings.monthly)) {
       allPackages.push(...this.currentOfferings.monthly);

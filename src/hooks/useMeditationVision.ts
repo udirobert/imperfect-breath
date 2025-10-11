@@ -229,24 +229,6 @@ const DEFAULT_CONFIG: VisionConfig = {
 };
 
 export const useMeditationVision = (config?: Partial<VisionConfig>) => {
-  // Handle conditional initialization - return null state if no config provided
-  if (!config) {
-    return {
-      state: {
-        isActive: false,
-        isReady: false,
-        metrics: null,
-        currentFPS: 0,
-        performanceMode: 'optimal' as const,
-        backendAvailable: false,
-        error: null,
-      },
-      start: () => Promise.resolve(),
-      stop: () => { },
-      reset: () => { },
-    };
-  }
-
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
 
   const [state, setState] = useState<VisionState>({
@@ -518,6 +500,22 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
 
     performanceTracker.current = [];
   }, [finalConfig.targetFPS]);
+
+  // Handle conditional initialization - return null state if no config provided
+  if (!config) {
+    return {
+      isActive: false,
+      isReady: false,
+      metrics: null,
+      currentFPS: 0,
+      performanceMode: 'optimal' as const,
+      backendAvailable: false,
+      error: null,
+      start: () => Promise.resolve(),
+      stop: () => { },
+      reset: () => { },
+    };
+  }
 
   return {
     state,

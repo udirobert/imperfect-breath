@@ -36,7 +36,17 @@ export const StreamingMetricsDisplay: React.FC<StreamingMetricsDisplayProps> = (
 }) => {
   const [currentMetrics, setCurrentMetrics] = useState<Partial<StreamingMetrics> | null>(null);
   const [historicalMetrics, setHistoricalMetrics] = useState<StreamingMetrics[]>([]);
-  const [aggregatedStats, setAggregatedStats] = useState<any>(null);
+  const [aggregatedStats, setAggregatedStats] = useState<{
+    totalSessions: number;
+    averageThroughput: number;
+    averageLatency: number;
+    averageErrorRate: number;
+    providerStats: Record<string, {
+      sessions: number;
+      avgThroughput: number;
+      avgErrorRate: number;
+    }>;
+  } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -326,7 +336,11 @@ export const StreamingMetricsDisplay: React.FC<StreamingMetricsDisplayProps> = (
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {Object.entries(aggregatedStats.providerStats).map(([provider, stats]: [string, any]) => (
+                    {Object.entries(aggregatedStats.providerStats).map(([provider, stats]: [string, {
+                      sessions: number;
+                      avgThroughput: number;
+                      avgErrorRate: number;
+                    }]) => (
                       <div key={provider} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{provider}</span>

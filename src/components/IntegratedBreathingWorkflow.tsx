@@ -39,7 +39,7 @@ import type {
   BreathingPatternAttributes,
   NFTMetadata,
 } from "../lib/flow/types";
-import type { BreathingSession } from "../lib/lens";
+import type { BreathingSession } from "../lib/lens/types";
 
 interface WorkflowStep {
   id: string;
@@ -252,7 +252,7 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
       console.error("AI analysis failed:", error);
       toast.error("AI analysis failed");
     }
-  }, [patternData, validatePattern, analyzeSession, flowUser]);
+  }, [patternData, validatePattern, analyzeSession, flowUser, results]);
 
   // Session completion handler (moved up to avoid scope issues)
   const handleSessionComplete = useCallback((results: SessionResults) => {
@@ -379,12 +379,11 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
 
     try {
       const sessionData: BreathingSession = {
-        id: `session-${Date.now()}`,
         patternName: patternData.name,
         duration: sessionResults.duration,
         breathHoldTime: sessionResults.averageHoldTime,
         restlessnessScore: sessionResults.restlessnessScore,
-        timestamp: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
       };
 
       await shareBreathingSession(sessionData);

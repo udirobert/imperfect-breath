@@ -82,14 +82,13 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
 
     try {
       const sessionForSharing = {
-        id: `session-${Date.now()}`,
         patternName: sessionData.patternName || "Breathing Session",
         duration: (sessionData as ShareableSessionData).sessionDuration || 0,
         score: (sessionData as ShareableSessionData).score || 0,
-        timestamp: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
         breathHoldTime: (sessionData as ShareableSessionData).breathHoldTime || 0,
-        insights: (sessionData as ShareableSessionData).insights || [],
-        flowNFTId: (sessionData as ShareableSessionData).flowNFTId,
+        cycles: (sessionData as ShareableSessionData).cycles,
+        restlessnessScore: (sessionData as ShareableSessionData).restlessnessScore,
       };
 
       const result = await shareBreathingSession(sessionForSharing);

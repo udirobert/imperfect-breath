@@ -53,7 +53,7 @@ export class DataSanitizer {
       return String(text);
     }
 
-    return text.replace(/[&<>"'`=\/]/g, (match) => HTML_ENTITIES[match] || match);
+    return text.replace(/[&<>"'`=/]/g, (match) => HTML_ENTITIES[match] || match);
   }
 
   /**
@@ -83,11 +83,11 @@ export class DataSanitizer {
 
     // Remove dangerous tags and their content
     for (const tag of DANGEROUS_TAGS) {
-      const regex = new RegExp(`<${tag}\\b[^<]*(?:(?!<\\/${tag}>)<[^<]*)*<\\/${tag}>`, 'gi');
+      const regex = new RegExp(`<${tag}\\b[^<]*(?:(?!</${tag}>)<[^<]*)*</${tag}>`, 'gi');
       sanitized = sanitized.replace(regex, '');
       
       // Also remove self-closing tags
-      const selfClosingRegex = new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi');
+      const selfClosingRegex = new RegExp(`<${tag}\\b[^>]*\/?>`, 'gi');
       sanitized = sanitized.replace(selfClosingRegex, '');
     }
 
@@ -168,7 +168,7 @@ export class DataSanitizer {
     }
 
     // Remove all whitespace and control characters
-    return apiKey.replace(/[\s\x00-\x1F\x7F]/g, '');
+    return apiKey.replace(/[\s\u0000-\u001F\u007F]/g, '');
   }
 
   /**
@@ -270,7 +270,7 @@ export class DataSanitizer {
   /**
    * Sanitize breathing session data
    */
-  static sanitizeBreathingSession(sessionData: any): {
+  static sanitizeBreathingSession(sessionData: unknown): {
     patternName?: string;
     duration?: number;
     breathHoldTime?: number;
@@ -278,30 +278,57 @@ export class DataSanitizer {
     bpm?: number;
     consistencyScore?: number;
   } {
-    const sanitized: any = {};
-
-    if (sessionData.patternName) {
-      sanitized.patternName = this.sanitizeBreathingPatternName(sessionData.patternName);
+    // Type guard to ensure sessionData is an object
+    if (!sessionData || typeof sessionData !== 'object') {
+      return {};
     }
 
-    if (sessionData.duration !== undefined) {
-      sanitized.duration = this.sanitizeNumber(sessionData.duration);
+    const sanitized: {
+      patternName?: string;
+      duration?: number;
+      breathHoldTime?: number;
+      restlessnessScore?: number;
+      bpm?: number;
+      consistencyScore?: number;
+    } = {};
+
+    if ('patternName' in sessionData && sessionData.patternName !== undefined && sessionData.patternName !== null) {
+      sanitized.patternName = this.sanitizeBreathingPatternName(sessionData.patternName as string);
     }
 
-    if (sessionData.breathHoldTime !== undefined) {
-      sanitized.breathHoldTime = this.sanitizeNumber(sessionData.breathHoldTime);
+    if ('duration' in sessionData && sessionData.duration !== undefined && sessionData.duration !== null) {
+      const sanitizedValue = this.sanitizeNumber(sessionData.duration as number);
+      if (sanitizedValue !== null) {
+        sanitized.duration = sanitizedValue;
+      }
     }
 
-    if (sessionData.restlessnessScore !== undefined) {
-      sanitized.restlessnessScore = this.sanitizeNumber(sessionData.restlessnessScore, false);
+    if ('breathHoldTime' in sessionData && sessionData.breathHoldTime !== undefined && sessionData.breathHoldTime !== null) {
+      const sanitizedValue = this.sanitizeNumber(sessionData.breathHoldTime as number);
+      if (sanitizedValue !== null) {
+        sanitized.breathHoldTime = sanitizedValue;
+      }
     }
 
-    if (sessionData.bpm !== undefined) {
-      sanitized.bpm = this.sanitizeNumber(sessionData.bpm);
+    if ('restlessnessScore' in sessionData && sessionData.restlessnessScore !== undefined && sessionData.restlessnessScore !== null) {
+      const sanitizedValue = this.sanitizeNumber(sessionData.restlessnessScore as number, false);
+      if (sanitizedValue !== null) {
+        sanitized.restlessnessScore = sanitizedValue;
+      }
     }
 
-    if (sessionData.consistencyScore !== undefined) {
-      sanitized.consistencyScore = this.sanitizeNumber(sessionData.consistencyScore, false);
+    if ('bpm' in sessionData && sessionData.bpm !== undefined && sessionData.bpm !== null) {
+      const sanitizedValue = this.sanitizeNumber(sessionData.bpm as number);
+      if (sanitizedValue !== null) {
+        sanitized.bpm = sanitizedValue;
+      }
+    }
+
+    if ('consistencyScore' in sessionData && sessionData.consistencyScore !== undefined && sessionData.consistencyScore !== null) {
+      const sanitizedValue = this.sanitizeNumber(sessionData.consistencyScore as number, false);
+      if (sanitizedValue !== null) {
+        sanitized.consistencyScore = sanitizedValue;
+      }
     }
 
     return sanitized;
@@ -312,7 +339,7 @@ export class DataSanitizer {
    */
   static sanitizeObject(
     obj: Record<string, any>,
-    sanitizers: Record<string, string | ((value: any) => any)>
+    sanitizers: Record<string, string | ((value: unknown) => any)>
   ): Record<string, any> {
     const sanitized: Record<string, any> = {};
 

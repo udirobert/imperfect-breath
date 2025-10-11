@@ -284,7 +284,7 @@ export const ImprovedWalletManager = () => {
           <WalletStatusCard
             isConnected={flowUser?.loggedIn || false}
             isLoading={isFlowSetupLoading}
-            address={flowUser?.addr}
+            address={flowUser?.addr || undefined}
             displayName="Flow (NFTs)"
             icon={<Coins className="h-3 w-3" />}
             color="bg-green-500"

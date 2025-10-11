@@ -95,7 +95,7 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
   };
 
   const handleCopyAddress = async () => {
-    const { address } = useWalletStatus();
+    const { address } = walletStatus;
     if (address) {
       try {
         await navigator.clipboard.writeText(address);
@@ -114,7 +114,7 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
   };
 
   const handleViewOnExplorer = () => {
-    const { address } = useWalletStatus();
+    const { address } = walletStatus;
     if (address && chainId) {
       const explorerUrls: Record<string, string> = {
         '0x1': 'https://etherscan.io',
