@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { BreathingPattern } from '../lib/breathingPatterns';
+import { errorReporter } from '../lib/errors/error-reporter';
 import type { SessionPhase, BreathPhase, SessionMode, SessionMetrics, PerformanceMode, VisionMetrics } from '../types/metrics';
 
 // ============================================================================
@@ -145,14 +146,10 @@ export const useSessionStore = create<SessionState & SessionActions>()(
       
       // MODULAR: Notify error reporter of new session
       try {
-        // Use dynamic import instead of require() for browser compatibility
-        import('../lib/errors/error-reporter').then(({ errorReporter }) => {
-          errorReporter.updateSessionId(sessionId);
-        }).catch(() => {
-          // Graceful fallback if error reporter not available
-        });
-      } catch {
-        // Graceful fallback if error reporter not available
+        errorReporter.updateSessionId(sessionId);
+      } catch (e) {
+        console.warn('Error reporter not available, session ID not updated.', e);
+        // Graceful fallback
       }
       
       console.log('🔧 Session initialized with ID:', sessionId);
@@ -390,6 +387,27 @@ export const useSessionPatternEngagement = () => useSessionStore((state) => stat
 export const useSessionPatternEffectiveness = () => useSessionStore((state) => state.metrics.effectivenessScore);
 export const useSessionHasError = () => useSessionStore((state) => !!state.error);
 export const useSessionHasWarnings = () => useSessionStore((state) => state.warnings.length > 0);
+
+// ============================================================================
+// SELECTORS - Optimized state access
+// ============================================================================
+
+export const sessionSelectors = {
+  isActive: () => useSessionStore((state) => state.phase !== 'idle'),
+  isRunning: () => useSessionStore((state) => ['inhale', 'hold', 'exhale', 'pause'].includes(state.phase)),
+  isPaused: () => useSessionStore((state) => state.phase === 'paused'),
+  isComplete: () => useSessionStore((state) => state.phase === 'complete'),
+  hasError: () => useSessionStore((state) => !!state.error),
+  hasWarnings: () => useSessionStore((state) => state.warnings.length > 0),
+  currentCycle: () => useSessionStore((state) => state.metrics.cycleCount),
+  totalCycles: () => useSessionStore((state) => state.config?.maxCycles || 10),
+  progress: () => useSessionStore((state) => {
+    const maxCycles = state.config?.maxCycles || 10;
+    return Math.min((state.metrics.cycleCount / maxCycles) * 100, 100);
+  }),
+  visionActive: () => useSessionStore((state) => state.visionActive),
+  breathHoldTime: () => useSessionStore((state) => state.metrics.breathHoldTime),
+};
 
 // ============================================================================
 // HOOKS - Clean, focused hooks for components

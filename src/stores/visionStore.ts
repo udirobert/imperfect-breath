@@ -12,6 +12,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { MeditationMetrics } from '../types/metrics';
+import { apiClient } from '../lib/api/unified-client';
+import { useSessionStore } from './sessionStore';
 
 // ============================================================================
 // TYPES - Clean, focused interfaces
@@ -180,11 +182,7 @@ export const useVisionStore = create<VisionState & VisionActions>()(
                         ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
                         const imageData = canvas.toDataURL('image/jpeg', 0.8);
 
-                        // Make API call to backend
-                        const { apiClient } = await import('../lib/api/unified-client');
-
                         // Get current breathing phase from session store
-                        const { useSessionStore } = await import('./sessionStore');
                         const currentPhase = useSessionStore.getState().metrics?.currentPhase;
 
                         // Make API call to backend
@@ -358,6 +356,20 @@ export const useVisionHasError = () => useVisionStore((state) => !!state.error);
 export const useVisionIsBackendAvailable = () => useVisionStore((state) => state.backendAvailable);
 export const useVisionRestlessnessScore = () => useVisionStore((state) => state.metrics?.restlessnessScore || 0);
 export const useVisionStillnessScore = () => useVisionStore((state) => state.metrics?.stillness || 0);
+
+// ============================================================================
+// SELECTORS - Optimized state access
+// ============================================================================
+
+export const visionSelectors = {
+  isActive: () => useVisionStore((state) => state.isActive),
+  hasMetrics: () => useVisionStore((state) => !!state.metrics),
+  hasError: () => useVisionStore((state) => !!state.error),
+  isProcessing: () => useVisionStore((state) => state.isProcessing),
+  restlessnessScore: () => useVisionStore((state) => state.metrics?.restlessnessScore || 0),
+  sessionId: () => useVisionStore((state) => state.sessionId),
+  isConfigured: () => useVisionStore((state) => !!state.config),
+};
 
 // ============================================================================
 // HOOKS - Clean, focused hooks for components

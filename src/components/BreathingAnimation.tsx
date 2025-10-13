@@ -164,9 +164,9 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
           "absolute rounded-full bg-blue-50/20 border border-blue-200/40",
           // Phase-specific transitions for more natural breathing feel
           phase === "inhale"
-            ? "transition-all duration-[4000ms] ease-out"
+            ? "transition-all duration-4000 ease-out"
             : phase === "exhale"
-            ? "transition-all duration-[4000ms] ease-in"
+            ? "transition-all duration-4000 ease-in"
             : phase === "hold" || phase === "hold_after_exhale"
             ? "transition-all duration-500 ease-in-out"
             : "transition-all duration-1000 ease-in-out",

@@ -119,6 +119,13 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         // Ensure nothing gets externalized - everything should be bundled
         external: [],
+        onwarn(warning, warn) {
+          // Suppress "INVALID_ANNOTATION" warnings from node_modules
+          if (warning.code === 'INVALID_ANNOTATION') {
+            return;
+          }
+          warn(warning);
+        },
         output: {
           // Simplified chunking strategy to prevent module loading issues
           manualChunks: {

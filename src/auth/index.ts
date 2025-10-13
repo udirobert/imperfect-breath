@@ -11,7 +11,6 @@ export type { AuthMethod, AuthContext } from "./auth-methods";
 export { AuthMethodCard } from "./components/AuthMethodCard";
 
 // PERFORMANT: Performance optimization components and hooks
-export { LazyWalletAuth } from "./performance/LazyWalletAuth";
 export { useAuthPerformance } from "./performance/useAuthPerformance";
 export { useAuthPreferences } from "../hooks/useAuthPreferences";
 

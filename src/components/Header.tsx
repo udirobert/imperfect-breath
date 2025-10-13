@@ -21,7 +21,7 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { WalletManager } from "./WalletManager";
+const WalletManager = React.lazy(() => import("./WalletManager"));
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -190,7 +190,9 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                 {/* Wallet & Actions */}
                 <div className="border-t pt-4 space-y-3">
                   <div className="px-3">
-                    <WalletManager />
+                    <React.Suspense fallback={<div>Loading wallet...</div>}>
+                      <WalletManager />
+                    </React.Suspense>
                   </div>
 
                   {user && (
