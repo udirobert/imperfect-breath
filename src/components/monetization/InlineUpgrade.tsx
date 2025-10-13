@@ -132,7 +132,7 @@ export const InlineUpgrade: React.FC<InlineUpgradeProps> = ({
             Upgrade for {meta.name}
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-4xl max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>Unlock {meta.name}</DialogTitle>
             <DialogDescription>
@@ -161,7 +161,7 @@ export const InlineUpgrade: React.FC<InlineUpgradeProps> = ({
                 <ArrowRight className="h-3 w-3 ml-1" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-4xl max-w-[95vw]">
               <DialogHeader>
                 <DialogTitle>Unlock {meta.name}</DialogTitle>
                 <DialogDescription>
@@ -262,7 +262,7 @@ export const InlineUpgrade: React.FC<InlineUpgradeProps> = ({
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-4xl max-w-[95vw]">
             <DialogHeader>
               <DialogTitle>Unlock {meta.name}</DialogTitle>
               <DialogDescription>

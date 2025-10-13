@@ -237,7 +237,7 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({
                       Upgrade
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-4xl max-w-[95vw]">
                     <DialogHeader>
                       <DialogTitle>Choose Your Plan</DialogTitle>
                       <DialogDescription>
