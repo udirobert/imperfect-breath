@@ -10,7 +10,7 @@ import { Mail, Wallet, Zap, Users, Coins } from "lucide-react";
 import type { AuthFeatures } from "./useAuth";
 
 export interface AuthMethod {
-  id: 'guest' | 'email' | 'wallet' | 'lens' | 'flow';
+  id: 'guest' | 'email' | 'wallet';
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -46,13 +46,14 @@ export const AUTH_METHODS: Record<string, AuthMethod> = {
   
   email: {
     id: 'email',
-    title: 'Save Progress',
-    description: 'Track your breathing journey',
+    title: 'Sign In',
+    description: 'Create account or sign in with email',
     icon: Mail,
     benefits: [
-      'Cloud sync',
-      'Progress tracking',
-      'Personalized insights'
+      'Save your progress',
+      'Sync across devices',
+      'Personalized insights',
+      'Access anywhere'
     ],
     features: {},
     priority: 2,
@@ -61,54 +62,27 @@ export const AUTH_METHODS: Record<string, AuthMethod> = {
   
   wallet: {
     id: 'wallet',
-    title: 'Own Your Data',
-    description: 'NFTs, social features, and tools',
+    title: 'Onchain',
+    description: 'NFTs, social features, and blockchain tools',
     icon: Wallet,
     benefits: [
-      'Own your patterns',
-      'Social community',
-      'Creator monetization'
+      'Own your breathing patterns as NFTs',
+      'Social community features',
+      'Creator monetization tools',
+      'Cross-platform compatibility'
     ],
-    features: { blockchain: true },
+    features: { blockchain: true, lens: true, flow: true },
     priority: 3,
     requiresInput: false,
   },
 
-  lens: {
-    id: 'lens',
-    title: 'Social Profile',
-    description: 'Decentralized social with Lens Protocol',
-    icon: Users,
-    benefits: [
-      'Decentralized identity',
-      'Social features',
-      'Community building',
-      'Profile portability'
-    ],
-    features: { lens: true, blockchain: true },
-    priority: 4,
-    requiresInput: false,
-  },
-
-  flow: {
-    id: 'flow',
-    title: 'Flow Account',
-    description: 'Consumer-friendly Web3 experience',
-    icon: Coins,
-    benefits: [
-      'Low transaction costs',
-      'NFT capabilities',
-      'Walletless onboarding',
-      'Forte automation'
-    ],
-    features: { flow: true, blockchain: true },
-    priority: 5,
-    requiresInput: false,
-  },
+  // AGGRESSIVE CONSOLIDATION: Remove duplicate lens and flow methods
+  // These are now consolidated into the wallet method above
 };
 
 /**
- * CLEAN: Context-aware auth method recommendations
+ * AGGRESSIVE CONSOLIDATION: Streamlined auth method recommendations
+ * PREVENT BLOAT: Maximum 3 options to reduce cognitive load
  */
 export const getRecommendedAuthMethods = (
   context?: AuthContext,
@@ -119,25 +93,25 @@ export const getRecommendedAuthMethods = (
     return [];
   }
 
-  // Context-specific recommendations
+  // AGGRESSIVE CONSOLIDATION: Context-specific recommendations with max 3 options
   switch (context?.type) {
     case 'nft-purchase':
     case 'creator-tools':
-      // Prioritize blockchain-enabled methods for NFT features
-      return [AUTH_METHODS.wallet, AUTH_METHODS.flow, AUTH_METHODS.lens, AUTH_METHODS.email, AUTH_METHODS.guest];
+      // Blockchain features need wallet - show only relevant options
+      return [AUTH_METHODS.wallet, AUTH_METHODS.email, AUTH_METHODS.guest];
       
     case 'social-share':
-      // Social features benefit from Lens and wallet
-      return [AUTH_METHODS.lens, AUTH_METHODS.wallet, AUTH_METHODS.flow, AUTH_METHODS.email, AUTH_METHODS.guest];
+      // Social features - prioritize wallet for social auth
+      return [AUTH_METHODS.wallet, AUTH_METHODS.email, AUTH_METHODS.guest];
       
     case 'progress-tracking':
       // Progress tracking needs persistent auth
-      return [AUTH_METHODS.email, AUTH_METHODS.lens, AUTH_METHODS.wallet, AUTH_METHODS.flow, AUTH_METHODS.guest];
+      return [AUTH_METHODS.email, AUTH_METHODS.wallet, AUTH_METHODS.guest];
       
     case 'profile':
     default:
-      // Default: progressive enhancement path
-      return [AUTH_METHODS.guest, AUTH_METHODS.email, AUTH_METHODS.wallet, AUTH_METHODS.lens, AUTH_METHODS.flow];
+      // ENHANCEMENT FIRST: Progressive enhancement with clear value proposition
+      return [AUTH_METHODS.guest, AUTH_METHODS.email, AUTH_METHODS.wallet];
   }
 };
 

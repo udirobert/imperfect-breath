@@ -175,55 +175,8 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
     setError(error);
   }, [performance]);
 
-  const handleLensAuth = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Use the Lens auth from the auth hook
-      if (auth.refreshLensProfile) {
-        await auth.refreshLensProfile();
-        performance.completeAuthFlow(true, 'lens');
-        preferences.trackAuthSuccess('lens');
-        onComplete?.('lens');
-      } else {
-        throw new Error('Lens authentication not available');
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Lens authentication failed";
-      performance.trackError(errorMessage, 'lens-auth');
-      setError(errorMessage);
-    }
-
-    setIsLoading(false);
-  }, [auth, onComplete, performance, preferences]);
-
-  const handleFlowAuth = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Use the Flow auth from the auth hook
-      if (auth.loginFlow) {
-        const result = await auth.loginFlow();
-        if (result.success) {
-          performance.completeAuthFlow(true, 'flow');
-          preferences.trackAuthSuccess('flow');
-          onComplete?.('flow');
-        } else {
-          throw new Error(result.error || 'Flow authentication failed');
-        }
-      } else {
-        throw new Error('Flow authentication not available');
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Flow authentication failed";
-      performance.trackError(errorMessage, 'flow-auth');
-      setError(errorMessage);
-    }
-
-    setIsLoading(false);
-  }, [auth, onComplete, performance, preferences]);
+  // AGGRESSIVE CONSOLIDATION: Removed handleLensAuth and handleFlowAuth
+  // These are now handled by the consolidated wallet auth method
   
   const handleEmailAuth = async () => {
     if (!email || !password) {
@@ -421,63 +374,7 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
     );
   }
   
-  // CLEAN: Lens authentication (when lens method selected)
-  if (selectedMethod === 'lens' && authStep === 'authenticate') {
-    return (
-      <Suspense fallback={
-        <Card className={cn("w-full max-w-md mx-auto", className)}>
-          <CardContent className="flex items-center justify-center p-8">
-            <div className="flex items-center gap-3">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span className="text-muted-foreground">Loading Lens authentication...</span>
-            </div>
-          </CardContent>
-        </Card>
-      }>
-        <LazyLensAuth
-          onSuccess={() => {
-            performance.completeAuthFlow(true, 'lens');
-            preferences.trackAuthSuccess('lens');
-            onComplete?.('lens');
-          }}
-          onError={(error) => {
-            performance.trackError(error, 'lens-auth');
-            setError(error);
-          }}
-          className={className}
-        />
-      </Suspense>
-    );
-  }
-
-  // CLEAN: Flow authentication (when flow method selected)
-  if (selectedMethod === 'flow' && authStep === 'authenticate') {
-    return (
-      <Suspense fallback={
-        <Card className={cn("w-full max-w-md mx-auto", className)}>
-          <CardContent className="flex items-center justify-center p-8">
-            <div className="flex items-center gap-3">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span className="text-muted-foreground">Loading Flow authentication...</span>
-            </div>
-          </CardContent>
-        </Card>
-      }>
-        <LazyFlowAuth
-          onSuccess={() => {
-            performance.completeAuthFlow(true, 'flow');
-            preferences.trackAuthSuccess('flow');
-            onComplete?.('flow');
-          }}
-          onError={(error) => {
-            performance.trackError(error, 'flow-auth');
-            setError(error);
-          }}
-          className={className}
-        />
-      </Suspense>
-    );
-  }
+  // AGGRESSIVE CONSOLIDATION: Lens and Flow auth now handled by wallet method
   
   // CLEAN: Email authentication form (when email method selected)
   if (selectedMethod === 'email' && authStep === 'authenticate') {
