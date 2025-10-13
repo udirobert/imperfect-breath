@@ -1,15 +1,12 @@
 /**
- * Unified Recommendation Card - Consistent Pattern Display
- * 
- * DRY: Single source of truth for recommendation display
- * CLEAN: Clear separation of display logic from recommendation logic
- * MODULAR: Reusable across different contexts (mood, time, AI-based)
- * ENHANCEMENT FIRST: Builds on existing pattern data structure
+ * CONSOLIDATED: Enhanced existing Badge component for recommendations
+ * ENHANCEMENT FIRST: Builds on existing UI patterns
  */
 
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PremiumBadge } from "@/components/ui/premium-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Clock,
@@ -73,15 +70,21 @@ const getPatternIcon = (patternId: string) => {
   return iconMap[patternId] || Focus;
 };
 
-// CLEAN: Badge variant based on priority and confidence
-const getBadgeVariant = (confidence: number, priority?: string, index?: number) => {
+// PREMIUM: Badge variant based on priority and confidence using premium system
+const getPremiumBadgeVariant = (confidence: number, priority?: string, index?: number): "perfect" | "excellent" | "great" | "good" | "recommended" => {
   if (index === 0 || priority === 'high' || confidence >= 0.9) {
-    return 'default';
+    return 'perfect';
   }
-  if (confidence >= 0.8) {
-    return 'secondary';
+  if (confidence >= 0.85) {
+    return 'excellent';
   }
-  return 'outline';
+  if (confidence >= 0.75) {
+    return 'great';
+  }
+  if (confidence >= 0.65) {
+    return 'good';
+  }
+  return 'recommended';
 };
 
 export const RecommendationCard: React.FC<RecommendationCardProps> = ({
@@ -123,9 +126,12 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
         <div className="flex-1 text-left">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-sm">{pattern.name}</span>
-            <Badge variant={getBadgeVariant(confidence, priority)} className="text-xs">
+            <PremiumBadge 
+              variant={getPremiumBadgeVariant(confidence, priority, 0)}
+              size="sm"
+            >
               {badge}
-            </Badge>
+            </PremiumBadge>
           </div>
           <p className="text-xs text-muted-foreground line-clamp-1">
             {reason}
@@ -160,9 +166,12 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
               {showConfidenceIndicator && (
                 <div className="flex items-center gap-1">
                   <ConfidenceIcon className={cn("h-4 w-4", confidenceIndicator.color)} />
-                  <Badge variant={getBadgeVariant(confidence, priority)} className="text-xs">
+                  <PremiumBadge 
+                    variant={getPremiumBadgeVariant(confidence, priority, 0)}
+                    size="sm"
+                  >
                     {badge}
-                  </Badge>
+                  </PremiumBadge>
                 </div>
               )}
             </div>
@@ -228,9 +237,12 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium">{pattern.name}</span>
-            <Badge variant={getBadgeVariant(confidence, priority)} className="text-xs">
+            <PremiumBadge 
+              variant={getPremiumBadgeVariant(confidence, priority, 0)}
+              size="sm"
+            >
               {badge}
-            </Badge>
+            </PremiumBadge>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{reason}</span>

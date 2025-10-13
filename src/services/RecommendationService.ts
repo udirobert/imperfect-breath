@@ -9,6 +9,7 @@
 
 import { SmartPatternRecommendations, type RecommendationContext, type PatternRecommendation } from "@/lib/recommendations/SmartPatternRecommendations";
 import { getCache } from "@/lib/utils/cache-utils";
+import { getPremiumConfidence, getContextualBadge } from "@/lib/design/premium-language";
 
 export interface UserMood {
   id: string;
@@ -95,51 +96,24 @@ export class RecommendationService {
   }
   
   /**
-   * CLEAN: Generate clear, helpful badges instead of confusing percentages
+   * PREMIUM: Generate luxury badges using premium language system
    * ENHANCEMENT FIRST: Now supports enhanced context for better badges
    */
   private static generateClearBadge(rec: PatternRecommendation, index: number, context?: any): string {
-    if (index === 0 && rec.confidence >= 0.9) {
-      return "Perfect for you";
-    }
-    
-    // ENHANCEMENT: Context-aware badges when available
+    // PREMIUM: Use centralized premium language system
     if (context) {
-      if (context.energyLevel && context.energyLevel <= 2 && rec.patternId === "energy") {
-        return "Energy boost";
-      }
-      
-      if (context.stressLevel && context.stressLevel >= 4 && rec.patternId === "box") {
-        return "Stress relief";
-      }
-      
-      if (context.sleepQuality === "poorly" && rec.patternId === "relaxation") {
-        return "Rest & restore";
-      }
-      
-      if (context.availableTime && parseInt(context.availableTime.toString()) <= 2 && rec.timeToEffect.includes("30 seconds")) {
-        return "Quick relief";
-      }
+      return getContextualBadge({
+        timeOfDay: context.timeOfDay,
+        mood: context.mood,
+        goal: context.goal,
+        activity: context.recentActivity,
+        energyLevel: context.energyLevel,
+        stressLevel: context.stressLevel
+      }, rec.patternId);
     }
     
-    if (rec.confidence >= 0.85) {
-      return "Great match";
-    }
-    
-    if (rec.confidence >= 0.7) {
-      return "Good option";
-    }
-    
-    // Fallback to time-based badges
-    const hour = new Date().getHours();
-    if (hour >= 6 && hour < 12 && rec.patternId === "energy") {
-      return "Morning boost";
-    }
-    if (hour >= 18 && rec.patternId === "relaxation") {
-      return "Evening calm";
-    }
-    
-    return "Recommended";
+    // Fallback to confidence-based premium language
+    return getPremiumConfidence(rec.confidence, index);
   }
   
   /**

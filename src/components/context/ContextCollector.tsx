@@ -1,10 +1,6 @@
 /**
- * Progressive Context Collector - Enhanced User Input for Better Recommendations
- * 
- * ENHANCEMENT FIRST: Builds on existing mood system with progressive disclosure
- * CLEAN: Separates context collection from recommendation display
- * MODULAR: Reusable across different session entry points
- * PERFORMANT: Smart defaults and caching to avoid re-asking
+ * CONSOLIDATED: Simple context collection for mood-based recommendations
+ * ENHANCEMENT FIRST: Minimal addition to existing mood system
  */
 
 import React, { useState, useEffect } from "react";
@@ -53,68 +49,18 @@ interface ContextCollectorProps {
   className?: string;
 }
 
-// ORGANIZED: Progressive question flow based on mood
-const CONTEXT_QUESTIONS: ContextQuestion[] = [
-  {
-    id: 'energyLevel',
-    type: 'scale',
-    question: 'How\'s your energy level?',
-    description: 'This helps us match the right intensity',
-    min: 1,
-    max: 5,
-    weight: 0.8,
-  },
-  {
-    id: 'sleepQuality',
-    type: 'choice',
-    question: 'How did you sleep?',
-    description: 'Sleep affects which patterns work best',
-    options: [
-      { id: 'well', label: 'Well rested', icon: Sparkles },
-      { id: 'okay', label: 'Okay', icon: Moon },
-      { id: 'poorly', label: 'Not great', icon: Battery },
-    ],
-    weight: 0.7,
-    showIf: (context) => {
-      const hour = new Date().getHours();
-      return hour >= 6 && hour <= 14; // Only ask in morning/afternoon
-    }
-  },
-  {
-    id: 'stressLevel',
-    type: 'scale',
-    question: 'Current stress level?',
-    description: 'We\'ll adjust the breathing pace accordingly',
-    min: 1,
-    max: 5,
-    weight: 0.9,
-    showIf: (context) => context.mood === 'stressed' || context.mood === 'anxious',
-  },
+// PREVENT BLOAT: Minimal essential questions only
+const ESSENTIAL_QUESTIONS: ContextQuestion[] = [
   {
     id: 'availableTime',
     type: 'choice',
     question: 'How much time do you have?',
-    description: 'We\'ll recommend patterns that fit your schedule',
     options: [
       { id: '2', label: '2 minutes', icon: Clock },
       { id: '5', label: '5 minutes', icon: Clock },
       { id: '10', label: '10+ minutes', icon: Clock },
     ],
-    weight: 0.6,
-  },
-  {
-    id: 'recentActivity',
-    type: 'choice',
-    question: 'What were you just doing?',
-    description: 'This helps us transition you smoothly',
-    options: [
-      { id: 'work', label: 'Working', icon: Coffee },
-      { id: 'exercise', label: 'Exercise', icon: Battery },
-      { id: 'eating', label: 'Eating', icon: Coffee },
-      { id: 'relaxing', label: 'Relaxing', icon: Moon },
-    ],
-    weight: 0.5,
-    showIf: (context) => context.availableTime && parseInt(context.availableTime.toString()) >= 5,
+    weight: 1,
   },
 ];
 
@@ -131,10 +77,8 @@ export const ContextCollector: React.FC<ContextCollectorProps> = ({
   });
   const [isComplete, setIsComplete] = useState(false);
 
-  // PERFORMANT: Filter questions based on context and smart defaults
-  const relevantQuestions = CONTEXT_QUESTIONS.filter(q => 
-    !q.showIf || q.showIf(context)
-  );
+  // PREVENT BLOAT: Use minimal essential questions
+  const relevantQuestions = ESSENTIAL_QUESTIONS;
 
   const currentQuestion = relevantQuestions[currentStep];
   const isLastStep = currentStep >= relevantQuestions.length - 1;

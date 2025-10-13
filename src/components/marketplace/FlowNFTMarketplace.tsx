@@ -363,7 +363,7 @@ export const FlowNFTMarketplace: React.FC = () => {
 
         <div>
           <label className="text-sm font-medium">
-            Min AI Score: {filters.aiScore}%
+            Min Quality: {filters.aiScore > 80 ? 'Premium' : filters.aiScore > 60 ? 'High' : 'Good'}
           </label>
           <input
             type="range"
@@ -446,7 +446,7 @@ export const FlowNFTMarketplace: React.FC = () => {
             </div>
             <div className="flex items-center gap-1">
               <Zap className="h-4 w-4 text-blue-500" />
-              <span className="font-medium">{nft.effectiveness}%</span>
+              <span className="font-medium">{nft.effectiveness > 90 ? 'Excellent' : nft.effectiveness > 80 ? 'Great' : nft.effectiveness > 70 ? 'Good' : 'Effective'}</span>
             </div>
           </div>
 
@@ -547,7 +547,7 @@ export const FlowNFTMarketplace: React.FC = () => {
                   </Badge>
                   <Badge className="text-xs">{nft.attributes.category}</Badge>
                   <span className="text-xs text-muted-foreground">
-                    {nft.effectiveness}% effective
+                    {nft.effectiveness > 90 ? 'Highly effective' : nft.effectiveness > 80 ? 'Very effective' : nft.effectiveness > 70 ? 'Effective' : 'Good results'}
                   </span>
                 </div>
               </div>
@@ -626,7 +626,7 @@ export const FlowNFTMarketplace: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-muted rounded-lg">
                 <div className="text-2xl font-bold">
-                  {selectedNFT.effectiveness}%
+                  {selectedNFT.effectiveness > 90 ? 'Excellent' : selectedNFT.effectiveness > 80 ? 'Great' : selectedNFT.effectiveness > 70 ? 'Good' : 'Effective'}
                 </div>
                 <div className="text-xs text-muted-foreground">AI Score</div>
               </div>
