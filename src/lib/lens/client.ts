@@ -17,93 +17,65 @@ import type {
   LensAuthTokens,
   Timeline,
 } from "./types";
+import { follow, unfollow } from "@lens-protocol/client/actions";
+import { evmAddress } from "@lens-protocol/client";
+import { blockchainAuthService } from "@/services/blockchain/BlockchainAuthService";
+import { getTimeline as fetchTimelineFromAPI } from "@/lib/api/socialService";
 
-// Lens v3 Content Curation Strategy
-const WELLNESS_KEYWORDS = [
-  "breathing",
-  "breathwork",
-  "meditation",
-  "mindfulness",
-  "wellness",
-  "pranayama",
-  "breath hold",
-  "wim hof",
-  "box breathing",
-  "4-7-8",
-  "coherent breathing",
-  "yoga",
-  "zen",
-  "calm",
-  "relaxation",
-  "stress relief",
-  "anxiety relief",
-  "focus",
-  "concentration",
-  "peace",
-  "tranquil",
-  "self-care",
-  "mental health",
-  "healing",
-  "therapeutic",
-  "holistic",
-];
+// SDK-adapter types for feed/publications mapping
+interface SdkPageInfo { next?: string; prev?: string }
+interface SdkFeedItem {
+  id?: string;
+  publicationId?: string;
+  createdAt?: string;
+  timestamp?: string;
+  by?: {
+    id?: string;
+    handle?: string;
+    ownedBy?: { address?: string };
+    address?: string;
+    metadata?: { name?: string; picture?: string };
+  };
+  author?: { address?: string; username?: string; name?: string; avatar?: string };
+  metadata?: { content?: string; contentUri?: string; tags?: string[] };
+  stats?: { reactions?: number; comments?: number; replies?: number; collects?: number; mirrors?: number; quotes?: number };
+  content?: string;
+}
+interface SdkFeedResult {
+  items: SdkFeedItem[];
+  pageInfo?: SdkPageInfo;
+  next?: string;
+}
 
-const BREATHING_PATTERNS = [
-  "box-breathing",
-  "478-breathing",
-  "wim-hof",
-  "coherent-breathing",
-  "triangle-breathing",
-  "alternate-nostril",
-  "belly-breathing",
-  "tactical-breathing",
-  "resonant-breathing",
-  "breath-retention",
-];
+// Unwrap Lens SDK Result style objects
+function unwrapResult<T>(res: any): T | null {
+  if (!res) return null;
+  if (typeof res.isOk === 'function') {
+    return res.isOk() ? (res.value as T) : null;
+  }
+  if (typeof res.isErr === 'function') {
+    return res.isErr() ? null : (res.value as T);
+  }
+  return res as T;
+}
 
-// Our app identifier for content filtering
+// Lightweight random id helper for fallback cases
+function cryptoRandomId(): string {
+  try {
+    const arr = new Uint32Array(2);
+    if (globalThis.crypto?.getRandomValues) {
+      globalThis.crypto.getRandomValues(arr);
+    } else {
+      throw new Error("getRandomValues unavailable");
+    }
+    return `pub-${arr[0].toString(16)}${arr[1].toString(16)}`;
+  } catch {
+    return `pub-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  }
+}
+
+// App identifier for content filtering (used by feedReason helpers)
 const IMPERFECT_BREATH_APP_ID = "imperfect-breath";
-const LENS_WELLNESS_GROUP_ID = "wellness-breathwork-community";
-const LENS_MINDFULNESS_FEED_ID = "mindfulness-feed";
-
-// Content curation configuration
-const CONTENT_CURATION_CONFIG = {
-  // Primary: Content from our app
-  ownAppContent: {
-    appId: IMPERFECT_BREATH_APP_ID,
-    weight: 1.0, // Highest priority
-  },
-
-  // Secondary: Wellness-focused Groups and Feeds
-  wellnessGroups: [
-    LENS_WELLNESS_GROUP_ID,
-    "breathwork-practitioners",
-    "meditation-daily",
-    "mindfulness-community",
-    "wellness-journey",
-  ],
-
-  // Curated feeds for wellness content
-  wellnessFeeds: [
-    LENS_MINDFULNESS_FEED_ID,
-    "daily-wellness",
-    "breathwork-feed",
-    "meditation-insights",
-  ],
-
-  // Keyword-based filtering
-  keywords: {
-    include: WELLNESS_KEYWORDS,
-    exclude: ["crypto", "trading", "financial", "politics", "controversial"],
-  },
-
-  // Quality filters
-  qualityThresholds: {
-    minReactions: 2, // Minimum engagement
-    minContentLength: 50, // Avoid spam
-    maxContentLength: 2000, // Avoid excessive posts
-  },
-};
 
 /**
  * Simplified Lens v3 API Client
@@ -117,6 +89,9 @@ export class LensV3API {
     authenticatedAt: number;
     expiresAt: number;
   } | null = null;
+  // In-memory cache for dedup and smoother pagination
+  private seenPostIds: Set<string> = new Set();
+  private timelineCacheNext: string | undefined = undefined;
 
   /**
    * Login to Lens Protocol with wallet
@@ -373,46 +348,160 @@ export class LensV3API {
   async getTimeline(
     cursor?: string,
   ): Promise<SocialActionResult & { data?: Timeline }> {
-    if (!this.isAuthenticated) {
+    // Ensure SDK session exists so we can derive the viewer address
+    const session = blockchainAuthService.getCurrentLensSession();
+    if (!session) {
       return { success: false, error: "Not authenticated" };
     }
 
     try {
-      // Simulate API call to Lens v3
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      // Get curated content from multiple Lens v3 sources
-      const curatedPosts = await this.getCuratedWellnessContent(cursor);
+      // Reset cache on fresh fetch
+      if (!cursor) {
+        this.seenPostIds.clear();
+      }
+
+      // Determine viewer address from current Lens session
+      let viewerAddress: string | null = null;
+      try {
+        const account: any = await blockchainAuthService.getAuthorAccount();
+        viewerAddress = account?.ownedBy?.address ?? account?.address ?? null;
+      } catch {
+        console.warn("Could not fetch author account for viewer address");
+      }
+
+      if (!viewerAddress) {
+        // Fallback: use current session details
+        try {
+          const details: any = await blockchainAuthService.getCurrentLensSessionDetails();
+          const acct = details?.account;
+          viewerAddress = acct?.ownedBy?.address ?? acct?.address ?? null;
+        } catch {
+          console.warn("Could not fetch session details for viewer address");
+        }
+      }
+
+      if (!viewerAddress) {
+        return { success: false, error: "Unable to determine viewer address" };
+      }
+
+      // Try direct client-side SDK fetching first, then fall back to backend
+      let posts: Post[] | null = null;
+      let pageInfo: SdkPageInfo | undefined;
+
+      try {
+        const actions: any = await import("@lens-protocol/client/actions");
+        const { evmAddress } = await import("@lens-protocol/client");
+
+        if (typeof actions.fetchFeed === "function") {
+          const sdkRes = await actions.fetchFeed(session, {
+            feed: evmAddress(viewerAddress as `0x${string}`),
+            cursor,
+          } as any);
+          const value = unwrapResult<SdkFeedResult>(sdkRes);
+          if (value) {
+            const items = value.items ?? [];
+            posts = items.map((item) => {
+              const authorAddr = item?.by?.ownedBy?.address || item?.by?.address || item?.author?.address || viewerAddress;
+              const username = item?.by?.handle || item?.author?.username || undefined;
+              const content = item?.metadata?.content || item?.content || item?.metadata?.contentUri || "";
+              const createdAt = item?.createdAt || item?.timestamp || new Date().toISOString();
+              const reactions = item?.stats?.reactions ?? item?.stats?.collects ?? 0;
+              const comments = item?.stats?.comments ?? item?.stats?.replies ?? 0;
+              const reposts = item?.stats?.mirrors ?? item?.stats?.quotes ?? 0;
+
+              return {
+                id: String(item?.id ?? item?.publicationId ?? cryptoRandomId()),
+                content,
+                author: {
+                  id: String(item?.by?.id ?? authorAddr ?? ""),
+                  address: String(authorAddr ?? ""),
+                  username: username ? { localName: String(username), fullHandle: String(username) } : undefined,
+                  metadata: { name: item?.by?.metadata?.name || item?.author?.name, picture: item?.by?.metadata?.picture || item?.author?.avatar },
+                },
+                timestamp: createdAt,
+                stats: { reactions, comments, reposts },
+                metadata: { content, tags: Array.isArray(item?.metadata?.tags) ? item.metadata.tags : [] },
+              } as Post;
+            });
+            pageInfo = value.pageInfo ?? { next: value?.next };
+          }
+        } else if (typeof actions.fetchPublications === "function") {
+          const sdkRes = await actions.fetchPublications(session, {
+            where: { from: evmAddress(viewerAddress as `0x${string}`) },
+            cursor,
+          } as any);
+          const value = unwrapResult<SdkFeedResult>(sdkRes);
+          if (value) {
+            const items = value.items ?? [];
+            posts = items.map((item) => {
+              const authorAddr = item?.by?.ownedBy?.address || item?.by?.address || item?.author?.address || viewerAddress;
+              const username = item?.by?.handle || item?.author?.username || undefined;
+              const content = item?.metadata?.content || item?.content || item?.metadata?.contentUri || "";
+              const createdAt = item?.createdAt || item?.timestamp || new Date().toISOString();
+              const reactions = item?.stats?.reactions ?? item?.stats?.collects ?? 0;
+              const comments = item?.stats?.comments ?? item?.stats?.replies ?? 0;
+              const reposts = item?.stats?.mirrors ?? item?.stats?.quotes ?? 0;
+
+              return {
+                id: String(item?.id ?? item?.publicationId ?? cryptoRandomId()),
+                content,
+                author: {
+                  id: String(item?.by?.id ?? authorAddr ?? ""),
+                  address: String(authorAddr ?? ""),
+                  username: username ? { localName: String(username), fullHandle: String(username) } : undefined,
+                  metadata: { name: item?.by?.metadata?.name || item?.author?.name, picture: item?.by?.metadata?.picture || item?.author?.avatar },
+                },
+                timestamp: createdAt,
+                stats: { reactions, comments, reposts },
+                metadata: { content, tags: Array.isArray(item?.metadata?.tags) ? item.metadata.tags : [] },
+              } as Post;
+            });
+            pageInfo = value.pageInfo ?? { next: value?.next };
+          }
+        }
+      } catch (sdkError) {
+        console.warn("Lens SDK feed fetch unavailable, falling back to backend:", sdkError);
+      }
+
+      if (!posts || posts.length === 0) {
+        const apiResult = await fetchTimelineFromAPI(viewerAddress);
+        posts = (apiResult.items || []).map((p: any) => ({
+          id: p.id,
+          content: p.content,
+          author: {
+            id: p.author.address,
+            address: p.author.address,
+            username: p.author.username ? { localName: p.author.username, fullHandle: p.author.username } : undefined,
+            metadata: { name: p.author.name, picture: p.author.avatar },
+          },
+          timestamp: p.createdAt,
+          stats: { reactions: p.stats?.reactions ?? 0, comments: p.stats?.comments ?? 0, reposts: p.stats?.mirrors ?? 0 },
+          metadata: { content: p.content, tags: (p.metadata?.tags as string[]) || [] },
+        }));
+        pageInfo = { next: undefined, prev: undefined };
+      }
+
+      // In-memory dedup by id
+      const deduped = posts.filter((post) => {
+        if (this.seenPostIds.has(post.id)) return false;
+        this.seenPostIds.add(post.id);
+        return true;
+      });
 
       const timeline: Timeline = {
-        items: curatedPosts.map((post) => ({
+        items: deduped.map((post) => ({
           ...post,
-          feedReason: {
-            type: this.determineFeedReason(post),
-            context: this.getFeedContext(post),
-          },
+          feedReason: { type: this.determineFeedReason(post), context: this.getFeedContext(post) },
         })),
-        pageInfo: {
-          next:
-            curatedPosts.length >= 10
-              ? (parseInt(cursor || "0") + 10).toString()
-              : undefined,
-          prev:
-            cursor && parseInt(cursor) > 0
-              ? Math.max(0, parseInt(cursor) - 10).toString()
-              : undefined,
-          hasMore: curatedPosts.length >= 10,
-        },
+        pageInfo: { next: pageInfo?.next, prev: pageInfo?.prev, hasMore: Boolean(pageInfo?.next) },
       };
 
-      return {
-        success: true,
-        data: timeline,
-      };
+      // Cache next cursor
+      this.timelineCacheNext = pageInfo?.next;
+
+      return { success: true, data: timeline };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Timeline fetch failed",
-      };
+      return { success: false, error: error instanceof Error ? error.message : "Timeline fetch failed" };
     }
   }
 
@@ -420,21 +509,18 @@ export class LensV3API {
    * Follow an account
    */
   async followAccount(accountAddress: string): Promise<SocialActionResult> {
-    if (!this.isAuthenticated) {
+    const session = blockchainAuthService.getCurrentLensSession();
+    if (!session) {
       return { success: false, error: "Not authenticated" };
     }
-
     try {
-      // Mock follow action
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      console.log(`✅ Followed account ${accountAddress} (mock)`);
+      const result = await follow(session, { account: evmAddress(accountAddress as `0x${string}`) });
+      if ((result as any).isErr?.()) {
+        return { success: false, error: (result as any).error?.message || "Follow failed" };
+      }
       return { success: true };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Follow failed",
-      };
+      return { success: false, error: error instanceof Error ? error.message : "Follow failed" };
     }
   }
 
@@ -442,21 +528,90 @@ export class LensV3API {
    * Unfollow an account
    */
   async unfollowAccount(accountAddress: string): Promise<SocialActionResult> {
-    if (!this.isAuthenticated) {
+    const session = blockchainAuthService.getCurrentLensSession();
+    if (!session) {
       return { success: false, error: "Not authenticated" };
     }
-
     try {
-      // Mock unfollow action
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      console.log(`✅ Unfollowed account ${accountAddress} (mock)`);
+      const result = await unfollow(session, { account: evmAddress(accountAddress as `0x${string}`) });
+      if ((result as any).isErr?.()) {
+        return { success: false, error: (result as any).error?.message || "Unfollow failed" };
+      }
       return { success: true };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unfollow failed",
-      };
+      return { success: false, error: error instanceof Error ? error.message : "Unfollow failed" };
+    }
+  }
+
+  // Reactions: like
+  async likePost(publicationId: string): Promise<SocialActionResult> {
+    const session = blockchainAuthService.getCurrentLensSession();
+    if (!session) return { success: false, error: "Not authenticated" };
+    try {
+      const actions: any = await import("@lens-protocol/client/actions");
+      const { postId } = await import("@lens-protocol/client");
+      if (typeof actions.like === 'function') {
+        const res = await actions.like(session, { publication: postId(publicationId) });
+        if ((res as any).isErr?.()) return { success: false, error: (res as any).error?.message || "Like failed" };
+        return { success: true };
+      }
+      if (typeof actions.addReaction === 'function') {
+        const res = await actions.addReaction(session, { publication: postId(publicationId), reaction: 'UPVOTE' });
+        if ((res as any).isErr?.()) return { success: false, error: (res as any).error?.message || "Reaction failed" };
+        return { success: true };
+      }
+      return { success: false, error: "Like action unavailable" };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Like failed" };
+    }
+  }
+
+  // Mirror (repost)
+  async mirrorPost(publicationId: string): Promise<SocialActionResult> {
+    const session = blockchainAuthService.getCurrentLensSession();
+    if (!session) return { success: false, error: "Not authenticated" };
+    try {
+      const actions: any = await import("@lens-protocol/client/actions");
+      const { postId } = await import("@lens-protocol/client");
+      if (typeof actions.mirror === 'function') {
+        const res = await actions.mirror(session, { publication: postId(publicationId) });
+        if ((res as any).isErr?.()) return { success: false, error: (res as any).error?.message || "Mirror failed" };
+        return { success: true };
+      }
+      if (typeof actions.repost === 'function') {
+        const res = await actions.repost(session, { publication: postId(publicationId) });
+        if ((res as any).isErr?.()) return { success: false, error: (res as any).error?.message || "Repost failed" };
+        return { success: true };
+      }
+      return { success: false, error: "Mirror action unavailable" };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Mirror failed" };
+    }
+  }
+
+  // Comment via SDK post with commentOn
+  async commentOn(postIdStr: string, content: string): Promise<SocialActionResult> {
+    const session = blockchainAuthService.getCurrentLensSession();
+    if (!session) return { success: false, error: "Not authenticated" };
+    try {
+      const { createTextPostMetadata } = await import("@/lib/lens/createLensPostMetadata");
+      const { uploadWithFallback } = await import("@/lib/lens/uploadToGrove");
+      const actions: any = await import("@lens-protocol/client/actions");
+      const { uri, postId, evmAddress } = await import("@lens-protocol/client");
+
+      const metadata = createTextPostMetadata(content);
+      const lensUri = await uploadWithFallback(metadata);
+
+      const payload: any = { contentUri: uri(lensUri), commentOn: { post: postId(postIdStr) } };
+      const authorAddr = blockchainAuthService.getAuthorAddress();
+      if (authorAddr) payload.author = evmAddress(authorAddr as `0x${string}`);
+
+      if (typeof actions.post !== 'function') return { success: false, error: "Post action unavailable" };
+      const res = await actions.post(session, payload);
+      if ((res as any).isErr?.()) return { success: false, error: (res as any).error?.message || "Comment failed" };
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Comment failed" };
     }
   }
 
@@ -536,265 +691,6 @@ export class LensV3API {
     }
   }
 
-  /**
-   * Get curated wellness content from Lens v3
-   * Combines multiple sources: Groups, Feeds, Keywords, and our App content
-   */
-  private async getCuratedWellnessContent(cursor?: string): Promise<Post[]> {
-    try {
-      const limit = 10;
-      const offset = cursor ? parseInt(cursor) : 0;
-
-      // In real implementation, these would be actual Lens v3 API calls:
-
-      // 1. Primary: Get posts from our app
-      const ownAppPosts = await this.fetchPostsByApp(
-        IMPERFECT_BREATH_APP_ID,
-        limit / 4,
-      );
-
-      // 2. Get posts from wellness groups
-      const groupPosts = await this.fetchPostsFromGroups(
-        CONTENT_CURATION_CONFIG.wellnessGroups,
-        limit / 4,
-      );
-
-      // 3. Get posts from curated wellness feeds
-      const feedPosts = await this.fetchPostsFromFeeds(
-        CONTENT_CURATION_CONFIG.wellnessFeeds,
-        limit / 4,
-      );
-
-      // 4. Get keyword-filtered posts from global timeline
-      const keywordPosts = await this.fetchPostsByKeywords(
-        CONTENT_CURATION_CONFIG.keywords.include,
-        limit / 4,
-      );
-
-      // Combine and deduplicate
-      const allPosts = [
-        ...ownAppPosts,
-        ...groupPosts,
-        ...feedPosts,
-        ...keywordPosts,
-      ];
-
-      // Remove duplicates and apply quality filters
-      const uniquePosts = this.deduplicateAndFilter(allPosts);
-
-      // Sort by relevance and recency
-      const sortedPosts = this.sortByRelevanceAndTime(uniquePosts);
-
-      // Apply pagination
-      return sortedPosts.slice(offset, offset + limit);
-    } catch (error) {
-      console.error("Failed to get curated content:", error);
-      return this.getFallbackContent();
-    }
-  }
-
-  /**
-   * Fetch posts from our specific app (highest priority)
-   */
-  private async fetchPostsByApp(appId: string, limit: number): Promise<Post[]> {
-    // Real implementation would use Lens v3 API:
-    // const posts = await lensClient.fetchPosts({
-    //   where: { metadata: { appId } },
-    //   limit,
-    //   orderBy: 'latest'
-    // });
-
-    // Mock implementation with our app's content
-    return [
-      {
-        id: `${appId}-1`,
-        content:
-          "🌬️ Just shared my morning breathing routine! 4-7-8 pattern helped me start the day with clarity and focus.\n\n✨ Try it: Inhale for 4, hold for 7, exhale for 8\n\n#breathing #morningroutine #478breathing #imperfectbreath",
-        author: {
-          id: "0x1111",
-          address: "0x1111111111111111111111111111111111111111",
-          username: {
-            localName: "breathingcoach",
-            fullHandle: "breathingcoach.lens",
-          },
-          metadata: {
-            name: "Maya Patel",
-          },
-        },
-        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-        stats: { reactions: 15, comments: 4, reposts: 3 },
-      },
-    ];
-  }
-
-  /**
-   * Fetch posts from wellness-focused Lens Groups
-   */
-  private async fetchPostsFromGroups(
-    groupIds: string[],
-    limit: number,
-  ): Promise<Post[]> {
-    // Real implementation would use Lens v3 Groups API:
-    // const posts = await Promise.all(
-    //   groupIds.map(groupId =>
-    //     lensClient.fetchGroupPosts({ groupId, limit: Math.ceil(limit / groupIds.length) })
-    //   )
-    // );
-
-    // Mock wellness group content
-    return [
-      {
-        id: "group-wellness-1",
-        content:
-          "Daily reminder: Your breath is always with you as an anchor to the present moment 🧘‍♀️\n\nTake 3 deep breaths right now and notice how you feel.\n\n#mindfulness #presentmoment #breathawareness",
-        author: {
-          id: "0x2222",
-          address: "0x2222222222222222222222222222222222222222",
-          username: {
-            localName: "zenmind",
-            fullHandle: "zenmind.lens",
-          },
-          metadata: { name: "Elena Rodriguez" },
-        },
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        stats: { reactions: 28, comments: 8, reposts: 5 },
-      },
-    ];
-  }
-
-  /**
-   * Fetch posts from curated wellness feeds
-   */
-  private async fetchPostsFromFeeds(
-    feedIds: string[],
-    limit: number,
-  ): Promise<Post[]> {
-    // Real implementation would use Lens v3 Feeds API:
-    // const posts = await Promise.all(
-    //   feedIds.map(feedId =>
-    //     lensClient.fetchFeedPosts({ feedId, limit: Math.ceil(limit / feedIds.length) })
-    //   )
-    // );
-
-    // Mock curated feed content
-    return [
-      {
-        id: "feed-mindfulness-1",
-        content:
-          "Week 3 of my Wim Hof journey 🔥❄️\n\nBreath retention times are improving:\n• Week 1: 45 seconds\n• Week 2: 1 minute 15 seconds  \n• Week 3: 1 minute 45 seconds\n\nThe cold exposure is becoming easier too!\n\n#wimhof #breathwork #coldexposure #progress",
-        author: {
-          id: "0x3333",
-          address: "0x3333333333333333333333333333333333333333",
-          username: {
-            localName: "icebathking",
-            fullHandle: "icebathking.lens",
-          },
-          metadata: {
-            name: "Marcus Silva",
-          },
-        },
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        stats: { reactions: 22, comments: 12, reposts: 4 },
-      },
-    ];
-  }
-
-  /**
-   * Fetch posts by wellness keywords from global timeline
-   */
-  private async fetchPostsByKeywords(
-    keywords: string[],
-    limit: number,
-  ): Promise<Post[]> {
-    // Real implementation would search posts by content:
-    // const posts = await lensClient.searchPosts({
-    //   query: keywords.join(' OR '),
-    //   limit,
-    //   contentFilter: CONTENT_CURATION_CONFIG.keywords.exclude.map(word => `-${word}`).join(' ')
-    // });
-
-    // Mock keyword-filtered content
-    return [
-      {
-        id: "keyword-meditation-1",
-        content:
-          "Meditation doesn't have to be perfect 🧘‍♂️\n\nSome days my mind is like a hurricane, other days it's calm like a lake. Both are valid experiences.\n\nThe practice is in returning to the breath, again and again.\n\n#meditation #mindfulness #selfcompassion #breathwork",
-        author: {
-          id: "0x4444",
-          address: "0x4444444444444444444444444444444444444444",
-          username: {
-            localName: "peacefulmind",
-            fullHandle: "peacefulmind.lens",
-          },
-          metadata: {
-            name: "Dr. Sarah Kim",
-          },
-        },
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        stats: { reactions: 34, comments: 15, reposts: 7 },
-      },
-    ];
-  }
-
-  /**
-   * Remove duplicate posts and apply quality filters
-   */
-  private deduplicateAndFilter(posts: Post[]): Post[] {
-    const seen = new Set<string>();
-    const config = CONTENT_CURATION_CONFIG.qualityThresholds;
-
-    return posts.filter((post) => {
-      // Remove duplicates
-      if (seen.has(post.id)) return false;
-      seen.add(post.id);
-
-      // Apply quality filters
-      const totalReactions =
-        (post.stats?.reactions || 0) + (post.stats?.comments || 0);
-      if (totalReactions < config.minReactions) return false;
-
-      if (post.content.length < config.minContentLength) return false;
-      if (post.content.length > config.maxContentLength) return false;
-
-      // Filter out excluded keywords
-      const lowerContent = post.content.toLowerCase();
-      if (
-        CONTENT_CURATION_CONFIG.keywords.exclude.some((keyword) =>
-          lowerContent.includes(keyword.toLowerCase()),
-        )
-      )
-        return false;
-
-      return true;
-    });
-  }
-
-  /**
-   * Sort posts by relevance (our app first) and recency
-   */
-  private sortByRelevanceAndTime(posts: Post[]): Post[] {
-    return posts.sort((a, b) => {
-      // Our app content gets highest priority
-      const aIsOurApp = a.id.startsWith(IMPERFECT_BREATH_APP_ID);
-      const bIsOurApp = b.id.startsWith(IMPERFECT_BREATH_APP_ID);
-
-      if (aIsOurApp && !bIsOurApp) return -1;
-      if (!aIsOurApp && bIsOurApp) return 1;
-
-      // Then by engagement score
-      const aEngagement =
-        (a.stats?.reactions || 0) + (a.stats?.comments || 0) * 2;
-      const bEngagement =
-        (b.stats?.reactions || 0) + (b.stats?.comments || 0) * 2;
-
-      if (aEngagement !== bEngagement) {
-        return bEngagement - aEngagement;
-      }
-
-      // Finally by recency
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-    });
-  }
 
   /**
    * Determine feed reason for content discovery

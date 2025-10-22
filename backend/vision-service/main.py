@@ -32,6 +32,7 @@ import httpx
 from pathlib import Path
 import urllib.request
 from contextlib import asynccontextmanager
+from siwe_endpoints import router as siwe_router
 
 # Configure logging
 logging.basicConfig(
@@ -177,6 +178,8 @@ app = FastAPI(
 
 # Include RevenueCat configuration router
 app.include_router(revenuecat_router)
+# Include SIWE authentication router
+app.include_router(siwe_router)
 
 # CORS configuration
 app.add_middleware(

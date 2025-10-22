@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/auth/useAuth";
 import { useLens } from "@/hooks/useLens";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,9 +40,13 @@ import {
 import { WalletConnection } from "@/components/wallet/WalletConnection";
 import { BreathingSessionPost } from "@/components/social/BreathingSessionPost";
 import { SocialActions } from "@/components/social/SocialActions";
+// Add unified social action buttons for consistent UX
+import { LikeButton, CommentButton, RepostButton } from "@/components/social/SocialButton";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { formatTime } from "@/lib/utils/formatters";
+import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { trackEvent } from "@/lib/analytics";
 
 interface CommunityStats {
   totalSessions: number;
@@ -67,6 +71,8 @@ const CommunityFeed: React.FC = () => {
   // Use consolidated auth system
   const auth = useAuth({ blockchain: true, lens: true });
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { history } = useSessionHistory();
   const {
     isAuthenticated,
     currentAccount,
@@ -119,11 +125,11 @@ const CommunityFeed: React.FC = () => {
     }
   }, [searchParams, setSearchParams]);
 
-  const handleLensConnect = async () => {
+  const handleLensConnect = async (): Promise<boolean> => {
     try {
       if (!auth.wallet?.address) {
         toast.error("Please connect your wallet first");
-        return;
+        return false;
       }
 
       const result = await authenticate(auth.wallet.address);
@@ -131,15 +137,42 @@ const CommunityFeed: React.FC = () => {
         toast.success("Connected to Lens Protocol!");
         // Load initial data
         loadTimeline(true);
+        return true;
       } else {
         throw new Error(result.error || "Authentication failed");
       }
     } catch (error) {
       console.error("Lens connection error:", error);
       toast.error("Failed to connect to Lens Protocol");
+      return false;
     }
   };
 
+  const handleShareLatestToLens = async () => {
+    trackEvent("share_to_lens_click", { source: "community" });
+    const latest = history && history.length > 0 ? history[0] : undefined;
+
+    const sessionState = latest
+      ? {
+          patternID: undefined,
+          patternName: latest.pattern_name || "Breathing",
+          sessionDuration: latest.session_duration || 300,
+          breathHoldTime: latest.breath_hold_time || 0,
+          restlessnessScore: latest.restlessness_score || 0,
+          timestamp: latest.created_at,
+        }
+      : undefined;
+
+    if (!isAuthenticated) {
+      const ok = await handleLensConnect();
+      navigate("/lens/flow", {
+        state: { focusTab: ok ? "share" : "auth", session: sessionState },
+      });
+      return;
+    }
+
+    navigate("/lens/flow", { state: { focusTab: "share", session: sessionState } });
+  };
   const filteredPosts = posts.filter((post) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -196,8 +229,12 @@ const CommunityFeed: React.FC = () => {
             <Button onClick={handleLensConnect} size="lg">
               Connect to Lens Protocol
             </Button>
+            {/* Quick action to share latest session to Lens */}
+            <Button variant="outline" size="lg" onClick={handleShareLatestToLens}>
+              Share latest session
+            </Button>
             <p className="text-sm text-muted-foreground">
-              Connected wallet:{" "}
+              Connected wallet: {" "}
               {auth.wallet?.address
                 ? `${auth.wallet.address.slice(0, 6)}...${auth.wallet.address.slice(-4)}`
                 : "None"}
@@ -422,30 +459,33 @@ const CommunityFeed: React.FC = () => {
                         </div>
                         <p className="text-sm mb-3">{post.content}</p>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <Button
+                          {/* Like Action */}
+                          <LikeButton
+                            targetId={post.id}
                             variant="ghost"
                             size="sm"
                             className="h-8 px-2"
-                          >
-                            <Heart className="w-4 h-4 mr-1" />
-                            {post.stats?.reactions || 0}
-                          </Button>
-                          <Button
+                            showCount
+                            count={post.stats?.reactions || 0}
+                          />
+                          {/* Comment Action */}
+                          <CommentButton
+                            targetId={post.id}
                             variant="ghost"
                             size="sm"
                             className="h-8 px-2"
-                          >
-                            <MessageCircle className="w-4 h-4 mr-1" />
-                            {post.stats?.comments || 0}
-                          </Button>
-                          <Button
+                            showCount
+                            count={post.stats?.comments || 0}
+                          />
+                          {/* Repost Action */}
+                          <RepostButton
+                            postId={post.id}
                             variant="ghost"
                             size="sm"
                             className="h-8 px-2"
-                          >
-                            <Share className="w-4 h-4 mr-1" />
-                            {post.stats?.reposts || 0}
-                          </Button>
+                            showCount
+                            count={post.stats?.reposts || 0}
+                          />
                         </div>
                       </div>
                     </div>

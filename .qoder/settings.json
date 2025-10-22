@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/Users/udingethe/dev/imperfect-breath/**)",
+      "Edit(!/Users/udingethe/dev/imperfect-breath/**)"
+    ],
+    "allow": [
+      "Read(/Users/udingethe/dev/imperfect-breath/**)",
+      "Edit(/Users/udingethe/dev/imperfect-breath/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}

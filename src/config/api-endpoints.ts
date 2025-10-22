@@ -45,6 +45,12 @@ export const API_ENDPOINTS = {
     health: '/v1/blocks?height=sealed',
   },
 
+  // SIWE Authentication
+  siwe: {
+    challenge: '/api/siwe/challenge',
+    verify: '/api/siwe/verify',
+  },
+
   // Lens Protocol Service
   lens: {
     // Lens API doesn't provide standard REST endpoints

@@ -47,8 +47,12 @@ export class RevenueCatAuthIntegration {
    */
   public async initialize(): Promise<void> {
     try {
-      await this.revenueCat.initialize();
-      console.log('✅ RevenueCat Auth Integration initialized');
+      const ok = await this.revenueCat.initialize();
+      if (ok) {
+        console.log('✅ RevenueCat Auth Integration initialized');
+      } else if (import.meta.env.DEV) {
+        console.debug('RevenueCat unavailable on this platform - integration skipped');
+      }
     } catch (error) {
       console.error('❌ Failed to initialize RevenueCat Auth Integration:', error);
     }

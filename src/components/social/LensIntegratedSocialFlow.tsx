@@ -32,13 +32,15 @@ import { useShareSession, type SessionData, type ShareableSessionData } from "..
 interface LensIntegratedSocialFlowProps {
   phase: "completion" | "sharing" | "celebration" | "active";
   sessionData: SessionData;
-  onSocialAction: (action: string, data: any) => void;
+  onSocialAction: (action: string, data: Record<string, unknown>) => void;
+  initialTab?: "share" | "session" | "auth";
 }
 
 export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> = ({
   phase,
   sessionData,
   onSocialAction,
+  initialTab,
 }) => {
   const {
     isAuthenticated,
@@ -54,7 +56,7 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
   } = useLens();
 
   const [walletAddress, setWalletAddress] = useState("");
-  const [activeTab, setActiveTab] = useState("share");
+  const [activeTab, setActiveTab] = useState(initialTab ?? "share");
 
   // Handle Lens authentication
   const handleAuthenticate = async () => {
@@ -273,7 +275,7 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
   // Main render logic
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as "share" | "session" | "auth")}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="share">Share</TabsTrigger>
           <TabsTrigger value="session">Session</TabsTrigger>

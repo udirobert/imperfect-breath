@@ -26,7 +26,7 @@ export interface UseWalletReturn {
   connect: (providerName?: string) => Promise<void>;
   disconnect: () => Promise<void>;
   switchProvider: (name: string) => Promise<void>;
-  request: (method: string, params?: any[]) => Promise<any>;
+  request: (method: string, params?: unknown[]) => Promise<unknown>;
   clearError: () => void;
   
   // Utilities
@@ -37,7 +37,7 @@ export interface UseWalletReturn {
   switchChain: (chainId: string) => Promise<void>;
   addChain: (chainConfig: ChainConfig) => Promise<void>;
   signMessage: (message: string) => Promise<string>;
-  signTypedData: (typedData: any) => Promise<string>;
+  signTypedData: (typedData: unknown) => Promise<string>;
   
   // Balance operations
   getBalance: (address?: string) => Promise<string>;
@@ -83,9 +83,9 @@ export const useWallet = (): UseWalletReturn => {
   const switchChain = useCallback(async (chainId: string): Promise<void> => {
     try {
       await operations.request('wallet_switchEthereumChain', [{ chainId }]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If chain doesn't exist, the error code will be 4902
-      if (error.code === 4902) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 4902) {
         throw new Error(`Chain ${chainId} not added to wallet. Use addChain() first.`);
       }
       throw error;
@@ -113,7 +113,7 @@ export const useWallet = (): UseWalletReturn => {
   /**
    * Sign typed data (EIP-712)
    */
-  const signTypedData = useCallback(async (typedData: any): Promise<string> => {
+  const signTypedData = useCallback(async (typedData: unknown): Promise<string> => {
     if (!connectionState.address) {
       throw new Error('No connected account');
     }
@@ -250,8 +250,8 @@ export const useChainOperations = () => {
     
     try {
       await switchChain(targetChainId);
-    } catch (error: any) {
-      if (error.code === 4902 && chainConfig) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 4902 && chainConfig) {
         await addChain(chainConfig);
         await switchChain(targetChainId);
       } else {

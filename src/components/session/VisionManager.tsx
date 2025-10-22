@@ -59,6 +59,12 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
   const visionError = useVisionStore((state) => state.error);
   const backendAvailable = useVisionStore((state) => state.backendAvailable);
 
+  // Store visionStore in a ref to avoid dependency issues
+  const visionStoreRef = useRef(visionStore);
+  useEffect(() => {
+    visionStoreRef.current = visionStore;
+  }, [visionStore]);
+
   // PERFORMANT: Memoize landmarks to prevent infinite re-renders
   const landmarks = useMemo(
     () => visionMetrics?.faceLandmarks || [],
@@ -83,25 +89,25 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
 
   // Initialize vision when enabled
   useEffect(() => {
-    if (enabled && !visionStore.config) {
-      visionStore.initialize(visionConfig);
+    if (enabled && !visionStoreRef.current.config) {
+      visionStoreRef.current.initialize(visionConfig);
     }
-  }, [enabled, visionStore, visionConfig]);
+  }, [enabled, visionConfig]);
 
   // Start vision processing when we have the essentials
   useEffect(() => {
     const startVisionProcessing = async () => {
       const shouldStartVision =
         enabled &&
-        visionStore.isReady &&
-        !visionStore.isActive &&
+        visionStoreRef.current.isReady &&
+        !visionStoreRef.current.isActive &&
         !!videoRef.current &&
         !!cameraStream;
 
       if (shouldStartVision) {
         try {
           console.log("🔍 Starting vision processing (simplified conditions)");
-          await visionStore.start(videoRef.current!);
+          await visionStoreRef.current.start(videoRef.current!);
           console.log("✅ Vision processing started - FaceMesh should now be active");
           onVisionReady?.();
         } catch (err) {
@@ -112,25 +118,25 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
       }
     };
 
-    if (enabled && visionStore.isReady && videoRef.current && cameraStream) {
+    if (enabled && visionStoreRef.current.isReady && videoRef.current && cameraStream) {
       startVisionProcessing();
     }
-  }, [enabled, visionStore, cameraStream, videoRef, onVisionReady, onVisionError]);
+  }, [enabled, cameraStream, videoRef, onVisionReady, onVisionError]);
 
   // Stop vision when disabled (but not on every state change)
   useEffect(() => {
-    if (!enabled && visionStore.isActive) {
+    if (!enabled && visionStoreRef.current.isActive) {
       console.log('🛑 VisionManager: Stopping vision processing (disabled)');
-      visionStore.stop();
+      visionStoreRef.current.stop();
     }
   }, [enabled]); // Only depend on enabled state
 
   // Cleanup vision processing when component unmounts
   useEffect(() => {
     return () => {
-      if (visionStore.isActive) {
+      if (visionStoreRef.current.isActive) {
         console.log('🧹 VisionManager: Cleaning up vision processing on unmount');
-        visionStore.stop();
+        visionStoreRef.current.stop();
       }
     };
   }, []); // Empty dependency array - only run on unmount

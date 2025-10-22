@@ -88,6 +88,10 @@ export const useAuthPerformance = () => {
 
   // PERFORMANT: Start auth flow timing
   const startAuthFlow = useCallback(() => {
+    // Prevent duplicate start events in development (StrictMode double-invocation)
+    if (startTimeRef.current !== null) {
+      return;
+    }
     startTimeRef.current = performance.now();
     setMetrics(prev => ({
       ...prev,

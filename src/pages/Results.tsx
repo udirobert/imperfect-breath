@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -46,24 +46,23 @@ import { EnhancedCustomPattern } from "../types/patterns";
 import { BreathingSessionPost } from "../components/social/BreathingSessionPost";
 import { SessionCompleteModal } from "../components/unified/SessionCompleteModal";
 
-// TEMPORARY: Debug component for AI analysis
 import { AIAnalysisDebugButton } from "../components/debug/AIAnalysisDebugButton";
 
-// ENHANCED: Error boundary for AI analysis
 import { AIAnalysisErrorBoundary } from "../components/error/AIAnalysisErrorBoundary";
 
-// ENHANCED: Dr. Breathe AI Analysis Display
 import { EnhancedAIAnalysisDisplay } from "../components/ai/EnhancedAIAnalysisDisplay";
 import { StreamingIndicator } from "../components/ai/StreamingIndicator";
 import {
   EnhancedAnalysisService,
   EnhancedAnalysisRequest,
 } from "../lib/ai/enhanced-analysis-service";
+import { trackEvent } from "@/lib/analytics";
 
 // Using consolidated formatTime from utils
 
 const Results = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isAuthenticated: isLensAuthenticated } = useLens();
   const { streak, totalMinutes, saveSession, history } = useSessionHistory();
@@ -104,6 +103,46 @@ const Results = () => {
   const [isSharing, setIsSharing] = useState(false); // Prevent multiple share attempts
 
   const sessionData = useMemo(() => location.state || {}, [location.state]);
+
+  const patternID = useMemo(() => {
+    if (!sessionData.patternName) return undefined;
+    const match = Object.values(BREATHING_PATTERNS).find(
+      (p) => p.name === sessionData.patternName
+    );
+    return match?.id;
+  }, [sessionData.patternName]);
+
+  // Share to Lens CTA with auth gating and router state
+  const handleShareToLensClick = () => {
+    try {
+      trackEvent("share_to_lens_click", {
+        source: "results",
+        patternID,
+        patternName: sessionData.patternName,
+      });
+    } catch {
+      console.warn("Failed to track share to lens click event");
+    }
+
+    const sessionState = {
+      patternID,
+      patternName: sessionData.patternName,
+      sessionDuration: sessionData.sessionDuration,
+      breathHoldTime: sessionData.breathHoldTime,
+      restlessnessScore: sessionData.restlessnessScore,
+      timestamp: sessionData.timestamp || new Date().toISOString(),
+    };
+
+    if (!isLensAuthenticated) {
+      toast.info("Connect to Lens to share your results", {
+        description: "We’ll resume the share flow after connecting.",
+      });
+      navigate("/lens/flow", { state: { focusTab: "auth", session: sessionState } });
+      return;
+    }
+
+    navigate("/lens/flow", { state: { focusTab: "share", session: sessionState } });
+  };
 
   useEffect(() => {
     if (sessionData.patternName && !hasSavedRef.current && user) {
@@ -156,7 +195,12 @@ const Results = () => {
     });
 
     // UNIFIED DATA FLOW: Combine session + vision data (AGGRESSIVE CONSOLIDATION)
-    let enhancedSessionData: any = {
+    type EnhancedSessionData = SessionData & {
+      cycleCount?: number;
+      targetCycles?: number;
+      visionMetrics?: unknown;
+    };
+    let enhancedSessionData: EnhancedSessionData = {
       breathHoldTime: sessionData.breathHoldTime || 0,
       restlessnessScore: sessionData.restlessnessScore || 0,
       patternName: sessionData.patternName,
@@ -165,12 +209,12 @@ const Results = () => {
       landmarks: 68,
     };
 
-    // Add cycle data if available (using any type to avoid TS errors)
+    // Add cycle data if available
     if (sessionData.cycleCount !== undefined) {
-      (enhancedSessionData as any).cycleCount = sessionData.cycleCount;
+      enhancedSessionData.cycleCount = sessionData.cycleCount;
     }
     if (sessionData.targetCycles !== undefined) {
-      (enhancedSessionData as any).targetCycles = sessionData.targetCycles;
+      enhancedSessionData.targetCycles = sessionData.targetCycles;
     }
 
     // ENHANCED: Robust vision data integration with proper validation
@@ -417,6 +461,8 @@ Check out Imperfect Breath!`;
             ((sessionData.cycleCount || 0) / sessionData.targetCycles) * 100
           )
         : 100,
+      // Pass along any vision metrics if present for AI analysis
+      visionMetrics: sessionData.visionMetrics,
     };
     return data;
   }, [sessionData]);
@@ -1010,7 +1056,7 @@ Check out Imperfect Breath!`;
                       landmarks: sessionData.landmarks,
                       timestamp: sessionData.timestamp,
                       visionMetrics:
-                        (enhancedSessionData as any).visionMetrics || undefined,
+                        enhancedSessionData.visionMetrics || undefined,
                       cycleCount: sessionData.cycleCount,
                       targetCycles: sessionData.targetCycles,
                       // Include all available session data
@@ -1313,6 +1359,16 @@ Check out Imperfect Breath!`;
             >
               <Share className="mr-2 h-5 w-5" />
               {isSharing ? "Sharing..." : "Share Results"}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="rounded-full"
+              onClick={handleShareToLensClick}
+              disabled={!sessionData.patternName}
+            >
+              <Share className="mr-2 h-5 w-5" />
+              Share to Lens
             </Button>
             <Link to="/">
               <Button size="lg" variant="ghost" className="rounded-full">

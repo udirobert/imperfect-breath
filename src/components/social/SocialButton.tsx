@@ -26,10 +26,7 @@ import {
   Plus,
   X,
   Repeat2,
-  Heart,
   Share2,
-  Bookmark,
-  Flag,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -45,24 +42,32 @@ export type SocialActionType =
   | "follow" 
   | "unfollow" 
   | "repost"
-  | "share"
-  | "bookmark"
-  | "report";
+  | "share";
 
 interface SocialButtonProps {
   actionType: SocialActionType;
   targetId: string; // postId, userId, patternId, etc.
-  actionParams?: any;
+  actionParams?: {
+    shareData?: ShareData;
+    [key: string]: unknown;
+  };
   className?: string;
   variant?: "default" | "ghost" | "outline" | "destructive";
   size?: "sm" | "default" | "lg";
   showCount?: boolean;
   count?: number;
-  isActive?: boolean; // for liked, bookmarked, followed states
+  isActive?: boolean; // for liked, followed states
   disabled?: boolean;
   compact?: boolean;
-  onSuccess?: (result: any) => void;
-  onError?: (error: any) => void;
+  onSuccess?: (result: unknown) => void;
+  onError?: (error: unknown) => void;
+}
+
+// Narrow type for Web Share API payload
+interface ShareData {
+  title?: string;
+  text?: string;
+  url?: string;
 }
 
 const ACTION_CONFIG = {
@@ -130,22 +135,6 @@ const ACTION_CONFIG = {
     successMessage: "Shared successfully!",
     authMessage: "Please connect to share.",
   },
-  bookmark: {
-    icon: Bookmark,
-    activeText: "Bookmarked",
-    inactiveText: "Bookmark",
-    loadingText: "Bookmarking...",
-    successMessage: "Added to bookmarks!",
-    authMessage: "Please connect to bookmark.",
-  },
-  report: {
-    icon: Flag,
-    activeText: "Reported",
-    inactiveText: "Report",
-    loadingText: "Reporting...",
-    successMessage: "Report submitted. Thank you!",
-    authMessage: "Please connect to report.",
-  },
 };
 
 export const SocialButton: React.FC<SocialButtonProps> = ({
@@ -163,8 +152,8 @@ export const SocialButton: React.FC<SocialButtonProps> = ({
   onSuccess,
   onError,
 }) => {
-  const { isAuthenticated, authenticate, createComment, createPost, isPosting } = useLens();
-  const { executeAction, isActing, actionError } = useAction();
+  const { isAuthenticated, authenticate, createComment, likePost, mirrorPost, followUser, unfollowUser, isPosting } = useLens();
+  const { executeAction, isActing } = useAction();
   
   const [localIsActive, setLocalIsActive] = useState(isActive);
   const [showDialog, setShowDialog] = useState(false);
@@ -175,7 +164,7 @@ export const SocialButton: React.FC<SocialButtonProps> = ({
   const Icon = config.icon;
   
   const isProcessing = isLoading || isActing || isPosting;
-  const currentVariant = localIsActive ? "default" : variant;
+  const currentVariant: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" = localIsActive ? "default" : (variant as "default" | "destructive" | "outline" | "secondary" | "ghost" | "link");
 
   const handleAuthentication = async () => {
     if (!isAuthenticated) {
@@ -212,134 +201,134 @@ export const SocialButton: React.FC<SocialButtonProps> = ({
           setShowDialog(false);
           break;
           
-        case "follow":
-        case "unfollow":
-          // Handle follow/unfollow logic - placeholder implementation
-          console.warn(`Follow/unfollow action ${actionType} - Implementation needed`);
-          result = { success: true, message: `${actionType} action completed` };
-          setLocalIsActive(!localIsActive);
-          break;
-
-        case "repost":
-          // Handle repost logic using createPost
-          result = await createPost(`Reposting: ${targetId}`, ["repost", "imperfect-breath"]);
-          break;
-
-        case "share":
-        case "bookmark":
-        case "report":
-          // Handle other actions - placeholder implementation
-          console.warn(`${actionType} action - Implementation needed`);
-          result = { success: true, message: `${actionType} action completed` };
-          if (["bookmark"].includes(actionType)) {
+        case "like":
+          // Use Lens like action
+          result = await likePost(targetId);
+          if (result?.success) {
             setLocalIsActive(!localIsActive);
           }
           break;
-
-        default:
-          // Only use executeAction for supported actions
-          if (["collect", "like", "react"].includes(actionType)) {
-            result = await executeAction(targetId, actionType as 'collect' | 'like' | 'react', actionParams);
-            if (["like", "react"].includes(actionType)) {
-              setLocalIsActive(!localIsActive);
-            }
-          } else {
-            // Fallback for unsupported actions
-            console.warn(`Unsupported action type: ${actionType}`);
-            result = { success: true, message: `${actionType} action completed` };
+          
+        case "follow":
+          result = await followUser(targetId);
+          if (result?.success) {
+            setLocalIsActive(true);
           }
-      }
+          break;
+        case "unfollow":
+          result = await unfollowUser(targetId);
+          if (result?.success) {
+            setLocalIsActive(false);
+          }
+          break;
 
-      toast.success(config.successMessage);
-      onSuccess?.(result);
-      
+        case "repost":
+          // Mirror publication via Lens
+          result = await mirrorPost(targetId);
+          break;
+
+        case "share":
+          // Native share fallback (non-Lens)
+          try {
+            const shareData: ShareData = (actionParams && 'shareData' in actionParams ? actionParams.shareData as ShareData : undefined) ?? {
+              title: "Imperfect Breath",
+              text: "Check this out",
+              url: window.location.href,
+            };
+            if (navigator.share) {
+              await navigator.share(shareData);
+            } else {
+              await navigator.clipboard.writeText(shareData.url ?? window.location.href);
+              toast.success("Link copied to clipboard");
+            }
+            result = { success: true };
+          } catch (err) {
+            result = { success: false, error: err instanceof Error ? err.message : String(err) };
+          }
+          break;
+
+        case "collect":
+        case "react":
+          // Unified action execution (supported types)
+          result = await executeAction(targetId, actionType, actionParams);
+          break;
+         default:
+           throw new Error(`Unsupported action type: ${actionType}`);
+       }
+ 
+       if (result?.success) {
+         toast.success(config.successMessage);
+         onSuccess?.(result);
+       } else if (result && 'error' in result && result.error) {
+         toast.error(String(result.error));
+         onError?.(result.error);
+       }
+
     } catch (error) {
-      console.error(`Error performing ${actionType}:`, error);
-      toast.error(`Failed to ${actionType}. Please try again.`);
+      console.error("Action error:", error);
+      toast.error("Something went wrong. Please try again.");
       onError?.(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleClick = () => {
-    if (actionType === "comment") {
-      setShowDialog(true);
-    } else {
-      executeActionWithAuth();
-    }
-  };
-
-  const getButtonText = () => {
-    if (isProcessing) return config.loadingText;
-    if (localIsActive) return config.activeText;
-    return config.inactiveText;
-  };
-
   return (
-    <>
+    <div className={`inline-flex items-center ${compact ? 'gap-1' : 'gap-2'} ${className}`}>
       <Button
-        onClick={handleClick}
-        disabled={disabled || isProcessing}
         variant={currentVariant}
-        size={size}
-        className={`flex items-center gap-1 ${className}`}
+        size={size as "default" | "sm" | "lg" | "icon"}
+        disabled={disabled || isProcessing}
+        onClick={() => {
+          if (actionType === "comment") {
+            setShowDialog(true);
+          } else {
+            executeActionWithAuth();
+          }
+        }}
       >
-        {isProcessing ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Icon className={`w-4 h-4 ${localIsActive && actionType === "like" ? "fill-current" : ""}`} />
-        )}
-        {!compact && <span>{getButtonText()}</span>}
-        {showCount && count > 0 && (
-          <Badge variant="secondary" className="ml-1 text-xs">
+        <Icon className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} mr-2`} />
+        {compact ? null : (localIsActive ? ACTION_CONFIG[actionType].activeText : ACTION_CONFIG[actionType].inactiveText)}
+        {showCount && (
+          <Badge variant="secondary" className="ml-2 text-xs">
             {count}
           </Badge>
         )}
       </Button>
 
-      {/* Comment Dialog */}
-      {actionType === "comment" && (
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Comment</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <Textarea
-                placeholder="Write your comment here..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                rows={4}
-                className="resize-none"
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={executeActionWithAuth}
-                disabled={isProcessing || !commentText.trim()}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Posting...
-                  </>
-                ) : (
-                  "Post Comment"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
+      {/* Comment dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add a comment</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder="Share your thoughts..."
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+          />
+          <DialogFooter>
+            <Button
+              variant="default"
+              onClick={executeActionWithAuth}
+              disabled={isProcessing || !commentText.trim()}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {ACTION_CONFIG.comment.loadingText}
+                </>
+              ) : (
+                ACTION_CONFIG.comment.inactiveText
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
-// Convenience components for backward compatibility and ease of use
 export const CollectButton = (props: Omit<SocialButtonProps, "actionType">) => (
   <SocialButton {...props} actionType="collect" />
 );
@@ -369,14 +358,7 @@ export const ShareButton = (props: Omit<SocialButtonProps, "actionType">) => (
   <SocialButton {...props} actionType="share" />
 );
 
-export const BookmarkButton = (props: Omit<SocialButtonProps, "actionType">) => (
-  <SocialButton {...props} actionType="bookmark" />
-);
-
-export const ReportButton = (props: Omit<SocialButtonProps, "actionType">) => (
-  <SocialButton {...props} actionType="report" />
-);
-
+// Removed unsupported actions: Bookmark and Report
 export const ReactButton = (props: Omit<SocialButtonProps, "actionType">) => (
   <SocialButton {...props} actionType="react" />
 );

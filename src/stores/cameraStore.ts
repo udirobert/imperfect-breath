@@ -365,18 +365,19 @@ export const useCameraStore = create<CameraState & CameraActions>()(
 // ============================================================================
 
 export const cameraSelectors = {
-    isActive: () => useCameraStore((state) => state.status === 'active'),
-    hasStream: () => useCameraStore((state) => !!state.stream),
-    hasPermission: () => useCameraStore((state) => state.hasPermission),
-    hasDevices: () => useCameraStore((state) => state.devices.length > 0),
-    isLoading: () => useCameraStore((state) => state.status === 'requesting' || state.isEnumeratingDevices),
-    hasError: () => useCameraStore((state) => !!state.error),
-    streamHealth: () => useCameraStore((state) => {
+    isActive: () => useCameraStore.getState().status === 'active',
+    hasStream: () => !!useCameraStore.getState().stream,
+    hasPermission: () => useCameraStore.getState().hasPermission,
+    hasDevices: () => useCameraStore.getState().devices.length > 0,
+    isLoading: () => useCameraStore.getState().status === 'requesting' || useCameraStore.getState().isEnumeratingDevices,
+    hasError: () => !!useCameraStore.getState().error,
+    streamHealth: () => {
+        const state = useCameraStore.getState();
         if (!state.stream) return 'failed';
         if (state.consecutiveErrors > 3) return 'degraded';
         if (state.status === 'active' && state.refCount > 0) return 'healthy';
         return 'degraded';
-    }),
+    },
 };
 
 // ============================================================================

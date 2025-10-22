@@ -32,19 +32,7 @@ const LazyWalletAuth = React.lazy(() =>
   }))
 );
 
-// PERFORMANT: Lazy load Lens auth component
-const LazyLensAuth = React.lazy(() => 
-  import("@/auth/components/LensAuth").then(module => ({
-    default: module.LensAuth
-  }))
-);
 
-// PERFORMANT: Lazy load Flow auth component
-const LazyFlowAuth = React.lazy(() => 
-  import("@/auth/components/FlowAuth").then(module => ({
-    default: module.FlowAuth
-  }))
-);
 
 interface UnifiedAuthFlowProps {
   // MODULAR: Support different auth feature combinations
@@ -148,15 +136,11 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
       return;
     }
 
-    if (methodId === 'lens') {
-      // Lens auth - trigger authentication directly
-      handleLensAuth();
-      return;
-    }
-
-    if (methodId === 'flow') {
-      // Flow auth - trigger authentication directly
-      handleFlowAuth();
+    // All blockchain-related auth (wallet, lens, flow) now goes through wallet flow
+    if (methodId === 'lens' || methodId === 'flow') {
+      // These will be handled by wallet auth flow
+      setSelectedMethod('wallet');
+      setAuthStep('authenticate');
       return;
     }
     

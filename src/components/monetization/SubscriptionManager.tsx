@@ -43,12 +43,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  useRevenueCat,
+  revenueCat,
   SUBSCRIPTION_TIERS,
   PURCHASE_ITEMS,
   type SubscriptionTier,
   type PurchaseItem,
 } from "@/lib/monetization/revenueCat";
+import { useRevenueCatStatus } from "@/stores/authStore";
 
 // Type definitions for component
 interface RecommendationItem {
@@ -91,21 +92,28 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({
   showCurrentPlan = true,
   variant = "full",
 }) => {
-  const {
-    isInitialized,
-    subscriptionStatus,
-    isLoading,
-    purchaseSubscription,
-    purchaseItem,
-    restorePurchases,
-    hasFeatureAccess,
-  } = useRevenueCat();
+  const rc = useRevenueCatStatus();
+  const isInitialized = rc.isAvailable;
+  const subscriptionStatus = {
+    tier: rc.subscriptionTier,
+    isActive: rc.isSubscriptionActive,
+    features: rc.features,
+  };
+  const isLoading = false;
 
   const [purchasingTier, setPurchasingTier] = useState<string | null>(null);
   const [purchasingItem, setPurchasingItem] = useState<string | null>(null);
   const [showPurchaseItems, setShowPurchaseItems] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const purchaseSubscription = async (packageId: string) =>
+    revenueCat.purchaseSubscription(packageId);
+  const purchaseItem = async (packageId: string) =>
+    revenueCat.purchaseItem(packageId);
+  const restorePurchases = async () => revenueCat.restorePurchases();
+  const hasFeatureAccess = async (feature: string) =>
+    revenueCat.hasFeatureAccess(feature);
 
   const handlePurchaseSubscription = async (tier: SubscriptionTier) => {
     if (!isInitialized || tier.id === "basic") return;
@@ -353,13 +361,7 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({
                     {subscriptionStatus.isActive
                       ? "Currently active"
                       : "Not active"}
-                    {subscriptionStatus.expiresAt && (
-                      <span>
-                        {" "}
-                        • Expires{" "}
-                        {subscriptionStatus.expiresAt.toLocaleDateString()}
-                      </span>
-                    )}
+
                   </CardDescription>
                 </div>
               </div>

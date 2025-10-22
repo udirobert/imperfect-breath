@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useLens } from '../hooks/useLens';
 import type { Post, Account, SocialActionResult } from '../lib/lens/types';
 
@@ -142,14 +142,6 @@ export const LensProvider: React.FC<LensProviderProps> = ({ children }) => {
       {children}
     </LensContext.Provider>
   );
-};
-
-export const useLensContext = (): LensContextType => {
-  const context = useContext(LensContext);
-  if (context === undefined) {
-    throw new Error('useLensContext must be used within a LensProvider');
-  }
-  return context;
 };
 
 export default LensProvider;

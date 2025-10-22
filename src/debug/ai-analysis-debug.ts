@@ -10,7 +10,7 @@ import { API_ENDPOINTS } from '../config/api-endpoints';
 export interface DebugResult {
   step: string;
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   timing?: number;
 }
@@ -393,7 +393,11 @@ export const debugAIAnalysis = async (): Promise<DebugResult[]> => {
 
 // Global debug function for browser console
 if (typeof window !== 'undefined') {
-  (window as any).debugAIAnalysis = async () => {
+  interface Window {
+    debugAIAnalysis?: () => Promise<DebugResult[]>;
+  }
+  
+  (window as Window).debugAIAnalysis = async () => {
     const aiDebugger = new AIAnalysisDebugger();
     const results = await aiDebugger.runFullDiagnostic();
     console.log(aiDebugger.generateReport());

@@ -10,24 +10,39 @@
 import React from "react";
 
 // Type definitions for RevenueCat interfaces (for web compatibility)
+// Proper type definitions for RevenueCat
 interface PurchasesOfferingType {
-  monthly?: unknown[];
-  annual?: unknown[];
-  lifetime?: unknown[];
+  monthly?: PurchasesPackageType[];
+  annual?: PurchasesPackageType[];
+  lifetime?: PurchasesPackageType[];
 }
 
 interface CustomerInfoType {
   activeSubscriptions: string[];
   allPurchasedProductIdentifiers: string[];
   entitlements: {
-    active: { [key: string]: unknown };
+    active: { [key: string]: EntitlementInfo };
   };
+}
+
+interface EntitlementInfo {
+  expirationDate?: string;
+  isActive: boolean;
+  identifier: string;
+  productIdentifier: string;
 }
 
 interface PurchasesPackageType {
   identifier: string;
   packageType: string;
-  product: unknown;
+  product: {
+    identifier: string;
+    description: string;
+    title: string;
+    price: number;
+    priceString: string;
+    currencyCode: string;
+  };
 }
 
 // Conditional import for RevenueCat - only available on mobile platforms
@@ -211,6 +226,7 @@ export class RevenueCatService {
   private customerInfo: CustomerInfoType | null = null;
   private secureConfig: SecureRevenueCatConfig | null = null;
   private isWebPlatform = false;
+  private hasWarnedUnavailable = false;
 
   private constructor() {}
 
@@ -226,41 +242,38 @@ export class RevenueCatService {
    */
   public async initialize(): Promise<boolean> {
     try {
-      // Check if we're on web platform
-      this.isWebPlatform = !isMobile;
-      
-      if (this.isWebPlatform) {
-        console.info("Running on web platform - using mock RevenueCat implementation");
-        this.isInitialized = true;
-        // Initialize with mock data for web
-        this.customerInfo = {
-          activeSubscriptions: [],
-          allPurchasedProductIdentifiers: [],
-          entitlements: { active: {} }
-        };
-        return true;
+      // Only initialize on mobile platforms with Capacitor
+      if (!isMobile) {
+        if (!this.hasWarnedUnavailable) {
+          this.hasWarnedUnavailable = true;
+          if (import.meta.env.DEV) {
+            console.info("RevenueCat is only available on mobile platforms");
+          }
+        }
+        return false;
       }
 
       // Load secure configuration
       this.secureConfig = await loadRevenueCatConfig();
       
       if (!this.secureConfig.isAvailable || !this.secureConfig.config) {
-        console.warn(
-          "RevenueCat configuration not available:",
-          this.secureConfig.error || "Configuration unavailable"
-        );
-        console.info("Running in demo mode without RevenueCat integration");
+        if (import.meta.env.DEV) {
+          console.warn(
+            "RevenueCat configuration not available:",
+            this.secureConfig.error || "Configuration unavailable"
+          );
+        }
         return false;
       }
 
       // Determine platform and get appropriate API key
       const platform = this.getPlatform();
       
-      // Skip API key validation for web platform
       if (platform === "web") {
-        console.info("Web platform detected - using mock implementation");
-        this.isInitialized = true;
-        return true;
+        if (import.meta.env.DEV) {
+          console.info("RevenueCat is not supported on web platform");
+        }
+        return false;
       }
       
       const apiKey = getRevenueCatKeyForPlatform(this.secureConfig.config, platform as "ios" | "android");
@@ -268,7 +281,7 @@ export class RevenueCatService {
       // Validate the API key
       if (!isValidRevenueCatKey(apiKey, platform as "ios" | "android")) {
         console.warn(
-          `Invalid RevenueCat API key for ${platform} platform. Using demo mode.`
+          `Invalid RevenueCat API key for ${platform} platform.`
         );
         return false;
       }
@@ -311,13 +324,8 @@ export class RevenueCatService {
    */
   public async loadOfferings(): Promise<void> {
     try {
-      if (this.isWebPlatform) {
-        // Mock offerings for web
-        this.currentOfferings = {
-          monthly: [],
-          annual: [],
-          lifetime: []
-        };
+      if (!isMobile || !this.isInitialized) {
+        console.warn("RevenueCat not available - cannot load offerings");
         return;
       }
       
@@ -333,8 +341,28 @@ export class RevenueCatService {
    */
   public async getSubscriptionStatus(): Promise<SubscriptionStatus> {
     try {
+      if (!isMobile) {
+        // Return basic tier for non-mobile platforms
+        return {
+          tier: "basic",
+          isActive: true,
+          features:
+            SUBSCRIPTION_TIERS.find((t) => t.id === "basic")?.features || [],
+        };
+      }
+
       if (!this.isInitialized) {
         await this.initialize();
+      }
+
+      if (!this.isInitialized) {
+        // Return basic tier if initialization failed
+        return {
+          tier: "basic",
+          isActive: true,
+          features:
+            SUBSCRIPTION_TIERS.find((t) => t.id === "basic")?.features || [],
+        };
       }
 
       try {
@@ -352,21 +380,21 @@ export class RevenueCatService {
       // Check for active subscriptions
       const activeEntitlements = this.customerInfo?.entitlements?.active || {};
 
-      if (activeEntitlements.pro) {
+      if (activeEntitlements.pro && activeEntitlements.pro.isActive) {
         return {
           tier: "pro",
           isActive: true,
-          expiresAt: new Date(activeEntitlements.pro.expirationDate || ""),
+          expiresAt: activeEntitlements.pro.expirationDate ? new Date(activeEntitlements.pro.expirationDate) : undefined,
           features:
             SUBSCRIPTION_TIERS.find((t) => t.id === "pro")?.features || [],
         };
       }
 
-      if (activeEntitlements.premium) {
+      if (activeEntitlements.premium && activeEntitlements.premium.isActive) {
         return {
           tier: "premium",
           isActive: true,
-          expiresAt: new Date(activeEntitlements.premium.expirationDate || ""),
+          expiresAt: activeEntitlements.premium.expirationDate ? new Date(activeEntitlements.premium.expirationDate) : undefined,
           features:
             SUBSCRIPTION_TIERS.find((t) => t.id === "premium")?.features || [],
         };
@@ -397,197 +425,185 @@ export class RevenueCatService {
     packageId: string,
   ): Promise<PurchaseResult> {
     try {
+      if (!isMobile) {
+        return {
+          success: false,
+          error: "Purchases are only available on mobile platforms"
+        };
+      }
+
       if (!this.currentOfferings) {
         await this.loadOfferings();
       }
 
-      const targetPackage = this.findPackage(packageId);
-      if (!targetPackage) {
-        return { success: false, error: "Package not found" };
+      const packageToPurchase = this.findPackage(packageId);
+      if (!packageToPurchase) {
+        return {
+          success: false,
+          error: `Package ${packageId} not found`,
+        };
       }
 
-      const result = await Purchases.purchasePackage({
-        aPackage: targetPackage,
-      });
-      if (result && "customerInfo" in result) {
-        this.customerInfo = result.customerInfo;
-      }
+      const purchaseResult = await Purchases.purchasePackage(packageToPurchase);
+      
+      // Handle both direct CustomerInfo and wrapped response
+      const customerInfo = "customerInfo" in purchaseResult 
+        ? purchaseResult.customerInfo 
+        : purchaseResult;
 
-      return { success: true, customerInfo: result.customerInfo };
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      this.customerInfo = customerInfo;
+
+      return {
+        success: true,
+        customerInfo: customerInfo,
+      };
+    } catch (error: any) {
       console.error("Purchase failed:", error);
       return {
         success: false,
-        error: errorMessage || "Purchase failed",
+        error: error.message || "Purchase failed",
       };
     }
   }
 
-  /**
-   * Purchase an in-app item
-   */
   public async purchaseItem(packageId: string): Promise<PurchaseResult> {
-    return this.purchaseSubscription(packageId); // Same logic for now
+    // Same implementation as purchaseSubscription for one-time purchases
+    return this.purchaseSubscription(packageId);
   }
 
-  /**
-   * Restore purchases
-   */
   public async restorePurchases(): Promise<PurchaseResult> {
     try {
-      const result = await Purchases.restorePurchases();
-      if (result && "customerInfo" in result) {
-        this.customerInfo = result.customerInfo;
+      if (!isMobile) {
+        return {
+          success: false,
+          error: "Restore purchases is only available on mobile platforms"
+        };
       }
-      return { success: true, customerInfo: result.customerInfo };
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      console.error("Restore failed:", error);
+
+      const restoreResult = await Purchases.restorePurchases();
+      
+      // Handle both direct CustomerInfo and wrapped response
+      const customerInfo = "customerInfo" in restoreResult 
+        ? restoreResult.customerInfo 
+        : restoreResult;
+
+      this.customerInfo = customerInfo;
+
+      return {
+        success: true,
+        customerInfo: customerInfo,
+      };
+    } catch (error: any) {
+      console.error("Restore purchases failed:", error);
       return {
         success: false,
-        error: errorMessage || "Restore failed",
+        error: error.message || "Restore purchases failed",
       };
     }
   }
 
-  /**
-   * Check if user has specific feature access
-   */
   public async hasFeatureAccess(feature: string): Promise<boolean> {
-    const status = await this.getSubscriptionStatus();
-
-    // Feature mapping
-    const featureMap: { [key: string]: string[] } = {
-      ai_coaching: ["premium", "pro"],
-      ai_analysis: ["premium", "pro"],
-      streaming_feedback: ["premium", "pro"],
-      streaming_metrics: ["pro"],
-      persona_insights: ["pro"],
-      cloud_sync: ["premium", "pro"],
-      custom_patterns: ["premium", "pro"],
-      nft_creation: ["pro"],
-      web3_features: ["pro"],
-      instructor_tools: ["pro"],
-      advanced_analytics: ["premium", "pro"],
-    };
-
-    const requiredTiers = featureMap[feature] || [];
-    return requiredTiers.includes(status.tier);
+    try {
+      const status = await this.getSubscriptionStatus();
+      return status.features.includes(feature);
+    } catch (error) {
+      console.error("Failed to check feature access:", error);
+      return false;
+    }
   }
 
-  /**
-   * Get available packages for purchase
-   */
   public getAvailablePackages(): PurchasesPackageType[] {
     if (!this.currentOfferings) return [];
 
     const allPackages: PurchasesPackageType[] = [];
 
-    if (Array.isArray(this.currentOfferings.monthly)) {
+    if (this.currentOfferings.monthly) {
       allPackages.push(...this.currentOfferings.monthly);
     }
-    if (Array.isArray(this.currentOfferings.annual)) {
+    if (this.currentOfferings.annual) {
       allPackages.push(...this.currentOfferings.annual);
     }
-    if (Array.isArray(this.currentOfferings.lifetime)) {
+    if (this.currentOfferings.lifetime) {
       allPackages.push(...this.currentOfferings.lifetime);
     }
 
     return allPackages;
   }
 
-  /**
-   * Set user attributes for analytics
-   */
   public async setUserAttributes(attributes: {
     [key: string]: string;
   }): Promise<void> {
     try {
-      if (this.isWebPlatform) {
-        console.log("Mock: Setting user attributes on web platform:", attributes);
-        return;
-      }
-      
-      if (!this.isInitialized || !Purchases) {
-        console.warn("RevenueCat not initialized, cannot set user attributes");
+      if (!isMobile || !this.isInitialized) {
+        console.warn("RevenueCat not available - cannot set user attributes");
         return;
       }
 
       await Purchases.setAttributes(attributes);
-      console.log("User attributes set successfully");
     } catch (error) {
       console.error("Failed to set user attributes:", error);
     }
   }
 
-  /**
-   * Log in user (for cross-platform sync)
-   */
   public async loginUser(userId: string): Promise<void> {
     try {
+      if (!isMobile || !this.isInitialized) {
+        console.warn("RevenueCat not available - cannot login user");
+        return;
+      }
+
+      await Purchases.logIn(userId);
+      
+      // Refresh customer info after login
       try {
-        const result = await Purchases.logIn({ appUserID: userId });
-        if (result && "customerInfo" in result) {
-          this.customerInfo = result.customerInfo;
-        }
+        const customerInfoResult = await Purchases.getCustomerInfo();
+        this.customerInfo =
+          "customerInfo" in customerInfoResult
+            ? customerInfoResult.customerInfo
+            : customerInfoResult;
       } catch (error) {
-        console.error("Failed to login user:", error);
+        console.warn("Failed to refresh customer info after login", error);
       }
     } catch (error) {
       console.error("Failed to login user:", error);
     }
   }
 
-  /**
-   * Log out user
-   */
   public async logoutUser(): Promise<void> {
     try {
-      try {
-        const result = await Purchases.logOut();
-        if (result && "customerInfo" in result) {
-          this.customerInfo = result.customerInfo;
-        }
-      } catch (error) {
-        console.error("Failed to logout user:", error);
+      if (!isMobile || !this.isInitialized) {
+        console.warn("RevenueCat not available - cannot logout user");
+        return;
       }
+
+      await Purchases.logOut();
+      
+      // Clear customer info after logout
+      this.customerInfo = null;
     } catch (error) {
       console.error("Failed to logout user:", error);
     }
   }
 
-  /**
-   * Check if RevenueCat is available and properly configured
-   */
   public isRevenueCatAvailable(): boolean {
-    return this.isWebPlatform || (this.secureConfig?.isAvailable === true && this.isInitialized);
+    return isMobile && this.isInitialized;
   }
 
-  /**
-   * Get configuration status for debugging
-   */
   public getConfigurationStatus(): {
     isAvailable: boolean;
     isInitialized: boolean;
     error?: string;
   } {
     return {
-      isAvailable: this.isWebPlatform || this.secureConfig?.isAvailable === true,
+      isAvailable: isMobile,
       isInitialized: this.isInitialized,
-      error: this.isWebPlatform ? undefined : this.secureConfig?.error
+      error: !isMobile ? "RevenueCat is only available on mobile platforms" : undefined,
     };
   }
 
-  // Private helper methods
   private getPlatform(): "ios" | "android" | "web" {
-    // For Capacitor, we can check the platform
-    if (
-      typeof window !== "undefined" &&
-      (window as unknown as { Capacitor?: { getPlatform(): string } }).Capacitor
-    ) {
+    // Check if we're in a Capacitor environment
+    if (typeof window !== "undefined" && (window as any).Capacitor) {
       const platform = (
         window as unknown as { Capacitor: { getPlatform(): string } }
       ).Capacitor.getPlatform();
@@ -597,11 +613,7 @@ export class RevenueCatService {
     }
     
     // Default to web for browser environments
-    if (typeof window !== "undefined" && !isMobile) {
-      return "web";
-    }
-    
-    return "android"; // Default fallback
+    return "web";
   }
 
   private findPackage(packageId: string): PurchasesPackageType | null {
@@ -609,13 +621,13 @@ export class RevenueCatService {
 
     const allPackages: PurchasesPackageType[] = [];
 
-    if (Array.isArray(this.currentOfferings.monthly)) {
+    if (this.currentOfferings.monthly) {
       allPackages.push(...this.currentOfferings.monthly);
     }
-    if (Array.isArray(this.currentOfferings.annual)) {
+    if (this.currentOfferings.annual) {
       allPackages.push(...this.currentOfferings.annual);
     }
-    if (Array.isArray(this.currentOfferings.lifetime)) {
+    if (this.currentOfferings.lifetime) {
       allPackages.push(...this.currentOfferings.lifetime);
     }
 

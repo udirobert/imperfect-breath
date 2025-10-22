@@ -38,8 +38,8 @@ export interface UseErrorHandlerReturn {
 
   // Utilities
   reportError: (error: AppError, context?: Record<string, any>) => void;
-  wrapAsync: <T extends any[], R>(fn: (...args: T) => Promise<R>) => (...args: T) => Promise<R>;
-  wrapSync: <T extends any[], R>(fn: (...args: T) => R) => (...args: T) => R;
+  wrapAsync: <T extends readonly unknown[], R>(fn: (...args: T) => Promise<R>) => (...args: T) => Promise<R>;
+  wrapSync: <T extends readonly unknown[], R>(fn: (...args: T) => R) => (...args: T) => R;
 }
 
 const DEFAULT_OPTIONS: Required<ErrorHandlerOptions> = {
@@ -62,14 +62,14 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     lastErrorTime: null,
   });
 
-  const lastRecoveryAction = useRef<(() => Promise<any>) | null>(null);
+  const lastRecoveryAction = useRef<(() => Promise<void>) | null>(null);
 
   /**
    * Handle an error
    */
   const handleError = useCallback((
     error: Error | AppError,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) => {
     const appError = error instanceof AppError
       ? error
@@ -196,7 +196,7 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
   }, []);
 
   /**\n   * Wrap async function with error handling\n   */
-  const wrapAsync = useCallback(<T extends any[], R>(
+  const wrapAsync = useCallback(<T extends readonly unknown[], R>(
     fn: (...args: T) => Promise<R>
   ) => {
     return async (...args: T): Promise<R> => {
@@ -214,7 +214,7 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
   /**
    * Wrap sync function with error handling
    */
-  const wrapSync = useCallback(<T extends any[], R>(
+  const wrapSync = useCallback(<T extends readonly unknown[], R>(
     fn: (...args: T) => R
   ) => {
     return (...args: T): R => {

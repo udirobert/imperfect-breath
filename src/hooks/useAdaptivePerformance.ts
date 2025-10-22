@@ -42,7 +42,9 @@ const useAdaptivePerformance = () => {
   useEffect(() => {
     const detectCapabilities = () => {
       const isMobile = isTouchDevice(); // Use centralized detection
-      const isLowEnd = navigator.hardwareConcurrency <= 2 || (navigator as any).deviceMemory <= 2;
+      // Type assertion for non-standard navigator.deviceMemory API
+      const isLowEnd = navigator.hardwareConcurrency <= 2 || 
+        ('deviceMemory' in navigator && (navigator as any).deviceMemory <= 2);
 
       setCapabilities({
         isMobile,
@@ -60,7 +62,7 @@ const useAdaptivePerformance = () => {
     const updateBatteryInfo = async () => {
       if ('getBattery' in navigator) {
         try {
-          const battery = await (navigator as any).getBattery();
+          const battery = await (navigator as any).getBattery() as Promise<{ level: number }>;
           setBatteryLevel(Math.round(battery.level * 100));
           setIsLowPowerMode(battery.level < 0.2);
 
@@ -83,9 +85,12 @@ const useAdaptivePerformance = () => {
   useEffect(() => {
     const updateNetworkStatus = () => {
       if (navigator.onLine) {
-        const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-        if (connection) {
-          const effectiveType = connection.effectiveType;
+        // Type assertion for Network Information API (non-standard)
+        const connection = (navigator as any).connection || 
+                          (navigator as any).mozConnection || 
+                          (navigator as any).webkitConnection;
+        if (connection && 'effectiveType' in connection) {
+          const effectiveType = connection.effectiveType as 'slow-2g' | '2g' | '3g' | '4g' | '5g';
           setNetworkStatus(effectiveType === 'slow-2g' || effectiveType === '2g' ? 'slow' : 'online');
         } else {
           setNetworkStatus('online');

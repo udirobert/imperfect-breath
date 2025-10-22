@@ -393,20 +393,21 @@ export const useSessionHasWarnings = () => useSessionStore((state) => state.warn
 // ============================================================================
 
 export const sessionSelectors = {
-  isActive: () => useSessionStore((state) => state.phase !== 'idle'),
-  isRunning: () => useSessionStore((state) => ['inhale', 'hold', 'exhale', 'pause'].includes(state.phase)),
-  isPaused: () => useSessionStore((state) => state.phase === 'paused'),
-  isComplete: () => useSessionStore((state) => state.phase === 'complete'),
-  hasError: () => useSessionStore((state) => !!state.error),
-  hasWarnings: () => useSessionStore((state) => state.warnings.length > 0),
-  currentCycle: () => useSessionStore((state) => state.metrics.cycleCount),
-  totalCycles: () => useSessionStore((state) => state.config?.maxCycles || 10),
-  progress: () => useSessionStore((state) => {
+  isActive: () => useSessionStore.getState().phase !== 'idle',
+  isRunning: () => ['inhale', 'hold', 'exhale', 'pause'].includes(useSessionStore.getState().phase),
+  isPaused: () => useSessionStore.getState().phase === 'paused',
+  isComplete: () => useSessionStore.getState().phase === 'complete',
+  hasError: () => !!useSessionStore.getState().error,
+  hasWarnings: () => useSessionStore.getState().warnings.length > 0,
+  currentCycle: () => useSessionStore.getState().metrics.cycleCount,
+  totalCycles: () => useSessionStore.getState().config?.maxCycles || 10,
+  progress: () => {
+    const state = useSessionStore.getState();
     const maxCycles = state.config?.maxCycles || 10;
     return Math.min((state.metrics.cycleCount / maxCycles) * 100, 100);
-  }),
-  visionActive: () => useSessionStore((state) => state.visionActive),
-  breathHoldTime: () => useSessionStore((state) => state.metrics.breathHoldTime),
+  },
+  visionActive: () => useSessionStore.getState().visionActive,
+  breathHoldTime: () => useSessionStore.getState().metrics.breathHoldTime,
 };
 
 // ============================================================================

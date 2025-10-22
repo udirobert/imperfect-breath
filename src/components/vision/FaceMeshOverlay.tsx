@@ -231,7 +231,7 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
       console.error('FaceMesh drawing error:', error);
       setError("FaceMesh rendering failed");
     }
-  }, [videoElement, landmarks, isActive, confidence, breathPhase]);
+  }, [videoElement, landmarks, isActive, confidence, breathPhase, faceCenter]);
 
   // Simplified animation loop with proper cleanup
   useEffect(() => {

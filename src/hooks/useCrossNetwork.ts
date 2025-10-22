@@ -8,8 +8,8 @@ import { useLens } from './useLens';
 interface CrossNetworkState {
   isLoading: boolean;
   error: string | null;
-  lastForteResult: any;
-  lastLensPost: any | null;
+  lastForteResult: unknown;
+  lastLensPost: unknown | null;
   crossNetworkId: string | null;
 }
 
@@ -18,11 +18,11 @@ interface UseCrossNetworkReturn {
   executeForteWithLens: (
     actions: Array<{
       type: 'source' | 'sink' | 'swap' | 'nft_transfer';
-      params: Record<string, any>;
+      params: Record<string, unknown>;
     }>,
     lensAction: 'purchase' | 'mint' | 'sale',
-    nft: any
-  ) => Promise<any>;
+    nft: unknown
+  ) => Promise<unknown>;
   createSocialChallenge: (payload: {
     challengeName: string;
     patternId: string;
@@ -33,7 +33,7 @@ interface UseCrossNetworkReturn {
       tokenAmount?: number;
       uniqueId: string;
     };
-  }) => Promise<any>;
+  }) => Promise<unknown>;
 }
 
 export const useCrossNetwork = (): UseCrossNetworkReturn => {

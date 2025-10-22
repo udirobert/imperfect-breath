@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext } from 'react';
 import { useCameraStore } from '../stores/cameraStore';
 
 export type CameraStatus = 'idle' | 'requesting' | 'active' | 'error' | 'permission-denied';
@@ -40,7 +40,7 @@ export const CameraProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 // Hook to use camera context
 export const useCamera = (): CameraContextType => {
-  const context = useContext(CameraContext);
+  const context = React.useContext(CameraContext);
   if (context === undefined) {
     throw new Error('useCamera must be used within a CameraProvider');
   }

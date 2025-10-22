@@ -362,13 +362,13 @@ export const useVisionStillnessScore = () => useVisionStore((state) => state.met
 // ============================================================================
 
 export const visionSelectors = {
-  isActive: () => useVisionStore((state) => state.isActive),
-  hasMetrics: () => useVisionStore((state) => !!state.metrics),
-  hasError: () => useVisionStore((state) => !!state.error),
-  isProcessing: () => useVisionStore((state) => state.isProcessing),
-  restlessnessScore: () => useVisionStore((state) => state.metrics?.restlessnessScore || 0),
-  sessionId: () => useVisionStore((state) => state.sessionId),
-  isConfigured: () => useVisionStore((state) => !!state.config),
+  isActive: () => useVisionStore.getState().isActive,
+  hasMetrics: () => !!useVisionStore.getState().metrics,
+  hasError: () => !!useVisionStore.getState().error,
+  isProcessing: () => useVisionStore.getState().isProcessing,
+  restlessnessScore: () => useVisionStore.getState().metrics?.restlessnessScore || 0,
+  sessionId: () => useVisionStore.getState().sessionId,
+  isConfigured: () => !!useVisionStore.getState().config,
 };
 
 // ============================================================================

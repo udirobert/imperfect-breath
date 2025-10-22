@@ -34,6 +34,9 @@ const InstructorOnboarding = React.lazy(
   () => import("@/pages/InstructorOnboarding"),
 );
 const Subscription = React.lazy(() => import("@/pages/Subscription"));
+// Add lazy imports for new Lens pages
+const LensSocialHubPage = React.lazy(() => import("@/pages/LensSocialHubPage"));
+const LensSocialFlowPage = React.lazy(() => import("@/pages/LensSocialFlowPage"));
 
 // Loading component for lazy routes
 const PageLoader = () => (
@@ -46,14 +49,19 @@ const PageLoader = () => (
   </div>
 );
 
+import { useAuthOrchestrator } from "@/hooks/useAuthOrchestrator";
+
 function App() {
+  // Initialize global auth orchestration
+  useAuthOrchestrator();
+
   return (
     <CameraProvider>
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Main Application Routes with Header */}
-            <Route element={<MainLayout />}>
+            <Route element={<MainLayout />}> 
               <Route path="/" element={<Index enhanced={false} />} />
               <Route path="/enhanced" element={<Index enhanced={true} />} />
               <Route path="/session" element={<SessionEntryPoints />} />
@@ -78,6 +86,9 @@ function App() {
                 element={<InstructorOnboarding />}
               />
               <Route path="/subscription" element={<Subscription />} />
+              {/* New Lens routes */}
+              <Route path="/lens" element={<LensSocialHubPage />} />
+              <Route path="/lens/flow" element={<LensSocialFlowPage />} />
             </Route>
 
             {/* Routes without Header */}

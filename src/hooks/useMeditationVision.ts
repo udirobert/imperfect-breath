@@ -432,7 +432,9 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
     finalConfig.features,
     finalConfig.silentMode,
     finalConfig.gracefulDegradation,
-    updatePerformanceMode
+    state.backendAvailable,
+    updatePerformanceMode,
+    finalConfig.sessionId
   ]);
 
   // Start vision processing
@@ -462,7 +464,7 @@ export const useMeditationVision = (config?: Partial<VisionConfig>) => {
       }));
     }
 
-  }, [processFrame]); // Remove state dependencies
+  }, [processFrame, state.isActive, finalConfig.targetFPS]); // Include processFrame and related config
 
   // Stop processing
   const stop = useCallback(() => {

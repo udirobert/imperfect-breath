@@ -4,26 +4,21 @@
  * PERFORMANT: Lazy loads wallet connectors only when needed
  * CLEAN: Separates wallet auth concerns from main auth flow
  * MODULAR: Composable wallet authentication component
+ * UX: Improved visual hierarchy and reduced clutter
  */
 
 import React, { Suspense, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Wallet, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Loader2, Wallet, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAccount } from 'wagmi';
 
 // PERFORMANT: Lazy load wallet connection component
 const WalletConnection = React.lazy(() => 
   import('@/components/wallet/WalletConnection').then(module => ({
     default: module.WalletConnection
-  }))
-);
-
-// PERFORMANT: Lazy load wallet manager
-const WalletManager = React.lazy(() => 
-  import('@/components/WalletManager').then(module => ({
-    default: module.WalletManager
   }))
 );
 
@@ -48,6 +43,7 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shouldLoad, setShouldLoad] = useState(preload);
+  const { isConnected } = useAccount();
 
   // PERFORMANT: Preload wallet components when requested
   useEffect(() => {
@@ -157,16 +153,20 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
             </div>
           </div>
         ) : (
-          // PERFORMANT: Lazy load wallet components when needed
+          // Connected state - only show wallet connection details
           <Suspense fallback={<WalletLoadingFallback />}>
             <div className="space-y-4">
-              <WalletConnection />
+              <WalletConnection autoOpen />
               
-              <div className="pt-4 border-t border-gray-200">
-                <WalletManager />
-              </div>
+              {/* Success indicator and continue button */}
+              {isConnected && (
+                <div className="flex items-center justify-center gap-2 py-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-sm text-muted-foreground">Wallet connected successfully</span>
+                </div>
+              )}
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
                   onClick={onBack}
@@ -175,13 +175,15 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
                 >
                   Back
                 </Button>
-                <Button
-                  onClick={handleSuccess}
-                  className="flex-1"
-                  disabled={isLoading}
-                >
-                  Continue
-                </Button>
+                {isConnected && (
+                  <Button
+                    onClick={handleSuccess}
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
+                    Continue
+                  </Button>
+                )}
               </div>
             </div>
           </Suspense>

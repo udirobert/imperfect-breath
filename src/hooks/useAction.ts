@@ -7,7 +7,7 @@ export const useAction = () => {
   const [actionError, setActionError] = useState<Error | null>(null);
   const { currentAccount, isAuthenticated } = useLens();
 
-  const executeAction = useCallback(async (postId: string, actionType: 'collect' | 'like' | 'react', actionParams: any = {}) => {
+  const executeAction = useCallback(async (postId: string, actionType: 'collect' | 'like' | 'react', actionParams: Record<string, unknown> = {}) => {
     if (!currentAccount) {
       toast.error("You must have a Lens account to perform this action.");
       return;

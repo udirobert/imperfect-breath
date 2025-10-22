@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner';
 import { lensTestnet } from '@/lib/wagmi/chains';
 import { cn } from '@/lib/utils';
+import { Connector } from 'wagmi';
 
 interface NetworkInfo {
   id: number;
@@ -79,7 +80,7 @@ export const ImprovedWalletConnection: React.FC = () => {
   const isOnSupportedNetwork = currentNetwork !== undefined;
   const isOnLensTestnet = chain?.id === lensTestnet.id;
 
-  const handleConnect = (connector: any) => {
+  const handleConnect = (connector: Connector) => {
     connect({ connector });
     setIsDialogOpen(false);
   };
@@ -105,7 +106,7 @@ export const ImprovedWalletConnection: React.FC = () => {
       await switchChain({ chainId: networkId });
       toast.success(`Switched to ${SUPPORTED_NETWORKS[networkId].name}`);
       setIsNetworkDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to switch network:', error);
       toast.error(`Failed to switch to ${SUPPORTED_NETWORKS[networkId].name}`);
     }

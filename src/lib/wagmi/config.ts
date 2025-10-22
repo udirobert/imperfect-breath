@@ -1,13 +1,14 @@
 import { createConfig, http } from 'wagmi'
 import { mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors'
+import { lensTestnet } from './chains'
 
 // Get environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || ''
 const enableWalletConnect = import.meta.env.VITE_ENABLE_WALLET_CONNECT === 'true' && projectId && !projectId.includes('your_') && !projectId.includes('demo')
 
 // Define supported chains
-const chains = [mainnet, polygon, arbitrum, sepolia] as const
+const chains = [mainnet, polygon, arbitrum, sepolia, lensTestnet] as const
 
 // Create connectors array conditionally
 const connectors = [
@@ -28,6 +29,7 @@ export const config = createConfig({
     [polygon.id]: http(`https://polygon-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
     [arbitrum.id]: http(`https://arb-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
     [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`),
+    [lensTestnet.id]: http(lensTestnet.rpcUrls.default.http[0] || 'https://rpc.testnet.lens.xyz'),
   },
 })
 

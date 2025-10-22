@@ -32,6 +32,7 @@ import {
 import { useSecureAIAnalysis as useAIAnalysis } from "../hooks/useSecureAIAnalysis";
 import { useFlow } from "../hooks/useFlow";
 import { useLens } from "../hooks/useLens";
+import { useBlockchainAuth } from "../hooks/useBlockchainAuth";
 
 // Import types
 import type { CustomPattern } from "../lib/patternStorage";
@@ -97,6 +98,13 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
     isPosting: lensPosting,
     authenticate: lensAuth,
   } = useLens();
+
+  // Use unified blockchain auth service
+  const {
+    isAuthenticated: blockchainAuth,
+    authenticateBoth,
+    state: { isAuthenticating },
+  } = useBlockchainAuth();
 
   // Component state
   const [currentStep, setCurrentStep] = useState(0);
@@ -222,7 +230,7 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
         timestamp: new Date().toISOString(),
       };
 
-      await analyzeSession(sessionData);
+      await analyzeSession("auto", sessionData);
 
       // The results are stored in the hook's state, so we need to access them from there
       // For now, we'll use a timeout to wait for the results to be processed
@@ -365,10 +373,10 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
     mintBreathingPattern,
   ]);
 
-  // Step 5: Lens Social Integration
+  // Step 5: Lens Social Integration - updated to use unified auth
   const handleShareToLens = useCallback(async () => {
-    if (!lensAuthenticated) {
-      await lensAuth(flowUser?.addr || "");
+    if (!blockchainAuth) {
+      await authenticateBoth();
       return;
     }
 
@@ -394,9 +402,8 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
       toast.error("Failed to share to Lens");
     }
   }, [
-    lensAuthenticated,
-    lensAuth,
-    flowUser,
+    blockchainAuth,
+    authenticateBoth,
     sessionResults,
     mintedNFTId,
     patternData,
@@ -849,16 +856,18 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!lensAuthenticated ? (
+        {!blockchainAuth ? (
           <div className="text-center py-4">
             <Button
-              onClick={() => lensAuth(flowUser?.addr || "")}
+              onClick={authenticateBoth}
+              disabled={isAuthenticating}
               className="w-full"
             >
-              Connect Lens Account
+              {isAuthenticating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Connect Blockchain Accounts
             </Button>
             <p className="text-sm text-muted-foreground mt-2">
-              Share your achievement with the community
+              Connect to Lens and Flow to share your achievement
             </p>
           </div>
         ) : !sharedToLens ? (
@@ -1020,10 +1029,10 @@ export const IntegratedBreathingWorkflow: React.FC = () => {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm">Lens Account</span>
+                <span className="text-sm">Blockchain Auth</span>
                 <div
                   className={`h-3 w-3 rounded-full ${
-                    lensAuthenticated ? "bg-green-500" : "bg-gray-300"
+                    blockchainAuth ? "bg-green-500" : "bg-gray-300"
                   }`}
                 />
               </div>

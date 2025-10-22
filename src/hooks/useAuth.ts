@@ -4,6 +4,8 @@ import type { Session } from "@supabase/supabase-js";
 import { User, UserRole } from "../types/blockchain";
 import { useWalletStatus, useWalletActions } from "./useWallet";
 import { revenueCatAuthIntegration } from "../lib/monetization/revenueCatAuthIntegration";
+import { useAuthStore } from "../stores/authStore";
+import { useSiweAuth } from './useSiweAuth';
 
 // Blockchain features configuration
 const BLOCKCHAIN_FEATURES_ENABLED = true;
@@ -23,11 +25,31 @@ export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Publish to unified AuthSession store
+  const setStoreSession = useAuthStore((s) => s.setSession);
+  const setStoreLoading = useAuthStore((s) => s.setLoading);
+  const setStoreProfile = useAuthStore((s) => s.setProfile);
+  const setStoreWallet = useAuthStore((s) => s.setWallet);
 
   // New wallet hooks for wallet integration
   const { isConnected, isConnecting, address, chainId } = useWalletStatus();
   const { connect, disconnect } = useWalletActions();
-  
+
+  // Sync local hook state into unified store
+  useEffect(() => {
+    setStoreSession(session);
+    setStoreLoading(loading);
+  }, [session, loading, setStoreSession, setStoreLoading]);
+
+  useEffect(() => {
+    setStoreProfile(profile);
+  }, [profile, setStoreProfile]);
+
+  useEffect(() => {
+    setStoreWallet(address ?? null, chainId ?? null, !!isConnected);
+  }, [address, chainId, isConnected, setStoreWallet]);
+
   const openConnectModal = useCallback(async () => {
     try {
       await connect();
@@ -196,6 +218,19 @@ export const useAuth = () => {
         return;
       }
 
+      // If no Supabase session, perform SIWE verification for wallet-only auth
+      if (!session) {
+        const { authenticate } = useSiweAuth();
+        const result = await authenticate();
+        if (!result.success) {
+          throw new Error(result.error || 'SIWE authentication failed');
+        }
+        // Sync wallet with RevenueCat using address as userId (mobile-only integration remains isolated)
+        const userId = address;
+        await revenueCatAuthIntegration.handleWalletAuth(userId, address, chainId ? parseInt(chainId, 16) : undefined);
+        return;
+      }
+
       // Sync wallet with RevenueCat
       const userId = session?.user?.id || address; // Use session user ID if available, otherwise use address
       await revenueCatAuthIntegration.handleWalletAuth(userId, address, chainId ? parseInt(chainId, 16) : undefined);
@@ -214,12 +249,8 @@ export const useAuth = () => {
         if (error) throw error;
         await refreshProfile();
       } else {
-        // Create new account with wallet authentication
-        // Note: This would typically require a signature verification flow
-        console.log("Wallet-only authentication not yet implemented");
-        throw new Error(
-          "Please sign up with email first, then connect your wallet",
-        );
+        // Fallback: advise email signup if SIWE path is not applicable
+        console.log("Wallet-only authentication now uses SIWE; email signup optional");
       }
     } catch (error) {
       console.error("Wallet login failed:", error);
