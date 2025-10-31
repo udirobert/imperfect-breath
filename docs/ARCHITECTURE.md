@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Technical architecture and system design decisions.
+Technical architecture and system design for Imperfect Breath.
 
 ## System Overview
 
@@ -9,8 +9,8 @@ Technical architecture and system design decisions.
 │   Frontend      │    │    Backend       │    │   Blockchain    │
 │   (React/PWA)   │◄──►│  (Python/FastAPI)│◄──►│  (Flow/Lens)    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
+          │                       │                       │
+          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Local Storage │    │    Supabase      │    │      IPFS       │
 │   (IndexedDB)   │    │   (PostgreSQL)   │    │  (Metadata)     │
@@ -54,7 +54,6 @@ Web3Features/
 
 ### State Management
 ```typescript
-// Zustand stores
 interface AppState {
   session: SessionStore      // Current breathing session
   user: UserStore           // Authentication & profile
@@ -136,6 +135,54 @@ interface LocalSession {
 }
 ```
 
+## Authentication Architecture
+
+### Multi-Chain Authentication Support
+
+**Supported Combinations:**
+- Email + Lens + Flow + Wallet = Complete Web3 experience
+- Lens only = Social-focused experience
+- Flow only = NFT/Creator-focused experience
+- Traditional email = Basic experience with upgrade path
+
+### Authentication Flow States
+```typescript
+interface AuthState {
+  // Core authentication
+  user: unknown;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+
+  // Multi-chain states (optional)
+  wallet?: { address: string; isConnected: boolean };
+  flowUser?: { address: string; loggedIn: boolean };
+  lensProfile?: { id: string; handle: string; name?: string };
+}
+```
+
+### Core Components
+
+#### 1. UnifiedAuthFlow
+Handles method selection and shows connection status for all methods.
+
+#### 2. ConsolidatedAuthGate
+Single auth gate for all use cases with flexible fallback strategies.
+
+#### 3. LazyWalletAuth
+Lazy-loaded with conflict detection and connection timeout protection.
+
+### Platform Compatibility
+
+#### Web Platform
+- **Mock implementations** for development
+- **Graceful degradation** for unsupported features
+- **Clear upgrade paths** to mobile for full functionality
+
+#### Mobile Platform (iOS/Android)
+- **Full RevenueCat integration** for subscriptions
+- **Native wallet connections** via Capacitor
+- **Complete Web3 functionality**
+
 ## Blockchain Integration
 
 ### Flow Blockchain
@@ -177,6 +224,255 @@ interface PrivacyControls {
 }
 ```
 
+## API Reference
+
+### Vision Service API
+
+#### Health Check
+```http
+GET /health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+#### Process Frame
+```http
+POST /api/vision/process
+Content-Type: application/json
+
+{
+  "frame": "base64-encoded-image",
+  "sessionId": "session-uuid",
+  "timestamp": 1640995200
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "analysis": {
+    "breathingPhase": "inhale|hold|exhale",
+    "confidence": 0.85,
+    "landmarks": [[x, y, z], ...],
+    "metrics": {
+      "breathRate": 12,
+      "consistency": 0.8
+    }
+  }
+}
+```
+
+### AI Analysis API
+
+#### Generate Insights
+```http
+POST /api/ai-analysis
+Content-Type: application/json
+
+{
+  "sessionData": {
+    "pattern": "4-7-8",
+    "duration": 600,
+    "metrics": {...}
+  },
+  "userHistory": [...]
+}
+```
+
+**Response:**
+```json
+{
+  "insights": [
+    "Great consistency in breath holds",
+    "Try extending exhale phase for deeper relaxation"
+  ],
+  "recommendations": [
+    "Consider 6-7-8 pattern for next session",
+    "Focus on smooth transitions between phases"
+  ],
+  "score": 85
+}
+```
+
+### Frontend Hooks
+
+#### useSession Hook
+```typescript
+import { useSession } from '@/hooks/useSession';
+
+const MyComponent = () => {
+  const {
+    startSession,
+    pauseSession,
+    endSession,
+    currentPhase,
+    timeRemaining,
+    metrics
+  } = useSession();
+
+  const handleStart = () => {
+    startSession({
+      pattern: '4-7-8',
+      duration: 600,
+      enableVision: true
+    });
+  };
+
+  return (
+    <div>
+      <p>Phase: {currentPhase}</p>
+      <p>Time: {timeRemaining}s</p>
+      <button onClick={handleStart}>Start</button>
+    </div>
+  );
+};
+```
+
+#### useVision Hook
+```typescript
+import { useVision } from '@/hooks/useVision';
+
+const VisionComponent = () => {
+  const {
+    isActive,
+    startVision,
+    stopVision,
+    analysis,
+    error
+  } = useVision();
+
+  useEffect(() => {
+    if (isActive && analysis) {
+      console.log('Breathing phase:', analysis.breathingPhase);
+    }
+  }, [analysis]);
+
+  return (
+    <div>
+      {error && <p>Error: {error}</p>}
+      <button onClick={startVision}>Enable Camera</button>
+    </div>
+  );
+};
+```
+
+## Blockchain Integration APIs
+
+### Flow Blockchain
+
+#### NFT Minting
+```typescript
+import { mintBreathingNFT } from '@/lib/flow/nft';
+
+const mintAchievement = async (sessionData) => {
+  const nft = await mintBreathingNFT({
+    sessionMetrics: sessionData.metrics,
+    patternName: sessionData.pattern,
+    timestamp: sessionData.completedAt,
+    metadata: {
+      description: "Breathing session achievement",
+      attributes: [
+        { trait_type: "Pattern", value: sessionData.pattern },
+        { trait_type: "Score", value: sessionData.score }
+      ]
+    }
+  });
+
+  return nft;
+};
+```
+
+#### Marketplace Integration
+```typescript
+import { listPatternForSale } from '@/lib/flow/marketplace';
+
+const sellPattern = async (pattern) => {
+  const listing = await listPatternForSale({
+    patternId: pattern.id,
+    price: "10.0", // FLOW tokens
+    royalty: 5 // 5% royalty to creator
+  });
+
+  return listing;
+};
+```
+
+## Configuration
+
+### Environment Variables
+```bash
+# Required for enhanced features (optional)
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_key
+VITE_GEMINI_API_KEY=your_gemini_key
+VITE_HETZNER_SERVICE_URL=https://api.imperfectform.fun
+
+# Blockchain (optional)
+VITE_FLOW_ACCESS_NODE=https://rest-testnet.onflow.org
+VITE_LENS_API_URL=https://api-v2-mumbai.lens.dev
+```
+
+### API Client Configuration
+```typescript
+// src/lib/api/unified-client.ts
+export const apiClient = {
+  vision: new VisionAPI({
+    baseURL: import.meta.env.VITE_HETZNER_SERVICE_URL || 'http://localhost:8001'
+  }),
+
+  ai: new AIAnalysisAPI({
+    provider: 'gemini', // or 'openai', 'anthropic'
+    apiKey: import.meta.env.VITE_GEMINI_API_KEY
+  }),
+
+  social: new LensAPI({
+    baseURL: import.meta.env.VITE_LENS_API_URL
+  })
+};
+```
+
+## Error Handling
+
+### Standard Error Response Format
+```typescript
+interface APIError {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+  timestamp: string;
+}
+```
+
+### Error Handling Patterns
+```typescript
+// Frontend error handling
+const handleAPIError = (error: APIError) => {
+  switch (error.error.code) {
+    case 'VISION_CAMERA_ERROR':
+      // Fallback to manual mode
+      setVisionEnabled(false);
+      break;
+    case 'AUTH_REQUIRED':
+      // Redirect to auth
+      navigate('/auth');
+      break;
+    default:
+      // Generic error handling
+      showToast(error.error.message, 'error');
+  }
+};
+```
+
 ## Performance Optimizations
 
 ### Frontend
@@ -200,13 +496,13 @@ services:
   frontend:
     image: nginx:alpine
     ports: ["80:80", "443:443"]
-    
+
   backend:
     image: python:3.11-slim
     ports: ["8001:8001"]
     environment:
       - ENV=production
-      
+
   database:
     image: postgres:15
     volumes: ["./data:/var/lib/postgresql/data"]
@@ -223,7 +519,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: npm test
-      
+
   deploy:
     needs: test
     runs-on: ubuntu-latest

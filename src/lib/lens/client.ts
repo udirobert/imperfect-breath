@@ -48,13 +48,13 @@ interface SdkFeedResult {
 }
 
 // Unwrap Lens SDK Result style objects
-function unwrapResult<T>(res: any): T | null {
+function unwrapResult<T>(res: unknown): T | null {
   if (!res) return null;
-  if (typeof res.isOk === 'function') {
-    return res.isOk() ? (res.value as T) : null;
+  if (typeof res === 'object' && res !== null && 'isOk' in res && typeof (res as { isOk: unknown }).isOk === 'function') {
+    return (res as { isOk(): boolean; value: T }).isOk() ? (res as { value: T }).value : null;
   }
-  if (typeof res.isErr === 'function') {
-    return res.isErr() ? null : (res.value as T);
+  if (typeof res === 'object' && res !== null && 'isErr' in res && typeof (res as { isErr: unknown }).isErr === 'function') {
+    return (res as { isErr(): boolean; value: T }).isErr() ? null : (res as { value: T }).value;
   }
   return res as T;
 }
@@ -363,7 +363,7 @@ export class LensV3API {
       // Determine viewer address from current Lens session
       let viewerAddress: string | null = null;
       try {
-        const account: any = await blockchainAuthService.getAuthorAccount();
+        const account: unknown = await blockchainAuthService.getAuthorAccount();
         viewerAddress = account?.ownedBy?.address ?? account?.address ?? null;
       } catch {
         console.warn("Could not fetch author account for viewer address");
@@ -372,7 +372,7 @@ export class LensV3API {
       if (!viewerAddress) {
         // Fallback: use current session details
         try {
-          const details: any = await blockchainAuthService.getCurrentLensSessionDetails();
+          const details: unknown = await blockchainAuthService.getCurrentLensSessionDetails();
           const acct = details?.account;
           viewerAddress = acct?.ownedBy?.address ?? acct?.address ?? null;
         } catch {
@@ -389,7 +389,7 @@ export class LensV3API {
       let pageInfo: SdkPageInfo | undefined;
 
       try {
-        const actions: any = await import("@lens-protocol/client/actions");
+        const actions: unknown = await import("@lens-protocol/client/actions");
         const { evmAddress } = await import("@lens-protocol/client");
 
         if (typeof actions.fetchFeed === "function") {
@@ -465,7 +465,7 @@ export class LensV3API {
 
       if (!posts || posts.length === 0) {
         const apiResult = await fetchTimelineFromAPI(viewerAddress);
-        posts = (apiResult.items || []).map((p: any) => ({
+        posts = (apiResult.items || []).map((p: unknown) => ({
           id: p.id,
           content: p.content,
           author: {

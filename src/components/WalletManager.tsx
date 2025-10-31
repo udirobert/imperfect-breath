@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useFlow } from "../hooks/useFlow";
+import { useFlowAuth } from "../auth/composables/useFlowAuth";
 import { useLens } from "../hooks/useLens";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "./ui/button";
@@ -29,11 +29,11 @@ import { ConnectWalletButton } from "./wallet/ConnectWalletButton";
 
 export const WalletManager = () => {
   const {
-    user: flowUser,
-    connect: flowLogIn,
-    disconnect: flowLogOut,
-    executeTransaction,
-  } = useFlow();
+    flowUser,
+    login: flowLogIn,
+    logout: flowLogOut,
+    isLoading: flowIsLoading,
+  } = useFlowAuth();
 
   const {
     isAuthenticated,
@@ -50,38 +50,12 @@ export const WalletManager = () => {
   const [isLensAuthenticating, setIsLensAuthenticating] = useState(false);
 
   useEffect(() => {
-    // If Flow user is logged in, ensure their account is set up for NFTs
     if (flowUser?.loggedIn && !isFlowSetupLoading) {
-      const setupFlowAccount = async () => {
-        try {
-          setIsFlowSetupLoading(true);
-          const txCode = `
-            import ImperfectBreath from 0xImperfectBreath
-
-            transaction {
-                prepare(signer: AuthAccount) {
-                    if signer.borrow<&BreathFlowVision.Collection>(from: BreathFlowVision.CollectionStoragePath) == nil {
-                        signer.save(<-BreathFlowVision.createEmptyCollection(), to: BreathFlowVision.CollectionStoragePath)
-                        signer.link<&BreathFlowVision.Collection{BreathFlowVision.CollectionPublic}>(
-                            BreathFlowVision.CollectionPublicPath,
-                            target: BreathFlowVision.CollectionStoragePath
-                        )
-                    }
-                }
-            }
-          `;
-          await executeTransaction(txCode);
-          toast.success("Flow account ready for breathing NFTs!");
-        } catch (error) {
-          console.error("Failed to set up Flow account:", error);
-          // Don't show error toast as this is optional setup
-        } finally {
-          setIsFlowSetupLoading(false);
-        }
-      };
-      setupFlowAccount();
+      // Flow account is ready for use with new Forte capabilities
+      toast.success("Flow account connected and ready!");
+      setIsFlowSetupLoading(false);
     }
-  }, [flowUser?.loggedIn, executeTransaction, isFlowSetupLoading]);
+  }, [flowUser?.loggedIn, isFlowSetupLoading]);
 
   const handleLensDisconnect = async () => {
     try {
@@ -109,8 +83,8 @@ export const WalletManager = () => {
 
   // Get shortened address for Flow
   const getFlowAddress = () => {
-    if (!flowUser?.addr) return "";
-    return `${flowUser.addr.slice(0, 6)}...${flowUser.addr.slice(-4)}`;
+    if (!flowUser?.address) return "";
+    return `${flowUser.address.slice(0, 6)}...${flowUser.address.slice(-4)}`;
   };
 
   // Handle wallet address copy
@@ -175,7 +149,7 @@ export const WalletManager = () => {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => handleCopyAddress(flowUser.addr || "", "Flow")}
+              onClick={() => handleCopyAddress(flowUser.address || "", "Flow")}
               className="flex items-center space-x-2"
             >
               <Copy className="w-4 h-4" />
@@ -306,7 +280,6 @@ export const WalletManager = () => {
           </Badge>
         </div>
       )}
-
-      </div>
+    </div>
   );
 };

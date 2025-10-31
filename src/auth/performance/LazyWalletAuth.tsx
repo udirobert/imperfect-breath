@@ -1,25 +1,31 @@
 /**
  * Lazy Wallet Auth Component - Performance Optimization
- * 
+ *
  * PERFORMANT: Lazy loads wallet connectors only when needed
  * CLEAN: Separates wallet auth concerns from main auth flow
  * MODULAR: Composable wallet authentication component
  * UX: Improved visual hierarchy and reduced clutter
  */
 
-import React, { Suspense, useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Wallet, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAccount } from 'wagmi';
+import React, { Suspense, useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Loader2,
+  Wallet,
+  ChevronLeft,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAccount } from "wagmi";
 
 // PERFORMANT: Lazy load wallet connection component
-const WalletConnection = React.lazy(() => 
-  import('@/components/wallet/WalletConnection').then(module => ({
-    default: module.WalletConnection
-  }))
+const WalletConnection = React.lazy(() =>
+  import("@/components/wallet/WalletConnection").then((module) => ({
+    default: module.WalletConnection,
+  })),
 );
 
 interface LazyWalletAuthProps {
@@ -43,7 +49,37 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shouldLoad, setShouldLoad] = useState(preload);
+  const [providerConflictDetected, setProviderConflictDetected] =
+    useState(false);
   const { isConnected } = useAccount();
+
+  // Check for wallet provider conflicts on mount
+  useEffect(() => {
+    const checkProviderConflict = () => {
+      try {
+        // Check if ethereum property is non-configurable (indicates conflict)
+        const descriptor = Object.getOwnPropertyDescriptor(window, "ethereum");
+        if (descriptor && !descriptor.configurable) {
+          console.warn("LazyWalletAuth: Ethereum provider conflict detected");
+          setProviderConflictDetected(true);
+        }
+      } catch (error) {
+        console.warn("LazyWalletAuth: Provider conflict check failed:", error);
+        setProviderConflictDetected(true);
+      }
+    };
+
+    checkProviderConflict();
+  }, []);
+
+  // Reset loading state when wallet connects
+  useEffect(() => {
+    if (isConnected && isLoading) {
+      console.log("LazyWalletAuth: Wallet connected, clearing loading state");
+      setIsLoading(false);
+      setError(null);
+    }
+  }, [isConnected, isLoading]);
 
   // PERFORMANT: Preload wallet components when requested
   useEffect(() => {
@@ -52,17 +88,39 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
       const preloadTimer = setTimeout(() => {
         setShouldLoad(true);
       }, 100);
-      
+
       return () => clearTimeout(preloadTimer);
     }
   }, [preload, shouldLoad]);
 
   const handleWalletConnect = () => {
+    console.log("LazyWalletAuth: Wallet connect initiated");
+
+    if (providerConflictDetected) {
+      setError(
+        "Multiple wallet extensions detected. Please disable conflicting wallet extensions and refresh the page.",
+      );
+      return;
+    }
+
     if (!shouldLoad) {
       setShouldLoad(true);
     }
     setIsLoading(true);
     setError(null);
+
+    // Set a timeout to prevent infinite loading
+    setTimeout(() => {
+      if (isLoading && !isConnected) {
+        console.warn(
+          "LazyWalletAuth: Connection timeout, resetting loading state",
+        );
+        setIsLoading(false);
+        setError(
+          "Connection timeout. Please try again or check your wallet extension.",
+        );
+      }
+    }, 30000); // 30 second timeout
   };
 
   const handleError = (errorMessage: string) => {
@@ -71,10 +129,34 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
     onError?.(errorMessage);
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = useCallback(() => {
+    console.log("LazyWalletAuth: handleSuccess called", {
+      isConnected,
+      isLoading,
+      error,
+    });
     setIsLoading(false);
+    setError(null);
     onSuccess?.();
-  };
+  }, [isConnected, isLoading, error, onSuccess]);
+
+  // Auto-trigger success when wallet connects and component is ready
+  useEffect(() => {
+    console.log("LazyWalletAuth: useEffect triggered", {
+      isConnected,
+      shouldLoad,
+      isLoading,
+      error,
+    });
+    if (isConnected && shouldLoad && !isLoading && !error) {
+      // Small delay to ensure UI is stable
+      const timer = setTimeout(() => {
+        console.log("LazyWalletAuth: Auto-triggering success");
+        handleSuccess();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, shouldLoad, isLoading, error, handleSuccess]);
 
   // PERFORMANT: Loading state while wallet components load
   const WalletLoadingFallback = () => (
@@ -127,7 +209,7 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
               <p className="text-sm text-muted-foreground">
                 Ready to connect your wallet and unlock Web3 features?
               </p>
-              <Button 
+              <Button
                 onClick={handleWalletConnect}
                 className="w-full"
                 disabled={isLoading}
@@ -145,7 +227,7 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
                 )}
               </Button>
             </div>
-            
+
             <div className="text-center">
               <p className="text-xs text-muted-foreground">
                 Supports MetaMask, WalletConnect, Coinbase Wallet, and more
@@ -156,34 +238,85 @@ export const LazyWalletAuth: React.FC<LazyWalletAuthProps> = ({
           // Connected state - only show wallet connection details
           <Suspense fallback={<WalletLoadingFallback />}>
             <div className="space-y-4">
-              <WalletConnection autoOpen />
-              
-              {/* Success indicator and continue button */}
-              {isConnected && (
-                <div className="flex items-center justify-center gap-2 py-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm text-muted-foreground">Wallet connected successfully</span>
+              {providerConflictDetected ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Multiple wallet extensions detected. Please disable
+                    conflicting extensions and refresh the page.
+                    <br />
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="underline mt-1 hover:no-underline"
+                    >
+                      Refresh Page
+                    </button>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <WalletConnection autoOpen />
+
+                  {/* Success indicator and continue button */}
+                  {isConnected && (
+                    <div className="flex items-center justify-center gap-2 py-3">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span className="text-sm text-muted-foreground">
+                        Wallet connected successfully
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Connection status and network info */}
+                  {isConnected && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <h4 className="font-medium text-green-800 mb-2">
+                        Ready for Web3
+                      </h4>
+                      <p className="text-sm text-green-700 mb-2">
+                        Your wallet is connected to Lens Testnet and ready to
+                        use social features
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Debug info - remove in production */}
+              {process.env.NODE_ENV === "development" && (
+                <div className="text-xs bg-gray-100 p-2 rounded">
+                  <div>Connected: {isConnected ? "Yes" : "No"}</div>
+                  <div>Loading: {isLoading ? "Yes" : "No"}</div>
+                  <div>Should Load: {shouldLoad ? "Yes" : "No"}</div>
+                  <div>
+                    Provider Conflict: {providerConflictDetected ? "Yes" : "No"}
+                  </div>
+                  <div>Error: {error || "None"}</div>
                 </div>
               )}
-              
+
               <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
-                  onClick={onBack}
+                  onClick={() => {
+                    console.log("LazyWalletAuth: Back button clicked");
+                    onBack?.();
+                  }}
                   className="flex-1"
-                  disabled={isLoading}
+                  disabled={false}
                 >
                   Back
                 </Button>
-                {isConnected && (
-                  <Button
-                    onClick={handleSuccess}
-                    className="flex-1"
-                    disabled={isLoading}
-                  >
-                    Continue
-                  </Button>
-                )}
+                <Button
+                  onClick={() => {
+                    console.log("LazyWalletAuth: Continue button clicked");
+                    handleSuccess();
+                  }}
+                  className="flex-1"
+                  disabled={!isConnected || providerConflictDetected}
+                >
+                  Continue
+                </Button>
               </div>
             </div>
           </Suspense>

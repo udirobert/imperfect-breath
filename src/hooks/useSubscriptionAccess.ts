@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { revenueCat, type SubscriptionStatus } from '@/lib/monetization/revenueCat';
+import { revenueCatService, type SubscriptionStatus } from '@/lib/monetization/revenueCat';
 import { getDeveloperOverride } from '@/lib/monetization/revenueCatConfig';
 
 export interface SubscriptionAccess {
@@ -26,7 +26,7 @@ export const useSubscriptionAccess = (): SubscriptionAccess => {
     try {
       setIsLoading(true);
       setError(null);
-      const status = await revenueCat.getSubscriptionStatus();
+      const status = await revenueCatService.getSubscriptionStatus();
       setSubscriptionStatus(status);
     } catch (err) {
       console.error('Failed to load subscription status:', err);

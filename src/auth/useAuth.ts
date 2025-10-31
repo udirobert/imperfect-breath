@@ -15,7 +15,7 @@ export interface AuthState {
   user: unknown;
   isAuthenticated: boolean;
   isLoading: boolean;
-  
+
   // Blockchain auth (optional)
   wallet?: {
     address: string | undefined;
@@ -23,14 +23,14 @@ export interface AuthState {
     chainId: number | undefined;
     isConnected: boolean;
   } | null;
-  
+
   // Flow auth (optional)
   flowUser?: {
     address: string;
     loggedIn: boolean;
     services: unknown[];
   } | null;
-  
+
   // Lens auth (optional)
   lensProfile?: {
     id: string;
@@ -44,18 +44,24 @@ export interface AuthState {
 
 export interface AuthActions {
   // Core auth actions
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<{ success: boolean; error?: string }>;
-  register: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  
+  register: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+
   // Blockchain actions (conditional)
   connectWallet?: () => Promise<{ success: boolean; error?: string }>;
   disconnectWallet?: () => Promise<{ success: boolean; error?: string }>;
-  
+
   // Flow actions (conditional)
   loginFlow?: () => Promise<{ success: boolean; error?: string }>;
   logoutFlow?: () => Promise<{ success: boolean; error?: string }>;
-  
+
   // Lens actions (conditional)
   refreshLensProfile?: () => Promise<void>;
   clearLensProfile?: () => void;
@@ -63,7 +69,7 @@ export interface AuthActions {
 
 /**
  * Main auth composer hook - only loads requested features
- * 
+ *
  * Enhanced modular auth system that builds on the main useAuth hook
  * @param features - Which auth features to enable
  * @returns Combined auth state and actions
@@ -71,157 +77,179 @@ export interface AuthActions {
 export const useAuth = (features: AuthFeatures = {}) => {
   // Use the enhanced auth hook without blockchain features first
   const baseAuth = useEnhancedAuth();
-  
+
   // Always call hooks, but conditionally use their values
   const blockchainAuth = useBlockchainAuth();
   const flowAuth = useFlowAuth();
   const lensAuth = useLensAuth();
 
+  // Extract baseAuth values for stable references
+  const {
+    user,
+    isAuthenticated,
+    loading,
+    loginWithEmail,
+    logout,
+    signUpWithEmail,
+  } = baseAuth;
+
   // Compose auth state
-  const authState: AuthState = useMemo(() => ({
-    // Core auth state
-    user: baseAuth.user,
-    isAuthenticated: baseAuth.isAuthenticated,
-    isLoading: baseAuth.loading ||
-               (features.blockchain && blockchainAuth?.isConnecting) ||
-               (features.flow && flowAuth?.isLoading) ||
-               (features.lens && lensAuth?.isLoading) ||
-               false,
-    
-    // Conditional blockchain state
-    ...(features.blockchain && {
-      wallet: blockchainAuth?.wallet,
+  const authState: AuthState = useMemo(
+    () => ({
+      // Core auth state
+      user,
+      isAuthenticated,
+      isLoading:
+        loading ||
+        (features.blockchain && blockchainAuth?.isConnecting) ||
+        (features.flow && flowAuth?.isLoading) ||
+        (features.lens && lensAuth?.isLoading) ||
+        false,
+
+      // Conditional blockchain state
+      ...(features.blockchain && {
+        wallet: blockchainAuth?.wallet,
+      }),
+
+      // Conditional Flow state
+      ...(features.flow && {
+        flowUser: flowAuth?.flowUser,
+      }),
+
+      // Conditional Lens state
+      ...(features.lens && {
+        lensProfile: lensAuth?.lensProfile,
+      }),
     }),
-    
-    // Conditional Flow state
-    ...(features.flow && {
-      flowUser: flowAuth?.flowUser,
-    }),
-    
-    // Conditional Lens state
-    ...(features.lens && {
-      lensProfile: lensAuth?.lensProfile,
-    }),
-  }), [
-    baseAuth.user,
-    baseAuth.isAuthenticated,
-    baseAuth.loading,
-    blockchainAuth?.wallet,
-    blockchainAuth?.isConnecting,
-    flowAuth?.flowUser,
-    flowAuth?.isLoading,
-    lensAuth?.lensProfile,
-    lensAuth?.isLoading,
-    features.blockchain,
-    features.flow,
-    features.lens,
-  ]);
+    [
+      user,
+      isAuthenticated,
+      loading,
+      blockchainAuth?.wallet,
+      blockchainAuth?.isConnecting,
+      flowAuth?.flowUser,
+      flowAuth?.isLoading,
+      lensAuth?.lensProfile,
+      lensAuth?.isLoading,
+      features.blockchain,
+      features.flow,
+      features.lens,
+    ],
+  );
 
   // Compose auth actions
-  const authActions: AuthActions = useMemo(() => ({
-    // Core auth actions
-    login: async (email: string, password: string) => {
-      try {
-        await baseAuth.loginWithEmail(email, password);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Login failed"
-        };
-      }
-    },
-    logout: async () => {
-      try {
-        await baseAuth.logout();
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Logout failed"
-        };
-      }
-    },
-    register: async (email: string, password: string) => {
-      try {
-        await baseAuth.signUpWithEmail(email, password);
-        return { success: true };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Registration failed"
-        };
-      }
-    },
-    
-    // Conditional blockchain actions
-    ...(features.blockchain && {
-      connectWallet: blockchainAuth?.connectWallet,
-      disconnectWallet: blockchainAuth?.disconnectWallet,
+  const authActions: AuthActions = useMemo(
+    () => ({
+      // Core auth actions
+      login: async (email: string, password: string) => {
+        try {
+          await loginWithEmail(email, password);
+          return { success: true };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : "Login failed",
+          };
+        }
+      },
+      logout: async () => {
+        try {
+          await logout();
+          return { success: true };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : "Logout failed",
+          };
+        }
+      },
+      register: async (email: string, password: string) => {
+        try {
+          await signUpWithEmail(email, password);
+          return { success: true };
+        } catch (error) {
+          return {
+            success: false,
+            error:
+              error instanceof Error ? error.message : "Registration failed",
+          };
+        }
+      },
+
+      // Conditional blockchain actions
+      ...(features.blockchain && {
+        connectWallet: blockchainAuth?.connectWallet,
+        disconnectWallet: blockchainAuth?.disconnectWallet,
+      }),
+
+      // Conditional Flow actions
+      ...(features.flow && {
+        loginFlow: flowAuth?.login,
+        logoutFlow: flowAuth?.logout,
+      }),
+
+      // Conditional Lens actions
+      ...(features.lens && {
+        refreshLensProfile: lensAuth?.refreshProfile,
+        clearLensProfile: lensAuth?.clearProfile,
+      }),
     }),
-    
-    // Conditional Flow actions
-    ...(features.flow && {
-      loginFlow: flowAuth?.login,
-      logoutFlow: flowAuth?.logout,
-    }),
-    
-    // Conditional Lens actions
-    ...(features.lens && {
-      refreshLensProfile: lensAuth?.refreshProfile,
-      clearLensProfile: lensAuth?.clearProfile,
-    }),
-  }), [
-    baseAuth.loginWithEmail,
-    baseAuth.logout,
-    baseAuth.signUpWithEmail,
-    blockchainAuth?.connectWallet,
-    blockchainAuth?.disconnectWallet,
-    flowAuth?.login,
-    flowAuth?.logout,
-    lensAuth?.refreshProfile,
-    lensAuth?.clearProfile,
-    features.blockchain,
-    features.flow,
-    features.lens,
-  ]);
+    [
+      loginWithEmail,
+      logout,
+      signUpWithEmail,
+      blockchainAuth?.connectWallet,
+      blockchainAuth?.disconnectWallet,
+      flowAuth?.login,
+      flowAuth?.logout,
+      lensAuth?.refreshProfile,
+      lensAuth?.clearProfile,
+      features.blockchain,
+      features.flow,
+      features.lens,
+    ],
+  );
 
   // Helper properties
-  const helpers = useMemo(() => ({
-    // Core helpers
-    hasUser: baseAuth.isAuthenticated,
-    
-    // Blockchain helpers
-    hasWallet: blockchainAuth?.hasWallet || false,
-    walletAddress: blockchainAuth?.address || null,
-    currentChain: blockchainAuth?.currentChain || null,
-    
-    // Flow helpers
-    hasFlowAccount: flowAuth?.hasFlowAccount || false,
-    flowAddress: flowAuth?.flowAddress || null,
-    
-    // Lens helpers
-    hasLensProfile: lensAuth?.hasLensProfile || false,
-    lensHandle: lensAuth?.lensHandle || null,
-    
-    // Combined helpers
-    isFullyConnected: baseAuth.isAuthenticated && 
-                     (!features.blockchain || blockchainAuth?.hasWallet) &&
-                     (!features.flow || flowAuth?.hasFlowAccount) &&
-                     (!features.lens || lensAuth?.hasLensProfile),
-  }), [
-    baseAuth.isAuthenticated,
-    blockchainAuth?.hasWallet,
-    blockchainAuth?.address,
-    blockchainAuth?.currentChain,
-    flowAuth?.hasFlowAccount,
-    flowAuth?.flowAddress,
-    lensAuth?.hasLensProfile,
-    lensAuth?.lensHandle,
-    features.blockchain,
-    features.flow,
-    features.lens,
-  ]);
+  const helpers = useMemo(
+    () => ({
+      // Core helpers
+      hasUser: isAuthenticated,
+
+      // Blockchain helpers
+      hasWallet: blockchainAuth?.hasWallet || false,
+      walletAddress: blockchainAuth?.address || null,
+      currentChain: blockchainAuth?.currentChain || null,
+
+      // Flow helpers
+      hasFlowAccount: flowAuth?.hasFlowAccount || false,
+      flowAddress: flowAuth?.flowAddress || null,
+
+      // Lens helpers
+      hasLensProfile: lensAuth?.hasLensProfile || false,
+      lensHandle: lensAuth?.lensHandle || null,
+
+      // Combined helpers
+      isFullyConnected:
+        isAuthenticated &&
+        (!features.blockchain || blockchainAuth?.hasWallet) &&
+        (!features.flow || flowAuth?.hasFlowAccount) &&
+        (!features.lens || lensAuth?.hasLensProfile),
+    }),
+    [
+      isAuthenticated,
+      blockchainAuth?.hasWallet,
+      blockchainAuth?.address,
+      blockchainAuth?.currentChain,
+      flowAuth?.hasFlowAccount,
+      flowAuth?.flowAddress,
+      lensAuth?.hasLensProfile,
+      lensAuth?.lensHandle,
+      features.blockchain,
+      features.flow,
+      features.lens,
+    ],
+  );
 
   return {
     ...authState,
@@ -234,4 +262,5 @@ export const useAuth = (features: AuthFeatures = {}) => {
 export const useBasicAuth = () => useAuth({});
 export const useWeb3Auth = () => useAuth({ blockchain: true });
 export const useFlowOnlyAuth = () => useAuth({ flow: true });
-export const useFullAuth = () => useAuth({ blockchain: true, flow: true, lens: true });
+export const useFullAuth = () =>
+  useAuth({ blockchain: true, flow: true, lens: true });

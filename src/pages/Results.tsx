@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+
 import { Progress } from "../components/ui/progress";
 import { Badge } from "../components/ui/badge";
 import {
@@ -22,13 +23,11 @@ import {
   Star,
   Share,
   Brain,
-  Settings,
   Loader2,
-  TrendingUp,
   Shield,
-  CheckCircle,
   BarChart3,
   Heart,
+  TrendingUp,
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
 import { useSessionHistory } from "../hooks/useSessionHistory";
@@ -52,6 +51,7 @@ import { AIAnalysisErrorBoundary } from "../components/error/AIAnalysisErrorBoun
 
 import { EnhancedAIAnalysisDisplay } from "../components/ai/EnhancedAIAnalysisDisplay";
 import { StreamingIndicator } from "../components/ai/StreamingIndicator";
+import { PostSessionActions } from "../components/session/PostSessionActions";
 import {
   EnhancedAnalysisService,
   EnhancedAnalysisRequest,
@@ -90,7 +90,7 @@ const Results = () => {
         typeof analysis === "object" &&
         analysis.provider &&
         analysis.analysis && // Should have the actual analysis text
-        analysis.score // Should have scores
+        analysis.score, // Should have scores
     );
 
     console.log("🔍 AI Analysis: Processed analyses:", validAnalyses.length);
@@ -107,7 +107,7 @@ const Results = () => {
   const patternID = useMemo(() => {
     if (!sessionData.patternName) return undefined;
     const match = Object.values(BREATHING_PATTERNS).find(
-      (p) => p.name === sessionData.patternName
+      (p) => p.name === sessionData.patternName,
     );
     return match?.id;
   }, [sessionData.patternName]);
@@ -137,11 +137,15 @@ const Results = () => {
       toast.info("Connect to Lens to share your results", {
         description: "We’ll resume the share flow after connecting.",
       });
-      navigate("/lens/flow", { state: { focusTab: "auth", session: sessionState } });
+      navigate("/lens/flow", {
+        state: { focusTab: "auth", session: sessionState },
+      });
       return;
     }
 
-    navigate("/lens/flow", { state: { focusTab: "share", session: sessionState } });
+    navigate("/lens/flow", {
+      state: { focusTab: "share", session: sessionState },
+    });
   };
 
   useEffect(() => {
@@ -171,7 +175,7 @@ const Results = () => {
 
   const handleAIAnalysis = async () => {
     console.log("🚀 handleAIAnalysis called - starting debug trace");
-    
+
     if (!sessionData.patternName) {
       console.error("❌ No session data available for analysis");
       toast.error("No session data available for analysis");
@@ -180,7 +184,7 @@ const Results = () => {
 
     // Check subscription access first - no longer show popup, just prevent action
     if (!canUseAIAnalysis) {
-      console.log('❌ AI Analysis blocked - insufficient subscription tier');
+      console.log("❌ AI Analysis blocked - insufficient subscription tier");
       // Don't show popup, the inline upgrade component will handle this
       return;
     }
@@ -222,7 +226,7 @@ const Results = () => {
       try {
         console.log(
           "🔍 Vision Analysis: Fetching data for session:",
-          sessionData.visionSessionId
+          sessionData.visionSessionId,
         );
 
         // PERFORMANT: Cache vision data fetches to avoid redundant requests
@@ -239,9 +243,9 @@ const Results = () => {
               import.meta.env.VITE_HETZNER_SERVICE_URL ||
               "http://localhost:8001"
             }${createEndpoint.visionSessionSummary(
-              sessionData.visionSessionId
+              sessionData.visionSessionId,
             )}`,
-            { signal: controller.signal }
+            { signal: controller.signal },
           );
 
           clearTimeout(timeoutId);
@@ -252,19 +256,19 @@ const Results = () => {
             sessionStorage.setItem(cacheKey, visionData);
             sessionStorage.setItem(
               `${cacheKey}_timestamp`,
-              Date.now().toString()
+              Date.now().toString(),
             );
           } else if (visionSummary.status === 404) {
             // Handle 404 gracefully without throwing an error that would trigger the error boundary
             console.warn(
-              "Vision summary not found on server, using session data only"
+              "Vision summary not found on server, using session data only",
             );
             toast.warning(
-              "Vision data not available - using session data only"
+              "Vision data not available - using session data only",
             );
           } else {
             throw new Error(
-              `Vision API returned status ${visionSummary.status}`
+              `Vision API returned status ${visionSummary.status}`,
             );
           }
         }
@@ -275,7 +279,7 @@ const Results = () => {
             const parsedVisionData = JSON.parse(visionData);
             console.log(
               "📊 Enhanced session data with vision metrics:",
-              parsedVisionData
+              parsedVisionData,
             );
 
             // ENHANCEMENT FIRST: Merge vision data with session data
@@ -287,23 +291,26 @@ const Results = () => {
           } catch (parseError) {
             console.warn(
               "Failed to parse vision data, using session data only:",
-              parseError
+              parseError,
             );
           }
         }
       } catch (error) {
         console.warn(
           "Vision data fetch failed, continuing with session data:",
-          error
+          error,
         );
         toast.warning("Vision analysis unavailable - using session data only");
       }
     }
 
     // Use the existing analyzeSession function from the hook
-    console.log("🤖 About to call analyzeSession with enhanced data:", enhancedSessionData);
+    console.log(
+      "🤖 About to call analyzeSession with enhanced data:",
+      enhancedSessionData,
+    );
     try {
-      await analyzeSession('auto', enhancedSessionData);
+      await analyzeSession("auto", enhancedSessionData);
       console.log("✅ analyzeSession completed successfully");
     } catch (error) {
       console.error("❌ analyzeSession failed:", error);
@@ -380,7 +387,7 @@ Focused breathing practice with Imperfect Breath 🌬️`;
         } catch (error) {
           console.error(
             "Lens sharing failed, falling back to native share:",
-            error
+            error,
           );
         }
       }
@@ -452,13 +459,13 @@ Check out Imperfect Breath!`;
       // Add calculated metrics - only for sessions that actually tracked these metrics
       stillnessScore:
         sessionData.sessionType === "classic" || !sessionData.cameraUsed
-          ? null // Don't calculate stillness for classic sessions
+          ? undefined // Don't calculate stillness for classic sessions
           : sessionData.restlessnessScore !== undefined
-          ? Math.max(0, 100 - sessionData.restlessnessScore) // Real data: stillness = 100 - restlessness
-          : null, // No real data available
+            ? Math.max(0, 100 - sessionData.restlessnessScore) // Real data: stillness = 100 - restlessness
+            : undefined, // No real data available
       completionRate: sessionData.targetCycles
         ? Math.round(
-            ((sessionData.cycleCount || 0) / sessionData.targetCycles) * 100
+            ((sessionData.cycleCount || 0) / sessionData.targetCycles) * 100,
           )
         : 100,
       // Pass along any vision metrics if present for AI analysis
@@ -525,20 +532,24 @@ Check out Imperfect Breath!`;
         value: `${enhancedSessionData.stillnessScore}%`,
         icon: <Star className="w-6 h-6 text-primary" />,
         description:
+          enhancedSessionData.stillnessScore !== undefined &&
           enhancedSessionData.stillnessScore >= 80
             ? "Excellent stillness and focus!"
-            : enhancedSessionData.stillnessScore >= 60
-            ? "Good stillness, keep practicing!"
-            : "Focus on finding a comfortable position.",
+            : enhancedSessionData.stillnessScore !== undefined &&
+                enhancedSessionData.stillnessScore >= 60
+              ? "Good stillness, keep practicing!"
+              : "Focus on finding a comfortable position.",
         content: (
           <Progress
-            value={enhancedSessionData.stillnessScore}
+            value={enhancedSessionData.stillnessScore || 0}
             indicatorClassName={
+              enhancedSessionData.stillnessScore !== undefined &&
               enhancedSessionData.stillnessScore >= 80
                 ? "bg-green-500"
-                : enhancedSessionData.stillnessScore >= 60
-                ? "bg-yellow-500"
-                : "bg-red-500"
+                : enhancedSessionData.stillnessScore !== undefined &&
+                    enhancedSessionData.stillnessScore >= 60
+                  ? "bg-yellow-500"
+                  : "bg-red-500"
             }
             className="h-2"
           />
@@ -557,20 +568,20 @@ Check out Imperfect Breath!`;
             ? enhancedSessionData.cycleCount >= 10
               ? "🧘"
               : enhancedSessionData.cycleCount >= 5
-              ? "🌸"
-              : enhancedSessionData.cycleCount >= 3
-              ? "🌿"
-              : "🌱"
-            : enhancedSessionData.stillnessScore !== null &&
-              enhancedSessionData.stillnessScore >= 90
-            ? "🌟"
-            : enhancedSessionData.stillnessScore !== null &&
-              enhancedSessionData.stillnessScore >= 75
-            ? "💫"
-            : enhancedSessionData.stillnessScore !== null &&
-              enhancedSessionData.stillnessScore >= 60
-            ? "⭐"
-            : "🌱"}
+                ? "🌸"
+                : enhancedSessionData.cycleCount >= 3
+                  ? "🌿"
+                  : "🌱"
+            : enhancedSessionData.stillnessScore !== undefined &&
+                enhancedSessionData.stillnessScore >= 90
+              ? "🌟"
+              : enhancedSessionData.stillnessScore !== undefined &&
+                  enhancedSessionData.stillnessScore >= 75
+                ? "💫"
+                : enhancedSessionData.stillnessScore !== undefined &&
+                    enhancedSessionData.stillnessScore >= 60
+                  ? "⭐"
+                  : "🌱"}
         </div>
         <h1 className="text-4xl font-bold mb-2">Session Complete!</h1>
         <p className="text-xl font-semibold mb-2 text-primary">
@@ -578,20 +589,20 @@ Check out Imperfect Breath!`;
             ? enhancedSessionData.cycleCount >= 10
               ? "Exceptional Focus!"
               : enhancedSessionData.cycleCount >= 5
-              ? "Great Session!"
-              : enhancedSessionData.cycleCount >= 3
-              ? "Good Progress!"
-              : "Keep Growing!"
-            : enhancedSessionData.stillnessScore !== null &&
-              enhancedSessionData.stillnessScore >= 90
-            ? "Exceptional Practice!"
-            : enhancedSessionData.stillnessScore !== null &&
-              enhancedSessionData.stillnessScore >= 75
-            ? "Great Session!"
-            : enhancedSessionData.stillnessScore !== null &&
-              enhancedSessionData.stillnessScore >= 60
-            ? "Good Progress!"
-            : "Keep Growing!"}
+                ? "Great Session!"
+                : enhancedSessionData.cycleCount >= 3
+                  ? "Good Progress!"
+                  : "Keep Growing!"
+            : enhancedSessionData.stillnessScore !== undefined &&
+                enhancedSessionData.stillnessScore >= 90
+              ? "Exceptional Practice!"
+              : enhancedSessionData.stillnessScore !== undefined &&
+                  enhancedSessionData.stillnessScore >= 75
+                ? "Great Session!"
+                : enhancedSessionData.stillnessScore !== undefined &&
+                    enhancedSessionData.stillnessScore >= 60
+                  ? "Good Progress!"
+                  : "Keep Growing!"}
         </p>
         <Badge variant="outline" className="text-lg px-4 py-2 mb-6">
           {enhancedSessionData.patternName}
@@ -624,260 +635,8 @@ Check out Imperfect Breath!`;
           ))}
         </div>
 
-        {/* Session Insights & Achievements */}
-        <div className="mb-8 w-full max-w-4xl">
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center gap-2">
-                <CheckCircle className="w-5 h-5" />
-                Session Insights
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3">
-                {/* Cycle Achievement */}
-                {enhancedSessionData.cycleCount > 0 && (
-                  <div className="flex flex-col items-center text-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-3xl">🎯</div>
-                    <div>
-                      <p className="font-semibold text-lg">Cycles Completed</p>
-                      <p className="text-sm text-muted-foreground">
-                        You completed {enhancedSessionData.cycleCount} breathing
-                        cycles
-                        {enhancedSessionData.cycleCount >= 10
-                          ? " - excellent endurance!"
-                          : enhancedSessionData.cycleCount >= 5
-                          ? " - building strong habits!"
-                          : " - every cycle counts!"}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Breath Hold Achievement - only for enhanced sessions */}
-                {enhancedSessionData.cameraUsed &&
-                  enhancedSessionData.sessionType !== "classic" &&
-                  enhancedSessionData.breathHoldTime > 15 && (
-                    <div className="flex flex-col items-center text-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="text-3xl">🫁</div>
-                      <div>
-                        <p className="font-semibold text-lg">Breath Control</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatTime(enhancedSessionData.breathHoldTime)}{" "}
-                          breath hold shows
-                          {enhancedSessionData.breathHoldTime > 45
-                            ? " exceptional"
-                            : enhancedSessionData.breathHoldTime > 30
-                            ? " strong"
-                            : " developing"}{" "}
-                          respiratory control
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Stillness Achievement - only for enhanced sessions */}
-                {enhancedSessionData.cameraUsed &&
-                  enhancedSessionData.sessionType !== "classic" &&
-                  enhancedSessionData.stillnessScore !== null &&
-                  enhancedSessionData.stillnessScore >= 70 && (
-                    <div className="flex flex-col items-center text-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="text-3xl">🧘</div>
-                      <div>
-                        <p className="font-semibold text-lg">
-                          Mindful Stillness
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {enhancedSessionData.stillnessScore}% stillness
-                          indicates
-                          {enhancedSessionData.stillnessScore >= 90
-                            ? " profound inner calm and focus"
-                            : enhancedSessionData.stillnessScore >= 80
-                            ? " excellent body awareness"
-                            : " growing tranquility and presence"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Focus Achievement - for classic sessions */}
-                {enhancedSessionData.sessionType === "classic" &&
-                  enhancedSessionData.cycleCount >= 3 && (
-                    <div className="flex flex-col items-center text-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="text-3xl">🎯</div>
-                      <div>
-                        <p className="font-semibold text-lg">Pure Focus</p>
-                        <p className="text-sm text-muted-foreground">
-                          Completed {enhancedSessionData.cycleCount} cycles with
-                          pure, distraction-free focus
-                          {enhancedSessionData.cycleCount >= 10
-                            ? " - exceptional concentration!"
-                            : " - building strong mindfulness habits!"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Duration Achievement */}
-                {enhancedSessionData.duration >= 300 && (
-                  <div className="flex flex-col items-center text-center gap-3 p-4 bg-orange-50 rounded-lg border border-orange-200">
-                    <div className="text-3xl">⏰</div>
-                    <div>
-                      <p className="font-semibold text-lg">
-                        Dedicated Practice
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatTime(enhancedSessionData.duration)} of focused
-                        breathing
-                        {enhancedSessionData.duration >= 600
-                          ? " shows remarkable commitment!"
-                          : " builds lasting mindfulness habits!"}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Progress Streak */}
-                {streak > 1 && (
-                  <div className="flex flex-col items-center text-center gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="text-3xl">🔥</div>
-                    <div>
-                      <p className="font-semibold text-lg">Practice Streak</p>
-                      <p className="text-sm text-muted-foreground">
-                        {streak} consecutive days of practice - you're building
-                        powerful wellness habits!
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Phase Accuracy Achievement - only for enhanced sessions */}
-                {enhancedSessionData.sessionType !== "classic" &&
-                  enhancedSessionData.phaseAccuracy >= 75 && (
-                    <div className="flex flex-col items-center text-center gap-3 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                      <div className="text-3xl">⏱️</div>
-                      <div>
-                        <p className="font-semibold text-lg">Precise Timing</p>
-                        <p className="text-sm text-muted-foreground">
-                          {enhancedSessionData.phaseAccuracy}% phase accuracy
-                          shows excellent timing control
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Rhythm Consistency Achievement - only for enhanced sessions */}
-                {enhancedSessionData.sessionType !== "classic" &&
-                  enhancedSessionData.rhythmConsistency >= 75 && (
-                    <div className="flex flex-col items-center text-center gap-3 p-4 bg-teal-50 rounded-lg border border-teal-200">
-                      <div className="text-3xl">〰️</div>
-                      <div>
-                        <p className="font-semibold text-lg">Steady Rhythm</p>
-                        <p className="text-sm text-muted-foreground">
-                          {enhancedSessionData.rhythmConsistency}% rhythm
-                          consistency demonstrates excellent pattern stability
-                        </p>
-                      </div>
-                    </div>
-                  )}
-              </div>
-
-              {/* Personalized Recommendations */}
-              <div className="border-t pt-4 mt-4 text-center">
-                <h4 className="font-semibold mb-3 flex items-center justify-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Next Steps
-                </h4>
-                <div className="space-y-2 text-sm text-muted-foreground text-left max-w-md mx-auto">
-                  {enhancedSessionData.duration < 300 && (
-                    <p>
-                      • Try extending your next session to 5+ minutes for deeper
-                      benefits
-                    </p>
-                  )}
-
-                  {enhancedSessionData.sessionType === "classic" ? (
-                    // Classic session recommendations
-                    <>
-                      {enhancedSessionData.cycleCount < 5 && (
-                        <p>
-                          • Gradually increase your cycle count as you build
-                          endurance
-                        </p>
-                      )}
-                      {enhancedSessionData.cycleCount >= 10 && (
-                        <p>
-                          • Excellent focus! Consider trying the Enhanced
-                          session with AI feedback
-                        </p>
-                      )}
-                      {enhancedSessionData.duration >= 300 &&
-                        enhancedSessionData.cycleCount >= 8 && (
-                          <p>
-                            • You're ready for more advanced breathing patterns
-                            - explore the marketplace!
-                          </p>
-                        )}
-                      <p>
-                        • Perfect for daily practice - consistency is key to
-                        building mindfulness habits
-                      </p>
-                    </>
-                  ) : (
-                    // Enhanced session recommendations
-                    <>
-                      {enhancedSessionData.stillnessScore !== null &&
-                        enhancedSessionData.stillnessScore < 60 && (
-                          <p>
-                            • Focus on finding a comfortable, stable position
-                            before starting
-                          </p>
-                        )}
-                      {enhancedSessionData.cycleCount < 5 && (
-                        <p>
-                          • Gradually increase your cycle count as you build
-                          endurance
-                        </p>
-                      )}
-                      {enhancedSessionData.stillnessScore !== null &&
-                        enhancedSessionData.stillnessScore >= 80 &&
-                        enhancedSessionData.cycleCount >= 10 && (
-                          <p>
-                            • You're ready for more advanced breathing patterns
-                            - explore the marketplace!
-                          </p>
-                        )}
-                      {enhancedSessionData.breathHoldTime >= 45 && (
-                        <p>
-                          • Strong breath control! Consider exploring advanced
-                          pranayama techniques
-                        </p>
-                      )}
-                      {enhancedSessionData.phaseAccuracy < 60 && (
-                        <p>
-                          • Match the breathing rhythm closely for great results
-                        </p>
-                      )}
-                      {enhancedSessionData.rhythmConsistency < 60 && (
-                        <p>
-                          • Try to maintain steady timing throughout each
-                          breathing phase
-                        </p>
-                      )}
-                      {enhancedSessionData.phaseAccuracy >= 85 &&
-                        enhancedSessionData.rhythmConsistency >= 85 && (
-                          <p>
-                            • Exceptional technique! You've mastered the
-                            fundamentals of mindful breathing
-                          </p>
-                        )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Post-Session Actions - Clear next steps and feature discovery */}
+        <PostSessionActions sessionData={enhancedSessionData} />
 
         {/* Enhanced Session Upsell - Only for classic sessions */}
         {enhancedSessionData.sessionType === "classic" && (
@@ -975,8 +734,8 @@ Check out Imperfect Breath!`;
                         Get AI Analysis
                       </Button>
                     ) : (
-                      <InlineUpgrade 
-                        feature="ai_analysis" 
+                      <InlineUpgrade
+                        feature="ai_analysis"
                         variant="minimal"
                         className="w-auto"
                       />
@@ -986,10 +745,7 @@ Check out Imperfect Breath!`;
                   {/* Enhanced subscription status with inline upgrade */}
                   {!canUseAIAnalysis && (
                     <div className="mt-4">
-                      <InlineUpgrade 
-                        feature="ai_analysis" 
-                        variant="banner"
-                      />
+                      <InlineUpgrade feature="ai_analysis" variant="banner" />
                     </div>
                   )}
 
@@ -1018,11 +774,11 @@ Check out Imperfect Breath!`;
               {isAnalyzing ? (
                 <div className="space-y-4">
                   {/* Streaming Indicator */}
-                  <StreamingIndicator 
+                  <StreamingIndicator
                     streamingState={streamingState}
                     className="mb-4"
                   />
-                  
+
                   {/* Fallback Loading State */}
                   <Card>
                     <CardContent className="flex items-center justify-center p-8">
@@ -1071,7 +827,7 @@ Check out Imperfect Breath!`;
                   const enhancedAnalysis =
                     EnhancedAnalysisService.validateAndEnhanceResponse(
                       rawAnalysis,
-                      context
+                      context,
                     );
 
                   return (
@@ -1097,7 +853,7 @@ Check out Imperfect Breath!`;
                               sessionData.restlessnessScore !== undefined
                                 ? Math.max(
                                     0,
-                                    100 - sessionData.restlessnessScore
+                                    100 - sessionData.restlessnessScore,
                                   )
                                 : undefined;
 
@@ -1106,8 +862,8 @@ Check out Imperfect Breath!`;
                                 stillnessScore >= 80
                                   ? "excellent"
                                   : stillnessScore >= 70
-                                  ? "good"
-                                  : "developing"
+                                    ? "good"
+                                    : "developing"
                               } body awareness and focus. You completed ${
                                 sessionData.cycleCount || 0
                               } cycles with a ${stillnessScore}% stillness score. To improve this score, try finding a more comfortable seated position and focus on minimizing movement during your breathing cycles.\n\n— Dr. Breathe, Your Breathing Coach`;
@@ -1124,8 +880,8 @@ Check out Imperfect Breath!`;
                               breathHoldTime > 30
                                 ? "developing"
                                 : breathHoldTime > 15
-                                ? "beginning"
-                                : "emerging"
+                                  ? "beginning"
+                                  : "emerging"
                             } breath control. For ${
                               sessionData.patternName || "your chosen pattern"
                             }, you completed ${
@@ -1134,7 +890,7 @@ Check out Imperfect Breath!`;
                               sessionData.restlessnessScore !== undefined
                                 ? Math.max(
                                     0,
-                                    100 - sessionData.restlessnessScore
+                                    100 - sessionData.restlessnessScore,
                                   )
                                 : "N/A"
                             }% stillness score. Focus on maintaining a smooth, steady rhythm throughout each phase. What specific aspect of your breathing would you like to improve?\n\n— Dr. Breathe, Your Breathing Coach`;
@@ -1152,12 +908,12 @@ Check out Imperfect Breath!`;
                               sessionData.restlessnessScore !== undefined
                                 ? Math.max(
                                     0,
-                                    100 - sessionData.restlessnessScore
+                                    100 - sessionData.restlessnessScore,
                                   )
                                 : undefined;
 
                             return `Based on your actual session data, you practiced for ${Math.floor(
-                              duration / 60
+                              duration / 60,
                             )} minutes and ${
                               duration % 60
                             } seconds, completing ${cycles} breathing cycles${
@@ -1168,8 +924,8 @@ Check out Imperfect Breath!`;
                               cycles >= 10
                                 ? "excellent"
                                 : cycles >= 5
-                                ? "good"
-                                : "solid"
+                                  ? "good"
+                                  : "solid"
                             } endurance. This regular practice will help you develop better stress resilience and mental clarity over time. How are you feeling about your progress so far?\n\n— Dr. Breathe, Your Breathing Coach`;
                           }
 
@@ -1181,13 +937,13 @@ Check out Imperfect Breath!`;
                             const cycles = sessionData.cycleCount || 0;
                             const target = sessionData.targetCycles || 10;
                             const completionRate = Math.round(
-                              (cycles / target) * 100
+                              (cycles / target) * 100,
                             );
                             const stillnessScore =
                               sessionData.restlessnessScore !== undefined
                                 ? Math.max(
                                     0,
-                                    100 - sessionData.restlessnessScore
+                                    100 - sessionData.restlessnessScore,
                                   )
                                 : undefined;
 
@@ -1199,8 +955,8 @@ Check out Imperfect Breath!`;
                               completionRate >= 80
                                 ? "excellent"
                                 : completionRate >= 60
-                                ? "good"
-                                : "solid"
+                                  ? "good"
+                                  : "solid"
                             } focus and endurance. To improve your cycle completion, try gradually increasing your target as you build stamina rather than pushing too hard too fast.\n\n— Dr. Breathe, Your Breathing Coach`;
                           }
 
@@ -1212,13 +968,13 @@ Check out Imperfect Breath!`;
                             const cycles = sessionData.cycleCount || 0;
                             const target = sessionData.targetCycles || 10;
                             const completionRate = Math.round(
-                              (cycles / target) * 100
+                              (cycles / target) * 100,
                             );
                             const stillnessScore =
                               sessionData.restlessnessScore !== undefined
                                 ? Math.max(
                                     0,
-                                    100 - sessionData.restlessnessScore
+                                    100 - sessionData.restlessnessScore,
                                   )
                                 : undefined;
                             const duration = sessionData.sessionDuration || 0;
@@ -1227,7 +983,7 @@ Check out Imperfect Breath!`;
 
                             if (completionRate < 80) {
                               recommendations.push(
-                                "Gradually increase your target cycles as you build endurance"
+                                "Gradually increase your target cycles as you build endurance",
                               );
                             }
 
@@ -1236,25 +992,25 @@ Check out Imperfect Breath!`;
                               stillnessScore < 70
                             ) {
                               recommendations.push(
-                                "Focus on finding a more comfortable, stable position to improve stillness"
+                                "Focus on finding a more comfortable, stable position to improve stillness",
                               );
                             }
 
                             if (duration < 300) {
                               recommendations.push(
-                                "Try extending your sessions to at least 5 minutes for deeper benefits"
+                                "Try extending your sessions to at least 5 minutes for deeper benefits",
                               );
                             }
 
                             if (recommendations.length === 0) {
                               recommendations.push(
-                                "Continue with your current excellent practice routine"
+                                "Continue with your current excellent practice routine",
                               );
                               recommendations.push(
-                                "Try a different breathing pattern to challenge yourself"
+                                "Try a different breathing pattern to challenge yourself",
                               );
                               recommendations.push(
-                                "Share your progress with the community for motivation"
+                                "Share your progress with the community for motivation",
                               );
                             }
 
@@ -1265,7 +1021,7 @@ Check out Imperfect Breath!`;
                             }), here are my recommendations for improvement:\n\n${recommendations
                               .map((rec, i) => `${i + 1}. ${rec}`)
                               .join(
-                                "\n"
+                                "\n",
                               )}\n\n— Dr. Breathe, Your Breathing Coach`;
                           }
 
@@ -1282,7 +1038,7 @@ Check out Imperfect Breath!`;
                         } catch (error) {
                           console.error(
                             "Failed to generate Dr. Breathe response:",
-                            error
+                            error,
                           );
                           return "I appreciate your question! While I'm having a moment of technical difficulty, I want you to know that every question about your breathing practice is valuable. Please feel free to ask again.\n\n— Dr. Breathe, Your Breathing Coach";
                         }
@@ -1304,80 +1060,6 @@ Check out Imperfect Breath!`;
           </div>
         )}
 
-        {/* Main Actions - Prioritized for user journey */}
-        <div className="space-y-6">
-          {/* Primary Action: Try Different Pattern */}
-          <div className="text-center">
-            <h3 className="text-xl font-semibold mb-4">
-              🌟 Ready to explore different breathing techniques?
-            </h3>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-              <Link to="/patterns" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-8 py-3"
-                >
-                  <Heart className="mr-2 h-5 w-5" />
-                  Explore Breathing Patterns
-                </Button>
-              </Link>
-              <div className="text-sm text-muted-foreground">
-                Wim Hof, 4-7-8, and more
-              </div>
-            </div>
-          </div>
-
-          {/* Secondary Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            <Link
-              to={
-                enhancedSessionData.sessionType === "classic"
-                  ? "/session/enhanced"
-                  : "/session/classic"
-              }
-            >
-              <Button size="lg" variant="outline" className="px-8 py-3">
-                {enhancedSessionData.sessionType === "classic" ? (
-                  <>
-                    <Brain className="mr-2 h-5 w-5" />
-                    Try Enhanced Session
-                  </>
-                ) : (
-                  <>
-                    <Heart className="mr-2 h-5 w-5" />
-                    Try Classic Session
-                  </>
-                )}
-              </Button>
-            </Link>
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full shadow-lg"
-              onClick={handleShare}
-              disabled={!sessionData.patternName || isSharing}
-            >
-              <Share className="mr-2 h-5 w-5" />
-              {isSharing ? "Sharing..." : "Share Results"}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-full"
-              onClick={handleShareToLensClick}
-              disabled={!sessionData.patternName}
-            >
-              <Share className="mr-2 h-5 w-5" />
-              Share to Lens
-            </Button>
-            <Link to="/">
-              <Button size="lg" variant="ghost" className="rounded-full">
-                Back to Home
-              </Button>
-            </Link>
-          </div>
-        </div>
-
         {/* Enhanced Social Sharing - Available for all session types */}
         <div className="mt-8 w-full max-w-4xl">
           <BreathingSessionPost
@@ -1388,11 +1070,11 @@ Check out Imperfect Breath!`;
                 enhancedSessionData.sessionType === "classic"
                   ? Math.min(
                       100,
-                      Math.max(50, (enhancedSessionData.cycleCount || 1) * 10)
+                      Math.max(50, (enhancedSessionData.cycleCount || 1) * 10),
                     ) // Score based on cycles for classic
-                  : enhancedSessionData.stillnessScore !== null
-                  ? enhancedSessionData.stillnessScore // Use real calculated stillness
-                  : 75, // Fallback only if no real data
+                  : enhancedSessionData.stillnessScore !== undefined
+                    ? enhancedSessionData.stillnessScore // Use real calculated stillness
+                    : 75, // Fallback only if no real data
               breathHoldTime:
                 enhancedSessionData.sessionType === "classic"
                   ? 0

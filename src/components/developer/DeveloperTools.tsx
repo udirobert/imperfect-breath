@@ -5,42 +5,76 @@
  * MODULAR: Composable developer interface
  */
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Settings, 
-  Crown, 
-  Sparkles, 
-  Zap, 
-  RefreshCw, 
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Settings,
+  Crown,
+  Sparkles,
+  Zap,
+  RefreshCw,
   Trash2,
   Info,
-  CheckCircle
-} from 'lucide-react';
-import { 
-  getDeveloperOverride, 
-  setDeveloperOverride, 
-  clearDeveloperOverride 
-} from '@/lib/monetization/revenueCatConfig';
-import { revenueCat } from '@/lib/monetization/revenueCat';
+  CheckCircle,
+} from "lucide-react";
+import {
+  getDeveloperOverride,
+  setDeveloperOverride,
+  clearDeveloperOverride,
+} from "@/lib/monetization/revenueCatConfig";
+import { revenueCatService } from "@/lib/monetization/revenueCat";
 
 interface DeveloperToolsProps {
   className?: string;
 }
 
-export const DeveloperTools: React.FC<DeveloperToolsProps> = ({ className }) => {
+export const DeveloperTools: React.FC<DeveloperToolsProps> = ({
+  className,
+}) => {
   const [override, setOverride] = useState(getDeveloperOverride());
-  const [selectedTier, setSelectedTier] = useState<'basic' | 'premium' | 'pro'>('pro');
-  const [configStatus, setConfigStatus] = useState<any>(null);
+  const [selectedTier, setSelectedTier] = useState<"basic" | "premium" | "pro">(
+    "pro",
+  );
+  const [configStatus, setConfigStatus] = useState<{
+    isAvailable: boolean;
+    isInitialized: boolean;
+    error: string | null;
+  } | null>(null);
 
   // Refresh override status
-  const refreshOverride = () => {
+  const refreshOverride = async () => {
     setOverride(getDeveloperOverride());
-    setConfigStatus(revenueCat.getConfigurationStatus());
+    try {
+      const isAvailable = revenueCatService.isRevenueCatAvailable();
+      await revenueCatService.initialize();
+      setConfigStatus({
+        isAvailable,
+        isInitialized: true,
+        error: null,
+      });
+    } catch (error) {
+      setConfigStatus({
+        isAvailable: false,
+        isInitialized: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   };
 
   useEffect(() => {
@@ -60,13 +94,13 @@ export const DeveloperTools: React.FC<DeveloperToolsProps> = ({ className }) => 
   const tierIcons = {
     basic: Zap,
     premium: Sparkles,
-    pro: Crown
+    pro: Crown,
   };
 
   const tierColors = {
-    basic: 'bg-gray-500',
-    premium: 'bg-blue-500',
-    pro: 'bg-purple-500'
+    basic: "bg-gray-500",
+    premium: "bg-blue-500",
+    pro: "bg-purple-500",
   };
 
   // Only show in development
@@ -93,7 +127,9 @@ export const DeveloperTools: React.FC<DeveloperToolsProps> = ({ className }) => 
           {override.enabled ? (
             <div className="flex items-center gap-2">
               <Badge className={tierColors[override.tier]}>
-                {React.createElement(tierIcons[override.tier], { className: "h-3 w-3 mr-1" })}
+                {React.createElement(tierIcons[override.tier], {
+                  className: "h-3 w-3 mr-1",
+                })}
                 {override.tier.toUpperCase()}
               </Badge>
               <span className="text-sm text-muted-foreground">
@@ -112,7 +148,10 @@ export const DeveloperTools: React.FC<DeveloperToolsProps> = ({ className }) => 
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Set Developer Override</h4>
           <div className="flex gap-2">
-            <Select value={selectedTier} onValueChange={(value: any) => setSelectedTier(value)}>
+            <Select
+              value={selectedTier}
+              onValueChange={(value: "basic" | "premium" | "pro") => setSelectedTier(value)}
+            >
               <SelectTrigger className="flex-1">
                 <SelectValue />
               </SelectTrigger>
@@ -130,9 +169,9 @@ export const DeveloperTools: React.FC<DeveloperToolsProps> = ({ className }) => 
 
         {/* Clear Override */}
         {override.enabled && (
-          <Button 
-            onClick={handleClearOverride} 
-            variant="outline" 
+          <Button
+            onClick={handleClearOverride}
+            variant="outline"
             size="sm"
             className="w-full"
           >
@@ -149,18 +188,22 @@ export const DeveloperTools: React.FC<DeveloperToolsProps> = ({ className }) => 
               <RefreshCw className="h-3 w-3" />
             </Button>
           </div>
-          
+
           {configStatus && (
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-medium">Available:</span>
-                <Badge variant={configStatus.isAvailable ? "default" : "destructive"}>
+                <Badge
+                  variant={configStatus.isAvailable ? "default" : "destructive"}
+                >
                   {configStatus.isAvailable ? "Yes" : "No"}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-medium">Initialized:</span>
-                <Badge variant={configStatus.isInitialized ? "default" : "secondary"}>
+                <Badge
+                  variant={configStatus.isInitialized ? "default" : "secondary"}
+                >
                   {configStatus.isInitialized ? "Yes" : "No"}
                 </Badge>
               </div>
@@ -177,9 +220,9 @@ export const DeveloperTools: React.FC<DeveloperToolsProps> = ({ className }) => 
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            <strong>Usage:</strong> Set an override to test premium features locally. 
-            The override persists in localStorage until cleared. 
-            This only works in development mode.
+            <strong>Usage:</strong> Set an override to test premium features
+            locally. The override persists in localStorage until cleared. This
+            only works in development mode.
           </AlertDescription>
         </Alert>
       </CardContent>

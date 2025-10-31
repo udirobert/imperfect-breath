@@ -1,6 +1,6 @@
 /**
  * Auth Method Definitions - Single Source of Truth
- * 
+ *
  * ORGANIZED: Domain-driven auth method configuration
  * DRY: Centralized auth method definitions
  * CLEAN: Clear separation of auth method concerns
@@ -10,7 +10,7 @@ import { Mail, Wallet, Zap, Users, Coins } from "lucide-react";
 import type { AuthFeatures } from "./useAuth";
 
 export interface AuthMethod {
-  id: 'guest' | 'email' | 'wallet';
+  id: "guest" | "email" | "wallet" | "lens" | "flow";
   title: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -21,7 +21,12 @@ export interface AuthMethod {
 }
 
 export interface AuthContext {
-  type?: 'profile' | 'nft-purchase' | 'social-share' | 'creator-tools' | 'progress-tracking';
+  type?:
+    | "profile"
+    | "nft-purchase"
+    | "social-share"
+    | "creator-tools"
+    | "progress-tracking";
   source?: string;
 }
 
@@ -30,88 +35,133 @@ export interface AuthContext {
  */
 export const AUTH_METHODS: Record<string, AuthMethod> = {
   guest: {
-    id: 'guest',
-    title: 'Quick Start',
-    description: 'Try breathing sessions immediately',
+    id: "guest",
+    title: "Quick Start",
+    description: "Try breathing sessions immediately",
     icon: Zap,
     benefits: [
-      'Instant access',
-      'All breathing patterns',
-      'No signup required'
+      "Instant access",
+      "All breathing patterns",
+      "No signup required",
     ],
     features: {},
     priority: 1,
     requiresInput: false,
   },
-  
+
   email: {
-    id: 'email',
-    title: 'Sign In',
-    description: 'Create account or sign in with email',
+    id: "email",
+    title: "Sign In",
+    description: "Create account or sign in with email",
     icon: Mail,
     benefits: [
-      'Save your progress',
-      'Sync across devices',
-      'Personalized insights',
-      'Access anywhere'
+      "Save your progress",
+      "Sync across devices",
+      "Personalized insights",
+      "Access anywhere",
     ],
     features: {},
     priority: 2,
     requiresInput: true,
   },
-  
+
   wallet: {
-    id: 'wallet',
-    title: 'Onchain',
-    description: 'NFTs, social features, and blockchain tools',
+    id: "wallet",
+    title: "Web3 Wallet",
+    description: "Connect your existing crypto wallet",
     icon: Wallet,
     benefits: [
-      'Own your breathing patterns as NFTs',
-      'Social community features',
-      'Creator monetization tools',
-      'Cross-platform compatibility'
+      "Connect existing wallet",
+      "Full self-custody",
+      "Multi-chain support",
+      "Hardware wallet compatible",
     ],
-    features: { blockchain: true, lens: true, flow: true },
+    features: { blockchain: true },
     priority: 3,
     requiresInput: false,
   },
 
-  // AGGRESSIVE CONSOLIDATION: Remove duplicate lens and flow methods
-  // These are now consolidated into the wallet method above
+  lens: {
+    id: "lens",
+    title: "Lens Social",
+    description: "Decentralized social features with Lens Protocol",
+    icon: Users,
+    benefits: [
+      "Own your social graph",
+      "Decentralized social features",
+      "Share breathing patterns",
+      "Connect with community",
+    ],
+    features: { blockchain: true, lens: true },
+    priority: 4,
+    requiresInput: false,
+  },
+
+  flow: {
+    id: "flow",
+    title: "Flow Blockchain",
+    description: "NFTs and onchain actions on Flow (Forte)",
+    icon: Coins,
+    benefits: [
+      "Mint breathing pattern NFTs",
+      "Flow ecosystem access",
+      "Low-cost transactions",
+      "Creator monetization",
+    ],
+    features: { blockchain: true, flow: true },
+    priority: 5,
+    requiresInput: false,
+  },
 };
 
 /**
- * AGGRESSIVE CONSOLIDATION: Streamlined auth method recommendations
- * PREVENT BLOAT: Maximum 3 options to reduce cognitive load
+ * Context-aware auth method recommendations
+ * Shows relevant auth methods based on user intent
  */
 export const getRecommendedAuthMethods = (
   context?: AuthContext,
-  currentAuthState?: { isAuthenticated: boolean; hasWallet: boolean }
+  currentAuthState?: { isAuthenticated: boolean; hasWallet: boolean },
 ): AuthMethod[] => {
   // If already authenticated, don't show auth methods
   if (currentAuthState?.isAuthenticated) {
     return [];
   }
 
-  // AGGRESSIVE CONSOLIDATION: Context-specific recommendations with max 3 options
+  // Context-specific recommendations
   switch (context?.type) {
-    case 'nft-purchase':
-    case 'creator-tools':
-      // Blockchain features need wallet - show only relevant options
-      return [AUTH_METHODS.wallet, AUTH_METHODS.email, AUTH_METHODS.guest];
-      
-    case 'social-share':
-      // Social features - prioritize wallet for social auth
-      return [AUTH_METHODS.wallet, AUTH_METHODS.email, AUTH_METHODS.guest];
-      
-    case 'progress-tracking':
+    case "nft-purchase":
+    case "creator-tools":
+      // NFT and creator features - show Flow for minting, fallback options
+      return [
+        AUTH_METHODS.flow,
+        AUTH_METHODS.wallet,
+        AUTH_METHODS.email,
+        AUTH_METHODS.guest,
+      ];
+
+    case "social-share":
+      // Social features - prioritize Lens for social graph
+      return [
+        AUTH_METHODS.lens,
+        AUTH_METHODS.wallet,
+        AUTH_METHODS.email,
+        AUTH_METHODS.guest,
+      ];
+
+    case "progress-tracking":
       // Progress tracking needs persistent auth
       return [AUTH_METHODS.email, AUTH_METHODS.wallet, AUTH_METHODS.guest];
-      
-    case 'profile':
+
+    case "profile":
     default:
-      // ENHANCEMENT FIRST: Progressive enhancement with clear value proposition
-      return [AUTH_METHODS.guest, AUTH_METHODS.email, AUTH_METHODS.wallet];
+      // ENHANCEMENT FIRST: Progressive enhancement - show all options
+      return [
+        AUTH_METHODS.guest,
+        AUTH_METHODS.email,
+        AUTH_METHODS.lens,
+        AUTH_METHODS.flow,
+        AUTH_METHODS.wallet,
+      ];
   }
 };
 
@@ -120,15 +170,15 @@ export const getRecommendedAuthMethods = (
  */
 export const getRequiredFeatures = (context?: AuthContext): AuthFeatures => {
   switch (context?.type) {
-    case 'nft-purchase':
-    case 'creator-tools':
-      return { blockchain: true };
-      
-    case 'social-share':
+    case "nft-purchase":
+    case "creator-tools":
+      return { blockchain: true, flow: true };
+
+    case "social-share":
       return { blockchain: true, lens: true };
-      
-    case 'progress-tracking':
-    case 'profile':
+
+    case "progress-tracking":
+    case "profile":
     default:
       return {}; // Basic auth sufficient
   }
@@ -139,20 +189,20 @@ export const getRequiredFeatures = (context?: AuthContext): AuthFeatures => {
  */
 export const getAuthMethodDisplay = (
   methods: AuthMethod[],
-  mode: 'full' | 'minimal' | 'contextual' = 'full'
+  mode: "full" | "minimal" | "contextual" = "full",
 ) => {
   switch (mode) {
-    case 'minimal':
-      // Show only top 2 methods
-      return methods.slice(0, 2);
-      
-    case 'contextual':
+    case "minimal":
+      // Show only top 3 methods for simplicity
+      return methods.slice(0, 3);
+
+    case "contextual":
       // Show methods based on context priority
       return methods.sort((a, b) => a.priority - b.priority);
-      
-    case 'full':
+
+    case "full":
     default:
-      // Show all methods
-      return methods;
+      // Show all methods, limit to 5 to prevent overwhelm
+      return methods.slice(0, 5);
   }
 };

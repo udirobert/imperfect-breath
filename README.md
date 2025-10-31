@@ -45,10 +45,9 @@ MODEL_DOWNLOAD_ON_START=false python3 main.py &
 
 ## 📚 Documentation
 
-### 🚀 **[Setup Guide](docs/SETUP.md)** - Get started quickly
-### 🏗️ **[Architecture Guide](docs/ARCHITECTURE.md)** - System design & technical decisions
-### 👤 **[User Guide](docs/USER_GUIDE.md)** - How to use all features
-### 🔧 **[API Reference](docs/API.md)** - Developer documentation & integrations
+### 🚀 **[Development Guide](docs/DEVELOPMENT.md)** - Setup, roadmap, and implementation
+### 🏗️ **[Architecture Guide](docs/ARCHITECTURE.md)** - System design & technical details
+### 📖 **[Documentation Hub](docs/README.md)** - Additional guides and resources
 
 ## 🌟 Key Features
 

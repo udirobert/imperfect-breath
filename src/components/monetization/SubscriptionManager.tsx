@@ -43,11 +43,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  revenueCat,
+  revenueCatService,
   SUBSCRIPTION_TIERS,
-  PURCHASE_ITEMS,
   type SubscriptionTier,
-  type PurchaseItem,
 } from "@/lib/monetization/revenueCat";
 import { useRevenueCatStatus } from "@/stores/authStore";
 
@@ -108,12 +106,15 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({
   const [success, setSuccess] = useState<string | null>(null);
 
   const purchaseSubscription = async (packageId: string) =>
-    revenueCat.purchaseSubscription(packageId);
-  const purchaseItem = async (packageId: string) =>
-    revenueCat.purchaseItem(packageId);
-  const restorePurchases = async () => revenueCat.restorePurchases();
+    revenueCatService.purchaseSubscription(packageId);
+  // Note: purchaseItem functionality removed as PURCHASE_ITEMS is not exported
+  const purchaseItem = async (packageId: string) => {
+    console.warn("Purchase item functionality not available");
+    return { success: false, error: "Not implemented" };
+  };
+  const restorePurchases = async () => revenueCatService.restorePurchases();
   const hasFeatureAccess = async (feature: string) =>
-    revenueCat.hasFeatureAccess(feature);
+    revenueCatService.hasFeatureAccess(feature);
 
   const handlePurchaseSubscription = async (tier: SubscriptionTier) => {
     if (!isInitialized || tier.id === "basic") return;
@@ -280,18 +281,10 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
-                {PURCHASE_ITEMS.slice(0, 3).map((item) => (
-                  <Button
-                    key={item.id}
-                    variant="outline"
-                    className="w-full justify-between"
-                    onClick={() => handlePurchaseItem(item)}
-                    disabled={purchasingItem === item.id}
-                  >
-                    <span className="text-sm">{item.name}</span>
-                    <span className="text-sm font-semibold">{item.price}</span>
-                  </Button>
-                ))}
+                {/* PURCHASE_ITEMS removed as it's not exported from revenueCat.ts */}
+                <div className="text-sm text-muted-foreground">
+                  Individual purchase items not currently available
+                </div>
               </div>
             </DialogContent>
           </Dialog>
@@ -500,46 +493,10 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({
 
         {showPurchaseItems && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {PURCHASE_ITEMS.map((item) => {
-              const isPurchasing = purchasingItem === item.id;
-
-              return (
-                <Card key={item.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{item.name}</CardTitle>
-                      <Badge variant="secondary" className="text-xs">
-                        {item.type === "consumable" ? "Consumable" : "One-time"}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-sm">
-                      {item.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardFooter className="pt-2">
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-lg font-semibold">
-                        {item.price}
-                      </span>
-                      <Button
-                        size="sm"
-                        onClick={() => handlePurchaseItem(item)}
-                        disabled={isPurchasing}
-                      >
-                        {isPurchasing ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                            Buying...
-                          </>
-                        ) : (
-                          "Purchase"
-                        )}
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              );
-            })}
+            {/* PURCHASE_ITEMS removed as it's not exported from revenueCat.ts */}
+            <div className="text-sm text-muted-foreground">
+              Individual purchase items not currently available
+            </div>
           </div>
         )}
       </div>

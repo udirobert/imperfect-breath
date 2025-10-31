@@ -10,7 +10,7 @@ import {
   clearDeveloperOverride, 
   getDeveloperOverride 
 } from '@/lib/monetization/revenueCatConfig';
-import { revenueCat } from '@/lib/monetization/revenueCat';
+import { revenueCatService } from '@/lib/monetization/revenueCat';
 
 /**
  * Developer utilities exposed to global window object in development
@@ -46,15 +46,16 @@ export const developerCommands = {
   },
   
   getRevenueCatStatus: () => {
-    const status = revenueCat.getConfigurationStatus();
-    console.info('💰 RevenueCat status:', status);
-    return status;
+    // Note: revenueCatService doesn't have getConfigurationStatus method
+    const isAvailable = revenueCatService.isRevenueCatAvailable();
+    console.info('💰 RevenueCat available:', isAvailable);
+    return { isAvailable };
   },
   
   // Quick subscription status check
   checkSubscription: async () => {
     try {
-      const status = await revenueCat.getSubscriptionStatus();
+      const status = await revenueCatService.getSubscriptionStatus();
       console.info('📊 Current subscription status:', status);
       return status;
     } catch (error) {

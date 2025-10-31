@@ -27,11 +27,11 @@ npm run deploy:firewall
 
 | Document | Purpose |
 |----------|---------|
-| [CI/CD Setup](./CI_CD_SETUP.md) | Complete deployment pipeline guide |
-| [Domain Setup](./DOMAIN_SETUP.md) | Custom domain configuration |
-| [GitHub Secrets](./GITHUB_SECRETS_SETUP.md) | Automated deployment setup |
-| [Progress Summary](./PROGRESS_SUMMARY.md) | Current project status |
-| [Roadmap](./ROADMAP.md) | Future development plans |
+| [Architecture](./ARCHITECTURE.md) | System design, APIs, and technical details |
+| [Development](./DEVELOPMENT.md) | Setup, roadmap, implementation, and testing |
+| [Authentication](./AUTHENTICATION.md) | Authentication architecture and implementation |
+| [API](./API.md) | API endpoints and integration guides |
+| [Testing](./TESTING.md) | Testing strategy and implementation |
 
 ## 🏗️ **Architecture**
 
