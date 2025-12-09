@@ -39,10 +39,20 @@ BreathingSession/
 
 // AI & Vision
 VisionSystem/
-├── CameraCapture      # Video stream handling
-├── FaceMeshDetection  # MediaPipe integration
-├── BreathingAnalysis  # Pattern recognition
-└── AICoaching         # Personalized feedback
+├── CameraCapture           # Video stream handling
+├── FaceMeshDetection       # MediaPipe integration
+├── BreathingAnalysis       # Pattern recognition
+├── EnhancedEmotionalOverlay # Advanced FACS-based emotional analysis
+├── EmotionalPatternAdapter # Smart breathing recommendations based on emotional state
+├── EnhancedVisionManager   # Integration layer for emotional analysis
+├── EmotionalSessionInsights # Post-session emotional journey insights
+├── PreSessionPreparation  # Intelligent preparation with personality detection
+├── DynamicSessionEnhancer # Real-time session adaptation based on emotional feedback
+├── ComprehensiveSessionOrchestrator # Complete session journey orchestration
+└── AICoaching             # Personalized feedback
+
+// Vision Hooks
+├── useEmotionalAnalysis    # Hook for emotional analysis integration
 
 // Web3 Integration
 Web3Features/
@@ -224,7 +234,41 @@ interface PrivacyControls {
 }
 ```
 
-## API Reference
+## Emotional Analysis Architecture
+
+The emotional analysis system implements advanced FACS (Facial Action Coding System) capabilities with the following architectural principles:
+
+### Core Principles
+- **ENHANCEMENT FIRST**: Builds on existing `FaceMeshOverlay` and `VisionManager`
+- **AGGRESSIVE CONSOLIDATION**: Single emotional analysis system to prevent feature fragmentation
+- **PREVENT BLOAT**: Optional features that can be disabled without affecting core functionality
+- **DRY**: Shared emotional analysis logic in reusable components
+- **CLEAN**: Clear separation between basic face tracking and emotional analysis
+- **MODULAR**: Each emotional analysis component works independently
+- **PERFORMANT**: Client-side processing reduces server dependency and preserves privacy
+
+### Component Integration
+The emotional analysis system integrates seamlessly with existing vision components through:
+- **Enhanced Vision Manager**: Maintains backward compatibility with existing `VisionManager`
+- **Hook-based Integration**: `useEmotionalAnalysis` hook allows gradual adoption
+- **Progressive Enhancement**: Emotional features can be enabled/disabled without breaking existing functionality
+
+### Privacy & Security
+- **Local Processing**: All emotional analysis happens client-side to preserve privacy
+- **Minimal Data Storage**: Emotional data is session-scoped and cleared after sessions
+- **User Control**: Emotional analysis can be fully disabled by users
+- **Anonymized Insights**: No personally identifiable emotional data is stored or transmitted
+
+### Performance Considerations
+- **Client-Side Processing**: No server dependency for real-time emotional analysis
+- **Optimized Frame Rate**: 2fps analysis balances accuracy with performance
+- **WebGL Optimizations**: For efficient landmark processing
+- **Memory Management**: Keeps only recent emotional history to prevent memory bloat
+
+### API Integration
+The emotional analysis extends the existing vision API without breaking changes, adding emotional state data to the analysis response when enabled.
+
+### API Reference
 
 ### Vision Service API
 
@@ -253,6 +297,9 @@ Content-Type: application/json
 }
 ```
 
+### Enhanced Process Frame Response with Emotional Analysis
+When emotional analysis is enabled, the response includes additional emotional state data:
+
 **Response:**
 ```json
 {
@@ -264,6 +311,20 @@ Content-Type: application/json
     "metrics": {
       "breathRate": 12,
       "consistency": 0.8
+    },
+    "emotionalState": {
+      "dominantEmotion": "calm|tension|joy|neutral",
+      "duchenneMarker": true,
+      "stressIndicators": {
+        "browTension": 0.7,
+        "facialAsymmetry": 0.3,
+        "eyeWidening": 0.2
+      },
+      "relaxationScore": 85,
+      "smileVector": {
+        "authenticity": 0.9,
+        "intensity": 0.6
+      }
     }
   }
 }
@@ -321,7 +382,8 @@ const MyComponent = () => {
     startSession({
       pattern: '4-7-8',
       duration: 600,
-      enableVision: true
+      enableVision: true,
+      enableEmotionalAnalysis: true // Enable emotional analysis for enhanced feedback
     });
   };
 
@@ -329,10 +391,37 @@ const MyComponent = () => {
     <div>
       <p>Phase: {currentPhase}</p>
       <p>Time: {timeRemaining}s</p>
+      <p>Emotional State: {metrics.emotionalState?.dominantEmotion || 'Not detected'}</p>
+      <p>Relaxation Score: {metrics.emotionalState?.relaxationScore || 'N/A'}</p>
       <button onClick={handleStart}>Start</button>
     </div>
   );
 };
+```
+
+#### Integration with EnhancedVisionManager
+To use the enhanced emotional analysis features, replace your existing `VisionManager` with `EnhancedVisionManager`:
+
+```typescript
+// Before
+import { VisionManager } from './VisionManager';
+
+// After
+import { EnhancedVisionManager } from './EnhancedVisionManager';
+
+<EnhancedVisionManager
+  // All existing props work
+  enabled={true}
+  videoRef={videoRef}
+  cameraStream={cameraStream}
+  sessionId={sessionId}
+
+  // New emotional analysis props
+  emotionalAnalysisEnabled={true}
+  showDetailedEmotrics={false} // Start minimal
+  onPatternRecommendation={handleRecommendation}
+  currentPatternId={currentPattern}
+/>
 ```
 
 #### useVision Hook
@@ -358,6 +447,44 @@ const VisionComponent = () => {
     <div>
       {error && <p>Error: {error}</p>}
       <button onClick={startVision}>Enable Camera</button>
+    </div>
+  );
+};
+```
+
+#### useEmotionalAnalysis Hook
+For emotional analysis integration, use the `useEmotionalAnalysis` hook:
+
+```typescript
+import { useEmotionalAnalysis } from '@/hooks/useEmotionalAnalysis';
+
+const EmotionalVisionComponent = () => {
+  const emotionalAnalysis = useEmotionalAnalysis({
+    enabled: true,
+    insightLevel: 'moderate', // 'minimal', 'moderate', or 'detailed'
+    autoRecommendations: false, // Allow pattern recommendations based on emotions
+    sessionData: currentSessionData
+  });
+
+  // Process emotional data from your existing vision system
+  useEffect(() => {
+    if (emotionalData) {
+      emotionalAnalysis.processEmotionalState(emotionalData);
+    }
+  }, [emotionalData]);
+
+  // Get recommendations when needed
+  const recommendation = emotionalAnalysis.getPatternRecommendation(currentPattern);
+
+  return (
+    <div>
+      <p>Emotional State: {emotionalAnalysis.currentEmotionalState}</p>
+      <p>Relaxation Score: {emotionalAnalysis.relaxationScore}</p>
+      {recommendation && (
+        <button onClick={() => handleRecommendation(recommendation)}>
+          Try Recommended Pattern
+        </button>
+      )}
     </div>
   );
 };
