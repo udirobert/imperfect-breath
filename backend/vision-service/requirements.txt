@@ -1,3 +1,6 @@
+# Vision Service Dependencies
+# All versions are pinned for security and reproducibility
+
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
@@ -9,5 +12,5 @@ python-multipart==0.0.6
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 httpx==0.25.2
-cerebras-cloud-sdk>=1.23.0
+cerebras-cloud-sdk==1.23.0
 eth-account==0.9.0
