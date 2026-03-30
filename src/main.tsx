@@ -1,12 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { createRoot } from "react-dom/client";
-import { WagmiProvider } from "wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ConnectKitProvider } from "connectkit";
-import { WalletProvider } from "./lib/wallet/wallet-context";
 import { GlobalErrorBoundary, SessionStartupErrorBoundary } from "./lib/errors/error-boundary";
-import { config } from "./lib/wagmi/config";
 import { queryClient } from "./lib/query/config";
 import App from "./App.tsx";
 import "./index.css";
@@ -56,15 +52,9 @@ if (!rootElement) {
             <React.StrictMode>
               <GlobalErrorBoundary>
                 <QueryClientProvider client={queryClient}>
-                  <WagmiProvider config={config}>
-                    <ConnectKitProvider>
-                      <WalletProvider autoConnect={false}>
-                        <SessionStartupErrorBoundary>
-                          <App />
-                        </SessionStartupErrorBoundary>
-                      </WalletProvider>
-                    </ConnectKitProvider>
-                  </WagmiProvider>
+                  <SessionStartupErrorBoundary>
+                    <App />
+                  </SessionStartupErrorBoundary>
                 </QueryClientProvider>
               </GlobalErrorBoundary>
             </React.StrictMode>

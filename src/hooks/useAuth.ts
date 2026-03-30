@@ -4,11 +4,11 @@ import type { Session } from "@supabase/supabase-js";
 import { User, UserRole } from "../types/blockchain";
 import { useWalletStatus, useWalletActions } from "./useWallet";
 import { revenueCatAuthIntegration } from "../lib/monetization/revenueCatAuthIntegration";
-import { useAuthStore } from "../stores/authStore";
 import { useSiweAuth } from './useSiweAuth';
 
-// Blockchain features configuration
-const BLOCKCHAIN_FEATURES_ENABLED = true;
+// Blockchain features configuration - disabled by default to reduce initial bundle size
+// Users who navigate to Web3 routes will trigger lazy loading of blockchain features
+const BLOCKCHAIN_FEATURES_ENABLED = false;
 
 // Helper function to get chain name from chainId
 const getChainName = (chainId: string | null): string | null => {
@@ -26,29 +26,9 @@ export const useAuth = () => {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Publish to unified AuthSession store
-  const setStoreSession = useAuthStore((s) => s.setSession);
-  const setStoreLoading = useAuthStore((s) => s.setLoading);
-  const setStoreProfile = useAuthStore((s) => s.setProfile);
-  const setStoreWallet = useAuthStore((s) => s.setWallet);
-
-  // New wallet hooks for wallet integration
+  // Wallet hooks for wallet integration
   const { isConnected, isConnecting, address, chainId } = useWalletStatus();
   const { connect, disconnect } = useWalletActions();
-
-  // Sync local hook state into unified store
-  useEffect(() => {
-    setStoreSession(session);
-    setStoreLoading(loading);
-  }, [session, loading, setStoreSession, setStoreLoading]);
-
-  useEffect(() => {
-    setStoreProfile(profile);
-  }, [profile, setStoreProfile]);
-
-  useEffect(() => {
-    setStoreWallet(address ?? null, chainId ?? null, !!isConnected);
-  }, [address, chainId, isConnected, setStoreWallet]);
 
   const openConnectModal = useCallback(async () => {
     try {
@@ -331,3 +311,8 @@ export const useAuth = () => {
     currentChainId: chainId,
   };
 };
+
+export const useBasicAuth = () => useAuth();
+export const useWeb3Auth = () => useAuth();
+export const useFlowOnlyAuth = () => useAuth();
+export const useFullAuth = () => useAuth();

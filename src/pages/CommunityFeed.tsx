@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/auth/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useLens } from "@/hooks/useLens";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

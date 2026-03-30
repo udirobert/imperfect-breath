@@ -26,7 +26,6 @@ import { useAuthStatus, useAuthProfile, useRevenueCatStatus } from "@/stores/aut
 const WalletManager = React.lazy(() => import("./WalletManager").then((m) => ({ default: m.WalletManager })));
 import { cn } from "@/lib/utils";
 import { ConnectWalletButton } from "./wallet/ConnectWalletButton";
-import { toast } from "sonner";
 
 interface HeaderProps {
   className?: string;
@@ -55,23 +54,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     if ("vibrate" in navigator) {
       navigator.vibrate([15]); // Minimal, refined feedback
     }
-  };
-
-  // ENHANCEMENT: Elegant navigation feedback
-  const showNavigationFeedback = (message: string) => {
-    toast.success(message, {
-      duration: 2000,
-      position: "top-right",
-      style: {
-        background: "rgba(248, 250, 252, 0.95)",
-        color: "#334155",
-        border: "1px solid #e2e8f0",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: "500",
-        backdropFilter: "blur(8px)",
-      },
-    });
   };
 
   return (
@@ -158,7 +140,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                         to="/profile"
                         onClick={() => {
                           triggerHaptic();
-                          showNavigationFeedback("Opening profile");
                           handleMenuItemClick();
                         }}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
@@ -170,7 +151,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                         to="/community"
                         onClick={() => {
                           triggerHaptic();
-                          showNavigationFeedback("Joining community");
                           handleMenuItemClick();
                         }}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
@@ -183,7 +163,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                         to="/lens"
                         onClick={() => {
                           triggerHaptic();
-                          showNavigationFeedback("Opening Lens Hub");
                           handleMenuItemClick();
                         }}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
@@ -195,7 +174,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                         to="/instructor-onboarding"
                         onClick={() => {
                           triggerHaptic();
-                          showNavigationFeedback("Starting instructor journey");
                           handleMenuItemClick();
                         }}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
@@ -354,7 +332,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                       size="sm"
                       onClick={() => {
                         triggerHaptic();
-                        showNavigationFeedback("Joining community");
                       }}
                       className="flex items-center gap-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-300"
                     >
@@ -367,10 +344,9 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          triggerHaptic();
-                          showNavigationFeedback("Opening profile");
-                        }}
+                      onClick={() => {
+                        triggerHaptic();
+                      }}
                         className="flex items-center gap-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 transition-all duration-300"
                       >
                         <User className="w-4 h-4" />
@@ -398,7 +374,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                     size="sm"
                     onClick={() => {
                       triggerHaptic();
-                      showNavigationFeedback("Signing out");
                       logout();
                     }}
                     className="flex items-center gap-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all duration-300"
@@ -415,7 +390,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                       size="sm"
                       onClick={() => {
                         triggerHaptic();
-                        showNavigationFeedback("Opening sign in");
                       }}
                       className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white transition-all duration-300"
                     >
@@ -434,7 +408,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                         variant="outline"
                         onClick={() => {
                           triggerHaptic();
-                          showNavigationFeedback("Starting instructor journey");
                         }}
                         className="flex items-center gap-2 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 transition-all duration-300"
                       >

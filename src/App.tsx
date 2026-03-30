@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Core components that should load immediately
@@ -20,6 +20,9 @@ import TermsOfService from "@/pages/TermsOfService";
 // Responsive components
 import { ResponsiveSocialCreate } from "@/components/social/ResponsiveSocialCreate";
 import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
+
+// Lazy-loaded Web3 provider for routes that need blockchain features
+const LazyWeb3Provider = lazy(() => import("@/providers/LazyWeb3Provider").then(m => ({ default: m.LazyWeb3Provider })));
 
 // Large pages - lazy load these to reduce initial bundle size
 const Progress = React.lazy(() => import("@/pages/Progress"));
@@ -49,11 +52,14 @@ const PageLoader = () => (
   </div>
 );
 
-import { useAuthOrchestrator } from "@/hooks/useAuthOrchestrator";
+// Wrapper component for routes that need Web3 (blockchain) features
+const Web3RouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <LazyWeb3Provider>
+    {children}
+  </LazyWeb3Provider>
+);
 
 function App() {
-  // Initialize global auth orchestration
-  useAuthOrchestrator();
 
   return (
     <CameraProvider>
@@ -69,7 +75,7 @@ function App() {
               <Route path="/session/:mode" element={<SessionModeWrapper />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/results" element={<Results />} />
-              <Route path="/marketplace" element={<EnhancedMarketplace />} />
+              <Route path="/marketplace" element={<Web3RouteWrapper><EnhancedMarketplace /></Web3RouteWrapper>} />
               <Route path="/create" element={<CreatePattern />} />
               <Route
                 path="/create-post"
@@ -79,7 +85,7 @@ function App() {
                   </div>
                 }
               />
-              <Route path="/community" element={<CommunityFeed />} />
+              <Route path="/community" element={<Web3RouteWrapper><CommunityFeed /></Web3RouteWrapper>} />
               <Route path="/profile" element={<UserProfile />} />
               <Route
                 path="/instructor-onboarding"
@@ -87,8 +93,8 @@ function App() {
               />
               <Route path="/subscription" element={<Subscription />} />
               {/* New Lens routes */}
-              <Route path="/lens" element={<LensSocialHubPage />} />
-              <Route path="/lens/flow" element={<LensSocialFlowPage />} />
+              <Route path="/lens" element={<Web3RouteWrapper><LensSocialHubPage /></Web3RouteWrapper>} />
+              <Route path="/lens/flow" element={<Web3RouteWrapper><LensSocialFlowPage /></Web3RouteWrapper>} />
             </Route>
 
             {/* Routes without Header */}

@@ -9,7 +9,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { UnifiedAuthFlow } from '@/components/auth/UnifiedAuthFlow';
 import { toast } from 'sonner';
-import type { AuthContext } from '@/auth';
+import type { AuthContext } from '@/types/auth';
 
 const Auth = () => {
   const navigate = useNavigate();

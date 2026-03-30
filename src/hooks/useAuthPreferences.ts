@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AuthMethod } from '@/auth';
+import type { AuthMethod } from '@/types/auth';
 
 interface AuthPreferences {
   // User behavior tracking

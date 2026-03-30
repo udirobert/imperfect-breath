@@ -1,13 +1,13 @@
-import React, { useState, useCallback, useEffect, Suspense } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth, type AuthFeatures } from "@/auth";
+import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthPreferences } from "@/hooks/useAuthPreferences";
-import { useAuthPerformance } from "@/auth/performance/useAuthPerformance";
+import { useAuthPerformance } from "@/hooks/useAuthPerformance";
 import {
   Mail,
   CheckCircle,
@@ -19,7 +19,6 @@ import {
   Coins,
   Wallet,
   Star,
-  Plus,
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,29 +27,15 @@ import {
   getRecommendedAuthMethods,
   getAuthMethodDisplay,
   type AuthContext,
-} from "@/auth/auth-methods";
-import { AuthMethodCard } from "@/auth/components/AuthMethodCard";
+} from "@/types/auth";
+import { AuthMethodCard } from "./AuthMethodCard";
+import { WalletConnection } from "@/components/wallet/WalletConnection";
 
-// PERFORMANT: Lazy load wallet auth component
-const LazyWalletAuth = React.lazy(() =>
-  import("@/auth/performance/LazyWalletAuth").then((module) => ({
-    default: module.LazyWalletAuth,
-  })),
-);
-
-// PERFORMANT: Lazy load Flow auth component
-const LazyFlowAuth = React.lazy(() =>
-  import("@/auth/components/FlowAuth").then((module) => ({
-    default: module.FlowAuth,
-  })),
-);
-
-// PERFORMANT: Lazy load Lens auth component
-const LazyLensAuth = React.lazy(() =>
-  import("@/auth/components/LensAuth").then((module) => ({
-    default: module.LensAuth,
-  })),
-);
+interface AuthFeatures {
+  blockchain?: boolean;
+  flow?: boolean;
+  lens?: boolean;
+}
 
 interface UnifiedAuthFlowProps {
   // MODULAR: Support different auth feature combinations
@@ -511,50 +496,9 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
   // CLEAN: Wallet authentication (when wallet method selected)
   if (selectedMethod === "wallet" && authStep === "authenticate") {
     return (
-      <Suspense
-        fallback={
-          <Card className={cn("w-full max-w-md mx-auto", className)}>
-            <CardContent className="flex items-center justify-center p-8">
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-muted-foreground">
-                  Loading wallet options...
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        }
-      >
-        <LazyWalletAuth
-          onSuccess={handleWalletAuthSuccess}
-          onBack={handleBack}
-          onError={handleWalletAuthError}
-          className={className}
-          preload={preferences.shouldPreloadWallet}
-        />
-      </Suspense>
-    );
-  }
-
-  // CLEAN: Flow authentication (when flow method selected)
-  if (selectedMethod === "flow" && authStep === "authenticate") {
-    return (
-      <Suspense
-        fallback={
-          <Card className={cn("w-full max-w-md mx-auto", className)}>
-            <CardContent className="flex items-center justify-center p-8">
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-muted-foreground">
-                  Loading Flow authentication...
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        }
-      >
-        <div className={cn("w-full max-w-md mx-auto", className)}>
-          <div className="flex items-center gap-3 mb-4">
+      <Card className={cn("w-full max-w-md mx-auto", className)}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3 mb-2">
             <Button
               variant="ghost"
               size="sm"
@@ -563,54 +507,26 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h2 className="text-lg font-semibold flex-1">Flow Blockchain</h2>
+            <div className="text-center flex-1">
+              <CardTitle className="text-lg">Connect Wallet</CardTitle>
+            </div>
           </div>
-          <LazyFlowAuth
-            onSuccess={handleFlowAuthSuccess}
-            onError={handleFlowAuthError}
-          />
-        </div>
-      </Suspense>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <WalletConnection />
+          <Button
+            onClick={handleWalletAuthSuccess}
+            className="w-full"
+          >
+            Continue
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
-  // CLEAN: Lens authentication (when lens method selected)
-  if (selectedMethod === "lens" && authStep === "authenticate") {
-    return (
-      <Suspense
-        fallback={
-          <Card className={cn("w-full max-w-md mx-auto", className)}>
-            <CardContent className="flex items-center justify-center p-8">
-              <div className="flex items-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="text-muted-foreground">
-                  Loading Lens authentication...
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        }
-      >
-        <div className={cn("w-full max-w-md mx-auto", className)}>
-          <div className="flex items-center gap-3 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBack}
-              className="p-1 h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h2 className="text-lg font-semibold flex-1">Lens Protocol</h2>
-          </div>
-          <LazyLensAuth
-            onSuccess={handleLensAuthSuccess}
-            onError={handleLensAuthError}
-          />
-        </div>
-      </Suspense>
-    );
-  }
+  // Flow and Lens methods removed — use email or wallet auth
 
   // CLEAN: Email authentication form (when email method selected)
   if (selectedMethod === "email" && authStep === "authenticate") {

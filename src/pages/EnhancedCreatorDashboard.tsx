@@ -64,7 +64,7 @@ import {
 import { PatternStorageService } from "../lib/patternStorage";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/use-toast";
-import { useFullAuth } from "@/auth";
+import { useFullAuth } from "@/hooks/useAuth";
 import { usePatternCreation } from "../hooks/usePatternCreation";
 import {
   BlockchainSelector,
