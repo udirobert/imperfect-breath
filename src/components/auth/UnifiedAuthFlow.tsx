@@ -30,6 +30,7 @@ import {
 } from "@/types/auth";
 import { AuthMethodCard } from "./AuthMethodCard";
 import { WalletConnection } from "@/components/wallet/WalletConnection";
+import { useBlockchainAuth } from "@/hooks/useBlockchainAuth";
 
 interface AuthFeatures {
   blockchain?: boolean;
@@ -68,6 +69,7 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
   const auth = useAuth(features);
   const preferences = useAuthPreferences();
   const performance = useAuthPerformance();
+  const blockchainAuth = useBlockchainAuth();
 
   // CLEAN: Separate state for method selection vs auth flow
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
@@ -526,7 +528,104 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
     );
   }
 
-  // Flow and Lens methods removed — use email or wallet auth
+  // CLEAN: Lens authentication (when lens method selected)
+  if (selectedMethod === "lens" && authStep === "authenticate") {
+    return (
+      <Card className={cn("w-full max-w-md mx-auto", className)}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="p-1 h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center flex-1">
+              <CardTitle className="text-lg">Connect to Lens</CardTitle>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
+              <Users className="h-8 w-8 text-purple-600" />
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-lg">Lens Protocol</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Connect your wallet to authenticate with Lens
+              </p>
+            </div>
+            
+            {!blockchainAuth.state.isAuthenticated.lens ? (
+              <>
+                <WalletConnection />
+                {blockchainAuth.state.isAuthenticating && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Authenticating with Lens...
+                  </div>
+                )}
+                <Button
+                  onClick={async () => {
+                    try {
+                      const result = await blockchainAuth.authenticateLens();
+                      if (result.success) {
+                        handleLensAuthSuccess();
+                      } else {
+                        handleLensAuthError(result.error || 'Lens authentication failed');
+                      }
+                    } catch (err) {
+                      handleLensAuthError(err instanceof Error ? err.message : 'Authentication failed');
+                    }
+                  }}
+                  disabled={blockchainAuth.state.isAuthenticating}
+                  className="w-full"
+                >
+                  {blockchainAuth.state.isAuthenticating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="h-4 w-4 mr-2" />
+                      Connect with Lens
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-center justify-center gap-2 text-green-700">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium">Connected to Lens!</span>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <Button
+            onClick={handleLensAuthSuccess}
+            className="w-full"
+          >
+            Continue
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // CLEAN: Email authentication form (when email method selected)
   if (selectedMethod === "email" && authStep === "authenticate") {

@@ -170,10 +170,16 @@ export const useLens = (): UseLensReturn => {
         const result = await blockchainAuthService.resumeSession();
         if (result.success && result.lensSession) {
           setIsAuthenticated(true);
-          // For backward compatibility, we'll create an account object from the session
-          // In a real scenario, you'd fetch account details from the session
+          // Fetch account details from the session
           const storedAuthor = (blockchainAuthService as any).getAuthorAddress?.();
-          if (storedAuthor) setAuthorAddress(storedAuthor);
+          if (storedAuthor) {
+            setAuthorAddress(storedAuthor);
+            // Fetch full account details
+            const accountResult = await lensAPI.getAccount(storedAuthor);
+            if (accountResult.success && accountResult.data) {
+              setCurrentAccount(accountResult.data);
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to initialize session:", error);
@@ -210,8 +216,14 @@ export const useLens = (): UseLensReturn => {
           // Update state
           setIsAuthenticated(true);
           const storedAuthor = (blockchainAuthService as any).getAuthorAddress?.();
-          if (storedAuthor) setAuthorAddress(storedAuthor);
-          // In a real implementation, fetch current user from the service
+          if (storedAuthor) {
+            setAuthorAddress(storedAuthor);
+            // Fetch full account details
+            const accountResult = await lensAPI.getAccount(storedAuthor);
+            if (accountResult.success && accountResult.data) {
+              setCurrentAccount(accountResult.data);
+            }
+          }
         } else {
           throw new Error(result.error || "Authentication failed");
         }

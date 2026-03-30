@@ -1,17 +1,21 @@
 import { Button } from "../components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 export default function Index() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isGuest = !user;
 
   return (
     <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-4">
       <div className="text-center space-y-6 max-w-md">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground">
-          Imperfect Breath
+          Breathe Better. Together.
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground">
-          Peace through patterns. One breath at a time.
+          Guided breathing with social accountability
         </p>
         <Button
           size="lg"
@@ -20,6 +24,19 @@ export default function Index() {
         >
           Start
         </Button>
+
+        {isGuest && (
+          <div className="pt-4">
+            <p className="text-sm text-muted-foreground">
+              <Link 
+                to="/auth?redirect=/progress" 
+                className="text-primary hover:underline underline-offset-2"
+              >
+                Sign up
+              </Link> to save your progress across devices
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

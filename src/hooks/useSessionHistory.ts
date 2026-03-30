@@ -1,12 +1,23 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { differenceInCalendarDays, parseISO, isToday } from 'date-fns';
 import { BREATHING_PATTERNS } from '../lib/breathingPatterns';
 import { supabase } from '../integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { OfflineManager, type OfflineSession } from '../lib/offline/OfflineManager';
 import type { Database } from '../integrations/supabase/types';
 
 type SessionRecordFromDb = Database['public']['Tables']['sessions']['Row'];
+
+interface GuestSession {
+  id: string;
+  pattern_name: string;
+  breath_hold_time: number;
+  restlessness_score: number;
+  session_duration: number;
+  created_at: string;
+  synced: boolean;
+}
 
 export type SessionInput = {
   breathHoldTime: number;
@@ -77,12 +88,30 @@ const calculatePreferredPattern = (history: SessionRecordFromDb[]): string => {
     return patternDetails?.name || 'Unknown';
 };
 
+const convertOfflineSessionToGuestSession = (offlineSession: OfflineSession): GuestSession => ({
+  id: offlineSession.id,
+  pattern_name: offlineSession.patternName,
+  breath_hold_time: offlineSession.breathHoldTime,
+  restlessness_score: offlineSession.restlessnessScore || 0,
+  session_duration: offlineSession.duration,
+  created_at: offlineSession.startTime instanceof Date ? offlineSession.startTime.toISOString() : new Date(offlineSession.startTime).toISOString(),
+  synced: offlineSession.synced,
+});
+
 export const useSessionHistory = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const offlineManager = useMemo(() => OfflineManager.getInstance(), []);
 
-  const fetchHistory = async () => {
-    if (!user) return [];
+  const fetchOfflineSessions = useCallback((): GuestSession[] => {
+    const offlineSessions = offlineManager.getSessions();
+    return offlineSessions.map(convertOfflineSessionToGuestSession);
+  }, [offlineManager]);
+
+  const fetchHistory = async (): Promise<SessionRecordFromDb[]> => {
+    if (!user) {
+      return fetchOfflineSessions();
+    }
     const { data, error } = await supabase
       .from('sessions')
       .select('*')
@@ -91,20 +120,33 @@ export const useSessionHistory = () => {
 
     if (error) {
       console.error('Error fetching session history:', error);
-      throw new Error(error.message);
+      const offlineSessions = fetchOfflineSessions();
+      return offlineSessions;
     }
-    return data;
+    return data || [];
   };
 
-  const { data: history = [], isLoading } = useQuery<SessionRecordFromDb[]>({
+  const { data: history = [], isLoading } = useQuery<SessionRecordFromDb[] | GuestSession[]>({
     queryKey: ['sessionHistory', user?.id],
     queryFn: fetchHistory,
-    enabled: !!user,
   });
 
   const saveSessionMutation = useMutation({
     mutationFn: async (newSession: Omit<Database['public']['Tables']['sessions']['Insert'], 'user_id'>) => {
-      if (!user) throw new Error("User must be logged in to save a session.");
+      if (!user) {
+        offlineManager.saveSession({
+          patternId: newSession.pattern_name || 'custom',
+          patternName: newSession.pattern_name || 'Custom',
+          startTime: new Date(Date.now() - (newSession.session_duration || 0) * 1000),
+          endTime: new Date(),
+          duration: newSession.session_duration || 0,
+          cycleCount: Math.floor((newSession.session_duration || 0) / 20),
+          breathHoldTime: newSession.breath_hold_time || 0,
+          restlessnessScore: newSession.restlessness_score || 0,
+          completed: true,
+        });
+        return;
+      }
       
       const sessionToSave = {
         ...newSession,
@@ -133,14 +175,30 @@ export const useSessionHistory = () => {
     return saveSessionMutation.mutate(sessionForDb);
   }, [saveSessionMutation]);
 
+  const isGuestMode = !user;
+  
+  const combinedHistory = useMemo(() => {
+    const offlineSessions = fetchOfflineSessions();
+    const cloudSessions = Array.isArray(history) ? history.filter((s): s is SessionRecordFromDb => 'user_id' in (s || {})) : [];
+    const guestSessions = Array.isArray(history) ? history.filter((s): s is GuestSession => 'synced' in (s || {})) : [];
+    
+    if (user && offlineSessions.length > 0) {
+      return [...guestSessions, ...cloudSessions].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    }
+    return history as GuestSession[];
+  }, [history, user, fetchOfflineSessions]);
+
   return { 
-    history, 
+    history: combinedHistory,
+    isGuestMode,
     isLoading,
-    streak: calculateStreak(history), 
-    totalMinutes: calculateTotalMinutes(history), 
+    streak: calculateStreak(combinedHistory as SessionRecordFromDb[]), 
+    totalMinutes: calculateTotalMinutes(combinedHistory as SessionRecordFromDb[]), 
     saveSession, 
-    longestBreathHold: calculateLongestBreathHold(history), 
-    averageRestlessness: calculateAverageRestlessness(history), 
-    preferredPattern: calculatePreferredPattern(history) 
+    longestBreathHold: calculateLongestBreathHold(combinedHistory as SessionRecordFromDb[]), 
+    averageRestlessness: calculateAverageRestlessness(combinedHistory as SessionRecordFromDb[]), 
+    preferredPattern: calculatePreferredPattern(combinedHistory as SessionRecordFromDb[]) 
   };
 };

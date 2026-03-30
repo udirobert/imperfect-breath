@@ -6,13 +6,14 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, LineChart, Line, Tooltip } 
 import { format, parseISO } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Star, Clock, Activity, Zap, HeartPulse } from 'lucide-react';
 import { formatTime } from '@/lib/utils/formatters';
 
 // Using consolidated formatters from utils
 
 const Progress = () => {
-  const { history, streak, totalMinutes, longestBreathHold, averageRestlessness, preferredPattern } = useSessionHistory();
+  const { history, streak, totalMinutes, longestBreathHold, averageRestlessness, preferredPattern, isGuestMode } = useSessionHistory();
 
   const chartData = history.map(session => ({
     date: format(parseISO(session.created_at), 'MMM d'),
@@ -43,7 +44,18 @@ const Progress = () => {
       return (
         <div className="flex flex-col items-center justify-center text-center animate-fade-in p-4 h-full">
             <h2 className="text-2xl font-bold mb-4">No progress yet.</h2>
-            <p className="text-muted-foreground mb-8">Complete a session to start tracking your progress!</p>
+            {isGuestMode ? (
+              <>
+                <p className="text-muted-foreground mb-4">Complete a session to start tracking your progress!</p>
+                <p className="text-sm text-muted-foreground mb-8">
+                  <Link to="/auth?redirect=/progress" className="text-primary hover:underline font-medium">
+                    Sign up
+                  </Link> to save your progress and access it from any device.
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground mb-8">Complete a session to start tracking your progress!</p>
+            )}
             <Button asChild><Link to="/session">Start First Session</Link></Button>
         </div>
       )
@@ -51,7 +63,14 @@ const Progress = () => {
 
   return (
     <div className="flex flex-col items-center justify-center animate-fade-in p-4 space-y-8">
-      <h1 className="text-4xl font-bold">My Progress</h1>
+      <div className="flex items-center gap-4">
+        <h1 className="text-4xl font-bold">My Progress</h1>
+        {isGuestMode && (
+          <Badge variant="outline" className="text-xs">
+            Local
+          </Badge>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full max-w-5xl">
         {stats.map((stat, index) => (

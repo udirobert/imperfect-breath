@@ -5,6 +5,7 @@ import { User, UserRole } from "../types/blockchain";
 import { useWalletStatus, useWalletActions } from "./useWallet";
 import { revenueCatAuthIntegration } from "../lib/monetization/revenueCatAuthIntegration";
 import { useSiweAuth } from './useSiweAuth';
+import { useBlockchainAuth } from './useBlockchainAuth';
 
 // Blockchain features configuration - disabled by default to reduce initial bundle size
 // Users who navigate to Web3 routes will trigger lazy loading of blockchain features
@@ -29,6 +30,11 @@ export const useAuth = () => {
   // Wallet hooks for wallet integration
   const { isConnected, isConnecting, address, chainId } = useWalletStatus();
   const { connect, disconnect } = useWalletActions();
+  
+  // Blockchain auth (Lens + Flow)
+  const blockchainAuth = useBlockchainAuth();
+  const hasLensProfile = blockchainAuth.isLensAuthenticated;
+  const lensHandle = blockchainAuth.authService?.getAuthorAddress() || null;
 
   const openConnectModal = useCallback(async () => {
     try {
@@ -261,6 +267,9 @@ export const useAuth = () => {
       }
     : null;
 
+  // Additional helpers for UnifiedAuthFlow
+  const hasUser = !!session?.user?.id;
+
   return {
     // Enhanced Supabase auth with wallet support
     session,
@@ -271,6 +280,11 @@ export const useAuth = () => {
     signUpWithEmail,
     logout,
     refreshProfile,
+    
+    // Auth helpers for UnifiedAuthFlow
+    hasUser,
+    login: loginWithEmail,
+    register: signUpWithEmail,
 
     // Enhanced blockchain features
     walletUser: isConnected ? { address, chainId } : null,
@@ -309,6 +323,13 @@ export const useAuth = () => {
     ],
     currentChain: getChainName(chainId),
     currentChainId: chainId,
+    
+    // Lens/Social auth
+    hasLensProfile,
+    lensHandle,
+    hasFlowAccount: blockchainAuth.isFlowAuthenticated,
+    flowAddress: blockchainAuth.authService?.getCurrentFlowUser()?.addr || null,
+    blockchainAuth,
   };
 };
 
