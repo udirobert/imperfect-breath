@@ -6,7 +6,7 @@
  * - Lens Protocol: Social tipping and creator support
  */
 
-import { useFullAuth } from "@/auth";
+import { useFullAuth } from "@/hooks/useAuth";
 
 export interface BlockchainPaymentRequest {
   amount: number;

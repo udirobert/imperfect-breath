@@ -24,7 +24,6 @@ import { isTouchDevice } from "../../utils/mobile-detection";
 import { useAuth } from "../../hooks/useAuth";
 import { useSessionHistory } from "../../hooks/useSessionHistory";
 import { cn } from "../../lib/utils";
-import { toast } from "sonner";
 
 interface MobileAuthContext {
   type: string;
@@ -79,23 +78,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           navigator.vibrate([15]); // Minimal, refined feedback
       }
     }
-  };
-
-  // ENHANCEMENT: Elegant contextual messages
-  const showNavigationFeedback = (message: string) => {
-    toast.success(message, {
-      duration: 2000,
-      position: "bottom-center",
-      style: {
-        background: "rgba(248, 250, 252, 0.95)",
-        color: "#334155",
-        border: "1px solid #e2e8f0",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontWeight: "500",
-        backdropFilter: "blur(8px)",
-      },
-    });
   };
 
   const navItems = [
@@ -178,7 +160,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     // CLEAN: Handle auth-required features with context
     if (item.requiresAuth && !user) {
       triggerHapticFeedback("gentle");
-      showNavigationFeedback("Sign in required to continue");
+      
       const context = getAuthContext(item.id);
       const searchParams = new URLSearchParams();
       searchParams.set("context", context.type);
@@ -192,14 +174,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     if (item.id === "share") {
       if (history.length === 0) {
         triggerHapticFeedback("subtle");
-        showNavigationFeedback("Complete a session first to share");
+        
         navigate("/session");
         return;
       }
       // If user has sessions but no auth, show social-share context
       if (!user) {
         triggerHapticFeedback("gentle");
-        showNavigationFeedback("Sign in to share your progress");
+        
         const searchParams = new URLSearchParams();
         searchParams.set("context", "social-share");
         searchParams.set("source", "mobile-nav");
@@ -212,7 +194,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     // ENHANCED: Profile navigation with auth context
     if (item.id === "profile" && !user) {
       triggerHapticFeedback("subtle");
-      showNavigationFeedback("Sign in to access your profile");
+      
       const searchParams = new URLSearchParams();
       searchParams.set("context", "profile");
       searchParams.set("source", "mobile-nav");

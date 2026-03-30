@@ -6,10 +6,26 @@ import { BREATHING_PATTERNS, BreathingPattern } from "../lib/breathingPatterns";
 import { useOfflineManager } from "../lib/offline/OfflineManager";
 
 // Specialized components for different concerns
-import {
-  MeditationSession,
-  MeditationSessionConfig,
-} from "../components/session/MeditationSession";
+import { ResponsiveEnhancedSession } from "../components/session/ResponsiveEnhancedSession";
+
+interface MeditationSessionConfig {
+  mode: 'classic' | 'enhanced' | 'mobile';
+  pattern: {
+    name: string;
+    phases: {
+      inhale: number;
+      hold?: number;
+      exhale: number;
+      pause?: number;
+    };
+    difficulty: string;
+    benefits: string[];
+    description?: string;
+  };
+  autoStart: boolean;
+  maxCycles?: number;
+}
+
 import { SessionErrorBoundary } from "../lib/errors/error-boundary";
 
 /**
@@ -217,10 +233,26 @@ const BreathingSession: React.FC = () => {
     [handleSessionComplete, initialPattern]
   );
 
+  const responsiveConfig = {
+    pattern: {
+      name: sessionConfig.pattern.name,
+      phases: sessionConfig.pattern.phases,
+      benefits: sessionConfig.pattern.benefits,
+      description: sessionConfig.pattern.description,
+    },
+    mode: sessionConfig.mode === 'mobile' ? 'enhanced' : sessionConfig.mode,
+  };
+  
+  const modeConfig = {
+    enableCamera: sessionConfig.mode !== 'classic',
+    enableVision: sessionConfig.mode === 'enhanced' || sessionConfig.mode === 'mobile',
+  };
+
   return (
     <SessionErrorBoundary>
-      <MeditationSession
-        config={sessionConfig}
+      <ResponsiveEnhancedSession
+        config={responsiveConfig}
+        modeConfig={modeConfig}
         onSessionComplete={handleMeditationSessionComplete}
         onSessionExit={() => window.history.back()}
       />

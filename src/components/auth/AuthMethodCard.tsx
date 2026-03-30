@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, ArrowRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AuthMethod } from "../auth-methods";
+import type { AuthMethod } from "@/types/auth";
 
 interface AuthMethodCardProps {
   method: AuthMethod;
@@ -41,7 +41,6 @@ export const AuthMethodCard: React.FC<AuthMethodCardProps> = ({
     }
   };
 
-  // PERFORMANT: Minimal variant for space-constrained contexts
   if (variant === 'minimal') {
     return (
       <Button
@@ -51,7 +50,7 @@ export const AuthMethodCard: React.FC<AuthMethodCardProps> = ({
         className={cn(
           "flex items-center gap-3 p-4 h-auto text-left justify-start",
           "hover:bg-muted/50 transition-colors",
-          "touch-manipulation", // Mobile optimization
+          "touch-manipulation",
           isRecommended && "ring-2 ring-primary ring-offset-2",
           className
         )}
@@ -73,14 +72,13 @@ export const AuthMethodCard: React.FC<AuthMethodCardProps> = ({
     );
   }
 
-  // PERFORMANT: Compact variant for mobile
   if (variant === 'compact') {
     return (
       <Card 
         className={cn(
           "cursor-pointer transition-all duration-200",
           "hover:shadow-md hover:scale-[1.02]",
-          "active:scale-[0.98]", // Touch feedback
+          "active:scale-[0.98]",
           isRecommended && "ring-2 ring-primary ring-offset-2",
           disabled && "opacity-50 cursor-not-allowed",
           className
@@ -115,13 +113,12 @@ export const AuthMethodCard: React.FC<AuthMethodCardProps> = ({
     );
   }
 
-  // Default full variant
   return (
     <Card 
       className={cn(
         "cursor-pointer transition-all duration-200",
         "hover:shadow-lg hover:scale-[1.02]",
-        "active:scale-[0.98]", // Touch feedback
+        "active:scale-[0.98]",
         isRecommended && "ring-2 ring-primary ring-offset-2",
         disabled && "opacity-50 cursor-not-allowed",
         className
