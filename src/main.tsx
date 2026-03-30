@@ -45,25 +45,17 @@ if (!rootElement) {
     try {
       const root = createRoot(rootElement);
 
-      // Add a small delay to ensure all scripts are loaded
-      setTimeout(() => {
-        try {
-          root.render(
-            <React.StrictMode>
-              <GlobalErrorBoundary>
-                <QueryClientProvider client={queryClient}>
-                  <SessionStartupErrorBoundary>
-                    <App />
-                  </SessionStartupErrorBoundary>
-                </QueryClientProvider>
-              </GlobalErrorBoundary>
-            </React.StrictMode>
-          );
-        } catch (renderError) {
-          console.error("Error during React render:", renderError);
-          showErrorFallback(renderError);
-        }
-      }, 100); // Small delay to ensure all dependencies are ready
+      root.render(
+        <React.StrictMode>
+          <GlobalErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <SessionStartupErrorBoundary>
+                <App />
+              </SessionStartupErrorBoundary>
+            </QueryClientProvider>
+          </GlobalErrorBoundary>
+        </React.StrictMode>
+      );
 
     } catch (rootError) {
       console.error("Error creating React root:", rootError);
