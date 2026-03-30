@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useFlowAuth } from "../auth/composables/useFlowAuth";
+import { useFlow } from "../hooks/useFlow";
 import { useLens } from "../hooks/useLens";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "./ui/button";
@@ -29,11 +29,11 @@ import { ConnectWalletButton } from "./wallet/ConnectWalletButton";
 
 export const WalletManager = () => {
   const {
-    flowUser,
-    login: flowLogIn,
-    logout: flowLogOut,
-    isLoading: flowIsLoading,
-  } = useFlowAuth();
+    user: flowUser,
+    connect: flowLogIn,
+    disconnect: flowLogOut,
+  } = useFlow();
+  const flowIsLoading = false;
 
   const {
     isAuthenticated,
