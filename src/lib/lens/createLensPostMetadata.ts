@@ -1,40 +1,36 @@
 /**
  * Lens Protocol v3 Metadata Creation
  *
- * Simple metadata creation utilities for Lens v3
- * Uses basic JSON structures compatible with the new architecture
+ * Uses textOnly() from @lens-protocol/metadata for proper SDK compliance
+ * Maintains backward compatibility with existing interfaces
  */
 
+import { textOnly } from "@lens-protocol/metadata";
+import type { TextOnlyMetadata } from "@lens-protocol/metadata";
 import type { BreathingSession, PostMetadata } from "./types";
 
+export type { TextOnlyMetadata };
+
 /**
- * Create metadata for a breathing session post
+ * Generate default post content for a breathing session
+ */
+export function generateDefaultSessionPostContent(
+  session: BreathingSession,
+): string {
+  const minutes = Math.round(session.duration / 60);
+  return `🧘 Just finished a ${session.patternName} session - ${minutes} minute${minutes !== 1 ? "s" : ""}!`;
+}
+
+/**
+ * Create metadata for a breathing session post using textOnly() from Lens SDK
  */
 export function createBreathingSessionMetadata(
   session: BreathingSession,
-): PostMetadata {
-  const minutes = Math.round(session.duration / 60);
+): TextOnlyMetadata {
+  const content = generateDefaultSessionPostContent(session);
 
-  let content = `🌬️ Just completed a ${session.patternName} breathing session!\n\n`;
-  content += `⏱️ Duration: ${minutes} minute${minutes !== 1 ? "s" : ""}\n`;
-
-  if (session.score) {
-    content += `📊 Score: ${session.score}/100\n`;
-  }
-
-  if (session.cycles) {
-    content += `🔄 Cycles: ${session.cycles}\n`;
-  }
-
-  if (session.breathHoldTime) {
-    content += `💨 Max breath hold: ${session.breathHoldTime}s\n`;
-  }
-
-  content += `\n#breathing #mindfulness #wellness #${session.patternName.toLowerCase().replace(/\s+/g, "")}`;
-
-  return {
+  const metadata = textOnly({
     content,
-    title: `${session.patternName} Breathing Session`,
     tags: [
       "breathing",
       "mindfulness",
@@ -45,24 +41,24 @@ export function createBreathingSessionMetadata(
       {
         key: "sessionType",
         value: "breathing",
-        type: "string" as const,
+        type: "string",
       },
       {
         key: "pattern",
         value: session.patternName,
-        type: "string" as const,
+        type: "string",
       },
       {
         key: "duration",
         value: session.duration.toString(),
-        type: "number" as const,
+        type: "number",
       },
       ...(session.score
         ? [
             {
               key: "score",
               value: session.score.toString(),
-              type: "number" as const,
+              type: "number",
             },
           ]
         : []),
@@ -71,7 +67,7 @@ export function createBreathingSessionMetadata(
             {
               key: "cycles",
               value: session.cycles.toString(),
-              type: "number" as const,
+              type: "number",
             },
           ]
         : []),
@@ -80,13 +76,14 @@ export function createBreathingSessionMetadata(
             {
               key: "breathHoldTime",
               value: session.breathHoldTime.toString(),
-              type: "number" as const,
+              type: "number",
             },
           ]
         : []),
     ],
-    locale: "en",
-  };
+  });
+
+  return metadata;
 }
 
 /**

@@ -75,6 +75,7 @@ export interface UseLensReturn {
     patternName?: string,
   ) => Promise<SocialActionResult>;
   createPost: (content: string, tags?: string[]) => Promise<SocialActionResult>;
+  postToLens: (content: string, tags?: string[]) => Promise<SocialActionResult>;
   postSession: (
     content: string,
     sessionScore?: number,
@@ -298,7 +299,7 @@ export const useLens = (): UseLensReturn => {
 
         // Build content from session data
         let content: string;
-        let tags: string[] = ['breathing', 'mindfulness', 'wellness'];
+        const tags: string[] = ['breathing', 'mindfulness', 'wellness'];
         
         if (typeof sessionOrContent === "string") {
           content = sessionOrContent;
@@ -430,6 +431,74 @@ export const useLens = (): UseLensReturn => {
           description: errorMessage,
         });
         
+        return { success: false, error: errorMessage };
+      } finally {
+        setIsPosting(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isAuthenticated, authorAddress],
+  );
+
+  // Post custom content to Lens using textOnly() from @lens-protocol/metadata
+  const postToLens = useCallback(
+    async (content: string, tags?: string[]): Promise<SocialActionResult> => {
+      if (!isAuthenticated) {
+        return { success: false, error: "Not authenticated" };
+      }
+
+      setIsPosting(true);
+      setActionError(null);
+
+      try {
+        const session = blockchainAuthService.getCurrentLensSession();
+        if (!session) {
+          throw new Error("No active Lens session");
+        }
+
+        // Create metadata using textOnly() from @lens-protocol/metadata
+        const { textOnly } = await import("@lens-protocol/metadata");
+        const metadata = textOnly({
+          content,
+          tags: tags || ["breathing", "mindfulness", "wellness"],
+        });
+
+        // Upload metadata to Grove storage
+        const { uploadWithFallback } = await import("@/lib/lens/uploadToGrove");
+        const lensUri = await uploadWithFallback(metadata);
+
+        // Create post using Lens SDK post() action
+        const { post } = await import("@lens-protocol/client/actions");
+        const { uri, evmAddress } = await import("@lens-protocol/client");
+
+        const payload: any = { contentUri: uri(lensUri) };
+        if (authorAddress) {
+          payload.author = evmAddress(authorAddress as `0x${string}`);
+        }
+        const result = await post(session, payload);
+
+        if (result.isErr()) {
+          throw new Error(result.error.message);
+        }
+
+        const { toast } = await import("sonner");
+        toast.success("Posted to Lens!", {
+          description: "Your post has been shared on Lens",
+        });
+
+        await loadTimeline(true);
+
+        return { success: true };
+      } catch (error) {
+        const { getUserFriendlyError } = await import("@/lib/errors/user-messages");
+        const errorMessage = getUserFriendlyError(error instanceof Error ? error : String(error));
+        setActionError(errorMessage);
+
+        const { toast } = await import("sonner");
+        toast.error("Failed to post to Lens", {
+          description: errorMessage,
+        });
+
         return { success: false, error: errorMessage };
       } finally {
         setIsPosting(false);
@@ -866,6 +935,7 @@ export const useLens = (): UseLensReturn => {
     refreshAuth,
     shareBreathingSession,
     createPost,
+    postToLens,
     postSession,
     createComment,
     likePost,
