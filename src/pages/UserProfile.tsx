@@ -1,5 +1,6 @@
 import { useAuth } from "../hooks/useAuth";
 import { useLens } from "../hooks/useLens";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -9,10 +10,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Skeleton } from "../components/ui/skeleton";
 import { FollowButton } from "../components/social/SocialButton";
+import { Button } from "../components/ui/button";
+import { BarChart3, Users, Share2, Settings } from "lucide-react";
 
 const UserProfilePage = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const { currentAccount, isAuthenticating } = useLens();
+  const navigate = useNavigate();
 
   const isLoading = authLoading || isAuthenticating;
 
@@ -68,6 +72,41 @@ const UserProfilePage = () => {
           )}
           <p className="mt-2">{user?.email}</p>
         </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 mb-6">
+        <Button
+          variant="outline"
+          className="flex flex-col items-center gap-2 h-auto py-3"
+          onClick={() => navigate("/progress")}
+        >
+          <BarChart3 className="h-5 w-5" />
+          <span className="text-xs">Progress</span>
+        </Button>
+        <Button
+          variant="outline"
+          className="flex flex-col items-center gap-2 h-auto py-3"
+          onClick={() => navigate("/community")}
+        >
+          <Users className="h-5 w-5" />
+          <span className="text-xs">Community</span>
+        </Button>
+        <Button
+          variant="outline"
+          className="flex flex-col items-center gap-2 h-auto py-3"
+          onClick={() => navigate("/create-post")}
+        >
+          <Share2 className="h-5 w-5" />
+          <span className="text-xs">Share</span>
+        </Button>
+        <Button
+          variant="outline"
+          className="flex flex-col items-center gap-2 h-auto py-3"
+          onClick={() => navigate("/settings")}
+        >
+          <Settings className="h-5 w-5" />
+          <span className="text-xs">Settings</span>
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

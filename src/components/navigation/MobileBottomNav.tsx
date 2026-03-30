@@ -11,24 +11,10 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import {
-  Heart,
-  Share2,
-  BarChart3,
-  Users,
-  User,
-  Plus,
-  Sparkles,
-} from "lucide-react";
+import { Heart, User, Sparkles } from "lucide-react";
 import { isTouchDevice } from "../../utils/mobile-detection";
 import { useAuth } from "../../hooks/useAuth";
-import { useSessionHistory } from "../../hooks/useSessionHistory";
 import { cn } from "../../lib/utils";
-
-interface MobileAuthContext {
-  type: string;
-  source: string;
-}
 
 interface NavItem {
   id: string;
@@ -39,7 +25,6 @@ interface NavItem {
   color: string;
   activeColor: string;
   description: string;
-  requiresAuth?: boolean;
   badge?: string;
 }
 
@@ -53,7 +38,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { history } = useSessionHistory();
   const isMobile = isTouchDevice();
 
   // Only show on mobile devices
@@ -82,8 +66,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   const navItems = [
     {
-      id: "breathe",
-      label: "Breathe",
+      id: "home",
+      label: "Home",
       icon: Heart,
       path: "/",
       isActive: location.pathname === "/",
@@ -92,36 +76,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       description: "Start breathing session",
     },
     {
-      id: "share",
-      label: "Share",
-      icon: Share2,
-      path: "/create-post",
-      isActive: location.pathname === "/create-post",
+      id: "session",
+      label: "Session",
+      icon: Sparkles,
+      path: "/session/classic",
+      isActive: location.pathname.startsWith("/session"),
       color: "text-blue-600",
       activeColor: "text-blue-700 bg-blue-50",
-      description: "Share your progress",
-      badge: history.length > 0 && !user ? "New" : undefined,
-    },
-    {
-      id: "progress",
-      label: "Progress",
-      icon: BarChart3,
-      path: "/progress",
-      isActive: location.pathname === "/progress",
-      color: "text-purple-600",
-      activeColor: "text-purple-700 bg-purple-50",
-      description: "View your stats",
-      requiresAuth: true,
-    },
-    {
-      id: "community",
-      label: "Community",
-      icon: Users,
-      path: "/community",
-      isActive: location.pathname === "/community",
-      color: "text-orange-600",
-      activeColor: "text-orange-700 bg-orange-50",
-      description: "Connect with others",
+      description: "Start a breathing session",
     },
     {
       id: "profile",
@@ -136,65 +98,13 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       description: user
         ? "Your profile and settings"
         : "Sign in to save progress",
-      // ENHANCED: Visual indicator for unauthenticated state
       badge: !user ? "•" : undefined,
     },
   ] as NavItem[];
 
-  // ENHANCED: Context-aware navigation with smart auth handling
   const handleNavigation = (item: NavItem) => {
-    // MODULAR: Build auth context based on navigation intent
-    const getAuthContext = (itemId: string): MobileAuthContext => {
-      switch (itemId) {
-        case "progress":
-          return { type: "progress-tracking", source: "mobile-nav" };
-        case "share":
-          return { type: "social-share", source: "mobile-nav" };
-        case "profile":
-          return { type: "profile", source: "mobile-nav" };
-        default:
-          return { type: "profile", source: "mobile-nav" };
-      }
-    };
-
-    // CLEAN: Handle auth-required features with context
-    if (item.requiresAuth && !user) {
-      triggerHapticFeedback("gentle");
-      
-      const context = getAuthContext(item.id);
-      const searchParams = new URLSearchParams();
-      searchParams.set("context", context.type);
-      searchParams.set("source", context.source);
-      searchParams.set("redirect", item.path);
-      navigate(`/auth?${searchParams.toString()}`);
-      return;
-    }
-
-    // ENHANCED: Smart share handling with context
-    if (item.id === "share") {
-      if (history.length === 0) {
-        triggerHapticFeedback("subtle");
-        
-        navigate("/session");
-        return;
-      }
-      // If user has sessions but no auth, show social-share context
-      if (!user) {
-        triggerHapticFeedback("gentle");
-        
-        const searchParams = new URLSearchParams();
-        searchParams.set("context", "social-share");
-        searchParams.set("source", "mobile-nav");
-        searchParams.set("redirect", item.path);
-        navigate(`/auth?${searchParams.toString()}`);
-        return;
-      }
-    }
-
-    // ENHANCED: Profile navigation with auth context
     if (item.id === "profile" && !user) {
       triggerHapticFeedback("subtle");
-      
       const searchParams = new URLSearchParams();
       searchParams.set("context", "profile");
       searchParams.set("source", "mobile-nav");
@@ -202,9 +112,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       return;
     }
 
-    // Default navigation with subtle haptic feedback
     triggerHapticFeedback("subtle");
-
     navigate(item.path);
   };
 
@@ -217,7 +125,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         className,
       )}
     >
-      <div className="grid grid-cols-5 gap-1 px-2 py-2">
+      <div className="grid grid-cols-3 gap-1 px-2 py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.isActive;
@@ -263,20 +171,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             </Button>
           );
         })}
-      </div>
-
-      {/* Floating Action Button - Refined Premium Design */}
-      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-        <Button
-          onClick={() => {
-            triggerHapticFeedback("gentle");
-            navigate("/session/classic");
-          }}
-          size="lg"
-          className="h-12 w-12 rounded-full bg-slate-800 hover:bg-slate-900 shadow-lg hover:shadow-xl transition-all duration-500 active:scale-95"
-        >
-          <Plus className="h-6 w-6 text-white transition-transform duration-200" />
-        </Button>
       </div>
     </nav>
   );

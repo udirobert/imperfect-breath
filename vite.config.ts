@@ -20,16 +20,6 @@ const getChunkName = (id: string): string | undefined => {
   }
   
   // Safe independent libraries that can be chunked
-  if (id.includes('@tensorflow/tfjs-core') || 
-      id.includes('@tensorflow/tfjs-backend') ||
-      id.includes('@tensorflow/tfjs-converter')) {
-    return 'tensorflow-core';
-  }
-  
-  if (id.includes('@tensorflow-models')) {
-    return 'tensorflow-models';
-  }
-  
   if (id.includes('date-fns') || 
       id.includes('uuid') || 
       id.includes('lodash')) {
@@ -228,11 +218,6 @@ export default defineConfig(({ mode }) => {
       ],
       // Exclude optional dependencies that may not be available
       exclude: [
-        "@tensorflow/tfjs-backend-webgpu",
-        "@mediapipe/pose",
-        "@mediapipe/camera_utils",
-        "@mediapipe/control_utils",
-        "@mediapipe/drawing_utils",
         "@lens-chain/sdk",
         "@lens-chain/storage-client"
       ],
