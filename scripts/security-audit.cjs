@@ -31,7 +31,7 @@ const CONFIG = {
   FILE_EXTENSIONS: ['.js', '.ts', '.jsx', '.tsx', '.py', '.md', '.json', '.env'],
   
   // Directories to exclude
-  EXCLUDE_DIRS: ['node_modules', '.git', 'dist', 'build', '.next'],
+  EXCLUDE_DIRS: ['node_modules', '.git', 'dist', 'build', '.next', 'venv', '.venv'],
   
   // Security headers to check for
   SECURITY_HEADERS: [

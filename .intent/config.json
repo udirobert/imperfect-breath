@@ -1,0 +1,148 @@
+{
+  "scripts": [
+    {
+      "name": "dev",
+      "command": "npm run dev",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "build:secure",
+      "command": "npm run build:secure",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "build:dev",
+      "command": "npm run build:dev",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "mode": "command",
+      "category": "lint"
+    },
+    {
+      "name": "preview",
+      "command": "npm run preview",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "debug:prod",
+      "command": "npm run debug:prod",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "setup",
+      "command": "npm run setup",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "security",
+      "command": "npm run security",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "security:secrets",
+      "command": "npm run security:secrets",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "deploy",
+      "command": "npm run deploy",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "deploy:vision",
+      "command": "npm run deploy:vision",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "deploy:firewall",
+      "command": "npm run deploy:firewall",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "deploy:domain",
+      "command": "npm run deploy:domain",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "lens:v3-only",
+      "command": "npm run lens:v3-only",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "verify:blockchain",
+      "command": "npm run verify:blockchain",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "verify:lens",
+      "command": "npm run verify:lens",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "verify:flow",
+      "command": "npm run verify:flow",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "verify:api",
+      "command": "npm run verify:api",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "lens:dev",
+      "command": "npm run lens:dev",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "security:audit",
+      "command": "npm run security:audit",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "test",
+      "command": "npm run test",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:e2e",
+      "command": "npm run test:e2e",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:e2e:ui",
+      "command": "npm run test:e2e:ui",
+      "mode": "command",
+      "category": "test"
+    }
+  ]
+}
