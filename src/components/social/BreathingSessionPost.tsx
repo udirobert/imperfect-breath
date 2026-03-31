@@ -3,7 +3,7 @@
  * Updated for Lens SDK v3 with enhanced desktop sharing
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useLens } from "../../hooks/useLens";
 import type { BreathingSession } from "../../lib/lens";
 import type { SessionData, ShareableSessionData } from "../../lib/sharing";
@@ -22,12 +22,18 @@ import {
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
+import { Textarea } from "../../components/ui/textarea";
 import {
   Share2,
   Twitter,
+  Edit3,
+  Check,
+  X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useShareSession } from "../../lib/sharing";
+import { generateDefaultSessionPostContent } from "../../lib/lens/createLensPostMetadata";
 interface BreathingSessionPostProps {
   sessionData: BreathingSession;
   onPublished?: (txHash: string) => void;
@@ -39,12 +45,71 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
   onPublished,
   participatingChallenges = [],
 }) => {
-  const { shareBreathingSession, isPosting, isAuthenticated, actionError } =
+  const { shareBreathingSession, postToLens, isPosting, isAuthenticated, actionError } =
     useLens();
   const { shareOnTwitter, shareNative, copyToClipboard, hasNativeShare } = useShareSession();
   const [isPublishing, setIsPublishing] = useState(false);
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("lens");
+  const [isEditingLensPost, setIsEditingLensPost] = useState(false);
+  const [lensPostContent, setLensPostContent] = useState("");
+
+  const defaultLensPostContent = useMemo(() => {
+    return generateDefaultSessionPostContent({
+      ...sessionData,
+      completedAt: sessionData.completedAt || new Date().toISOString(),
+    });
+  }, [sessionData]);
+
+  const handleStartEditingLensPost = () => {
+    setLensPostContent(defaultLensPostContent);
+    setIsEditingLensPost(true);
+  };
+
+  const handleCancelEditingLensPost = () => {
+    setIsEditingLensPost(false);
+    setLensPostContent("");
+  };
+
+  const handlePublishLensPost = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please connect to Lens Protocol first", {
+        description: "You need to authenticate with Lens to share your session",
+      });
+      return;
+    }
+
+    const content = isEditingLensPost ? lensPostContent : defaultLensPostContent;
+    if (!content.trim()) {
+      toast.error("Post content cannot be empty");
+      return;
+    }
+
+    try {
+      setIsPublishing(true);
+
+      const result = await postToLens(content.trim());
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to post to Lens");
+      }
+
+      toast.success("Posted to Lens!", {
+        description: "Your session has been shared on Lens",
+      });
+
+      setIsEditingLensPost(false);
+      onPublished?.("");
+    } catch (error) {
+      console.error("Post to Lens error:", error);
+      toast.error("Failed to post to Lens", {
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   // Available challenges
   const availableChallenges = [
@@ -272,25 +337,82 @@ export const BreathingSessionPost: React.FC<BreathingSessionPostProps> = ({
               {hasNativeShare ? "Share" : "Copy to Share"}
             </Button>
 
-            {isAuthenticated && (
-              <Button
-                onClick={handlePublish}
-                disabled={isPosting || isPublishing}
-                variant="outline"
-                className="w-full justify-center gap-2 border-slate-200 hover:bg-slate-50 text-slate-700"
-              >
-                {isPublishing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-400 mr-2" />
-                    Sharing...
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="h-4 w-4" />
-                    Share on Lens
-                  </>
-                )}
-              </Button>
+            {isAuthenticated ? (
+              isEditingLensPost ? (
+                <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <Edit3 className="h-4 w-4 text-slate-500" />
+                    <span className="text-sm font-medium text-slate-700">Edit your post</span>
+                  </div>
+                  <Textarea
+                    value={lensPostContent}
+                    onChange={(e) => setLensPostContent(e.target.value)}
+                    placeholder="Write your post..."
+                    rows={4}
+                    className="resize-none"
+                    maxLength={500}
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">{lensPostContent.length}/500</span>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleCancelEditingLensPost}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handlePublishLensPost}
+                        disabled={isPublishing || !lensPostContent.trim()}
+                      >
+                        {isPublishing ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-1" />
+                        )}
+                        Post to Lens
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-600 italic">
+                    "{defaultLensPostContent}"
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleStartEditingLensPost}
+                      variant="outline"
+                      className="flex-1 justify-center gap-2"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      Edit Post
+                    </Button>
+                    <Button
+                      onClick={handlePublishLensPost}
+                      disabled={isPublishing}
+                      className="flex-1 justify-center gap-2"
+                    >
+                      {isPublishing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Share2 className="h-4 w-4" />
+                      )}
+                      Share
+                    </Button>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="text-center py-2">
+                <p className="text-xs text-slate-400">
+                  Connect to Lens Protocol for decentralized sharing
+                </p>
+              </div>
             )}
           </div>
 

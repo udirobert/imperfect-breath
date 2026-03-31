@@ -65,7 +65,7 @@ const Results = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAuthenticated: isLensAuthenticated } = useLens();
-  const { streak, totalMinutes, saveSession, history } = useSessionHistory();
+  const { streak, totalMinutes, saveSession, history, isGuestMode } = useSessionHistory();
   const { canUseAIAnalysis } = useAIFeatureAccess();
   const {
     analyzeSession,
@@ -149,7 +149,7 @@ const Results = () => {
   };
 
   useEffect(() => {
-    if (sessionData.patternName && !hasSavedRef.current && user) {
+    if (sessionData.patternName && !hasSavedRef.current) {
       try {
         saveSession({
           breathHoldTime: sessionData.breathHoldTime || 0,
@@ -157,11 +157,12 @@ const Results = () => {
           sessionDuration: sessionData.sessionDuration || 0,
           patternName: sessionData.patternName,
         });
-        toast.success("Session saved successfully!");
+        if (user) {
+          toast.success("Session saved successfully!");
+        }
         hasSavedRef.current = true;
       } catch (error) {
         console.error("Failed to save session", error);
-        toast.error("Could not save your session. Please try again.");
       }
     }
   }, [
@@ -610,6 +611,19 @@ Check out Imperfect Breath!`;
         <p className="text-muted-foreground mb-8">
           Take a moment to notice how you feel.
         </p>
+
+        {isGuestMode && (
+          <div className="mb-6 p-4 bg-muted/50 rounded-lg max-w-md mx-auto">
+            <p className="text-sm text-muted-foreground">
+              <button 
+                onClick={() => navigate('/auth?redirect=/progress')}
+                className="text-primary hover:underline font-medium"
+              >
+                Create an account
+              </button> to save your progress and see your history across devices.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full max-w-4xl">
           {stats.map((stat, index) => (

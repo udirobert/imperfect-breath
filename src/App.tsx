@@ -16,6 +16,7 @@ import NotFound from "@/pages/NotFound";
 import PatternSelectionPage from "@/pages/PatternSelectionPage";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
+import Settings from "@/pages/Settings";
 
 // Responsive components
 import { ResponsiveSocialCreate } from "@/components/social/ResponsiveSocialCreate";
@@ -92,6 +93,7 @@ function App() {
                 element={<InstructorOnboarding />}
               />
               <Route path="/subscription" element={<Subscription />} />
+              <Route path="/settings" element={<Settings />} />
               {/* New Lens routes */}
               <Route path="/lens" element={<Web3RouteWrapper><LensSocialHubPage /></Web3RouteWrapper>} />
               <Route path="/lens/flow" element={<Web3RouteWrapper><LensSocialFlowPage /></Web3RouteWrapper>} />

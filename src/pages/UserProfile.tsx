@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Skeleton } from "../components/ui/skeleton";
 import { FollowButton } from "../components/social/SocialButton";
 import { Button } from "../components/ui/button";
-import { BarChart3, Users, Share2, Settings } from "lucide-react";
+import { BarChart3, Users, Share2, Settings, CreditCard, Store } from "lucide-react";
 
 const UserProfilePage = () => {
   const { user, profile, loading: authLoading } = useAuth();
@@ -74,7 +74,7 @@ const UserProfilePage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 mb-6">
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-6">
         <Button
           variant="outline"
           className="flex flex-col items-center gap-2 h-auto py-3"
@@ -82,6 +82,22 @@ const UserProfilePage = () => {
         >
           <BarChart3 className="h-5 w-5" />
           <span className="text-xs">Progress</span>
+        </Button>
+        <Button
+          variant="outline"
+          className="flex flex-col items-center gap-2 h-auto py-3"
+          onClick={() => navigate("/subscription")}
+        >
+          <CreditCard className="h-5 w-5" />
+          <span className="text-xs">Subscription</span>
+        </Button>
+        <Button
+          variant="outline"
+          className="flex flex-col items-center gap-2 h-auto py-3"
+          onClick={() => navigate("/marketplace")}
+        >
+          <Store className="h-5 w-5" />
+          <span className="text-xs">Marketplace</span>
         </Button>
         <Button
           variant="outline"
