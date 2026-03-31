@@ -1,8 +1,39 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Settings as SettingsIcon, User, Bell, Palette, Shield, HelpCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Settings as SettingsIcon, User, Bell, Palette, Shield, HelpCircle, LogOut } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { useLens } from '../hooks/useLens';
+import { useFlow } from '../hooks/useFlow';
+import { useTheme } from 'next-themes';
+import { toast } from 'sonner';
 
 const Settings = () => {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const { logout: lensLogout } = useLens();
+  const { disconnect: flowDisconnect } = useFlow();
+  const { theme, setTheme } = useTheme();
+
+  const handleSignOut = async () => {
+    try {
+      await Promise.all([
+        signOut(),
+        lensLogout(),
+        flowDisconnect()
+      ]);
+      toast.success('Signed out successfully');
+      navigate('/');
+    } catch (error) {
+      toast.error('Failed to sign out completely');
+      console.error('Sign out error:', error);
+    }
+  };
+
+  const cycleTheme = () => {
+    if (theme === 'system') setTheme('light');
+    else if (theme === 'light') setTheme('dark');
+    else setTheme('system');
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -40,6 +71,16 @@ const Settings = () => {
                 <p className="font-medium text-gray-900 dark:text-white">Connected Accounts</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Manage Web3 wallet and social connections</p>
               </button>
+              <button 
+                onClick={handleSignOut}
+                className="w-full text-left px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-medium text-red-600 dark:text-red-400">Sign Out</p>
+                  <p className="text-sm text-red-500/70 dark:text-red-400/70">Disconnect from all associated accounts</p>
+                </div>
+                <LogOut className="h-5 w-5 text-red-500 dark:text-red-400" />
+              </button>
             </div>
           </div>
 
@@ -68,9 +109,14 @@ const Settings = () => {
               Appearance
             </h2>
             <div className="space-y-3">
-              <button className="w-full text-left px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                <p className="font-medium text-gray-900 dark:text-white">Theme</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Light, dark, or system default</p>
+              <button 
+                onClick={cycleTheme}
+                className="w-full text-left px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex justify-between items-center"
+              >
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">Theme</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Current: {theme?.charAt(0).toUpperCase()}{theme?.slice(1) || 'System'}</p>
+                </div>
               </button>
             </div>
           </div>

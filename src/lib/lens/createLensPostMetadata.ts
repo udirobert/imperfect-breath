@@ -5,7 +5,7 @@
  * Maintains backward compatibility with existing interfaces
  */
 
-import { textOnly } from "@lens-protocol/metadata";
+import { textOnly, MetadataAttributeType } from "@lens-protocol/metadata";
 import type { TextOnlyMetadata } from "@lens-protocol/metadata";
 import type { BreathingSession, PostMetadata } from "./types";
 
@@ -41,24 +41,24 @@ export function createBreathingSessionMetadata(
       {
         key: "sessionType",
         value: "breathing",
-        type: "string",
+        type: MetadataAttributeType.STRING,
       },
       {
         key: "pattern",
         value: session.patternName,
-        type: "string",
+        type: MetadataAttributeType.STRING,
       },
       {
         key: "duration",
         value: session.duration.toString(),
-        type: "number",
+        type: MetadataAttributeType.NUMBER,
       },
       ...(session.score
         ? [
             {
               key: "score",
               value: session.score.toString(),
-              type: "number",
+              type: MetadataAttributeType.NUMBER as MetadataAttributeType.NUMBER,
             },
           ]
         : []),
@@ -67,7 +67,7 @@ export function createBreathingSessionMetadata(
             {
               key: "cycles",
               value: session.cycles.toString(),
-              type: "number",
+              type: MetadataAttributeType.NUMBER as MetadataAttributeType.NUMBER,
             },
           ]
         : []),
@@ -76,7 +76,7 @@ export function createBreathingSessionMetadata(
             {
               key: "breathHoldTime",
               value: session.breathHoldTime.toString(),
-              type: "number",
+              type: MetadataAttributeType.NUMBER as MetadataAttributeType.NUMBER,
             },
           ]
         : []),
@@ -93,13 +93,11 @@ export function createTextPostMetadata(
   content: string,
   title?: string,
   tags?: string[],
-): PostMetadata {
-  return {
+): TextOnlyMetadata {
+  return textOnly({
     content,
-    title,
     tags: tags || ["imperfect-breath"],
-    locale: "en",
-  };
+  });
 }
 
 /**
@@ -108,27 +106,25 @@ export function createTextPostMetadata(
 export function createAchievementMetadata(
   achievementName: string,
   description: string,
-): PostMetadata {
+): TextOnlyMetadata {
   const content = `🏆 Achievement unlocked: ${achievementName}!\n\n${description}\n\n#achievement #wellness #breathing #milestone`;
 
-  return {
+  return textOnly({
     content,
-    title: `Achievement: ${achievementName}`,
     tags: ["achievement", "wellness", "breathing", "milestone"],
     attributes: [
       {
         key: "achievementType",
         value: "breathing",
-        type: "string" as const,
+        type: MetadataAttributeType.STRING,
       },
       {
         key: "achievementName",
         value: achievementName,
-        type: "string" as const,
+        type: MetadataAttributeType.STRING,
       },
     ],
-    locale: "en",
-  };
+  });
 }
 
 /**
@@ -138,7 +134,7 @@ export function createChallengeMetadata(
   challengeName: string,
   action: "joined" | "completed" | "progress",
   progress?: { current: number; total: number },
-): PostMetadata {
+): TextOnlyMetadata {
   let content = "";
 
   switch (action) {
@@ -157,33 +153,31 @@ export function createChallengeMetadata(
     }
   }
 
-  return {
+  return textOnly({
     content,
-    title: `Challenge ${action}: ${challengeName}`,
     tags: ["challenge", "breathing", "wellness", action],
     attributes: [
       {
         key: "challengeAction",
         value: action,
-        type: "string" as const,
+        type: MetadataAttributeType.STRING,
       },
       {
         key: "challengeName",
         value: challengeName,
-        type: "string" as const,
+        type: MetadataAttributeType.STRING,
       },
       ...(progress
         ? [
             {
               key: "progress",
               value: `${progress.current}/${progress.total}`,
-              type: "string" as const,
+              type: MetadataAttributeType.STRING as MetadataAttributeType.STRING,
             },
           ]
         : []),
     ],
-    locale: "en",
-  };
+  });
 }
 
 /**
