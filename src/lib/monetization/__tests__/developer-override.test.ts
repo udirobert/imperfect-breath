@@ -2,32 +2,19 @@
  * Developer Override Tests
  * CLEAN: Comprehensive testing of developer override functionality
  * MODULAR: Isolated test cases for each feature
+ * @vitest-environment jsdom
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { 
   getDeveloperOverride, 
   setDeveloperOverride, 
   clearDeveloperOverride 
 } from '../revenueCatConfig';
 
-// Mock localStorage for testing
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; }
-  };
-})();
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
-});
-
 describe('Developer Override System', () => {
   beforeEach(() => {
-    localStorageMock.clear();
+    localStorage.clear();
   });
 
   describe('getDeveloperOverride', () => {
@@ -45,7 +32,7 @@ describe('Developer Override System', () => {
         timestamp: Date.now()
       };
       
-      localStorageMock.setItem('imperfect-breath-dev-override', JSON.stringify(testOverride));
+      localStorage.setItem('imperfect-breath-dev-override', JSON.stringify(testOverride));
       
       const override = getDeveloperOverride();
       expect(override.enabled).toBe(true);
@@ -55,7 +42,7 @@ describe('Developer Override System', () => {
     });
 
     it('should handle invalid localStorage data gracefully', () => {
-      localStorageMock.setItem('imperfect-breath-dev-override', 'invalid-json');
+      localStorage.setItem('imperfect-breath-dev-override', 'invalid-json');
       
       const override = getDeveloperOverride();
       expect(override.enabled).toBe(false);

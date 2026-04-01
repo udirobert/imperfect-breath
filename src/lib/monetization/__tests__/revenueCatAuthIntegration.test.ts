@@ -2,23 +2,24 @@
  * RevenueCat Authentication Integration Tests
  * 
  * Tests for the enhanced RevenueCat authentication integration with email support
+ * @vitest-environment jsdom
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { RevenueCatAuthIntegration } from '../revenueCatAuthIntegration';
-import { revenueCatService } from '../revenueCat';
 
-// Mock revenueCatService
-const mockRevenueCatService = {
-  isRevenueCatAvailable: vi.fn(),
-  identifyUser: vi.fn(),
-  initialize: vi.fn(),
-};
+const { mockRevenueCatService } = vi.hoisted(() => ({
+  mockRevenueCatService: {
+    isRevenueCatAvailable: vi.fn(),
+    identifyUser: vi.fn(),
+    initialize: vi.fn(),
+  },
+}));
 
-// Mock the actual revenueCatService import
 vi.mock('../revenueCat', () => ({
   revenueCatService: mockRevenueCatService,
 }));
+
+import { RevenueCatAuthIntegration } from '../revenueCatAuthIntegration';
 
 describe('RevenueCatAuthIntegration', () => {
   let revenueCatAuthIntegration: RevenueCatAuthIntegration;

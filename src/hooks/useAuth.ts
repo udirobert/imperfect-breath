@@ -36,6 +36,9 @@ export const useAuth = () => {
   const hasLensProfile = blockchainAuth.isLensAuthenticated;
   const lensHandle = blockchainAuth.authService?.getAuthorAddress() || null;
 
+  // SIWE auth hook — must be called at top level, not inside a callback
+  const { authenticate: siweAuthenticate } = useSiweAuth();
+
   const openConnectModal = useCallback(async () => {
     try {
       await connect();
@@ -206,8 +209,7 @@ export const useAuth = () => {
 
       // If no Supabase session, perform SIWE verification for wallet-only auth
       if (!session) {
-        const { authenticate } = useSiweAuth();
-        const result = await authenticate();
+        const result = await siweAuthenticate();
         if (!result.success) {
           throw new Error(result.error || 'SIWE authentication failed');
         }
@@ -242,7 +244,7 @@ export const useAuth = () => {
       console.error("Wallet login failed:", error);
       throw error;
     }
-  }, [address, session, chainId, connectWallet, refreshProfile]);
+  }, [address, session, chainId, connectWallet, refreshProfile, siweAuthenticate]);
 
   const user = session?.user
     ? {

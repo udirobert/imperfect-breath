@@ -31,11 +31,26 @@ interface FlowConfig {
   discoveryWallet: string;
 }
 
+interface LensAccountInfo {
+  address: string;
+  ownedBy?: { address: string };
+}
+
+interface LensSessionInfo {
+  account?: LensAccountInfo;
+}
+
+interface FlowUser {
+  addr: string | null;
+  loggedIn: boolean;
+  [key: string]: unknown;
+}
+
 interface AuthResult {
   success: boolean;
   error?: string;
   lensSession?: SessionClient;
-  flowUser?: any;
+  flowUser?: FlowUser;
 }
 
 interface PaymentResult {
@@ -176,6 +191,7 @@ export class BlockchainAuthService {
         signMessage: signMessageWith({
           address: walletAddress as `0x${string}`,
           sign: signMessage,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any),
       });
 
@@ -189,7 +205,8 @@ export class BlockchainAuthService {
       try {
         const info = await currentSession(this.activeLensSession);
         if (!info.isErr()) {
-          const acct: any = (info.value as any).account;
+          const sessionInfo = info.value as LensSessionInfo;
+          const acct = sessionInfo.account;
           const addr: string | null = acct?.ownedBy?.address ?? acct?.address ?? null;
           if (addr) this.setAuthorAddress(addr);
         }
@@ -220,7 +237,8 @@ export class BlockchainAuthService {
         try {
           const info = await currentSession(this.activeLensSession);
           if (!info.isErr()) {
-            const acct: any = (info.value as any).account;
+          const sessionInfo = info.value as LensSessionInfo;
+          const acct = sessionInfo.account;
             const addr: string | null = acct?.ownedBy?.address ?? acct?.address ?? null;
             if (addr) this.setAuthorAddress(addr);
           }
@@ -234,7 +252,7 @@ export class BlockchainAuthService {
       return {
         success: true,
         lensSession: this.activeLensSession || undefined,
-        flowUser: this.isFlowInitialized ? undefined : null,
+        flowUser: this.isFlowInitialized ? undefined : undefined,
       };
     } catch (error) {
       return {
@@ -283,11 +301,11 @@ export class BlockchainAuthService {
     return result.value;
   }
 
-  async getAuthorAccount(): Promise<any | null> {
+  async getAuthorAccount(): Promise<LensAccountInfo | null> {
     if (!this.activeLensSession) return null;
     const sessionInfo = await currentSession(this.activeLensSession);
     if (sessionInfo.isErr()) return null;
-    return (sessionInfo.value as any).account ?? null;
+    return (sessionInfo.value as LensSessionInfo).account ?? null;
   }
 
   /**
@@ -342,9 +360,9 @@ export class BlockchainAuthService {
   /**
    * Get current Flow user if authenticated
    */
-  getCurrentFlowUser(): any {
+  getCurrentFlowUser(): FlowUser | null {
     if (!this.isFlowInitialized) return null;
-    return fcl.currentUser().snapshot();
+    return fcl.currentUser().snapshot() as FlowUser | null;
   }
 
   /**
@@ -401,6 +419,7 @@ export class BlockchainAuthService {
               }
           }
         `,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         args: (arg: any, t: any) => [
           arg(amount, t.UFix64),
           arg(recipient, t.Address),

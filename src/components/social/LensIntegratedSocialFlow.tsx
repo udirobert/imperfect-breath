@@ -28,6 +28,8 @@ import { useLens } from "../../hooks/useLens";
 import { BreathingSessionPost } from "./BreathingSessionPost";
 import { toast } from "sonner";
 import { useShareSession, type SessionData, type ShareableSessionData } from "../../lib/sharing";
+import { useAccount } from "wagmi";
+import { ConnectKitButton } from "connectkit";
 
 interface LensIntegratedSocialFlowProps {
   phase: "completion" | "sharing" | "celebration" | "active";
@@ -54,9 +56,18 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
     isLoadingTimeline,
     loadTimeline,
   } = useLens();
+  const { address: connectedAddress, isConnected } = useAccount();
+  const { shareOnTwitter, calculateScore } = useShareSession();
 
-  const [walletAddress, setWalletAddress] = useState("");
+  const [walletAddress, setWalletAddress] = useState(connectedAddress || "");
   const [activeTab, setActiveTab] = useState(initialTab ?? "share");
+
+  // Sync wallet address when account changes
+  React.useEffect(() => {
+    if (connectedAddress) {
+      setWalletAddress(connectedAddress);
+    }
+  }, [connectedAddress]);
 
   // Handle Lens authentication
   const handleAuthenticate = async () => {
@@ -127,24 +138,33 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
           Connect to Lens Protocol to share your breathing achievements with the decentralized social community.
         </p>
 
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Enter wallet address (0x...)"
-            value={walletAddress}
-            onChange={(e) => setWalletAddress(e.target.value)}
-            disabled={isAuthenticating}
-            className="flex-1 px-3 py-2 border rounded-md text-sm"
-          />
-          <Button
-            onClick={handleAuthenticate}
-            disabled={isAuthenticating || !walletAddress.trim()}
-          >
-            {isAuthenticating && (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            )}
-            Connect
-          </Button>
+        <div className="flex flex-col gap-3">
+          {isConnected ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter wallet address (0x...)"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                disabled={isAuthenticating}
+                className="flex-1 px-3 py-2 border rounded-md text-sm"
+              />
+              <Button
+                onClick={handleAuthenticate}
+                disabled={isAuthenticating || !walletAddress.trim()}
+              >
+                {isAuthenticating && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Connect Lens
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-4 border-2 border-dashed rounded-lg">
+              <p className="text-sm text-muted-foreground">No wallet connected</p>
+              <ConnectKitButton />
+            </div>
+          )}
         </div>
 
         {actionError && (
@@ -221,9 +241,6 @@ export const LensIntegratedSocialFlow: React.FC<LensIntegratedSocialFlowProps> =
       </Card>
     );
   };
-
-  // Import shared utilities
-  const { shareOnTwitter, calculateScore } = useShareSession();
 
   // Render quick actions
   const renderQuickActions = () => (

@@ -11,6 +11,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { blockchainAuthService } from "../services/blockchain/BlockchainAuthService";
 import { lensAPI } from "../lib/lens";
+import { ShareTextGenerator } from "../lib/sharing";
 import type {
   Account,
   Post,
@@ -297,22 +298,22 @@ export const useLens = (): UseLensReturn => {
           throw new Error("No active Lens session");
         }
 
-        // Build content from session data
+        // Build content from session data using centralized generator
         let content: string;
         const tags: string[] = ['breathing', 'mindfulness', 'wellness'];
         
         if (typeof sessionOrContent === "string") {
           content = sessionOrContent;
         } else {
-          const minutes = Math.round(sessionOrContent.duration / 60);
-          content = `🌬️ Just completed a ${sessionOrContent.patternName} breathing session!\n\n`;
-          content += `⏱️ Duration: ${minutes} minute${minutes !== 1 ? "s" : ""}\n`;
-          if (sessionScore) content += `📊 Score: ${sessionScore}/100\n`;
-          if (sessionOrContent.cycles) content += `🔄 Cycles: ${sessionOrContent.cycles}\n`;
-          content += `\nSharing my progress on my wellness journey 🧘‍♀️`;
+          // Add pattern-specific tag to the default list
+          const patternTag = sessionOrContent.patternName.toLowerCase().replace(/\s+/g, '');
+          const allTags = [...tags, patternTag];
           
-          // Add pattern-specific tag
-          tags.push(sessionOrContent.patternName.toLowerCase().replace(/\s+/g, ''));
+          content = ShareTextGenerator.generateLensText({
+            ...sessionOrContent,
+            score: sessionScore,
+            sessionDuration: sessionOrContent.duration
+          });
         }
 
         // Create metadata and upload to Grove with fallback
@@ -730,14 +731,12 @@ export const useLens = (): UseLensReturn => {
     await loadTimeline(false);
   }, [hasMorePosts, isLoadingTimeline, loadTimeline]);
 
-  // Load highlights (mock implementation)
+  // Load highlights
   const loadHighlights = useCallback(async (): Promise<void> => {
     setIsLoadingHighlights(true);
     try {
-      // For now, use the same timeline data
-      // This would be replaced with actual highlights/trending content
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setHighlights(timeline.slice(0, 5));
+      // TODO: Replace with real highlights API when available
+      setHighlights([]);
     } catch (error) {
       console.error("Failed to load highlights:", error);
     } finally {
@@ -771,14 +770,12 @@ export const useLens = (): UseLensReturn => {
     [],
   );
 
-  // Explore posts (mock implementation)
+  // Explore posts
   const explorePosts = useCallback(
     async (orderBy: "latest" | "topRated" = "latest"): Promise<Post[]> => {
       try {
-        // For now, return timeline data
-        // This would be replaced with actual explore/discovery functionality
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return timeline;
+        // TODO: Replace with real explore/discovery API when available
+        return [];
       } catch (error) {
         console.error("Failed to explore posts:", error);
         return [];
@@ -787,46 +784,32 @@ export const useLens = (): UseLensReturn => {
     [timeline],
   );
 
-  // Load community stats (mock implementation)
+  // Load community stats
   const loadCommunityStats = useCallback(async (): Promise<void> => {
     try {
-      // Mock data - replace with actual API calls
+      // TODO: Replace with real API call when backend endpoint is available
       setCommunityStats({
-        activeUsers: Math.floor(Math.random() * 200) + 50,
-        currentlyBreathing: Math.floor(Math.random() * 20) + 5,
-        sessionsToday: Math.floor(Math.random() * 500) + 100,
-        totalSessions: Math.floor(Math.random() * 10000) + 5000,
+        activeUsers: 0,
+        currentlyBreathing: 0,
+        sessionsToday: 0,
+        totalSessions: 0,
       });
     } catch (error) {
       console.error("Failed to load community stats:", error);
     }
   }, []);
 
-  // Load challenges (mock implementation)
+  // Load challenges
   const loadChallenges = useCallback(async (): Promise<void> => {
     try {
-      // Mock data - replace with actual API calls
-      const mockChallenges: BreathingChallenge[] = [
-        {
-          id: "challenge-1",
-          name: "30-Day Breathing Reset",
-          description: "Complete 30 days of mindful breathing practice",
-          hashtag: "#30DayBreathingReset",
-          duration: "30 days",
-          participants: 127,
-          reward: "Exclusive NFT Pattern",
-          isActive: true,
-          endsAt: "2024-12-31",
-          createdAt: "2024-11-01",
-        },
-      ];
-      setChallenges(mockChallenges);
+      // TODO: Replace with real API call when challenges endpoint is available
+      setChallenges([]);
     } catch (error) {
       console.error("Failed to load challenges:", error);
     }
   }, []);
 
-  // Join challenge (mock implementation)
+  // Join challenge
   const joinChallenge = useCallback(
     async (challengeId: string): Promise<SocialActionResult> => {
       if (!isAuthenticated) {
@@ -834,9 +817,8 @@ export const useLens = (): UseLensReturn => {
       }
 
       try {
-        // Mock implementation
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return { success: true };
+        // TODO: Replace with real API call when challenges endpoint is available
+        return { success: false, error: "Challenges not yet available" };
       } catch (error) {
         return {
           success: false,
@@ -848,24 +830,11 @@ export const useLens = (): UseLensReturn => {
     [isAuthenticated],
   );
 
-  // Load achievements (mock implementation)
+  // Load achievements
   const loadAchievements = useCallback(async (): Promise<void> => {
     try {
-      // Mock data
-      const mockAchievements: Achievement[] = [
-        {
-          id: "first-session",
-          name: "First Breath",
-          description: "Complete your first breathing session",
-          icon: "🌱",
-          category: "sessions",
-          requirement: { type: "sessions_completed", value: 1 },
-          unlockedAt: "2024-01-01",
-          progress: 1,
-          maxProgress: 1,
-        },
-      ];
-      setAchievements(mockAchievements);
+      // TODO: Replace with real API call when achievements endpoint is available
+      setAchievements([]);
     } catch (error) {
       console.error("Failed to load achievements:", error);
     }

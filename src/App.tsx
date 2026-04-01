@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/MainLayout";
 import SessionEntryPoints from "@/components/navigation/SessionEntryPoints";
 import SessionModeWrapper from "@/components/session/SessionModeWrapper";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 // Camera Context Provider
 import { CameraProvider } from "@/contexts/CameraContext";
@@ -21,6 +22,7 @@ import Settings from "@/pages/Settings";
 // Responsive components
 import { ResponsiveSocialCreate } from "@/components/social/ResponsiveSocialCreate";
 import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
+import RouteErrorBoundary from "@/components/auth/RouteErrorBoundary";
 
 // Lazy-loaded Web3 provider for routes that need blockchain features
 const LazyWeb3Provider = lazy(() => import("@/providers/LazyWeb3Provider").then(m => ({ default: m.LazyWeb3Provider })));
@@ -74,29 +76,33 @@ function App() {
               <Route path="/session" element={<SessionEntryPoints />} />
               <Route path="/patterns" element={<PatternSelectionPage />} />
               <Route path="/session/:mode" element={<SessionModeWrapper />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/results" element={<Results />} />
-              <Route path="/marketplace" element={<Web3RouteWrapper><EnhancedMarketplace /></Web3RouteWrapper>} />
-              <Route path="/create" element={<CreatePattern />} />
+              <Route path="/progress" element={<RouteErrorBoundary><Progress /></RouteErrorBoundary>} />
+              <Route path="/results" element={<RouteErrorBoundary><Results /></RouteErrorBoundary>} />
+              <Route path="/marketplace" element={<Web3RouteWrapper><RouteErrorBoundary><EnhancedMarketplace /></RouteErrorBoundary></Web3RouteWrapper>} />
+              <Route path="/create" element={<ProtectedRoute><RouteErrorBoundary><CreatePattern /></RouteErrorBoundary></ProtectedRoute>} />
               <Route
                 path="/create-post"
                 element={
-                  <div className="min-h-screen">
-                    <ResponsiveSocialCreate />
-                  </div>
+                  <ProtectedRoute>
+                    <RouteErrorBoundary>
+                      <div className="min-h-screen">
+                        <ResponsiveSocialCreate />
+                      </div>
+                    </RouteErrorBoundary>
+                  </ProtectedRoute>
                 }
               />
-              <Route path="/community" element={<Web3RouteWrapper><CommunityFeed /></Web3RouteWrapper>} />
-              <Route path="/profile" element={<UserProfile />} />
+              <Route path="/community" element={<Web3RouteWrapper><RouteErrorBoundary><CommunityFeed /></RouteErrorBoundary></Web3RouteWrapper>} />
+              <Route path="/profile" element={<ProtectedRoute><RouteErrorBoundary><UserProfile /></RouteErrorBoundary></ProtectedRoute>} />
               <Route
                 path="/instructor-onboarding"
-                element={<InstructorOnboarding />}
+                element={<ProtectedRoute><RouteErrorBoundary><InstructorOnboarding /></RouteErrorBoundary></ProtectedRoute>}
               />
-              <Route path="/subscription" element={<Subscription />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/subscription" element={<ProtectedRoute><RouteErrorBoundary><Subscription /></RouteErrorBoundary></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               {/* New Lens routes */}
-              <Route path="/lens" element={<Web3RouteWrapper><LensSocialHubPage /></Web3RouteWrapper>} />
-              <Route path="/lens/flow" element={<Web3RouteWrapper><LensSocialFlowPage /></Web3RouteWrapper>} />
+              <Route path="/lens" element={<Web3RouteWrapper><RouteErrorBoundary><LensSocialHubPage /></RouteErrorBoundary></Web3RouteWrapper>} />
+              <Route path="/lens/flow" element={<Web3RouteWrapper><RouteErrorBoundary><LensSocialFlowPage /></RouteErrorBoundary></Web3RouteWrapper>} />
             </Route>
 
             {/* Routes without Header */}

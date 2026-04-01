@@ -52,7 +52,7 @@ const DEFAULT_CONFIG: ErrorReportConfig = {
   enableRemoteReporting: false,
   enableLocalStorage: true,
   maxStoredErrors: 100,
-  environment: process.env.NODE_ENV as any || 'development',
+  environment: (import.meta.env.MODE as 'development' | 'staging' | 'production') || 'development',
 };
 
 /**
@@ -193,7 +193,7 @@ class ErrorReporter {
       userId: this.config.userId,
       sessionId: this.sessionId,
       environment: this.config.environment,
-      buildVersion: process.env.REACT_APP_VERSION,
+      buildVersion: import.meta.env.VITE_APP_VERSION,
       additionalContext,
     };
   }
@@ -497,10 +497,10 @@ class ErrorReporter {
 
 // Create and export singleton instance
 export const errorReporter = new ErrorReporter({
-  environment: process.env.NODE_ENV as any,
-  enableRemoteReporting: process.env.NODE_ENV === 'production',
-  reportingEndpoint: process.env.REACT_APP_ERROR_REPORTING_ENDPOINT,
-  apiKey: process.env.REACT_APP_ERROR_REPORTING_API_KEY,
+  environment: (import.meta.env.MODE as 'development' | 'staging' | 'production') || 'development',
+  enableRemoteReporting: import.meta.env.PROD,
+  reportingEndpoint: import.meta.env.VITE_ERROR_REPORTING_ENDPOINT,
+  apiKey: import.meta.env.VITE_ERROR_REPORTING_API_KEY,
 });
 
 // Export class for custom instances

@@ -12,6 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
+    "types": ["vite/client"],
     "declaration": false,
     "outDir": "./dist",
     "rootDir": ".",

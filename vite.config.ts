@@ -85,8 +85,8 @@ export default defineConfig(({ mode }) => {
 
     // Production-optimized build configuration
     build: {
-      // Source maps: hidden in production for security, visible in development
-      sourcemap: isProduction ? "hidden" : true,
+      // Source maps: disabled in production to prevent source reconstruction from bundles
+      sourcemap: isProduction ? false : true,
 
       // Production minification
       ...(isProduction
@@ -136,6 +136,23 @@ export default defineConfig(({ mode }) => {
               'class-variance-authority',
               'clsx',
               'tailwind-merge'
+            ],
+            // Web3 / Wallet dependencies — only loaded when needed
+            web3: [
+              'wagmi',
+              'viem',
+              '@wagmi/core',
+              'connectkit'
+            ],
+            // Lens Protocol SDK — only loaded on Lens pages
+            lens: [
+              '@lens-protocol/client',
+              '@lens-protocol/metadata'
+            ],
+            // Flow blockchain SDK — only loaded on Flow/NFT pages
+            flow: [
+              '@onflow/fcl',
+              '@onflow/types'
             ]
           },
           
@@ -221,6 +238,12 @@ export default defineConfig(({ mode }) => {
         "@lens-chain/sdk",
         "@lens-chain/storage-client"
       ],
+    },
+
+    // Vitest configuration
+    test: {
+      exclude: ['**/e2e/**', '**/node_modules/**'],
+      environment: 'node',
     },
 
     // Ensure proper HMR behavior

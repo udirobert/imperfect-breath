@@ -40,6 +40,11 @@ import {
 } from "lucide-react";
 import { useLens } from "@/hooks/useLens";
 import type { Post } from "@/lib/lens";
+import { useAccount } from "wagmi";
+import { ConnectKitButton } from "connectkit";
+import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { ShareTextGenerator } from "@/lib/sharing";
+import { toast } from "sonner";
 
 export function LensSocialHub() {
   const {
@@ -65,11 +70,20 @@ export function LensSocialHub() {
     isPosting,
     actionError,
   } = useLens();
+  const { address: connectedAddress, isConnected } = useAccount();
+  const { history } = useSessionHistory();
 
   // Local state
-  const [walletAddress, setWalletAddress] = useState("");
+  const [walletAddress, setWalletAddress] = useState(connectedAddress || "");
   const [newPostContent, setNewPostContent] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Sync wallet address when account changes
+  React.useEffect(() => {
+    if (connectedAddress) {
+      setWalletAddress(connectedAddress);
+    }
+  }, [connectedAddress]);
 
   // Handle authentication
   const handleAuthenticate = async () => {
@@ -79,14 +93,19 @@ export function LensSocialHub() {
 
   // Handle quick breathing session share
   const handleQuickShare = async () => {
+    const latest = history && history.length > 0 ? history[0] : undefined;
+    if (!latest) {
+      toast.error("No recent session found to share");
+      return;
+    }
+
     await shareBreathingSession({
-      patternName: "Box Breathing",
-      duration: 300, // 5 minutes in seconds
-      score: 85,
-      breathHoldTime: 4,
-      restlessnessScore: 15,
-      cycles: 10,
-      completedAt: new Date().toISOString(),
+      patternName: latest.pattern_name || "Breathing",
+      duration: latest.session_duration || 300,
+      score: Math.max(0, 100 - (latest.restlessness_score || 0)),
+      breathHoldTime: latest.breath_hold_time || 0,
+      restlessnessScore: latest.restlessness_score || 0,
+      completedAt: latest.created_at || new Date().toISOString(),
     });
   };
 
@@ -123,22 +142,31 @@ export function LensSocialHub() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Enter wallet address (0x...)"
-            value={walletAddress}
-            onChange={(e) => setWalletAddress(e.target.value)}
-            disabled={isAuthenticating}
-          />
-          <Button
-            onClick={handleAuthenticate}
-            disabled={isAuthenticating || !walletAddress.trim()}
-          >
-            {isAuthenticating && (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            )}
-            Connect
-          </Button>
+        <div className="flex flex-col gap-3">
+          {isConnected ? (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter wallet address (0x...)"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                disabled={isAuthenticating}
+              />
+              <Button
+                onClick={handleAuthenticate}
+                disabled={isAuthenticating || !walletAddress.trim()}
+              >
+                {isAuthenticating && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Connect Lens
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-6 border-2 border-dashed rounded-lg">
+              <p className="text-sm text-muted-foreground">No wallet connected</p>
+              <ConnectKitButton />
+            </div>
+          )}
         </div>
 
         {authError && (

@@ -5,27 +5,29 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { CrossNetworkIntegration } from '../cross-network-integration';
 
-// Mock the Lens API
-const mockLensAPI = {
-  createPost: vi.fn(),
-};
+// Use vi.hoisted() so mock variables are available in vi.mock factories (which get hoisted)
+const { mockLensAPI, mockFlowNFTClient } = vi.hoisted(() => {
+  return {
+    mockLensAPI: {
+      createPost: vi.fn(),
+    },
+    mockFlowNFTClient: {
+      mintNFT: vi.fn(),
+      purchaseNFT: vi.fn(),
+    },
+  };
+});
 
-// Mock the Flow NFT client
-const mockFlowNFTClient = {
-  mintNFT: vi.fn(),
-  purchaseNFT: vi.fn(),
-};
-
-// Mock imports
-vi.mock('../../../lib/lens', () => ({
+vi.mock('../../../../lib/lens', () => ({
   lensAPI: mockLensAPI,
 }));
 
-vi.mock('../clients/forte-nft-client', () => ({
+vi.mock('../../clients/forte-nft-client', () => ({
   ForteNFTClient: mockFlowNFTClient,
 }));
+
+import { CrossNetworkIntegration } from '../cross-network-integration';
 
 describe('CrossNetworkIntegration', () => {
   let crossNetworkIntegration: CrossNetworkIntegration;
