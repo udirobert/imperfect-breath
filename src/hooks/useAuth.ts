@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { User, UserRole } from "../types/blockchain";
 import { useWalletStatus, useWalletActions } from "./useWallet";
 import { revenueCatAuthIntegration } from "../lib/monetization/revenueCatAuthIntegration";
+import { revenueCatService, UserSubscription } from "../lib/monetization/revenueCat";
 import { useSiweAuth } from './useSiweAuth';
 import { useBlockchainAuth, BlockchainAuthReturn } from './useBlockchainAuth';
 
@@ -20,6 +21,7 @@ export interface UseAuthReturn {
   user: (Omit<User, 'wallet' | 'profile'> & { 
     id: string; 
     email: string; 
+    tier: 'free' | 'pro' | 'premium';
     wallet: { address: string | null; chain: string | null; chainId: string | null; isConnected: boolean } | null;
     profile: { username?: string; name?: string; avatar?: string };
   }) | null;
@@ -71,6 +73,7 @@ const getChainName = (chainId: string | null): string | null => {
 export const useAuth = (): UseAuthReturn => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Wallet hooks for wallet integration
@@ -160,6 +163,11 @@ export const useAuth = (): UseAuthReturn => {
         data: { session },
       } = await supabase.auth.getSession();
       setSession(session);
+      
+      // Load subscription status
+      const subStatus = await revenueCatService.getSubscriptionStatus();
+      setSubscription(subStatus);
+
       if (session?.user) {
         if (session.user?.id) {
           await fetchProfile(session.user.id);
@@ -331,6 +339,7 @@ export const useAuth = (): UseAuthReturn => {
         ...profile, // This provides role, creator_verified, etc.
         id: session.user.id,
         email: session.user.email || '',
+        tier: (subscription?.tier?.id || 'free') as 'free' | 'pro' | 'premium',
         wallet: isConnected
           ? {
               address,

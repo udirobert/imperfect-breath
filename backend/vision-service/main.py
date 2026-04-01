@@ -688,11 +688,8 @@ ai_response_cache = {}
 # All AI configuration is now handled in cerebras_client.py
 
 async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
-    """ENHANCEMENT FIRST: Unified AI analysis with Cerebras integration"""
+    """ENHANCEMENT FIRST: Unified AI analysis with multiple provider integration"""
     try:
-        # CLEAN: Import Cerebras client
-        from cerebras_client import analyze_breathing_session, is_available as cerebras_available
-        
         # Get enhanced session data if available
         session_id = request.session_data.get('visionSessionId')
         enhanced_data = None
@@ -702,50 +699,70 @@ async def process_ai_analysis(request: AIAnalysisRequest) -> AIAnalysisResponse:
             enhanced_data = session.get_enhanced_summary()
             logger.info(f"Enhanced session data for {session_id}: {len(enhanced_data.get('phase_analysis', {}))} phases")
         
-        # ENHANCEMENT FIRST: Use Cerebras if available and configured with proper response alignment
-        if cerebras_available() and enhanced_data:
-            try:
-                result = await analyze_breathing_session(enhanced_data, request.session_data)
-                
-                # ENHANCEMENT FIRST: Transform Cerebras response to match frontend expectations with proper structure
-                # DRY: Single source of truth for response transformation
+        # Route to appropriate provider
+        provider = request.provider.lower()
+        result = None
+        used_provider = provider
+
+        try:
+            if provider == "google":
+                from gemini_client import analyze_breathing_session as analyze_gemini, is_available as gemini_available
+                if gemini_available():
+                    result = await analyze_gemini(enhanced_data or request.session_data, request.session_data)
+                else:
+                    logger.warning("Google Gemini requested but not available, falling back")
+            
+            elif provider == "openai":
+                from openai_client import analyze_breathing_session as analyze_openai, is_available as openai_available
+                if openai_available():
+                    result = await analyze_openai(enhanced_data or request.session_data, request.session_data)
+                else:
+                    logger.warning("OpenAI requested but not available, falling back")
+
+            # Default/Fallback to Cerebras or first available
+            if result is None:
+                from cerebras_client import analyze_breathing_session as analyze_cerebras, is_available as cerebras_available
+                if cerebras_available():
+                    result = await analyze_cerebras(enhanced_data or request.session_data, request.session_data)
+                    used_provider = "cerebras"
+                else:
+                    logger.warning("Cerebras not available")
+
+            # If still None, we'll fall through to mock
+            if result:
+                # ENHANCEMENT FIRST: Transform response to match frontend expectations
+                # Note: The mapping here may need adjustment based on each provider's output
                 transformed_result = {
-                    "analysis": result.get("encouragement", "Great work on your breathing practice!"),  # Map encouragement to analysis
-                    "suggestions": (
-                        [result.get("phaseInsights", {}).get("inhale", "Focus on smooth inhalation"),
-                         result.get("phaseInsights", {}).get("exhale", "Practice controlled exhalation"),
-                         result.get("phaseInsights", {}).get("hold", "Maintain comfortable breath holds")] 
-                        if result.get("phaseInsights") and isinstance(result.get("phaseInsights"), dict) 
-                        else result.get("suggestions", [
-                            "Focus on smooth inhalation",
-                            "Practice controlled exhalation", 
-                            "Maintain comfortable breath holds"
-                        ])
-                    ),
-                    "score": {
+                    "analysis": result.get("analysis") or result.get("encouragement") or "Analysis complete.",
+                    "suggestions": result.get("suggestions") or [
+                        result.get("phaseInsights", {}).get("inhale", "Focus on smooth inhalation"),
+                        result.get("phaseInsights", {}).get("exhale", "Practice controlled exhalation"),
+                        result.get("phaseInsights", {}).get("hold", "Maintain comfortable breath holds")
+                    ],
+                    "score": result.get("score") or {
                         "overall": result.get("overallScore", 85),
                         "focus": result.get("phaseInsights", {}).get("inhaleScore", result.get("overallScore", 75)),
                         "consistency": result.get("consistencyScore", result.get("overallScore", 75)), 
                         "progress": result.get("progressScore", result.get("overallScore", 75))
                     },
-                    "nextSteps": result.get("nextSteps", [
+                    "nextSteps": result.get("nextSteps") or [
                         "Continue regular practice",
                         "Try longer sessions gradually",
                         "Focus on consistency"
-                    ])
+                    ]
                 }
                 
                 return AIAnalysisResponse(
                     success=True,
-                    provider="cerebras",
+                    provider=used_provider,
                     analysis_type=request.analysis_type,
                     result=transformed_result,
                     cached=False
                 )
-                
-            except Exception as e:
-                logger.warning(f"Cerebras analysis failed, falling back to mock: {e}")
-                # Fall through to fallback
+
+        except Exception as e:
+            logger.warning(f"AI Provider {provider} failed: {e}")
+            # Fall through to fallback
         
         # PERFORMANT: Fallback to mock response with actual session data
         session_data = request.session_data

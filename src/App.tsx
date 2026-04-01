@@ -7,6 +7,8 @@ import SessionEntryPoints from "@/components/navigation/SessionEntryPoints";
 import SessionModeWrapper from "@/components/session/SessionModeWrapper";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
+import { Toaster } from "@/components/ui/sonner";
+
 // Camera Context Provider
 import { CameraProvider } from "@/contexts/CameraContext";
 
@@ -117,6 +119,7 @@ function App() {
 
           {/* Mobile Bottom Navigation */}
           <MobileBottomNav />
+          <Toaster />
         </Suspense>
       </BrowserRouter>
     </CameraProvider>

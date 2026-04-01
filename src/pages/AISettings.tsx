@@ -32,12 +32,15 @@ import { apiClient } from "@/lib/api/unified-client";
 import PersonaSelector from "@/components/ai/PersonaSelector";
 import { PersonaType } from "@/lib/ai/personas";
 
+import { useAuth } from "@/hooks/useAuth";
+
 const AISettings = () => {
+  const { user } = useAuth();
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<Record<string, boolean>>({});
   const [selectedPersona, setSelectedPersona] = useState<PersonaType>('dr_breathe');
-  const [userTier, setUserTier] = useState<'free' | 'premium'>('free'); // TODO: Get from auth context
+  const userTier = user?.tier || 'free';
   const [trialStatus, setTrialStatus] = useState<{
     usageCount: number;
     isExhausted: boolean;

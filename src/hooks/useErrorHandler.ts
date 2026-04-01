@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { AppError, ErrorFactory, ErrorCategory, ErrorSeverity, RecoveryStrategy } from '../lib/errors/error-types';
 import { errorReporter } from '../lib/errors/error-reporter';
 
@@ -62,42 +63,7 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     lastErrorTime: null,
   });
 
-  const lastRecoveryAction = useRef<(() => Promise<void>) | null>(null);
-
-  /**
-   * Handle an error
-   */
-  const handleError = useCallback((
-    error: Error | AppError,
-    context?: Record<string, unknown>
-  ) => {
-    const appError = error instanceof AppError
-      ? error
-      : ErrorFactory.fromError(error, undefined, context);
-
-    const newState: ErrorState = {
-      error: appError,
-      isRecovering: false,
-      recoveryAttempts: 0,
-      lastErrorTime: Date.now(),
-    };
-
-    setErrorState(newState);
-
-    // Report error if enabled
-    if (config.autoReportErrors) {
-      errorReporter.reportError(appError, context);
-    }
-
-    // Call custom error handler
-    config.onError(appError);
-
-    // Show toast notification if enabled (would need toast system)
-    if (config.showErrorToast) {
-      // TODO: Integrate with toast notification system
-      console.warn('Error occurred:', appError.userMessage);
-    }
-  }, [config]);
+  const lastRecoveryAction = useRef<(() => Promise<any>) | null>(null);
 
   /**
    * Clear current error
@@ -178,15 +144,67 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     } catch (recoveryError) {
       console.error('Recovery failed:', recoveryError);
       setErrorState(prev => ({ ...prev, isRecovering: false }));
+      
+      // Handle recovery error - we need to define this later or use a ref
+      // to avoid circular dependency
+      if (typeof (handleErrorRef.current) === 'function') {
+        handleErrorRef.current(recoveryError as Error, {
+          originalError: errorState.error.id,
+          recoveryAttempt: errorState.recoveryAttempts
+        });
+      }
+      
       config.onRecovery(errorState.error, false);
+    }
+  }, [errorState, config, clearError]);
 
-      // Handle recovery error
-      handleError(recoveryError as Error, {
-        originalError: errorState.error.id,
-        recoveryAttempt: errorState.recoveryAttempts
+  /**
+   * Handle an error
+   */
+  const handleError = useCallback((
+    error: Error | AppError,
+    context?: Record<string, unknown>
+  ) => {
+    const appError = error instanceof AppError
+      ? error
+      : ErrorFactory.fromError(error, undefined, context);
+
+    const newState: ErrorState = {
+      error: appError,
+      isRecovering: false,
+      recoveryAttempts: 0,
+      lastErrorTime: Date.now(),
+    };
+
+    setErrorState(newState);
+
+    // Report error if enabled
+    if (config.autoReportErrors) {
+      errorReporter.reportError(appError, context);
+    }
+
+    // Call custom error handler
+    config.onError(appError);
+
+    // Show toast notification if enabled
+    if (config.showErrorToast) {
+      toast.error(appError.userMessage || "An unexpected error occurred", {
+        description: appError.category === ErrorCategory.UNKNOWN || appError.severity === ErrorSeverity.HIGH || appError.severity === ErrorSeverity.CRITICAL 
+          ? "Our team has been notified. Please try again soon."
+          : undefined,
+        action: appError.recovery !== RecoveryStrategy.FATAL ? {
+          label: "Retry",
+          onClick: () => retry()
+        } : undefined
       });
     }
-  }, [errorState, config, clearError, handleError]);
+  }, [config, retry]);
+
+  // Use a ref for handleError to avoid circular dependency in retry
+  const handleErrorRef = useRef(handleError);
+  useEffect(() => {
+    handleErrorRef.current = handleError;
+  }, [handleError]);
 
   /**
    * Report an error without handling it
@@ -195,7 +213,9 @@ export const useErrorHandler = (options: ErrorHandlerOptions = {}): UseErrorHand
     errorReporter.reportError(error, context);
   }, []);
 
-  /**\n   * Wrap async function with error handling\n   */
+  /**
+   * Wrap async function with error handling
+   */
   const wrapAsync = useCallback(<T extends readonly unknown[], R>(
     fn: (...args: T) => Promise<R>
   ) => {

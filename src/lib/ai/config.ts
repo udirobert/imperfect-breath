@@ -171,6 +171,8 @@ export class AIConfigManager {
 
   /**
    * Get API key for a provider
+   * NOTE: In production, keys are managed on the Hetzner backend for security.
+   * This method remains for development/override purposes.
    */
   static async getApiKey(provider: string): Promise<string | null> {
     try {
