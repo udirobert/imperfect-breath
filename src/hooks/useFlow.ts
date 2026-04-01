@@ -33,7 +33,13 @@ export const useFlow = (_options?: { network?: string }): UseFlowReturn => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fcl.currentUser().subscribe((currentUser: FlowUser) => setUser(currentUser));
+    fcl.currentUser().subscribe((currentUser: { addr: string | null; loggedIn: boolean }) => {
+      setUser({
+        loggedIn: currentUser.loggedIn,
+        addr: currentUser.addr,
+        address: currentUser.addr,
+      });
+    });
   }, []);
 
   const connect = useCallback(async () => {

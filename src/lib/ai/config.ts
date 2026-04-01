@@ -43,8 +43,8 @@ export interface SessionData {
   patternID?: number; // The ID of the NFT pattern used
   patternName: string;
   sessionDuration: number; // in seconds
-  breathHoldTime: number; // in seconds
-  restlessnessScore: number; // 0-100
+  breathHoldTime?: number; // in seconds
+  restlessnessScore?: number; // 0-100
   bpm?: number; // Breaths per minute, if calculated
   landmarks?: number; // Number of facial landmarks detected
   timestamp?: string; // Session timestamp
@@ -239,8 +239,8 @@ export const formatSessionPrompt = (
 
   return `Current Session Analysis:
 - Breathing Pattern: ${data.patternName}
-- Breath Hold Time: ${data.breathHoldTime} seconds
-- Restlessness Score: ${data.restlessnessScore}/100 (lower is better)
+- Breath Hold Time: ${data.breathHoldTime ?? 0} seconds
+- Restlessness Score: ${data.restlessnessScore ?? 50}/100 (lower is better)
 - Session Duration: ${data.sessionDuration} seconds
 - Facial landmarks detected: ${data.landmarks || 0} points
 - Timestamp: ${data.timestamp}${historyText}

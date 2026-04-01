@@ -5,7 +5,53 @@ import { User, UserRole } from "../types/blockchain";
 import { useWalletStatus, useWalletActions } from "./useWallet";
 import { revenueCatAuthIntegration } from "../lib/monetization/revenueCatAuthIntegration";
 import { useSiweAuth } from './useSiweAuth';
-import { useBlockchainAuth } from './useBlockchainAuth';
+import { useBlockchainAuth, BlockchainAuthReturn } from './useBlockchainAuth';
+
+// Auth action result interface (consistent with SocialActionResult)
+export interface AuthActionResult {
+  success: boolean;
+  error?: string;
+  data?: any;
+}
+
+// Unified Auth Return Interface
+export interface UseAuthReturn {
+  session: Session | null;
+  user: (Omit<User, 'wallet' | 'profile'> & { 
+    id: string; 
+    email: string; 
+    wallet: { address: string | null; chain: string | null; chainId: string | null; isConnected: boolean } | null;
+    profile: { username?: string; name?: string; avatar?: string };
+  }) | null;
+  profile: User | null;
+  loading: boolean;
+  loginWithEmail: (email: string, password: string) => Promise<AuthActionResult>;
+  signUpWithEmail: (email: string, password: string) => Promise<AuthActionResult>;
+  logout: () => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  hasUser: boolean;
+  login: (email: string, password: string) => Promise<AuthActionResult>;
+  register: (email: string, password: string) => Promise<AuthActionResult>;
+  walletUser: { address: string | null; chainId: string | null } | null;
+  wallet: { address: string | null; chain: string | null; chainId: string | null; isConnected: boolean } | null;
+  walletConnection: { isConnected: boolean; isConnecting: boolean; chain: string | null; chainId: string | null };
+  loginWithWallet: () => Promise<void>;
+  connectWallet: () => Promise<void>;
+  disconnectWallet: () => Promise<void>;
+  isAuthenticated: boolean;
+  hasWallet: boolean;
+  isWeb3User: boolean;
+  blockchainEnabled: boolean;
+  supportedChains: string[];
+  currentChain: string | null;
+  currentChainId: string | null;
+  hasLensProfile: boolean;
+  lensHandle: string | null;
+  hasFlowAccount: boolean;
+  flowAddress: string | null;
+  blockchainAuth: BlockchainAuthReturn;
+}
 
 // Blockchain features configuration - disabled by default to reduce initial bundle size
 // Users who navigate to Web3 routes will trigger lazy loading of blockchain features
@@ -22,7 +68,7 @@ const getChainName = (chainId: string | null): string | null => {
   return chainNames[chainId] || 'Unknown';
 };
 
-export const useAuth = () => {
+export const useAuth = (): UseAuthReturn => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,8 +93,20 @@ export const useAuth = () => {
     }
   }, [connect]);
 
+  // Transform DB user to the User interface
+  const transformToUser = (dbUser: any): User | null => {
+    if (!dbUser) return null;
+    return {
+      ...dbUser,
+      createdAt: dbUser.created_at || new Date().toISOString(),
+      updatedAt: dbUser.updated_at || new Date().toISOString(),
+      profile: dbUser.profile || {}, // Default to empty profile if not found
+    } as User;
+  };
+
   const fetchProfile = useCallback(async (userId: string) => {
     try {
+      // Explicitly type the query to avoid 'never' issues with Supabase client inference
       const { data, error } = await supabase
         .from("users")
         .select("*")
@@ -58,18 +116,26 @@ export const useAuth = () => {
       if (error) {
         // If no profile exists, create one
         if (error.code === "PGRST116") {
-          const { data: newUser, error: insertError } = await supabase
-            .from("users")
-            .insert({ id: userId, role: "user" })
+          const { data: newUser, error: insertError } = await (supabase
+            .from("users") as any)
+            .insert({ 
+              id: userId, 
+              role: "user" as UserRole,
+              creator_verified: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
             .select()
             .single();
+          
           if (insertError) throw insertError;
-          setProfile(newUser as User);
+          setProfile(transformToUser(newUser));
         } else {
           throw error;
         }
       } else {
-        setProfile(data as User);
+        // Map database fields (snake_case) to our User interface (camelCase)
+        setProfile(transformToUser(data));
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -142,22 +208,36 @@ export const useAuth = () => {
 
   // Traditional email/social login
   const loginWithEmail = useCallback(
-    async (email: string, password: string) => {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      return data;
+    async (email: string, password: string): Promise<AuthActionResult> => {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) return { success: false, error: error.message };
+        return { success: true, data };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : "Authentication failed" 
+        };
+      }
     },
     [],
   );
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string) => {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-      return data;
+    async (email: string, password: string): Promise<AuthActionResult> => {
+      try {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) return { success: false, error: error.message };
+        return { success: true, data };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : "Registration failed" 
+        };
+      }
     },
     [],
   );
@@ -226,8 +306,8 @@ export const useAuth = () => {
       // Create or link wallet to existing profile
       if (session?.user) {
         // Link wallet to existing Supabase user
-        const { error } = await supabase
-          .from("users")
+        const { error } = await (supabase
+          .from("users") as any)
           .update({
             wallet_address: address,
             preferred_chain: getChainName(chainId) || "ethereum",
@@ -246,11 +326,11 @@ export const useAuth = () => {
     }
   }, [address, session, chainId, connectWallet, refreshProfile, siweAuthenticate]);
 
-  const user = session?.user
+  const user = (session?.user && profile)
     ? {
-        id: session.user?.id,
-        email: session.user?.email || '',
-        ...profile, // Spread profile details into user object
+        ...profile, // This provides role, creator_verified, etc.
+        id: session.user.id,
+        email: session.user.email || '',
         wallet: isConnected
           ? {
               address,
@@ -264,8 +344,6 @@ export const useAuth = () => {
           name: session.user?.user_metadata?.display_name,
           avatar: session.user?.user_metadata?.avatar_url,
         },
-        createdAt: session.user?.created_at,
-        updatedAt: session.user?.updated_at,
       }
     : null;
 
@@ -332,6 +410,7 @@ export const useAuth = () => {
     hasFlowAccount: blockchainAuth.isFlowAuthenticated,
     flowAddress: blockchainAuth.authService?.getCurrentFlowUser()?.addr || null,
     blockchainAuth,
+    signOut: logout,
   };
 };
 

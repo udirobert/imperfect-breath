@@ -140,6 +140,35 @@ export interface Database {
           has_completed_onboarding?: boolean
         }
       }
+      users: {
+        Row: {
+          id: string
+          role: string
+          wallet_address?: string | null
+          preferred_chain?: string | null
+          creator_verified: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          role?: string
+          wallet_address?: string | null
+          preferred_chain?: string | null
+          creator_verified?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          role?: string
+          wallet_address?: string | null
+          preferred_chain?: string | null
+          creator_verified?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

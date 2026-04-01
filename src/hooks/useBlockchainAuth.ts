@@ -45,7 +45,22 @@ interface SubscriptionPlan {
   duration: string;
 }
 
-export const useBlockchainAuth = () => {
+export interface BlockchainAuthReturn {
+  state: BlockchainAuthState;
+  isAuthenticated: boolean;
+  isLensAuthenticated: boolean;
+  isFlowAuthenticated: boolean;
+  authenticateBoth: () => Promise<{ success: boolean; error?: string }>;
+  authenticateLens: () => Promise<{ success: boolean; error?: string }>;
+  authenticateFlow: () => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  executePayment: (amount: string, recipient: string) => Promise<PaymentResult>;
+  subscribeToPlan: (plan: SubscriptionPlan) => Promise<PaymentResult>;
+  refreshAuthStatus: () => void;
+  authService: typeof blockchainAuthService;
+}
+
+export const useBlockchainAuth = (): BlockchainAuthReturn => {
   const [state, setState] = useState<BlockchainAuthState>({
     isAuthenticated: {
       lens: false,
