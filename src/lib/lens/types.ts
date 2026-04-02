@@ -106,6 +106,19 @@ export interface BreathingSession {
   restlessnessScore?: number;
 }
 
+export interface SignedSessionRecord {
+  payload: {
+    appId: string;
+    user: string;
+    pattern: string;
+    duration: number;
+    score: number;
+    timestamp: string;
+    nonce: string;
+  };
+  signature: string;
+}
+
 // Community stats
 export interface CommunityStats {
   activeUsers: number;

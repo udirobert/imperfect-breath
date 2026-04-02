@@ -21,6 +21,8 @@ import { follow, unfollow } from "@lens-protocol/client/actions";
 import { evmAddress } from "@lens-protocol/client";
 import { blockchainAuthService } from "@/services/blockchain/BlockchainAuthService";
 import { getTimeline as fetchTimelineFromAPI } from "@/lib/api/socialService";
+import { services } from "@/config/environment";
+import type { SignedSessionRecord } from "./types";
 
 // SDK-adapter types for feed/publications mapping
 interface SdkPageInfo { next?: string; prev?: string }
@@ -626,12 +628,40 @@ export class LensV3API {
     } finally {
       this.isAuthenticated = false;
       this.currentUser = null;
-      this.sessionData = null;
     }
   }
 
   /**
-   * Share a breathing session as a post
+   * Get a signed session record from the vision-service
+   */
+  async getSignedSession(
+    session: BreathingSession,
+  ): Promise<SignedSessionRecord | null> {
+    if (!this.currentUser?.address) return null;
+
+    try {
+      const response = await fetch(`${services.vision.url}/lens/sign-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_address: this.currentUser.address,
+          pattern_name: session.patternName,
+          duration: session.duration,
+          score: session.score || 0,
+          timestamp: session.completedAt,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to sign session");
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Signing error:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Share a breathing session as a post with a verified record
    */
   async shareBreathingSession(
     session: BreathingSession,
@@ -641,7 +671,10 @@ export class LensV3API {
     }
 
     try {
-      // Create content for breathing session
+      // 1. Get a cryptographically signed record from the backend
+      const signedRecord = await this.getSignedSession(session);
+
+      // 2. Create content for breathing session
       const minutes = Math.round(session.duration / 60);
       let content = `🌬️ Just completed a ${session.patternName} breathing session!\n\n`;
       content += `⏱️ Duration: ${minutes} minute${minutes !== 1 ? "s" : ""}\n`;
@@ -650,35 +683,34 @@ export class LensV3API {
         content += `📊 Score: ${session.score}/100\n`;
       }
 
-      if (session.cycles) {
-        content += `🔄 Cycles: ${session.cycles}\n`;
-      }
-
-      if (session.breathHoldTime) {
-        content += `💨 Max breath hold: ${session.breathHoldTime}s\n`;
+      if (signedRecord) {
+        content += `✅ Verified by Imperfect Breath\n`;
       }
 
       content += `\n#breathing #mindfulness #wellness #${session.patternName.toLowerCase().replace(/\s+/g, "")}`;
 
-      // Create metadata
+      // 3. Create metadata including the signed proof
       const metadata = {
         content,
         tags: [
           "breathing",
           "mindfulness",
           "wellness",
+          "verified",
           session.patternName.toLowerCase().replace(/\s+/g, ""),
         ],
         attributes: [
           { key: "sessionType", value: "breathing" },
           { key: "pattern", value: session.patternName },
           { key: "duration", value: session.duration.toString() },
+          { key: "verified", value: signedRecord ? "true" : "false" },
+          { key: "signature", value: signedRecord?.signature || "" },
         ],
       };
 
       const contentUri = `data:application/json,${encodeURIComponent(JSON.stringify(metadata))}`;
 
-      // Create the post
+      // 4. Create the post on Lens
       return await this.createPost(contentUri);
     } catch (error) {
       return {

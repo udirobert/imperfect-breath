@@ -35,6 +35,8 @@ from pathlib import Path
 import urllib.request
 from contextlib import asynccontextmanager
 from siwe_endpoints import router as siwe_router
+from eth_account import Account
+from eth_account.messages import encode_defunct
 
 # Configure logging
 logging.basicConfig(
@@ -76,7 +78,8 @@ CONFIG = {
     "jpeg_quality": 85,
     # PERFORMANT: Dynamic port configuration
     "port": int(os.getenv("PORT", "8001")),  # Default to 8001 to match Docker
-    "host": os.getenv("HOST", "0.0.0.0")
+    "host": os.getenv("HOST", "0.0.0.0"),
+    "lens_signer_key": os.getenv("LENS_SIGNER_KEY")
 }
 
 # MediaPipe model URLs for production deployment
@@ -247,6 +250,62 @@ class AIAnalysisRequest(BaseModel):
     provider: str
     session_data: Dict[str, Any]
     analysis_type: str = "session"
+
+# Lens Session Signing Models
+class SessionRecord(BaseModel):
+    user_address: str
+    pattern_name: str
+    duration: int
+    score: int
+    timestamp: str
+
+class SignedSessionResponse(BaseModel):
+    payload: Dict[str, Any]
+    signature: str
+
+@app.post("/lens/sign-session", response_model=SignedSessionResponse)
+async def sign_lens_session(record: SessionRecord):
+    """
+    Signs a breathing session record for Lens V3 Open Action.
+    Verifiable proof that the session was completed in Imperfect Breath.
+    """
+    if not CONFIG["lens_signer_key"]:
+        # Fallback to a development key if not configured
+        logger.warning("LENS_SIGNER_KEY not configured, using development fallback")
+        dev_key = "0x" + "1" * 64
+        signer_key = dev_key
+    else:
+        signer_key = CONFIG["lens_signer_key"]
+    
+    try:
+        # Construct the payload
+        payload = {
+            "appId": "imperfect-breath",
+            "user": record.user_address,
+            "pattern": record.pattern_name,
+            "duration": record.duration,
+            "score": record.score,
+            "timestamp": record.timestamp,
+            "nonce": uuid.uuid4().hex
+        }
+        
+        # Serialize payload to string for signing
+        message_str = json.dumps(payload, sort_keys=True)
+        
+        # Sign the message
+        signer_account = Account.from_key(signer_key)
+        message = encode_defunct(text=message_str)
+        signed_message = Account.sign_message(message, private_key=signer_account.key)
+        
+        logger.info(f"Successfully signed session for user {record.user_address}")
+        
+        return SignedSessionResponse(
+            payload=payload,
+            signature=signed_message.signature.hex()
+        )
+    except Exception as e:
+        logger.error(f"Failed to sign lens session: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Signing failure: {str(e)}")
 
 class AIAnalysisResponse(BaseModel):
     success: bool

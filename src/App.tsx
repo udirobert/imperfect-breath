@@ -46,6 +46,7 @@ const Subscription = React.lazy(() => import("@/pages/Subscription"));
 // Add lazy imports for new Lens pages
 const LensSocialHubPage = React.lazy(() => import("@/pages/LensSocialHubPage"));
 const LensSocialFlowPage = React.lazy(() => import("@/pages/LensSocialFlowPage"));
+const LeaderboardPage = React.lazy(() => import("@/pages/LeaderboardPage"));
 
 // Loading component for lazy routes
 const PageLoader = () => (
@@ -74,8 +75,8 @@ function App() {
           <Routes>
             {/* Main Application Routes with Header */}
             <Route element={<MainLayout />}> 
-              <Route path="/" element={<Index enhanced={false} />} />
-              <Route path="/enhanced" element={<Index enhanced={true} />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/enhanced" element={<Index />} />
               <Route path="/session" element={<SessionEntryPoints />} />
               <Route path="/patterns" element={<PatternSelectionPage />} />
               <Route path="/session/:mode" element={<SessionModeWrapper />} />
@@ -106,6 +107,7 @@ function App() {
               {/* New Lens routes */}
               <Route path="/lens" element={<Web3RouteWrapper><RouteErrorBoundary><LensSocialHubPage /></RouteErrorBoundary></Web3RouteWrapper>} />
               <Route path="/lens/flow" element={<Web3RouteWrapper><RouteErrorBoundary><LensSocialFlowPage /></RouteErrorBoundary></Web3RouteWrapper>} />
+              <Route path="/leaderboard" element={<Web3RouteWrapper><RouteErrorBoundary><LeaderboardPage /></RouteErrorBoundary></Web3RouteWrapper>} />
             </Route>
 
             {/* Routes without Header */}
