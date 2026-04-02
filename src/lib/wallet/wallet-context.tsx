@@ -418,11 +418,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
 /**
  * Hook to access wallet context
  */
-export const useWalletContext = (): WalletContextValue => {
+export const useWalletContext = (): WalletContextValue | null => {
   const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error('useWalletContext must be used within a WalletProvider');
-  }
   return context;
 };
 
@@ -430,7 +427,21 @@ export const useWalletContext = (): WalletContextValue => {
  * Hook for wallet connection status
  */
 export const useWalletConnection = () => {
-  const { state } = useWalletContext();
+  const context = useWalletContext();
+  
+  if (!context) {
+    return {
+      isAvailable: false,
+      isConnected: false,
+      isConnecting: false,
+      address: null,
+      shortAddress: null,
+      chainId: null,
+      error: null,
+    };
+  }
+
+  const { state } = context;
   return {
     isAvailable: state.isAvailable,
     isConnected: state.isConnected,
@@ -446,7 +457,18 @@ export const useWalletConnection = () => {
  * Hook for wallet operations
  */
 export const useWalletOperations = () => {
-  const { connect, disconnect, switchProvider, request, clearError } = useWalletContext();
+  const context = useWalletContext();
+  if (!context) {
+    const noop = async () => {};
+    return {
+      connect: async () => {},
+      disconnect: noop,
+      switchProvider: async () => {},
+      request: async () => { throw new Error('WalletProvider not available'); },
+      clearError: () => {},
+    };
+  }
+  const { connect, disconnect, switchProvider, request, clearError } = context;
   return {
     connect,
     disconnect,

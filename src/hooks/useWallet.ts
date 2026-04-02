@@ -60,7 +60,17 @@ export interface ChainConfig {
  * Main wallet hook - provides complete wallet functionality
  */
 export const useWallet = (): UseWalletReturn => {
-  const { state, isChainSupported } = useWalletContext();
+  // Safe context access
+  const context = useWalletContext();
+  const state = context?.state || {
+    isAvailable: false,
+    isConnected: false,
+    isConnecting: false,
+    activeProvider: null,
+    availableProviders: [],
+  };
+  const isChainSupported = context?.isChainSupported || (() => false);
+
   const connectionState = useWalletConnection();
   const operations = useWalletOperations();
 
