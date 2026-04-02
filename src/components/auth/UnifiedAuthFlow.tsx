@@ -515,7 +515,17 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <WalletConnection />
+          <WalletConnection 
+            showWeb3Options={true}
+            onLensConnect={() => {
+              setSelectedMethod('lens');
+              setAuthStep('authenticate');
+            }}
+            onFlowConnect={() => {
+              setSelectedMethod('flow');
+              setAuthStep('authenticate');
+            }}
+          />
           <Button
             onClick={handleWalletAuthSuccess}
             className="w-full"
@@ -569,7 +579,14 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
             
             {!blockchainAuth.state.isAuthenticated.lens ? (
               <>
-                <WalletConnection />
+                <WalletConnection 
+                  showWeb3Options={true}
+                  onLensConnect={() => {}}
+                  onFlowConnect={() => {
+                    setSelectedMethod('flow');
+                    setAuthStep('authenticate');
+                  }}
+                />
                 {blockchainAuth.state.isAuthenticating && (
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />

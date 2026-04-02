@@ -4,13 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Wallet, Copy, ExternalLink, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Wallet, Copy, ExternalLink, CheckCircle, XCircle, AlertCircle, Users, Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { lensTestnet } from '@/lib/wagmi/chains';
 import { Connector } from 'wagmi';
 
 interface WalletConnectionProps {
   autoOpen?: boolean;
+  showWeb3Options?: boolean;
+  onLensConnect?: () => void;
+  onFlowConnect?: () => void;
 }
 
 export const WalletConnection: React.FC<WalletConnectionProps> = ({ autoOpen = false }) => {
@@ -95,6 +98,59 @@ const { switchChain, isPending: isSwitching } = useSwitchChain();
                 </div>
               </Button>
             ))}
+
+            {/* Web3 Options: Lens + Flow */}
+            {showWeb3Options && (
+              <>
+                <div className="flex items-center gap-2 py-2">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">or continue with</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-12 border-purple-200 hover:bg-purple-50"
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    onLensConnect?.();
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">Lens Social</div>
+                      <div className="text-xs text-muted-foreground">
+                        Decentralized social features
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-start h-12 border-blue-200 hover:bg-blue-50"
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    onFlowConnect?.();
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Coins className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">Flow Blockchain</div>
+                      <div className="text-xs text-muted-foreground">
+                        NFTs and creator tools
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
