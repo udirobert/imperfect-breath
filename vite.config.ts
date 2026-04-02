@@ -137,13 +137,13 @@ export default defineConfig(({ mode }) => {
               'clsx',
               'tailwind-merge'
             ],
-            // Web3 / Wallet dependencies — only loaded when needed
-            web3: [
-              'wagmi',
-              'viem',
-              '@wagmi/core',
-              'connectkit'
-            ],
+            // Web3 / Wallet dependencies — keep in vendor to prevent provider errors
+            // web3: [
+            //   'wagmi',
+            //   'viem',
+            //   '@wagmi/core',
+            //   'connectkit'
+            // ],
             // Lens Protocol SDK — only loaded on Lens pages
             lens: [
               '@lens-protocol/client',
