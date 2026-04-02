@@ -111,7 +111,7 @@ function App() {
             </Route>
 
             {/* Routes without Header */}
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<Web3RouteWrapper><Auth /></Web3RouteWrapper>} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
