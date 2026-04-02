@@ -149,11 +149,11 @@ export default defineConfig(({ mode }) => {
               '@lens-protocol/client',
               '@lens-protocol/metadata'
             ],
-            // Flow blockchain SDK — only loaded on Flow/NFT pages
-            flow: [
-              '@onflow/fcl',
-              '@onflow/types'
-            ]
+            // Flow blockchain SDK — keep in main bundle to prevent circular deps
+            // flow: [
+            //   '@onflow/fcl',
+            //   '@onflow/types'
+            // ]
           },
           
           // Configure chunk file naming with better cache busting
