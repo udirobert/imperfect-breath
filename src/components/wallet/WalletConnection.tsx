@@ -74,7 +74,7 @@ const { switchChain, isPending: isSwitching } = useSwitchChain();
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Connect Your Wallet</DialogTitle>
+            <DialogTitle>Connect Wallet</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {connectors.map((connector) => (

@@ -52,14 +52,13 @@ export const AUTH_METHODS: Record<string, AuthMethod> = {
 
   wallet: {
     id: "wallet",
-    title: "Web3 Wallet",
-    description: "Connect your existing crypto wallet",
+    title: "Wallet",
+    description: "Connect your crypto wallet",
     icon: Wallet,
     benefits: [
-      "Connect existing wallet",
-      "Full self-custody",
-      "Multi-chain support",
-      "Hardware wallet compatible",
+      "Connect crypto wallet",
+      "Full ownership",
+      "Works across chains",
     ],
     priority: 3,
     requiresInput: false,
