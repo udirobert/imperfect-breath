@@ -113,3 +113,4 @@ supabase/.temp/
 build_output.txt
 lint_output.txt
 tsc_output.txt
+.blackboxcli/

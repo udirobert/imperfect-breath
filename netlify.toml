@@ -1,5 +1,5 @@
 [build]
-  command = "rm -rf node_modules package-lock.json && npm install --include=dev && npm run build"
+  command = "rm -rf node_modules package-lock.json && pnpm install --include=dev && pnpm run build"
   publish = "dist"
 
 [build.environment]
