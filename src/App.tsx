@@ -12,6 +12,9 @@ import { Toaster } from "@/components/ui/sonner";
 // Camera Context Provider
 import { CameraProvider } from "@/contexts/CameraContext";
 
+// Web3 Provider - loaded eagerly to prevent provider not found errors
+import { EagerWeb3Provider } from "@/providers/EagerWeb3Provider";
+
 // Small pages that can load immediately
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -26,9 +29,6 @@ import Settings from "@/pages/Settings";
 import { ResponsiveSocialCreate } from "@/components/social/ResponsiveSocialCreate";
 import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
 import RouteErrorBoundary from "@/components/auth/RouteErrorBoundary";
-
-// Lazy-loaded Web3 provider for routes that need blockchain features
-const LazyWeb3Provider = lazy(() => import("@/providers/LazyWeb3Provider").then(m => ({ default: m.LazyWeb3Provider })));
 
 // Large pages - lazy load these to reduce initial bundle size
 const Progress = React.lazy(() => import("@/pages/Progress"));
@@ -59,19 +59,13 @@ const PageLoader = () => (
   </div>
 );
 
-// Wrapper component for routes that need Web3 (blockchain) features
-const Web3RouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <LazyWeb3Provider>
-    {children}
-  </LazyWeb3Provider>
-);
-
 function App() {
 
   return (
-    <CameraProvider>
-      <BrowserRouter>
-        <Suspense fallback={<PageLoader />}>
+    <EagerWeb3Provider>
+      <CameraProvider>
+        <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Main Application Routes with Header */}
             <Route element={<MainLayout />}> 
@@ -82,7 +76,7 @@ function App() {
               <Route path="/session/:mode" element={<SessionModeWrapper />} />
               <Route path="/progress" element={<RouteErrorBoundary><Progress /></RouteErrorBoundary>} />
               <Route path="/results" element={<RouteErrorBoundary><Results /></RouteErrorBoundary>} />
-              <Route path="/marketplace" element={<Web3RouteWrapper><RouteErrorBoundary><EnhancedMarketplace /></RouteErrorBoundary></Web3RouteWrapper>} />
+              <Route path="/marketplace" element={<RouteErrorBoundary><EnhancedMarketplace /></RouteErrorBoundary>} />
               <Route path="/create" element={<ProtectedRoute><RouteErrorBoundary><CreatePattern /></RouteErrorBoundary></ProtectedRoute>} />
               <Route
                 path="/create-post"
@@ -96,7 +90,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/community" element={<Web3RouteWrapper><RouteErrorBoundary><CommunityFeed /></RouteErrorBoundary></Web3RouteWrapper>} />
+              <Route path="/community" element={<RouteErrorBoundary><CommunityFeed /></RouteErrorBoundary>} />
               <Route path="/profile" element={<ProtectedRoute><RouteErrorBoundary><UserProfile /></RouteErrorBoundary></ProtectedRoute>} />
               <Route
                 path="/instructor-onboarding"
@@ -105,13 +99,13 @@ function App() {
               <Route path="/subscription" element={<ProtectedRoute><RouteErrorBoundary><Subscription /></RouteErrorBoundary></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               {/* New Lens routes */}
-              <Route path="/lens" element={<Web3RouteWrapper><RouteErrorBoundary><LensSocialHubPage /></RouteErrorBoundary></Web3RouteWrapper>} />
-              <Route path="/lens/flow" element={<Web3RouteWrapper><RouteErrorBoundary><LensSocialFlowPage /></RouteErrorBoundary></Web3RouteWrapper>} />
-              <Route path="/leaderboard" element={<Web3RouteWrapper><RouteErrorBoundary><LeaderboardPage /></RouteErrorBoundary></Web3RouteWrapper>} />
+              <Route path="/lens" element={<RouteErrorBoundary><LensSocialHubPage /></RouteErrorBoundary>} />
+              <Route path="/lens/flow" element={<RouteErrorBoundary><LensSocialFlowPage /></RouteErrorBoundary>} />
+              <Route path="/leaderboard" element={<RouteErrorBoundary><LeaderboardPage /></RouteErrorBoundary>} />
             </Route>
 
             {/* Routes without Header */}
-            <Route path="/auth" element={<Web3RouteWrapper><Auth /></Web3RouteWrapper>} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
@@ -126,6 +120,7 @@ function App() {
         </Suspense>
       </BrowserRouter>
     </CameraProvider>
+    </EagerWeb3Provider>
   );
 }
 
