@@ -108,3 +108,8 @@ supabase/.temp/
 .qodo/
 .claude/
 .aider*
+ 
+# Build/Lint outputs
+build_output.txt
+lint_output.txt
+tsc_output.txt
