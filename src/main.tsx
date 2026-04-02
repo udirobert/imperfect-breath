@@ -4,9 +4,25 @@ import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { GlobalErrorBoundary, SessionStartupErrorBoundary } from "./lib/errors/error-boundary";
 import { queryClient } from "./lib/query/config";
+import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
 import "./polyfills.ts";
+
+// Sentry initialization for production error tracking
+if (import.meta.env.PROD) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    environment: import.meta.env.MODE,
+  });
+}
 
 // ENHANCEMENT: Initialize developer commands in development
 import "./lib/developer/console-commands";

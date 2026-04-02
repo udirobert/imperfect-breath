@@ -6,6 +6,7 @@
  */
 
 import { AppError, ErrorInfo, ErrorSeverity, ErrorCategory } from './error-types';
+import * as Sentry from "@sentry/react";
 
 export interface ErrorReportConfig {
   enableConsoleLogging: boolean;
@@ -174,7 +175,22 @@ class ErrorReporter {
 
       // Remote reporting
       if (this.config.enableRemoteReporting && this.shouldReportRemotely(error)) {
-        await this.sendToRemote(errorReport);
+        // Report to Sentry
+        Sentry.withScope((scope) => {
+          scope.setTag("category", error.category);
+          scope.setTag("severity", error.severity);
+          scope.setTag("sessionId", this.sessionId);
+          if (this.config.userId) scope.setUser({ id: this.config.userId });
+          if (additionalContext) scope.setContext("additional", additionalContext);
+          if (error.context) scope.setContext("error_context", error.context);
+          
+          Sentry.captureException(error);
+        });
+
+        // Also call generic endpoint if configured
+        if (this.config.reportingEndpoint) {
+          await this.sendToRemote(errorReport);
+        }
       }
 
     } catch (reportingError) {

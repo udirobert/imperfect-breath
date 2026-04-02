@@ -9,6 +9,8 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
 from webhook_handler import process_webhook
 from revenuecat_config import router as revenuecat_router
 import cv2
@@ -39,6 +41,18 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+# Sentry initialization for production error tracking
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[FastApiIntegration()],
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+        environment=os.getenv("APP_ENV", "production")
+    )
+
 logger = logging.getLogger(__name__)
 
 # ENHANCEMENT FIRST: Environment-aware configuration
