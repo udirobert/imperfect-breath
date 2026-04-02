@@ -45,8 +45,8 @@ const Auth = () => {
         features={{ blockchain: true }}
         context={context}
         onComplete={handleAuthComplete}
-        // PERFORMANT: Use contextual mode for focused experience
-        mode={context.type === 'profile' ? 'full' : 'contextual'}
+        // SIMPLIFIED: Use minimal mode to show fewer options
+        mode="minimal"
       />
     </div>
   );
