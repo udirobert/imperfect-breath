@@ -15,6 +15,7 @@ import { CameraProvider } from "@/contexts/CameraContext";
 // Small pages that can load immediately
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
+import Onboarding from "@/pages/Onboarding";
 import NotFound from "@/pages/NotFound";
 import PatternSelectionPage from "@/pages/PatternSelectionPage";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -109,7 +110,7 @@ function App() {
 
             {/* Routes without Header */}
             <Route path="/auth" element={<Auth />} />
-            <Route path="/onboarding" element={<Auth />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
 

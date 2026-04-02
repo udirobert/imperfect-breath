@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { cn } from "../lib/utils";
+import { motion } from "framer-motion";
 import { Badge } from "./ui/badge";
 import {
   getPhaseConfig,
@@ -159,18 +160,18 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
     );
 
     const MainCircle = () => (
-      <div
+      <motion.div
+        animate={{
+          scale: phase === "inhale" ? 1.2 : phase === "exhale" ? 0.9 : 1.0,
+          backgroundColor: phase === "inhale" ? "rgba(59, 130, 246, 0.2)" : "rgba(59, 130, 246, 0.1)",
+          boxShadow: phase === "inhale" ? "0 0 40px rgba(59, 130, 246, 0.3)" : "0 0 20px rgba(59, 130, 246, 0.1)"
+        }}
+        transition={{
+          duration: phase === "inhale" ? 4 : phase === "exhale" ? 4 : 0.5,
+          ease: "easeInOut"
+        }}
         className={cn(
-          "absolute rounded-full bg-blue-50/20 border border-blue-200/40",
-          // Phase-specific transitions for more natural breathing feel
-          phase === "inhale"
-            ? "transition-all duration-4000 ease-out"
-            : phase === "exhale"
-            ? "transition-all duration-4000 ease-in"
-            : phase === "hold" || phase === "hold_after_exhale"
-            ? "transition-all duration-500 ease-in-out"
-            : "transition-all duration-1000 ease-in-out",
-          // ENHANCED: Emotional shadow adaptation
+          "absolute rounded-full border border-blue-200/40",
           isActive && `shadow-lg ${currentColors.shadow}`
         )}
         style={{

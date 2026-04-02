@@ -1,0 +1,574 @@
+
+> imperfect-breath@0.0.0 lint /Users/udingethe/Dev/imperfect-breath
+> eslint .
+
+
+/Users/udingethe/Dev/imperfect-breath/scripts/check-build-secrets.cjs
+  10:1  error  Parsing error: 'import' and 'export' may appear only with 'sourceType: module'
+
+/Users/udingethe/Dev/imperfect-breath/scripts/secure-build.cjs
+  11:1  error  Parsing error: 'import' and 'export' may appear only with 'sourceType: module'
+
+/Users/udingethe/Dev/imperfect-breath/src/components/VideoFeed.tsx
+  142:5  warning  React Hook React.useEffect has a missing dependency: 'videoRef'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/udingethe/Dev/imperfect-breath/src/components/monitoring/SystemHealthMonitor.tsx
+  116:32  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  118:32  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  508:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/udingethe/Dev/imperfect-breath/src/components/navigation/BottomTabBar.tsx
+  22:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/components/session/MoodBasedRecommendations.tsx
+  156:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  226:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/components/session/PatternSelection.tsx
+  113:66  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:74  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/components/session/ResponsiveEnhancedSession.tsx
+  50:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  90:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/components/session/SessionModeWrapper.tsx
+   50:16  error  Unexpected any. Specify a different type                                                                                                                                                                @typescript-eslint/no-explicit-any
+  128:26  error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?               react-hooks/rules-of-hooks
+  168:33  error  React Hook "useSessionCompletion" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  176:7   error  React Hook "useSession" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?            react-hooks/rules-of-hooks
+  185:50  error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?               react-hooks/rules-of-hooks
+  213:29  error  React Hook "useCallback" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?           react-hooks/rules-of-hooks
+  214:15  error  Unexpected any. Specify a different type                                                                                                                                                                @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/components/ui/premium-tooltip.tsx
+  111:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/udingethe/Dev/imperfect-breath/src/contexts/CameraContext.tsx
+  42:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useAdaptivePerformance.ts
+  47:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  89:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  90:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useAuth.ts
+   15:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  123:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  318:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useCrossNetwork.ts
+  54:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useEmotionalAnalysis.ts
+   59:29  error    Unexpected any. Specify a different type                                                                                                                                                                                         @typescript-eslint/no-explicit-any
+   60:28  error    Unexpected any. Specify a different type                                                                                                                                                                                         @typescript-eslint/no-explicit-any
+  169:6   warning  React Hook useCallback has a missing dependency: 'state'. Either include it or remove the dependency array. Mutable values like 'state.current' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+  206:6   warning  React Hook useMemo has a missing dependency: 'state'. Either include it or remove the dependency array. Mutable values like 'state.current' aren't valid dependencies because mutating them doesn't re-render the component      react-hooks/exhaustive-deps
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useErrorHandler.ts
+   36:67  error    Unexpected any. Specify a different type                                                                                                                                         @typescript-eslint/no-explicit-any
+   41:59  error    Unexpected any. Specify a different type                                                                                                                                         @typescript-eslint/no-explicit-any
+   58:9   warning  The 'config' object makes the dependencies of useCallback Hook (at line 159) change on every render. To fix this, wrap the initialization of 'config' in its own useMemo() Hook  react-hooks/exhaustive-deps
+   58:9   warning  The 'config' object makes the dependencies of useCallback Hook (at line 201) change on every render. To fix this, wrap the initialization of 'config' in its own useMemo() Hook  react-hooks/exhaustive-deps
+   66:52  error    Unexpected any. Specify a different type                                                                                                                                         @typescript-eslint/no-explicit-any
+  212:78  error    Unexpected any. Specify a different type                                                                                                                                         @typescript-eslint/no-explicit-any
+  286:75  error    Unexpected any. Specify a different type                                                                                                                                         @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useLens.ts
+  176:58  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  210:27  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  220:58  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  329:25  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  406:24  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  475:24  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  549:5   warning  React Hook useCallback has an unnecessary dependency: 'authorAddress'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+  705:51  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  745:6   warning  React Hook useCallback has an unnecessary dependency: 'timeline'. Either exclude it or remove the dependency array       react-hooks/exhaustive-deps
+  784:5   warning  React Hook useCallback has an unnecessary dependency: 'timeline'. Either exclude it or remove the dependency array       react-hooks/exhaustive-deps
+  889:33  error    Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useMeditationVision.ts
+  118:5  error    Unnecessary try/catch wrapper                                                                                               no-useless-catch
+  431:6  warning  React Hook useCallback has a missing dependency: 'finalConfig.targetFPS'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useSecureAIAnalysis.ts
+  379:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  380:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  381:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useSession.ts
+  308:6  warning  React Hook useCallback has a missing dependency: 'startSession'. Either include it or remove the dependency array        react-hooks/exhaustive-deps
+  358:6  warning  React Hook useCallback has a missing dependency: 'stopBreathingCycle'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  367:6  warning  React Hook useCallback has a missing dependency: 'stopBreathingCycle'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/udingethe/Dev/imperfect-breath/src/hooks/useValidation.ts
+  110:9  error    Unexpected lexical declaration in case block                                                                                                   no-case-declarations
+  113:9  error    Unexpected lexical declaration in case block                                                                                                   no-case-declarations
+  207:6  warning  React Hook useCallback has unnecessary dependencies: 'sanitizeValue' and 'validateFields'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/ai/enhanced-analysis-service.ts
+  155:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/ai/personas.ts
+  315:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/ai/recommendations.ts
+  193:62  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  220:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/ai/streaming-metrics.ts
+   48:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  324:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/ai/user-experience-assessment.ts
+  289:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  355:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  392:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  419:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  434:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  459:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/analytics.ts
+   2:74  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+   5:32  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  12:33  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  19:5   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+  22:5   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/api/jwt-client.ts
+  58:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  68:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/api/unified-client.ts
+    17:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   279:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   311:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   388:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   495:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   649:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   659:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   751:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   762:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   776:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1018:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1027:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1043:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1122:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1122:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1154:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1155:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1156:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1160:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1163:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1166:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1169:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1176:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/api/unified-data-client.ts
+  13:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  42:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  69:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  87:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  88:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  90:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/breathing-phase-config.ts
+  112:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/breathing/emotional-pattern-adapter.ts
+  264:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/debug/stateDebugger.ts
+   26:27   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   44:35   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   45:30   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   64:24   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:59   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  170:39   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:34   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  255:47   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  279:28   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  279:34   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  283:33   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  283:53   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  287:51   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  287:81   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  287:103  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:36   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  453:60   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  527:16   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  528:16   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  529:16   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  530:16   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  531:16   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  532:16   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/developer/console-commands.ts
+  101:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/errors/error-boundary.tsx
+  183:68  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  471:75  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/errors/error-reporter.ts
+   29:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  158:73  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  188:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  360:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  488:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/errors/error-types.ts
+  474:80  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  474:88  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/flow/clients/base-client.ts
+   25:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  145:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  161:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  175:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  175:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  239:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  297:65  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  364:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  364:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/flow/clients/nft-client.ts
+  528:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/flow/clients/transaction-client.ts
+   45:11  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  107:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  319:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  322:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/flow/enhanced-flow-client.ts
+   43:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  147:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  165:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  526:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  578:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  631:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  633:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  634:8   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  635:6   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  644:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  644:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  658:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  658:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  672:66  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/flow/types.ts
+  278:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/lens/__tests__/lens-client.test.ts
+  216:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  218:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  228:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  241:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  243:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  248:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  250:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  255:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  260:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  289:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  291:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  303:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  319:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  321:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  353:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  439:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/lens/client.ts
+  399:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  432:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  518:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  519:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  537:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  538:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  551:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  555:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  555:77  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  560:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  560:77  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  574:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  578:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  578:77  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  583:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  583:77  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  599:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  605:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  611:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  611:75  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/monetization/__tests__/revenueCatAuthIntegration.test.ts
+  319:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  324:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  328:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  335:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  338:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  342:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  343:7  error  Read-only global 'window' should not be modified                                                                     no-global-assign
+  349:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  352:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/network/connection-manager.ts
+   40:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  409:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/network/retry-policy.ts
+   85:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  107:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  412:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  412:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  417:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  468:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  510:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  510:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  511:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  516:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  516:61  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/offline/OfflineManager.ts
+  100:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  128:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/payments/PaymentProcessor.ts
+  36:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/query/config.ts
+  17:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/recommendations/SmartPatternRecommendations.ts
+  610:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  725:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/reviewService.ts
+  15:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  54:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/security/__tests__/security-utils.test.ts
+  263:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/security/security-utils.ts
+   90:15  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  150:11  error  Unexpected lexical declaration in case block  no-case-declarations
+  303:25  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  304:62  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  305:21  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  334:12  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  384:29  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  384:35  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  388:28  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  388:34  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  404:39  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  436:13  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  447:23  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  448:60  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  458:10  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  461:43  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/user-delight/engagement-orchestrator.ts
+   70:21  error  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   71:18  error  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  222:37  error  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  222:57  error  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  223:9   error  'scores' is never reassigned. Use 'const' instead  prefer-const
+  270:21  error  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  300:14  error  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  351:57  error  Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  364:9   error  Unexpected lexical declaration in case block       no-case-declarations
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/utils.ts
+  27:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  32:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/utils/cache-utils.ts
+  18:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/utils/formatters.ts
+  161:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/utils/performance-utils.ts
+   38:5   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+   39:12  error    React Hook "React.useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?                                                                                 react-hooks/rules-of-hooks
+   42:8   warning  React Hook React.useMemo was passed a dependency list that is not an array literal. This means we can't statically verify whether you've passed the correct dependencies                                                                                                        react-hooks/exhaustive-deps
+   42:8   warning  React Hook React.useMemo has missing dependencies: 'factory', 'key', and 'ttlMs'. Either include them or remove the dependency array. If 'factory' changes too often, find the parent component that defines it and wrap that definition in useCallback                         react-hooks/exhaustive-deps
+   47:10  error    React Hook "React.useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?                                                                                 react-hooks/rules-of-hooks
+   66:3   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+   85:6   warning  React Hook React.useCallback was passed a dependency list that is not an array literal. This means we can't statically verify whether you've passed the correct dependencies                                                                                                    react-hooks/exhaustive-deps
+   85:6   warning  React Hook React.useCallback has missing dependencies: 'asyncFactory', 'cache', 'key', and 'ttlMs'. Either include them or remove the dependency array. If 'asyncFactory' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+   94:61  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  107:46  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  107:56  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  130:46  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  130:56  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  203:66  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  215:50  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  349:13  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  355:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/utils/social-errors.ts
+  54:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/validation/input-validator.ts
+   16:45  error  Unnecessary escape character: \+          no-useless-escape
+   16:98  error  Unnecessary escape character: \+          no-useless-escape
+   21:26  error  Unnecessary escape character: \.          no-useless-escape
+  325:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  325:91  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  328:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  331:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/validation/sanitizer.ts
+   90:59  error  Unnecessary escape character: \/                                   no-useless-escape
+  171:27  error  Unexpected control character(s) in regular expression: \x00, \x1f  no-control-regex
+  341:25  error  Unexpected any. Specify a different type                           @typescript-eslint/no-explicit-any
+  342:62  error  Unexpected any. Specify a different type                           @typescript-eslint/no-explicit-any
+  343:21  error  Unexpected any. Specify a different type                           @typescript-eslint/no-explicit-any
+  344:37  error  Unexpected any. Specify a different type                           @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/wallet/provider-manager.ts
+   10:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   14:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   14:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   32:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  187:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  305:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  305:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  392:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  393:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  393:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  397:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  398:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  398:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  404:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  405:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  406:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  407:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/lib/wallet/wallet-context.tsx
+  142:38  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  142:56  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  260:63  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  421:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  432:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  448:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/udingethe/Dev/imperfect-breath/src/main.tsx
+  66:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/BreathingSession.tsx
+  216:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/InstructorOnboarding.tsx
+  651:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  715:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  886:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/LensSocialFlowPage.tsx
+  13:37  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  23:41  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  26:53  error    Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  33:5   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/api/analytics/latest-session.ts
+  10:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/api/cross-network/mint.ts
+   13:44  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   13:54  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   71:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  108:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  146:9   error  Unexpected lexical declaration in case block  no-case-declarations
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/api/flow/mint-pattern.ts
+  15:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/api/integration/flow-forte.ts
+  7:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  7:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/api/integration/lens-v3.ts
+   14:44  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   14:54  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   69:9   error  Unexpected lexical declaration in case block  no-case-declarations
+   98:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  127:9   error  Unexpected lexical declaration in case block  no-case-declarations
+
+/Users/udingethe/Dev/imperfect-breath/src/pages/api/integration/revenuecat.ts
+   15:44  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   15:54  error  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   71:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  128:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  150:9   error  Unexpected lexical declaration in case block  no-case-declarations
+
+/Users/udingethe/Dev/imperfect-breath/src/polyfills.ts
+  10:20  error  The `Function` type accepts any function-like value.
+Prefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type
+  13:8   error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  17:56  error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  18:14  error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  23:37  error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  78:29  error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  85:8   error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  91:14  error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  92:14  error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+  93:13  error  Unexpected any. Specify a different type                                                                                 @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/providers/LazyWeb3Provider.tsx
+   9:14   warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  25:77   error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  26:111  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  71:50   error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/services/RecommendationService.ts
+  102:90  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/stores/preferencesStore.ts
+  474:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/udingethe/Dev/imperfect-breath/src/types/elizaos.d.ts
+  15:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  28:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  41:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  81:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  83:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  95:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 406 problems (377 errors, 29 warnings)
+  1 error and 5 warnings potentially fixable with the `--fix` option.
+
+ ELIFECYCLE  Command failed with exit code 1.
