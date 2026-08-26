@@ -26,6 +26,20 @@ export default {
         sans: ['Manrope', 'sans-serif'],
       },
 			colors: {
+				brume: {
+					// Mist palette — Brume brand identity
+					50: '#f4f7f9',
+					100: '#e6edf1',
+					200: '#c9d8e0',
+					300: '#a3bcc9',
+					400: '#7597ab',
+					500: '#547a90',
+					600: '#41637a',
+					700: '#355063',
+					800: '#2c4151',
+					900: '#22303c',
+					950: '#151f28',
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
