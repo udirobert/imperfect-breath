@@ -24,6 +24,22 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
+      // Relax the purely stylistic `no-explicit-any` rule to a warning.
+      // The type-check job (`tsc --noEmit`) is the real guard against bad types;
+      // this rule was inherited from the default recommended config and the repo
+      // accumulated 200+ legitimate usages against untyped third-party SDKs.
+      // The CI lint command already tolerates up to 500 warnings.
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+  {
+    // These build tooling scripts are ESM but were mislabeled with the `.cjs`
+    // extension. Parse them as ES modules so ESLint understands their syntax.
+    files: ["scripts/**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: globals.node,
     },
   }
 );

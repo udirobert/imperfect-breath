@@ -37,7 +37,7 @@ export const useRevenueCatSync = () => {
       setRevenueCatState(
         true,
         true,
-        subscriptionStatus.tier as "basic" | "premium" | "pro",
+        subscriptionStatus.tier?.id as "basic" | "premium" | "pro",
         subscriptionStatus.isActive,
         subscriptionStatus.features,
       );

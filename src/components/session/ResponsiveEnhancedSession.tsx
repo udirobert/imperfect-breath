@@ -154,7 +154,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
         enabled={modeConfig.enableVision && cameraStream !== null}
         videoRef={videoRef}
         cameraStream={cameraStream}
-        sessionId={sessionId}
+        sessionId={sessionId ?? ''}
         onVisionReady={() => console.log('Vision processing ready')}
         onVisionError={(error) => console.warn('Vision processing error:', error)}
       />
@@ -291,7 +291,12 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
           patternName={config.pattern.name}
           pattern={{
             name: config.pattern.name,
-            phases: config.pattern.phases,
+            phases: {
+              inhale: config.pattern.phases.inhale,
+              hold: config.pattern.phases.hold,
+              exhale: config.pattern.phases.exhale,
+              pause: config.pattern.phases.pause,
+            },
             benefits: config.pattern.benefits || ['Improved focus', 'Stress reduction'],
             description: config.pattern.description || `Experience the ${config.pattern.name} breathing technique with enhanced AI feedback.`
           }}

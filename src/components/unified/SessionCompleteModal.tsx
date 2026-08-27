@@ -81,6 +81,7 @@ export const SessionCompleteModal: React.FC<SessionCompleteModalProps> = ({
     score: sessionData.score,
     cycles: sessionData.cycles,
     breathHoldTime: sessionData.breathHoldTime,
+    completedAt: new Date().toISOString(),
   };
 
   return (

@@ -119,10 +119,9 @@ export const SessionModeWrapper: React.FC = () => {
   const location = useLocation();
   const isMobile = isTouchDevice();
 
-  // Validate mode
-  if (!mode || !["classic", "enhanced", "mobile"].includes(mode)) {
-    return <Navigate to="/session" replace />;
-  }
+  // Validate mode. NOTE: must be deferred until after all hooks are invoked —
+  // React requires hooks to run unconditionally before any early return.
+  const isValidMode = !!mode && ["classic", "enhanced", "mobile"].includes(mode);
 
   // CLEAN: Get pattern from URL search params, location state, or localStorage
   const initialPattern = useMemo(() => {
@@ -239,6 +238,10 @@ export const SessionModeWrapper: React.FC = () => {
     enableCamera: sessionConfig.mode !== 'classic',
     enableVision: sessionConfig.mode === 'enhanced' || sessionConfig.mode === 'mobile',
   };
+
+  if (!isValidMode) {
+    return <Navigate to="/session" replace />;
+  }
 
   return (
     <SessionErrorBoundary>

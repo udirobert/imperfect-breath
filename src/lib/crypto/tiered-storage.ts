@@ -66,7 +66,7 @@ class SecureProvider implements StorageProvider {
       return SecureProvider.encryptionKey;
     } catch (error) {
       console.error('Failed to initialize encryption key:', error);
-      throw new Error('Failed to initialize encryption');
+      throw new Error('Failed to initialize encryption', { cause: error });
     }
   }
 
@@ -91,7 +91,7 @@ class SecureProvider implements StorageProvider {
       };
     } catch (error) {
       console.error('Encryption failed:', error);
-      throw new Error('Encryption failed');
+      throw new Error('Encryption failed', { cause: error });
     }
   }
 
@@ -113,7 +113,7 @@ class SecureProvider implements StorageProvider {
       return new TextDecoder().decode(decryptedData);
     } catch (error) {
       console.error('Decryption failed:', error);
-      throw new Error('Decryption failed');
+      throw new Error('Decryption failed', { cause: error });
     }
   }
 

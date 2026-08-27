@@ -18,7 +18,7 @@ import { FaceMeshOverlay } from '../vision/FaceMeshOverlay';
 
 export interface VisionManagerProps {
   enabled: boolean;
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   cameraStream: MediaStream | null;
   sessionId: string;
   onVisionReady?: () => void;
@@ -45,7 +45,7 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
   );
 
   // Debug: Log when sessionId changes
-  const prevSessionIdRef = useRef<string>();
+  const prevSessionIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (prevSessionIdRef.current && prevSessionIdRef.current !== sessionId) {
       console.log('🔄 VisionManager: SessionId changed from', prevSessionIdRef.current, 'to', sessionId);

@@ -138,7 +138,7 @@ export const AIAnalysisDebugButton: React.FC = () => {
                       </div>
                     )}
 
-                    {result.data && !result.success && (
+                    {Boolean(result.data) && !result.success && (
                       <details className="mt-2">
                         <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
                           View Details

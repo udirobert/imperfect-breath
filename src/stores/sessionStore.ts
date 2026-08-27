@@ -24,6 +24,7 @@ export interface SessionConfig {
   enableCamera: boolean;
   enableAudio: boolean;
   enableAI: boolean;
+  maxCycles?: number;
 }
 
 // SessionMetrics now imported from types/metrics.ts
@@ -403,7 +404,7 @@ export const useSessionHasWarnings = () => useSessionStore((state) => state.warn
 // ============================================================================
 
 export const sessionSelectors = {
-  isActive: () => useSessionStore.getState().phase !== 'idle',
+  isActive: () => useSessionStore.getState().phase !== 'setup',
   isRunning: () => ['inhale', 'hold', 'exhale', 'pause'].includes(useSessionStore.getState().phase),
   isPaused: () => useSessionStore.getState().phase === 'paused',
   isComplete: () => useSessionStore.getState().phase === 'complete',

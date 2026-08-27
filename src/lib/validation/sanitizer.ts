@@ -87,7 +87,7 @@ export class DataSanitizer {
       sanitized = sanitized.replace(regex, '');
       
       // Also remove self-closing tags
-      const selfClosingRegex = new RegExp(`<${tag}\\b[^>]*\/?>`, 'gi');
+      const selfClosingRegex = new RegExp(`<${tag}\\b[^>]*[/]?>`, 'gi');
       sanitized = sanitized.replace(selfClosingRegex, '');
     }
 
@@ -167,7 +167,10 @@ export class DataSanitizer {
       return '';
     }
 
-    // Remove all whitespace and control characters
+    // Remove all whitespace and control characters.
+    // The control-character range is deliberate: we must strip control bytes
+    // (\\u0000-\\u001F, \\u007F) from API keys before validation.
+    // eslint-disable-next-line no-control-regex
     return apiKey.replace(/[\s\u0000-\u001F\u007F]/g, '');
   }
 

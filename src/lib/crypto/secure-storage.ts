@@ -93,7 +93,7 @@ class SecureStorageManager {
       sessionStorage.setItem(`${this.STORAGE_PREFIX}${key}`, JSON.stringify(encrypted));
     } catch (error) {
       console.error('Failed to store encrypted data:', error);
-      throw new Error('Secure storage failed');
+      throw new Error('Secure storage failed', { cause: error });
     }
   }
 

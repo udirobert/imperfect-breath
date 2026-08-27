@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { GlobalErrorBoundary, SessionStartupErrorBoundary } from "./lib/errors/error-boundary";
 import { queryClient } from "./lib/query/config";
 import * as Sentry from "@sentry/react";
-import App from "./App.tsx";
+import App from "./App";
 import "./index.css";
 import "./polyfills.ts";
 
@@ -30,8 +30,8 @@ import { runEnvironmentChecks } from "./utils/environment-check";
 import { optimizeForMobile } from "./utils/mobile-detection";
 
 // Explicitly set global references for old libraries that might expect them
-window.React = React;
-window.ReactDOM = ReactDOM;
+(window as unknown as { React: typeof React }).React = React;
+(window as unknown as { ReactDOM: typeof ReactDOM }).ReactDOM = ReactDOM;
 
 // Run environment checks before initializing the app
 const envCheck = runEnvironmentChecks();

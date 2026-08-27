@@ -80,8 +80,8 @@ export const useStableMetrics = (): StableMetricsResult => {
             stillness: prev.stillness + (rawMetrics.stillness - prev.stillness) * 0.3,
             presence: prev.presence + (rawMetrics.presence - prev.presence) * 0.4,
             posture: prev.posture + (rawMetrics.posture - prev.posture) * 0.3,
-            restlessnessScore: rawMetrics.restlessnessScore ? 
-              prev.restlessnessScore + (rawMetrics.restlessnessScore - (prev.restlessnessScore || 0)) * 0.3 :
+            restlessnessScore: rawMetrics.restlessnessScore ?
+              (prev.restlessnessScore ?? 0) + (rawMetrics.restlessnessScore - (prev.restlessnessScore ?? 0)) * 0.3 :
               prev.restlessnessScore,
           };
         }

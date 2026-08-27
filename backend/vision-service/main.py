@@ -5,7 +5,7 @@ Handles vision processing, face detection, landmark analysis, breathing pattern 
 and AI-powered session analysis.
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any

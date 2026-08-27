@@ -96,7 +96,7 @@ export const useWallet = (): UseWalletReturn => {
     } catch (error: unknown) {
       // If chain doesn't exist, the error code will be 4902
       if (error && typeof error === 'object' && 'code' in error && error.code === 4902) {
-        throw new Error(`Chain ${chainId} not added to wallet. Use addChain() first.`);
+        throw new Error(`Chain ${chainId} not added to wallet. Use addChain() first.`, { cause: error });
       }
       throw error;
     }

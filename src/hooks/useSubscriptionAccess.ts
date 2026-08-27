@@ -27,7 +27,12 @@ export const useSubscriptionAccess = (): SubscriptionAccess => {
       setIsLoading(true);
       setError(null);
       const status = await revenueCatService.getSubscriptionStatus();
-      setSubscriptionStatus(status);
+      setSubscriptionStatus({
+        tier: (status.tier?.id as "basic" | "premium" | "pro") ?? "basic",
+        isActive: status.isActive,
+        features: status.features,
+        ...(status.expiresAt ? { expiresAt: status.expiresAt } : {}),
+      });
     } catch (err) {
       console.error('Failed to load subscription status:', err);
       setError(err instanceof Error ? err.message : 'Failed to load subscription status');

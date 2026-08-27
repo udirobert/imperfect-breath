@@ -136,6 +136,7 @@ export interface VisionMetrics {
   confidence?: number;
   presence?: number;
   posture?: number;
+  restlessnessScore?: number;
   faceLandmarks?: Array<{ x: number; y: number; z?: number }>;
 }
 

@@ -66,7 +66,7 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
   className,
 }) => {
   const isMobile = useIsMobile();
-  const auth = useAuth(features);
+  const auth = useAuth();
   const preferences = useAuthPreferences();
   const performance = useAuthPerformance();
   const blockchainAuth = useBlockchainAuth();
@@ -374,7 +374,7 @@ export const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
   }
 
   // Show loading state
-  if (auth.isLoading) {
+  if (auth.loading) {
     return (
       <Card className={cn("w-full max-w-md mx-auto", className)}>
         <CardContent className="flex items-center justify-center p-8">

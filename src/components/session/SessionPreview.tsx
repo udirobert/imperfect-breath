@@ -36,7 +36,7 @@ interface SessionPreviewProps {
   onStart: (cameraEnabled: boolean) => void;
   onCancel?: () => void;
   enableCamera: boolean;
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   landmarks?: Array<{ x: number; y: number; z?: number }>;
   trackingStatus?: 'INITIALIZING' | 'TRACKING' | 'LOST';
 }

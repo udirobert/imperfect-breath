@@ -42,7 +42,7 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
   showBenefits = false,
   authRequired = 'evm',
 }) => {
-  const { isAvailable, isConnected, isConnecting, shortAddress, chainId, error } = useWalletStatus();
+  const { isAvailable, isConnected, isConnecting, address, shortAddress, chainId, error } = useWalletStatus();
   const { connect, disconnect, clearError } = useWalletActions();
   const { toast } = useToast();
 
@@ -95,10 +95,9 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
   };
 
   const handleCopyAddress = async () => {
-    const { address } = walletStatus;
-    if (address) {
+    if (shortAddress) {
       try {
-        await navigator.clipboard.writeText(address);
+        await navigator.clipboard.writeText(address!);
         toast({
           title: "Address copied",
           description: "Wallet address copied to clipboard",
@@ -114,8 +113,7 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
   };
 
   const handleViewOnExplorer = () => {
-    const { address } = walletStatus;
-    if (address && chainId) {
+    if (shortAddress && chainId) {
       const explorerUrls: Record<string, string> = {
         '0x1': 'https://etherscan.io',
         '0x89': 'https://polygonscan.com',

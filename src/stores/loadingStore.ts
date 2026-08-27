@@ -72,26 +72,3 @@ export const useLoadingStore = create<LoadingState>((set, get) => ({
     return Math.max(0, estimatedTotal - elapsed);
   }
 }));
-
-export const loadingSelectors = {
-  isLoading: () => {
-    const scopes = useLoadingStore(state => state.loadingScopes);
-    const operations = useLoadingStore(state => state.loadingOperations);
-    return Object.values(scopes).some(Boolean) || Object.values(operations).some(Boolean);
-  },
-  isScopeLoading: (scope: string) => {
-    return useLoadingStore(state => !!state.loadingScopes[scope]);
-  },
-  isOperationLoading: (operationId: string) => {
-    return useLoadingStore(state => !!state.loadingOperations[operationId]);
-  },
-  getProgress: (operationId: string) => {
-    return useLoadingStore(state => state.loadingProgress[operationId] || 0);
-  },
-  getMessage: (operationId: string) => {
-    return useLoadingStore(state => state.loadingMessages[operationId] || '');
-  },
-  getError: (operationId: string) => {
-    return useLoadingStore(state => state.loadingErrors[operationId] || null);
-  }
-};

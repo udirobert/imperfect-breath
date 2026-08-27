@@ -110,7 +110,7 @@ export const useSessionHistory = () => {
 
   const fetchHistory = async (): Promise<SessionRecordFromDb[]> => {
     if (!user) {
-      return fetchOfflineSessions();
+      return fetchOfflineSessions() as unknown as SessionRecordFromDb[];
     }
     const { data, error } = await supabase
       .from('sessions')
@@ -121,7 +121,7 @@ export const useSessionHistory = () => {
     if (error) {
       console.error('Error fetching session history:', error);
       const offlineSessions = fetchOfflineSessions();
-      return offlineSessions;
+      return offlineSessions as unknown as SessionRecordFromDb[];
     }
     return data || [];
   };
@@ -153,7 +153,7 @@ export const useSessionHistory = () => {
         user_id: user.id
       };
       
-      const { error } = await supabase.from('sessions').insert(sessionToSave);
+      const { error } = await supabase.from('sessions').insert(sessionToSave as Record<string, unknown> as never);
 
       if (error) {
         console.error('Error saving session:', error);

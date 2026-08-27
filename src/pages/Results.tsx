@@ -492,9 +492,9 @@ Check out Imperfect Breath!`;
     const baseStats: Array<{
       title: string;
       value: string;
-      icon: JSX.Element;
+      icon: React.JSX.Element;
       description: string;
-      content?: JSX.Element;
+      content?: React.JSX.Element;
     }> = [
       {
         title: "Session Duration",

@@ -323,7 +323,7 @@ class CameraManager {
       });
 
       this.emit({ type: 'error', error: error as Error });
-      throw new Error(errorMessage);
+      throw new Error(errorMessage, { cause: error });
     }
   }
 

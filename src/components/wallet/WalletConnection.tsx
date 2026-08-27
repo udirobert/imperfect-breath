@@ -16,7 +16,7 @@ interface WalletConnectionProps {
   onFlowConnect?: () => void;
 }
 
-export const WalletConnection: React.FC<WalletConnectionProps> = ({ autoOpen = false }) => {
+export const WalletConnection: React.FC<WalletConnectionProps> = ({ autoOpen = false, showWeb3Options = false, onLensConnect, onFlowConnect }) => {
   const { address, isConnected, chain } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();

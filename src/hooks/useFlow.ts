@@ -71,7 +71,7 @@ export const useFlow = (_options?: { network?: string }): UseFlowReturn => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Transaction failed";
       setError(msg);
-      throw new Error(msg);
+      throw new Error(msg, { cause: err });
     }
   }, []);
 
@@ -101,7 +101,7 @@ export const useFlow = (_options?: { network?: string }): UseFlowReturn => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Minting failed";
       setError(msg);
-      throw new Error(msg);
+      throw new Error(msg, { cause: err });
     } finally {
       setIsMinting(false);
     }
