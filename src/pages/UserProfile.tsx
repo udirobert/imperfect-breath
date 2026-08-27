@@ -1,6 +1,9 @@
 import { useAuth } from "../hooks/useAuth";
 import { useLens } from "../hooks/useLens";
-import { useNavigate } from "react-router-dom";
+import { useFlow } from "../hooks/useFlow";
+import { useNavigate, Link } from "react-router-dom";
+import { useTheme } from "next-themes";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -11,12 +14,40 @@ import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Skeleton } from "../components/ui/skeleton";
 import { FollowButton } from "../components/social/SocialButton";
 import { Button } from "../components/ui/button";
-import { BarChart3, Users, Share2, Settings, CreditCard, Store } from "lucide-react";
+import {
+  BarChart3,
+  Users,
+  Settings,
+  CreditCard,
+  Palette,
+  Shield,
+  LogOut,
+  HelpCircle,
+} from "lucide-react";
 
 const UserProfilePage = () => {
-  const { user, profile, loading: authLoading } = useAuth();
-  const { currentAccount, isAuthenticating } = useLens();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const { currentAccount, isAuthenticating, logout: lensLogout } = useLens();
+  const { disconnect: flowDisconnect } = useFlow();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+
+  const cycleTheme = () => {
+    if (theme === 'system') setTheme('light');
+    else if (theme === 'light') setTheme('dark');
+    else setTheme('system');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await Promise.all([signOut(), lensLogout(), flowDisconnect()]);
+      toast.success('Signed out successfully');
+      navigate('/');
+    } catch (error) {
+      toast.error('Failed to sign out completely');
+      console.error('Sign out error:', error);
+    }
+  };
 
   const isLoading = authLoading || isAuthenticating;
 
@@ -74,7 +105,7 @@ const UserProfilePage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-6">
+      <div className="grid grid-cols-3 gap-2 mb-6 max-w-md">
         <Button
           variant="outline"
           className="flex flex-col items-center gap-2 h-auto py-3"
@@ -89,15 +120,7 @@ const UserProfilePage = () => {
           onClick={() => navigate("/subscription")}
         >
           <CreditCard className="h-5 w-5" />
-          <span className="text-xs">Subscription</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-          onClick={() => navigate("/marketplace")}
-        >
-          <Store className="h-5 w-5" />
-          <span className="text-xs">Marketplace</span>
+          <span className="text-xs">Premium</span>
         </Button>
         <Button
           variant="outline"
@@ -107,23 +130,53 @@ const UserProfilePage = () => {
           <Users className="h-5 w-5" />
           <span className="text-xs">Community</span>
         </Button>
-        <Button
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-          onClick={() => navigate("/create-post")}
-        >
-          <Share2 className="h-5 w-5" />
-          <span className="text-xs">Share</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-          onClick={() => navigate("/settings")}
-        >
-          <Settings className="h-5 w-5" />
-          <span className="text-xs">Settings</span>
-        </Button>
       </div>
+
+      {/* Consolidation: settings live inside Profile. Theme, legal and sign-out
+          are surfaced here instead of a separate /settings destination. */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Button
+            variant="ghost"
+            className="w-full justify-between px-4 py-3 h-auto"
+            onClick={cycleTheme}
+          >
+            <span className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Theme
+            </span>
+            <span className="text-sm text-muted-foreground capitalize">
+              {theme === 'system' ? 'System' : theme}
+            </span>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start px-4 py-3 h-auto" asChild>
+            <Link to="/privacy">
+              <Shield className="h-4 w-4 mr-2" />
+              Privacy Policy
+            </Link>
+          </Button>
+          <Button variant="ghost" className="w-full justify-start px-4 py-3 h-auto" asChild>
+            <Link to="/terms">
+              <HelpCircle className="h-4 w-4 mr-2" />
+              Terms of Service
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start px-4 py-3 h-auto text-destructive hover:text-destructive"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

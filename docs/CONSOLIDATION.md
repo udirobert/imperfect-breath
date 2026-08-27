@@ -1,10 +1,41 @@
 # Consolidation Registry — Brume v1
 
-> Companion to `docs/STRATEGY.md` and `docs/BRUME.md`. Principle: **bury, don't delete.**
-> Everything below stays in the repo (git history + on disk) but is unrouted and unlinked.
-> Reversal cost is one commit. Registry last updated: Brume v1 sprint, Wk 0.
+> Companion to `docs/STRATEGY.md` and `docs/BRUME.md`. Principle (updated in the
+> dead-code sweep): **delete, don't bury** — git history preserves everything, and
+> unreferenced code rots into type/lint noise. The v1 "bury, don't delete" stance
+> was superseded once the surfaces were confirmed unreachable.
+> Registry last updated: consolidation round 3 (dead-code deletion).
 
-## Buried (unrouted Aug 27, branch `feat/brume`)
+## Consolidation Round 3 — dead-code deletion (branch `feat/consolidation-ux`)
+
+The buried surfaces from v1 (and every module they orphaned) were **deleted** after
+reachability analysis confirmed zero importers from `main.tsx`. Verified by
+`tsc` (0 errors), `eslint` (0 errors), `vitest` (39/39) and `pnpm build` (✓).
+
+- **110 files / ~21.6k lines removed** — buried pages (marketplace, creator tools,
+  instructor onboarding, Lens hub), their dedicated components/types, plus orphaned
+  hooks, libs, stores, providers and API routes.
+- **Kept:** `components/ui/` (shadcn kit = design-system baseline), `*.d.ts`
+  ambient declarations, and all `__tests__/` + `*.test.ts` suites (vitest
+  discovers tests by glob, so "no importer" is expected, not a dead signal).
+- The old v1 "buried" table below is retained for history; the files it lists are
+  now **gone** from the working tree (recoverable from git history).
+
+| Surface | Was buried at | Now |
+|---|---|---|
+| Marketplace | `src/pages/EnhancedMarketplace.tsx`, `src/components/marketplace/`, `src/types/marketplace.ts` | **deleted** |
+| Creator tools | `src/pages/CreatePattern.tsx`, `src/components/creator/`, `src/pages/EnhancedCreatorDashboard.tsx`, `src/types/creator.ts` | **deleted** |
+| Instructor onboarding | `src/pages/InstructorOnboarding.tsx` | **deleted** |
+| Lens social hub | `src/pages/LensSocialHubPage.tsx`, `src/pages/LensSocialFlowPage.tsx`, `src/components/lens/LensSocialHub.tsx` | **deleted** |
+| Social composer | `src/components/social/ResponsiveSocialCreate.tsx` | deleted in CI pass |
+
+**What was deliberately NOT deleted** (verified live): `sessionStore`, `visionStore`,
+`useSession`, `Results`-subtree (`PostSessionActions`, `InlineUpgrade`,
+`useSecureAIAnalysis`, `SessionCompleteModal`), `TodayCard`, `VideoFeed`,
+`BreathingAnimation`, `FaceMeshOverlay`, supabase client, `lib/lens`,
+`lib/sharing`, `cameraStore`, `authStore`.
+
+## Buried (unrouted Aug 27, branch `feat/brume`) — historical record
 
 | Surface | Files still on disk | Why buried |
 |---|---|---|
@@ -40,3 +71,21 @@ out (marketplace resurrection requires density we don't have).
 - Dead-code deletion sweep of buried files (after attestation metrics validate the bet)
 - `src/components/{debug,developer,monitoring,integration}` — audit for prod-only necessity
 - `src/pages/api/` — verify nothing routes there
+
+---
+
+## Consolidation Round 2 — UI/UX & page consolidation (branch `feat/consolidation-ux`)
+
+**Principle applied: fold destinations toward the 6-screen core loop; keep the files, stop separate routes.**
+
+| Move | Before | After |
+|---|---|---|
+| **Mobile nav dedup** | `MobileBottomNav` (global in `App.tsx`) **and** `BottomTabBar` (inside `ResponsiveNavigation`) both rendered on touch → **two stacked bars** | Removed global `MobileBottomNav.tsx`; the single context-aware `BottomTabBar` (from `ResponsiveNavigation`) is the only mobile bottom nav. |
+| **Community + Leaderboard** | Separate `/community` and `/leaderboard` pages | `Leaderboard` folded into `/community` sidebar; `/leaderboard` redirects → `/community`. One accountability door. |
+| **Profile + Settings** | Separate `/profile` and `/settings` pages | Settings (theme, privacy/terms, sign out) hosted inline inside `/profile`; `/settings` redirects → `/profile`. `Settings.tsx` kept on disk (buried), removed dead Marketplace/Share buttons. |
+| **Session entry unify** | Nav + "Start Again"/"Start Now" pointed directly at `/session/classic` | All practice/repeat CTAs and nav unify on `/session` entry (which still offers classic/enhanced mode cards). Resolves the v1 known-inconsistency note. |
+| **Results → Progress** | Post-session screen ended at share/repeat actions | Added "See My Progress" CTA that closes the core loop: session → results → proof gallery. |
+
+**Route set after round 2 (MainLayout):** `/`, `/session`, `/patterns`, `/session/:mode`, `/progress`, `/results`, `/community`, `/profile`, `/subscription` (+ `/settings` and `/leaderboard` kept as redirects so nothing breaks).
+
+**Still buried (unchanged from v1):** marketplace, creator tools, instructor onboarding, Lens hub, social composer — files on disk, unrouted.

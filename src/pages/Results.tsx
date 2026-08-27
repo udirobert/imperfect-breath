@@ -25,7 +25,6 @@ import {
   Brain,
   Shield,
   BarChart3,
-  Heart,
   TrendingUp,
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
@@ -664,6 +663,19 @@ Check out Imperfect Breath!`;
 
         {/* Post-Session Actions - Clear next steps and feature discovery */}
         <PostSessionActions sessionData={enhancedSessionData} />
+
+        {/* Consolidation: close the core loop — Results flows into Progress */}
+        <div className="mb-8 w-full max-w-4xl flex justify-center">
+          <Button
+            size="lg"
+            variant="default"
+            className="px-8 py-3"
+            onClick={() => navigate("/progress")}
+          >
+            <BarChart3 className="mr-2 h-5 w-5" />
+            See My Progress
+          </Button>
+        </div>
 
         {/* Enhanced Session Upsell - Only for classic sessions */}
         {enhancedSessionData.sessionType === "classic" && (

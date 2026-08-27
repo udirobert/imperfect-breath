@@ -34,7 +34,7 @@ const getNavItems = (user: any, locationPathname: string): NavItem[] => [
     id: "session",
     label: "Session",
     icon: Sparkles,
-    path: "/session/classic",
+    path: "/session",
     isActive: locationPathname.startsWith("/session"),
     color: "text-blue-600",
     activeColor: "text-blue-700 bg-blue-50",

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Core components that should load immediately
 import MainLayout from "@/components/MainLayout";
@@ -23,10 +23,12 @@ import NotFound from "@/pages/NotFound";
 import PatternSelectionPage from "@/pages/PatternSelectionPage";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
-import Settings from "@/pages/Settings";
 
 // Responsive components
-import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
+// NOTE (consolidation): the mobile bottom nav is rendered once by
+// ResponsiveNavigation (via BottomTabBar), which wraps every MainLayout route.
+// The legacy global MobileBottomNav was removed here to stop two stacked bars
+// from appearing on top of each other on touch devices.
 
 // Notifications (OneSignal) — guarded no-op until VITE_ONESIGNAL_APP_ID is set
 import { initNotifications } from "@/lib/notifications/oneSignal";
@@ -40,7 +42,11 @@ const Results = React.lazy(() => import("@/pages/Results"));
 const CommunityFeed = React.lazy(() => import("@/pages/CommunityFeed"));
 const UserProfile = React.lazy(() => import("@/pages/UserProfile"));
 const Subscription = React.lazy(() => import("@/pages/Subscription"));
-const LeaderboardPage = React.lazy(() => import("@/pages/LeaderboardPage"));
+
+// Consolidation redirects — leaderboard now lives inside /community; settings
+// live inside /profile. Old URLs redirect so nothing breaks.
+const LeaderboardRedirect = () => <Navigate to="/community" replace />;
+const SettingsRedirect = () => <Navigate to="/profile" replace />;
 
 // Loading component for lazy routes — pixel-grid loader with elapsed timer
 import { PixelLoader } from "@/components/primitives/PixelLoader";
@@ -73,8 +79,8 @@ function App() {
               <Route path="/community" element={<RouteErrorBoundary><CommunityFeed /></RouteErrorBoundary>} />
               <Route path="/profile" element={<ProtectedRoute><RouteErrorBoundary><UserProfile /></RouteErrorBoundary></ProtectedRoute>} />
               <Route path="/subscription" element={<ProtectedRoute><RouteErrorBoundary><Subscription /></RouteErrorBoundary></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/leaderboard" element={<RouteErrorBoundary><LeaderboardPage /></RouteErrorBoundary>} />
+              <Route path="/settings" element={<SettingsRedirect />} />
+              <Route path="/leaderboard" element={<LeaderboardRedirect />} />
             </Route>
 
             {/* Routes without Header */}
@@ -87,8 +93,6 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
 
-          {/* Mobile Bottom Navigation */}
-          <MobileBottomNav />
           <Toaster />
         </Suspense>
       </BrowserRouter>

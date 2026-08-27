@@ -34,7 +34,7 @@ export default function Index() {
           <Button
             size="lg"
             className="btn-premium px-12 py-8 text-xl rounded-full w-full sm:w-auto"
-            onClick={() => navigate(isGuest ? "/auth?context=onboarding" : "/session/classic")}
+            onClick={() => navigate(isGuest ? "/auth?context=onboarding" : "/session")}
           >
             {isGuest ? "Complete Onboarding" : "Start Now"}
           </Button>

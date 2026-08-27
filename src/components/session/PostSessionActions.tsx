@@ -205,7 +205,7 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
         title: "Build Your Daily Habit",
         description: `Practice daily to reach a ${Math.min(7, streak + 1)}-day streak`,
         icon: Trophy,
-        action: () => navigate("/session/classic"),
+        action: () => navigate("/session"),
         priority: "high",
         category: "practice",
         progress: (streak / 7) * 100,
@@ -398,7 +398,7 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
           <div className="flex flex-wrap gap-3 justify-center">
             <Button
               variant="outline"
-              onClick={() => navigate("/session/classic")}
+              onClick={() => navigate("/session")}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Practice Again
