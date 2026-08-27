@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { BreathingPattern } from '../lib/breathingPatterns';
 import { errorReporter } from '../lib/errors/error-reporter';
+import { trackSessionCompleted } from '../lib/notifications/oneSignal';
 import type { SessionPhase, BreathPhase, SessionMode, SessionMetrics, PerformanceMode, VisionMetrics } from '../types/metrics';
 
 // ============================================================================
@@ -194,10 +195,14 @@ export const useSessionStore = create<SessionState & SessionActions>()(
     },
 
     completeSession: () => {
+      // Capture before reset: vision active during the session is our
+      // "verified practice" signal for notification journey tags (Brume v1)
+      const verified = get().visionActive;
       set({
         phase: 'complete',
         visionActive: false,
       });
+      trackSessionCompleted({ verified });
     },
 
     resetSession: () => {

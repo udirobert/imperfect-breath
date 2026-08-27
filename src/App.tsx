@@ -27,6 +27,9 @@ import Settings from "@/pages/Settings";
 
 // Responsive components
 import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
+
+// Notifications (OneSignal) — guarded no-op until VITE_ONESIGNAL_APP_ID is set
+import { initNotifications } from "@/lib/notifications/oneSignal";
 import RouteErrorBoundary from "@/components/auth/RouteErrorBoundary";
 
 // Large pages - lazy load these to reduce initial bundle size
@@ -51,6 +54,9 @@ const PageLoader = () => (
 );
 
 function App() {
+  React.useEffect(() => {
+    void initNotifications();
+  }, []);
 
   return (
     <EagerWeb3Provider>

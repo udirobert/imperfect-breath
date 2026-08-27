@@ -17,16 +17,16 @@ export default function Index() {
         
         <div className="inline-flex items-center space-x-2 badge-premium mb-4">
           <Star className="w-3 h-3 fill-primary" />
-          <span>Award Winning Breathing Experience</span>
+          <span>Camera-Verified Breathwork</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.1]">
           Breathe <span className="text-gradient">Better</span>. <br />
-          Experience <span className="text-gradient">Stillness</span>.
+          Prove <span className="text-gradient">It</span>.
         </h1>
         
         <p className="text-xl md:text-2xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
-          AI-powered guided breathing with decentralized social accountability. 
+          Guided breathing your camera can verify — real coaching, real progress you can prove.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">

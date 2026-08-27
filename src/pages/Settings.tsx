@@ -69,7 +69,7 @@ const Settings = () => {
               </button>
               <button className="w-full text-left px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                 <p className="font-medium text-gray-900 dark:text-white">Connected Accounts</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Manage Web3 wallet and social connections</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Manage wallet and social connections</p>
               </button>
               <button 
                 onClick={handleSignOut}
@@ -166,7 +166,7 @@ const Settings = () => {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
-          <p>Imperfect Breath v1.0.0</p>
+          <p>Brume v1.0.0 — progress you can prove</p>
         </div>
       </div>
     </div>

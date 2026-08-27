@@ -114,3 +114,7 @@ build_output.txt
 lint_output.txt
 tsc_output.txt
 .blackboxcli/
+
+# pnpm local env noise
+.pnpm-store/
+pnpm-workspace.yaml

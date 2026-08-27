@@ -41,10 +41,28 @@ Every other breathwork app is a timer with audio. Brume *knows* you practiced.
 
 ## OneSignal Journeys (Keep Them Coming Back evidence)
 
-1. **First Breath** — onboarding → first *verified* session within 24h
-2. **Streak Rescue** — 20h gap in an active streak → gentle nudge ("your mist is waiting")
-3. **Buddy Accountability** — your buddy finished a session → you're up
-4. **Weekly Proof** — Sunday digest: verified sessions, streak, one insight
+**Wired client-side** (`src/lib/notifications/oneSignal.ts`, hooks in `App.tsx` init +
+`sessionStore.completeSession`). Permission is asked **in context** — after the first
+completed session, never on first open. SDK: `onesignal-cordova-plugin` (Capacitor).
+
+**Tag contract v1** (client → OneSignal; configure Journeys against these):
+
+| Tag | Values | Journey |
+|---|---|---|
+| `first_breath_done` | `"true"` | **1. First Breath** — trigger: user 24h old AND tag absent → "Your first verified breath is waiting" |
+| `last_session_at` | ISO date | **2. Streak Rescue** — trigger: `streak` ≥ 1 AND `last_session_at` ≥ 1 day stale → "Your mist is waiting" |
+| `streak` | number | Journey 2 segmentation; milestone congrats at 7/30 |
+| `verified_total` | number | **4. Weekly Proof** — Sunday digest: sessions, streak, one insight |
+| `sessions_total` | number | analytics segmentation |
+
+**3. Buddy Accountability** needs a server leg (client can't securely notify another
+user): `backend/vision-service` calls OneSignal REST with the buddy's player id when a
+session completes. Post-release task — Journeys 1, 2, 4 carry the award story alone.
+
+**Dashboard setup (no code):** create OneSignal app → add iOS/Android platforms →
+set `VITE_ONESIGNAL_APP_ID` → build the 3 Journeys above. `identifyUser()` /
+`resetNotificationUser()` helpers exist but are unwired until auth settles (works
+anonymously via tags meanwhile).
 
 ## Cut list for v1 (Thiel-small)
 
