@@ -35,7 +35,7 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
   const durationMinutes = Math.round(metrics.duration / 60);
 
   // Live attestation lifecycle — replaces the old static "pending" row
-  const attestation = useAttestation(verified);
+  const attestation = useAttestation(verified, { score: metrics.score });
   const attestRow: PipelineRow =
     attestation.status === "loading"
       ? { key: "attest", label: "Issuing credential", status: "active" }

@@ -1062,12 +1062,16 @@ class AttestationResponse(BaseModel):
 
 async def mint_flow_attestation(credential: ProofOfPracticeCredential) -> Optional[str]:
     """
-    Mint a ProofOfPractice credential on Flow testnet.
+    Server-side minting is intentionally unsupported.
 
-    TODO: Implement the chain call (Cadence transaction via flow-py-sdk against
-    flow-testnet) that mints the credential to credential.subject, and return the
-    Flow transaction ID. While unimplemented this returns None and the route
-    reports the attestation as "pending_chain".
+    Architecture: the backend verifies and records the attestation; the CHAIN
+    WRITE is user-initiated from the client (src/lib/flow/attest-practice.ts →
+    cadence/contracts/PracticeCredential.cdc), because keys never leave the
+    user's device (see PrivacyPolicy). This service therefore always reports
+    "pending_chain" — the client resolves on-chain status after self-issuing.
+
+    Returns None by design; kept as a named seam in case a future verifier
+    co-signing flow needs it.
     """
     logger.info(f"Flow minting stub: credential for session {credential.sessionId} not yet submitted to chain")
     return None
