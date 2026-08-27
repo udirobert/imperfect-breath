@@ -68,7 +68,7 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
 }) => {
   const navigate = useNavigate();
   const auth = useAuth();
-  const { user, hasWallet } = auth;
+  const { user } = auth;
   const hasUser = auth.isAuthenticated || !!user;
   const { streak, totalMinutes, history } = useSessionHistory();
 
@@ -222,7 +222,6 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
     sessionData,
     userLevel,
     hasUser,
-    hasWallet,
     navigate,
     streak,
     totalMinutes,

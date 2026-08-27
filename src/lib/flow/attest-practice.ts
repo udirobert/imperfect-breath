@@ -76,17 +76,12 @@ export async function attestPracticeOnChain(args: {
       arg(sigBytes, types.Array(types.UInt8)),
       arg(dataBytes, types.Array(types.UInt8)),
     ],
-    // @ts-expect-error — @onflow/fcl 1.21.10 ships no type declarations;
-    // these methods exist at runtime (verified).
     proposer: fcl.currentUser().authorization,
-    // @ts-expect-error
     payer: fcl.currentUser().authorization,
-    // @ts-expect-error
     authorizations: [fcl.currentUser().authorization],
     limit: 999,
   });
 
-  // @ts-expect-error — fcl.tx exists at runtime
   const sealed = await fcl.tx(transactionId).onceSealed();
   if (sealed.status !== 4) throw new Error(`tx_status_${sealed.status}`);
   return transactionId;

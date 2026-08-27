@@ -114,14 +114,14 @@ export function trackCredentialShared(): void {
   } catch { /* non-fatal */ }
 }
 
-/** Alias the device to an authenticated user. Wire into auth login when ready. */
+/** Alias the device to an authenticated user. Wired in useAuthOrchestrator. */
 export function identifyUser(userId: string): void {
   try {
     sdk?.login(userId);
   } catch { /* non-fatal */ }
 }
 
-/** Clear the alias on sign out. Wire into auth logout when ready. */
+/** Clear the alias on sign out. Wired in useAuthOrchestrator. */
 export function resetNotificationUser(): void {
   try {
     sdk?.logout();

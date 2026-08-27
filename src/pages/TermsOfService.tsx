@@ -572,7 +572,7 @@ const TermsOfService = () => {
                 <p>We currently support:</p>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Flow Blockchain for verified credential attestations</li>
-                  <li>Lens Protocol V3 for decentralized social features</li>
+                  <li>Lens Protocol V3 for decentralized social features (currently paused — see roadmap)</li>
                   <li>
                     Ethereum and other EVM-compatible networks for wallet
                     connections
