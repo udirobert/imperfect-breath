@@ -44,6 +44,9 @@ export interface SessionState {
   visionActive: boolean;
   visionMetrics: VisionMetrics | null;
 
+  // Session outcome (set on completion; cleared on reset)
+  lastSessionVerified: boolean;
+
   // Error and warning state
   error: string | null;
   warnings: string[];
@@ -120,6 +123,7 @@ const initialState: SessionState = {
   audioEnabled: true,
   visionActive: false,
   visionMetrics: null,
+  lastSessionVerified: false,
   error: null,
   warnings: [],
   performanceMode: 'optimal',
@@ -201,6 +205,7 @@ export const useSessionStore = create<SessionState & SessionActions>()(
       set({
         phase: 'complete',
         visionActive: false,
+        lastSessionVerified: verified,
       });
       trackSessionCompleted({ verified });
     },

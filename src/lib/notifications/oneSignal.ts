@@ -23,6 +23,7 @@ const STATS_KEY = "brume_notification_stats";
 interface LocalStats {
   sessions_total: number;
   verified_total: number;
+  shares_total: number;
   prompted_permission: boolean;
 }
 
@@ -33,9 +34,9 @@ let initAttempted = false;
 function readStats(): LocalStats {
   try {
     const raw = localStorage.getItem(STATS_KEY);
-    if (raw) return { sessions_total: 0, verified_total: 0, prompted_permission: false, ...JSON.parse(raw) };
+    if (raw) return { sessions_total: 0, verified_total: 0, shares_total: 0, prompted_permission: false, ...JSON.parse(raw) };
   } catch { /* corrupted stats are non-fatal */ }
-  return { sessions_total: 0, verified_total: 0, prompted_permission: false };
+  return { sessions_total: 0, verified_total: 0, shares_total: 0, prompted_permission: false };
 }
 
 function writeStats(stats: LocalStats): void {
@@ -101,6 +102,16 @@ export function trackSessionCompleted(opts: { verified: boolean; streak?: number
   } catch (error) {
     console.warn("OneSignal trackSessionCompleted failed (non-fatal):", error);
   }
+}
+
+/** Record a credential share — the virality metric (Grand Prize evidence). */
+export function trackCredentialShared(): void {
+  try {
+    const stats = readStats();
+    stats.shares_total += 1;
+    writeStats(stats);
+    sdk?.User.addTag("shares_total", String(stats.shares_total));
+  } catch { /* non-fatal */ }
 }
 
 /** Alias the device to an authenticated user. Wire into auth login when ready. */

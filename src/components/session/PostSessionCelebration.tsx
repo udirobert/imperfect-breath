@@ -1,8 +1,10 @@
 import React from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
-import { Trophy, ArrowRight, Sparkles, Star, Flame } from "lucide-react";
+import { Trophy, ArrowRight, Sparkles, Star, Flame, ShieldCheck, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { trackCredentialShared } from "@/lib/notifications/oneSignal";
 
 interface PostSessionCelebrationProps {
   metrics: {
@@ -14,6 +16,8 @@ interface PostSessionCelebrationProps {
     isFirstSession?: boolean;
     streak?: number;
   };
+  /** True when camera verification was active — unlocks the credential card */
+  verified?: boolean;
   onContinue?: () => void;
   onExplorePatterns?: () => void;
   onClose?: () => void;
@@ -21,11 +25,29 @@ interface PostSessionCelebrationProps {
 
 export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
   metrics,
+  verified = false,
   onContinue,
   onExplorePatterns,
   onClose,
 }) => {
   const durationMinutes = Math.round(metrics.duration / 60);
+
+  // The virality loop: shareable proof of practice (Grand Prize growth surface)
+  const handleShareCredential = async () => {
+    const text = `I just completed a camera-verified breathwork session on Brume — score ${metrics.score}${metrics.streak ? `, ${metrics.streak}-day streak` : ""}. Progress you can prove. 🌫️`;
+    const url = "https://brume.imperfectform.fun";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Brume — Verified Practice", text, url });
+      } else {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        toast.success("Credential copied — paste it anywhere");
+      }
+      trackCredentialShared();
+    } catch {
+      /* user dismissed the share sheet — fine */
+    }
+  };
 
   return (
     <motion.div 
@@ -76,6 +98,36 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           delay={0.3}
         />
       </div>
+
+      {verified && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="px-2"
+        >
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center justify-center gap-2 text-primary font-semibold">
+                <ShieldCheck className="w-5 h-5" />
+                Verified Record of Practice
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Camera-verified on {new Date().toLocaleDateString()} · Score {metrics.score}
+                {metrics.streak ? ` · ${metrics.streak}-day streak` : ""}
+              </p>
+              <Button
+                onClick={handleShareCredential}
+                variant="outline"
+                className="rounded-full border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share your proof
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 pt-4 px-2">
         <Button 
