@@ -26,25 +26,31 @@ export function AgentTrace({
   doneLabel = "Done",
   onSettled,
   className,
+  /** When provided, the trace is driven by real pipeline progress (0..steps.length)
+   *  instead of presentation timing. */
+  currentStep,
 }: {
   steps: TraceStep[];
   activeLabel?: string;
   doneLabel?: string;
   onSettled?: () => void;
   className?: string;
+  currentStep?: number;
 }) {
   const total = steps.length + 1; // all steps, then settle beat
   const [tick, setTick] = useState(0);
   const [manualExpanded, setManualExpanded] = useState<boolean | null>(null);
-  const working = tick < steps.length;
+  const driven = currentStep !== undefined;
+  const progress = driven ? Math.min(currentStep, steps.length) : tick;
+  const working = progress < steps.length;
   const expanded = manualExpanded ?? working;
-  const visible = Math.min(tick, steps.length);
+  const visible = Math.min(progress, steps.length);
 
   useEffect(() => {
-    if (tick >= total) return;
+    if (driven || tick >= total) return; // presentation timing only when uncontrolled
     const t = setTimeout(() => setTick((x) => x + 1), tick === steps.length ? SETTLE_MS : STEP_MS);
     return () => clearTimeout(t);
-  }, [tick, total, steps.length]);
+  }, [tick, total, steps.length, driven]);
 
   const settledRef = useRef(false);
   useEffect(() => {

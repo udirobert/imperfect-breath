@@ -43,6 +43,6 @@ Brume HSL tokens (`foreground`, `muted-foreground`, `card`, `border`); keyframes
 
 ## Still open
 
-- AgentTrace fed by **real pipeline stages** (vision metrics timestamps) instead of presentation timing
+- ~~AgentTrace real stages~~ ✅ — `currentStep` prop added; Results.tsx drives it from `streamingState` (connect → chunks → composing); uncontrolled auto-play remains the fallback
 - ContextCards on the **Home/Index** "what do you need today" surface (camera-detected state variant, not just self-report)
-- TaskPipeline **live attestation status** — poll `/api/attest` result instead of static pending row
+- ~~TaskPipeline live attestation~~ ✅ — `useAttestation` hook runs POST /api/attest on verified sessions (wallet present), honest lifecycle: loading → done ("Flow · queued") | failed + retry | needs-wallet

@@ -75,6 +75,19 @@ const Results = () => {
     streamingState,
   } = useSecureAIAnalysis();
 
+  // Drive the AgentTrace from the REAL pipeline: local prep → connect →
+  // streaming chunks → composing. No fake progress — steps advance only
+  // when the underlying streamingState actually moves.
+  const traceStep = useMemo(() => {
+    if (!isAnalyzing) return 4;
+    const s = streamingState;
+    if (s.isStreaming && s.progress.chunksProcessed > 0) {
+      return s.progress.estimatedProgress > 70 ? 3 : 2;
+    }
+    if (s.connectionStatus === "connected" || s.connectionStatus === "connecting") return 1;
+    return 0;
+  }, [isAnalyzing, streamingState]);
+
   // ENHANCED: Robust safety checks with comprehensive validation
   const analyses = useMemo(() => {
     // AGGRESSIVE CONSOLIDATION: Single validation chain
@@ -806,6 +819,7 @@ Check out Imperfect Breath!`;
                         activeLabel="Zen is reading your session"
                         doneLabel="Insight ready"
                         className="max-w-sm"
+                        currentStep={traceStep}
                       />
                     </CardContent>
                   </Card>

@@ -5,7 +5,8 @@ import { Trophy, ArrowRight, Sparkles, Star, Flame, ShieldCheck, Share2 } from "
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { trackCredentialShared } from "@/lib/notifications/oneSignal";
-import { TaskPipeline } from "@/components/primitives/TaskPipeline";
+import { TaskPipeline, type PipelineRow } from "@/components/primitives/TaskPipeline";
+import { useAttestation } from "@/hooks/useAttestation";
 
 interface PostSessionCelebrationProps {
   metrics: {
@@ -32,6 +33,19 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
   onClose,
 }) => {
   const durationMinutes = Math.round(metrics.duration / 60);
+
+  // Live attestation lifecycle — replaces the old static "pending" row
+  const attestation = useAttestation(verified);
+  const attestRow: PipelineRow =
+    attestation.status === "loading"
+      ? { key: "attest", label: "Issuing credential", status: "active" }
+      : attestation.status === "done"
+        ? { key: "attest", label: "Credential issued", status: "done", meta: attestation.meta }
+        : attestation.status === "failed"
+          ? { key: "attest", label: "Credential issuance failed", status: "failed" }
+          : attestation.status === "needs-wallet"
+            ? { key: "attest", label: "On-chain credential", status: "pending", meta: "connect wallet" }
+            : { key: "attest", label: "On-chain credential", status: "pending" };
 
   // The virality loop: shareable proof of practice (Grand Prize growth surface)
   const handleShareCredential = async () => {
@@ -122,13 +136,9 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
                 rows={[
                   { key: "verify", label: "Session verified by camera", status: "done" },
                   { key: "score", label: "Score recorded", status: "done", meta: String(metrics.score) },
-                  {
-                    key: "attest",
-                    label: "On-chain credential",
-                    status: "active",
-                    meta: "Flow testnet",
-                  },
+                  attestRow,
                 ]}
+                onRetry={attestation.retry}
                 className="border-t border-primary/10 pt-3"
               />
               <Button
