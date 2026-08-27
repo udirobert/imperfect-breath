@@ -247,7 +247,7 @@ export const MoodBasedRecommendations: React.FC<
     
     parts.push(`${rec.timeToEffect} to effect`);
     
-    return parts.join(" � ");
+    return parts.join(" · ");
   };
 
   // Reset selection

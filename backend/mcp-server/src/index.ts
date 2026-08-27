@@ -34,6 +34,12 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`${VISION_URL}${path}`);
+  if (!res.ok) throw new Error(`vision_service_${res.status}`);
+  return res.json() as Promise<T>;
+}
+
 const server = new McpServer({
   name: "brume-proof-of-practice",
   version: "0.1.0",
@@ -41,30 +47,26 @@ const server = new McpServer({
 
 // ---------------------------------------------------------------------------
 // Tool 1: verify a session — did the human actually breathe?
-// Backed by the existing vision service: POST /api/vision/process
+// Queries the vision service's session store for real camera data. The vision
+// API is frame-based (image_data), so verification is established on-device
+// during the session; this tool reports the server-side verification state.
 // ---------------------------------------------------------------------------
 server.tool(
   "breath_verify_session",
-  "Verify a breathwork session from camera-derived signal samples. Returns whether the practice is verified, plus measured breath rate, depth consistency, and a session score. Raw video never leaves the client device — only derived metrics are sent.",
+  "Verify whether a breathwork session was camera-verified. Returns verified status, breathing-frame count, and measured breath rate. Verification is established server-side from the vision processor's session store — not self-reported.",
   {
     apiKey: z.string().describe("Metered API key"),
-    samples: z
-      .array(z.object({ t: z.number(), signal: z.number() }))
-      .min(10)
-      .describe("Time-series of breath signal samples (face-mesh derived, client-side)"),
-    expectedPattern: z
-      .object({ inhale: z.number(), hold: z.number().optional(), exhale: z.number() })
-      .optional()
-      .describe("Target cadence in seconds, if practicing against a pattern"),
+    sessionId: z.string().describe("The session_id used during the camera session"),
   },
-  async ({ apiKey, samples, expectedPattern }) => {
+  async ({ apiKey, sessionId }) => {
     meter(apiKey, "breath_verify_session");
-    const result = await post<{
+    const result = await get<{
+      session_id: string;
       verified: boolean;
-      breathRate: number;
-      depthScore: number;
-      sessionScore: number;
-    }>("/api/vision/process", { samples, expectedPattern });
+      breathing_frames: number;
+      confidence_frames: number;
+      breath_rate: number | null;
+    }>(`/api/session/${encodeURIComponent(sessionId)}/verify-status`);
     return { content: [{ type: "text", text: JSON.stringify(result) }] };
   },
 );
@@ -92,12 +94,12 @@ server.tool(
 
 // ---------------------------------------------------------------------------
 // Tool 3: attest practice — portable credential (Flow, via backend)
-// TODO(backend): add POST /api/attest to vision-service to mint the on-chain
-// attestation. Until then returns a structured payload marked pending.
+// Calls POST /api/attest on the vision service. The backend verifies the
+// session server-side (camera data in the session store) before issuing.
 // ---------------------------------------------------------------------------
 server.tool(
   "breath_attest_practice",
-  "Issue a portable, on-chain proof-of-practice credential for a verified session. Credentials are attestations, not collectibles.",
+  "Issue a portable, on-chain proof-of-practice credential for a verified session. The backend verifies that the session was camera-verified before issuing. Credentials are attestations, not collectibles.",
   {
     apiKey: z.string(),
     sessionId: z.string(),
@@ -105,20 +107,19 @@ server.tool(
   },
   async ({ apiKey, sessionId, walletAddress }) => {
     meter(apiKey, "breath_attest_practice");
-    const credential = {
-      type: "ProofOfPractice",
-      sessionId,
-      subject: walletAddress,
-      issuedAt: new Date().toISOString(),
-      status: "pending_backend_route", // TODO(backend): wire POST /api/attest
-    };
-    return { content: [{ type: "text", text: JSON.stringify(credential) }] };
+    const result = await post<{
+      success: boolean;
+      credential: { type: string; sessionId: string; subject: string; issuedAt: string; metrics: Record<string, unknown> };
+      attestation: { status: string; txId: string | null; network: string };
+    }>("/api/attest", { session_id: sessionId, wallet_address: walletAddress });
+    return { content: [{ type: "text", text: JSON.stringify(result) }] };
   },
 );
 
 // ---------------------------------------------------------------------------
 // Tool 4: coach.respond — Zen coaching grounded in real signals
-// Backed by the existing service: POST /api/ai-analysis
+// Calls POST /api/ai-analysis with the correct AIAnalysisRequest shape
+// (provider + session_data), and reads the result from the correct field.
 // ---------------------------------------------------------------------------
 server.tool(
   "coach_respond",
@@ -132,8 +133,30 @@ server.tool(
   },
   async ({ apiKey, message, visionMetrics }) => {
     meter(apiKey, "coach_respond");
-    const result = await post<{ reply: string }>("/api/ai-analysis", { message, visionMetrics });
-    return { content: [{ type: "text", text: result.reply }] };
+    // AIAnalysisRequest requires `provider` and `session_data` (Dict).
+    const result = await post<{
+      success: boolean;
+      provider: string;
+      analysis_type: string;
+      result: Record<string, unknown> | null;
+      error: string | null;
+      cached: boolean;
+    }>("/api/ai-analysis", {
+      provider: "cerebras",
+      session_data: {
+        message,
+        visionMetrics,
+        // Minimal session_data fields the analysis functions read
+        patternName: "Breathing Session",
+        sessionDuration: 0,
+      },
+    });
+    // AIAnalysisResponse.result is the analysis dict; extract the text.
+    // The fallback-analysis path returns { analysis: string, ... } in result.
+    const analysisText =
+      (result.result as { analysis?: string } | null)?.analysis ??
+      JSON.stringify(result.result ?? { error: result.error });
+    return { content: [{ type: "text", text: analysisText }] };
   },
 );
 

@@ -141,6 +141,26 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
                 onRetry={attestation.retry}
                 className="border-t border-primary/10 pt-3"
               />
+              {/* User-initiated: the user must click to mint the on-chain credential.
+                  The wallet only prompts on this action, not on modal mount. */}
+              {attestation.status === "idle" && (
+                <Button
+                  onClick={() => void attestation.attest()}
+                  className="w-full rounded-full btn-premium py-6"
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Mint your verified credential
+                </Button>
+              )}
+              {attestation.status === "failed" && (
+                <Button
+                  onClick={() => void attestation.retry()}
+                  variant="outline"
+                  className="w-full rounded-full border-primary/30 text-primary hover:bg-primary/10"
+                >
+                  Retry credential issuance
+                </Button>
+              )}
               <Button
                 onClick={handleShareCredential}
                 variant="outline"

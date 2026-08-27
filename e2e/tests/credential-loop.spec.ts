@@ -16,6 +16,9 @@ test.describe("Brume core loop", () => {
     await expect(page).toHaveTitle(/Brume/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Breathe");
     await expect(page.getByText("Prove")).toBeVisible();
+    // Scope to the heading instead of getByText("Prove") to avoid matching
+    // both the hero h1 ("Prove It.") and the tagline ("progress you can prove").
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Prove");
     await expect(page.getByText("What do you need today?")).toBeVisible();
   });
 

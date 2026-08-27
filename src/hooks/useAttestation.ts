@@ -5,8 +5,13 @@
  * request lifecycle: idle → needs-wallet → loading → done (queued on Flow)
  * | failed (with retry). Honest by construction: 'done' means the backend
  * accepted the attestation; chain confirmation is reported as "queued".
+ *
+ * Security: this hook does NOT auto-fire. The on-chain write is user-initiated
+ * (per Privacy Policy) — the caller must explicitly call `attest()`, e.g.
+ * from a "Mint credential" button. An idempotency guard prevents double-firing
+ * (important under React.StrictMode, which double-invokes effects in dev).
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useAuth } from "@/hooks/useAuth";
 import { attestPracticeOnChain } from "@/lib/flow/attest-practice";
@@ -23,7 +28,14 @@ export function useAttestation(enabled: boolean, opts?: { score?: number }) {
   const [status, setStatus] = useState<AttestationStatus>("idle");
   const [meta, setMeta] = useState<string | undefined>(undefined);
 
-  const run = useCallback(async () => {
+  // Idempotency: prevent double-firing under StrictMode or repeated calls.
+  const hasRunRef = useRef(false);
+
+  const attest = useCallback(async () => {
+    // Guard: never run twice for the same lifecycle.
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+
     if (!sessionId || !address || !BACKEND_URL) {
       setStatus(address ? "idle" : "needs-wallet");
       return;
@@ -31,13 +43,15 @@ export function useAttestation(enabled: boolean, opts?: { score?: number }) {
     setStatus("loading");
     setMeta(undefined);
     try {
+      // NOTE: no `verified` field — the backend verifies server-side from the
+      // vision processor's session store. See backend/vision-service/main.py.
       const res = await fetch(`${BACKEND_URL}/api/attest`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           session_id: sessionId,
           wallet_address: address,
-          verified: true,
+          session_score: opts?.score ?? 0,
         }),
       });
       if (!res.ok) throw new Error(`attest_${res.status}`);
@@ -50,27 +64,27 @@ export function useAttestation(enabled: boolean, opts?: { score?: number }) {
       // the PracticeCredential contract is configured; failure keeps "queued" —
       // the backend record stands and the user can retry later.
       try {
-        await attestPracticeOnChain({ sessionId, score: opts?.score ?? 0 });
+        await attestPracticeOnChain({
+          sessionId,
+          score: opts?.score ?? 0,
+          verifierSignature: data?.verifier_signature,
+        });
         setMeta("Flow testnet ✓");
       } catch {
         /* stays queued — honest, backend has the record */
       }
     } catch {
       setStatus("failed");
+      hasRunRef.current = false; // allow retry on failure
     }
   }, [sessionId, address, opts?.score]);
 
-  useEffect(() => {
-    if (!enabled) {
-      setStatus("idle");
-      return;
-    }
-    if (!address) {
-      setStatus("needs-wallet");
-      return;
-    }
-    void run();
-  }, [enabled, address, run]);
+  // Reset state when the hook is disabled (modal unmounted), but do NOT
+  // auto-fire. The caller must invoke attest() explicitly (user-initiated).
+  const reset = useCallback(() => {
+    hasRunRef.current = false;
+    setStatus(enabled ? (address ? "idle" : "needs-wallet") : "idle");
+  }, [enabled, address]);
 
-  return { status, meta, retry: run };
+  return { status, meta, attest, reset, retry: attest };
 }

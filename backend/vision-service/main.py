@@ -1036,7 +1036,9 @@ class AttestationRequest(BaseModel):
     breath_rate: Optional[float] = None
     session_score: Optional[float] = None
     duration_seconds: Optional[int] = None
-    verified: bool = True
+    # NOTE: the `verified` field was removed — verification is established
+    # server-side from the vision processor's session store, not trusted
+    # from the client. See attest_practice() below.
 
 class PracticeMetrics(BaseModel):
     breath_rate: Optional[float] = None
@@ -1055,10 +1057,19 @@ class ChainAttestation(BaseModel):
     txId: Optional[str] = None
     network: str = "flow-testnet"
 
+class VerifierCoSignature(BaseModel):
+    """Backend co-signature proving the session was server-verified.
+    The client passes these to the Flow transaction; the contract checks
+    the signature against the authorized verifier account's public key."""
+    verifier_address: str
+    verifier_signature_hex: str
+    signed_data_hex: str
+
 class AttestationResponse(BaseModel):
     success: bool
     credential: ProofOfPracticeCredential
     attestation: ChainAttestation
+    verifier_signature: Optional[VerifierCoSignature] = None
 
 async def mint_flow_attestation(credential: ProofOfPracticeCredential) -> Optional[str]:
     """
@@ -1078,17 +1089,48 @@ async def mint_flow_attestation(credential: ProofOfPracticeCredential) -> Option
 
 @app.post("/api/attest", response_model=AttestationResponse)
 async def attest_practice(request: AttestationRequest):
-    """Issue a ProofOfPractice attestation for a camera-verified breathwork session"""
-    # Never attest unverified practice
-    if not request.verified:
-        raise HTTPException(status_code=400, detail="Cannot attest unverified practice sessions")
+    """Issue a ProofOfPractice attestation for a camera-verified breathwork session.
+
+    Security: the `verified` flag in the request body is IGNORED. Verification
+    is established server-side by checking that the session accumulated real
+    camera data in the vision processor's session store (breathing history +
+    confidence frames). An attestation cannot be minted by a bare curl call.
+    """
+    # Server-side verification: the session must exist and have real camera data.
+    # The client's `verified` flag is deliberately not trusted.
+    session = vision_processor.sessions.get(request.session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot attest: session not found in vision processor. "
+                   "Camera verification must have occurred for this session_id.",
+        )
+
+    breathing_frames = len(session.breathing_history) if session.breathing_history else 0
+    confidence_frames = len(session.confidence_history) if session.confidence_history else 0
+    min_required_frames = 10  # enough frames to constitute a real session
+
+    if breathing_frames < min_required_frames and confidence_frames < min_required_frames:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot attest unverified practice: session {request.session_id} "
+                   f"has only {breathing_frames} breathing frames / {confidence_frames} "
+                   f"confidence frames (minimum {min_required_frames} required).",
+        )
+
+    # Pull measured metrics from the session store when the client didn't supply them
+    breath_rate = request.breath_rate
+    if breath_rate is None and session.breathing_history:
+        breath_rate = round(
+            sum(session.breathing_history) / len(session.breathing_history), 2
+        )
 
     credential = ProofOfPracticeCredential(
         sessionId=request.session_id,
         subject=request.wallet_address,
         issuedAt=datetime.now(timezone.utc).isoformat(),
         metrics=PracticeMetrics(
-            breath_rate=request.breath_rate,
+            breath_rate=breath_rate,
             session_score=request.session_score,
             duration_seconds=request.duration_seconds
         )
@@ -1103,14 +1145,72 @@ async def attest_practice(request: AttestationRequest):
 
     logger.info(f"ProofOfPractice attestation issued for session {request.session_id} (subject {request.wallet_address})")
 
+    # Produce a verifier co-signature over the attestation payload. The contract
+    # checks this signature on-chain to prove the backend (an authorized verifier)
+    # attested the session — preventing self-issuance.
+    verifier_cosig = None
+    verifier_key = os.environ.get("BRUME_VERIFIER_KEY")
+    verifier_address = os.environ.get("BRUME_VERIFIER_ADDRESS", "")
+    if verifier_key and verifier_address:
+        try:
+            # signed_data = sessionId || wallet_address || score (UTF-8 bytes)
+            signed_data_str = f"{request.session_id}{request.wallet_address}{request.session_score or 0}"
+            signed_data_bytes = signed_data_str.encode("utf-8")
+            signer_account = Account.from_key(verifier_key)
+            signed_message = encode_defunct(text=signed_data_str)
+            signed = Account.sign_message(signed_message, private_key=verifier_key)
+            verifier_cosig = VerifierCoSignature(
+                verifier_address=verifier_address,
+                verifier_signature_hex=signed.signature.hex(),
+                signed_data_hex=signed_data_bytes.hex(),
+            )
+            logger.info(f"Verifier co-signature produced for session {request.session_id}")
+        except Exception as e:
+            logger.error(f"Failed to produce verifier co-signature: {e}")
+    else:
+        logger.warning(
+            "BRUME_VERIFIER_KEY / BRUME_VERIFIER_ADDRESS not set — "
+            "attestation issued without on-chain co-signature (contract will reject)"
+        )
+
     return AttestationResponse(
         success=True,
         credential=credential,
         attestation=ChainAttestation(
             status="issued" if tx_id else "pending_chain",
             txId=tx_id
-        )
+        ),
+        verifier_signature=verifier_cosig
     )
+
+
+# Session verification status — lets the MCP server (and other clients) query
+# whether a session accumulated real camera data, without trusting a client flag.
+class SessionVerifyResponse(BaseModel):
+    session_id: str
+    verified: bool
+    breathing_frames: int
+    confidence_frames: int
+    breath_rate: Optional[float] = None
+
+@app.get("/api/session/{session_id}/verify-status", response_model=SessionVerifyResponse)
+async def get_session_verify_status(session_id: str):
+    """Return whether a session has enough camera data to be considered verified."""
+    session = vision_processor.sessions.get(session_id)
+    breathing_frames = len(session.breathing_history) if session and session.breathing_history else 0
+    confidence_frames = len(session.confidence_history) if session and session.confidence_history else 0
+    min_required = 10
+    breath_rate = None
+    if session and session.breathing_history:
+        breath_rate = round(sum(session.breathing_history) / len(session.breathing_history), 2)
+    return SessionVerifyResponse(
+        session_id=session_id,
+        verified=breathing_frames >= min_required or confidence_frames >= min_required,
+        breathing_frames=breathing_frames,
+        confidence_frames=confidence_frames,
+        breath_rate=breath_rate,
+    )
+
 
 # AGGRESSIVE CONSOLIDATION: Single health check endpoint
 @app.get("/health")
