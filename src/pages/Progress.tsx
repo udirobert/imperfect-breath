@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Clock, Activity, Zap, HeartPulse } from 'lucide-react';
 import { formatTime } from '@/lib/utils/formatters';
+import { InsightCarousel } from '@/components/progress/InsightCarousel';
 
 // Using consolidated formatters from utils
 
@@ -83,6 +84,8 @@ const Progress = () => {
           </Card>
         ))}
       </div>
+
+      <InsightCarousel history={history} streak={streak} preferredPattern={preferredPattern} />
 
       <Card className="w-full max-w-5xl">
         <CardHeader>

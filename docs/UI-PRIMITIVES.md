@@ -37,6 +37,12 @@ Brume HSL tokens (`foreground`, `muted-foreground`, `card`, `border`); keyframes
 
 ## Next wiring candidates
 
-1. **Camera warmup** (vision model load) → PixelLoader `orbit` variant with "Warming up your camera" label
-2. **Zen recommendation card** (Home "what do you need today") → ContextCards with the detected-state rationale
-3. **Progress page** → InsightCarousel rebuilt on inline SVG sparklines (no liveline)
+1. ~~**Camera warmup**~~ ✅ — `VisionManager` not-ready state now uses PixelLoader `orbit` ("Warming up your camera"), replacing the blue info box
+2. ~~**Evidence-cited recommendations**~~ ✅ — `MoodBasedRecommendations` loading is now PixelLoader `dots` ("Reading your check-in"), and the top pick gets a ContextCard explaining *why* ("Your check-in · breath science")
+3. ~~**Progress page insights**~~ ✅ — `InsightCarousel` (`src/components/progress/`) rebuilt on the dependency-free `Sparkline` primitive: three honest, computed insight types (weekly momentum, calm trend, streak), earned-not-padded — no data, no card
+
+## Still open
+
+- AgentTrace fed by **real pipeline stages** (vision metrics timestamps) instead of presentation timing
+- ContextCards on the **Home/Index** "what do you need today" surface (camera-detected state variant, not just self-report)
+- TaskPipeline **live attestation status** — poll `/api/attest` result instead of static pending row

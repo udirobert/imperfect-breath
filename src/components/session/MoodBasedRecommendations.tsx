@@ -31,6 +31,8 @@ import {
 } from "@/lib/recommendations/SmartPatternRecommendations";
 import { ContextCollector, type UserContext } from "@/components/context/ContextCollector";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
+import { PixelLoader } from "@/components/primitives/PixelLoader";
+import { ContextCards } from "@/components/primitives/ContextCard";
 
 interface MoodOption {
   id: string;
@@ -245,7 +247,7 @@ export const MoodBasedRecommendations: React.FC<
     
     parts.push(`${rec.timeToEffect} to effect`);
     
-    return parts.join(" • ");
+    return parts.join(" ï¿½ ");
   };
 
   // Reset selection
@@ -473,11 +475,8 @@ export const MoodBasedRecommendations: React.FC<
 
               {/* ENHANCEMENT FIRST: Enhanced Recommendations Display */}
               {isLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Analyzing your context for perfect matches...
-                  </p>
+                <div className="flex justify-center py-8">
+                  <PixelLoader variant="dots" label="Reading your check-in" showElapsed={false} />
                 </div>
               ) : recommendations.length > 0 ? (
                 <div className="space-y-4">
@@ -490,6 +489,16 @@ export const MoodBasedRecommendations: React.FC<
                       {recommendations.length} personalized matches
                     </Badge>
                   </div>
+                  {/* Evidence-cited coaching: why the top pick, in plain words */}
+                  <ContextCards
+                    chunks={[
+                      {
+                        title: `Why ${recommendations[0].pattern.name}`,
+                        body: recommendations[0].explanation || recommendations[0].reason,
+                        source: "Your check-in Â· breath science",
+                      },
+                    ]}
+                  />
                   <div className="grid gap-3">
                     {recommendations.map((rec, index) => (
                       <RecommendationCard
