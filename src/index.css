@@ -5,33 +5,34 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 224 10% 20%;
+    /* Brume mist theme — calm blue-grey, aligns with tailwind `brume` palette */
+    --background: 204 25% 98%;
+    --foreground: 210 15% 20%;
 
-    --card: 210 20% 100%;
-    --card-foreground: 224 10% 20%;
+    --card: 204 25% 100%;
+    --card-foreground: 210 15% 20%;
 
-    --popover: 210 20% 100%;
-    --popover-foreground: 224 10% 20%;
+    --popover: 204 25% 100%;
+    --popover-foreground: 210 15% 20%;
 
-    --primary: 180 30% 45%;
-    --primary-foreground: 210 20% 98%;
+    --primary: 204 28% 45%;
+    --primary-foreground: 204 25% 98%;
 
-    --secondary: 210 30% 90%;
-    --secondary-foreground: 180 30% 45%;
+    --secondary: 204 25% 92%;
+    --secondary-foreground: 204 28% 35%;
 
-    --muted: 210 30% 90%;
-    --muted-foreground: 224 10% 45%;
+    --muted: 204 25% 92%;
+    --muted-foreground: 210 12% 45%;
 
-    --accent: 25 95% 85%;
-    --accent-foreground: 224 10% 20%;
+    --accent: 204 30% 88%;
+    --accent-foreground: 210 15% 20%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 180 30% 45%;
+    --border: 204 20% 88%;
+    --input: 204 20% 88%;
+    --ring: 204 28% 45%;
 
     --radius: 0.5rem;
   }
@@ -49,9 +50,62 @@
   }
 }
 
+/* ── Agent-native primitive animations (src/components/primitives) ── */
+@keyframes pixel-on {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 1; }
+}
+@keyframes shimmer-text {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes trace-spin {
+  to { transform: rotate(360deg); }
+}
+
+.shimmer-label {
+  animation: shimmer-text 1.4s linear infinite;
+}
+.fade-up {
+  animation: fade-up 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.pop-in {
+  animation: pop-in 250ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.trace-spin {
+  animation: trace-spin 700ms linear infinite;
+}
+
+/* Reduced motion: freeze decorative loops, keep information (timers) ticking */
+@media (prefers-reduced-motion: reduce) {
+  .pixel-cell,
+  .shimmer-label,
+  .fade-up,
+  .pop-in,
+  .trace-spin {
+    animation: none !important;
+  }
+  .pixel-cell {
+    opacity: 0.15 !important;
+  }
+  .fade-up,
+  .pop-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 @layer utilities {
   .bg-calm-gradient {
-    background: radial-gradient(circle at top left, hsl(210, 30%, 98%) 0%, hsl(180, 20%, 95%) 50%, hsl(210, 20% ,98%) 100%);
+    background: radial-gradient(circle at top left, hsl(204, 30%, 98%) 0%, hsl(204, 22%, 95%) 50%, hsl(210, 20%, 98%) 100%);
   }
   
   .glass {

@@ -23,13 +23,13 @@ import {
   Star,
   Share,
   Brain,
-  Loader2,
   Shield,
   BarChart3,
   Heart,
   TrendingUp,
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
+import { AgentTrace } from "@/components/primitives/AgentTrace";
 import { useSessionHistory } from "../hooks/useSessionHistory";
 import { useSecureAIAnalysis } from "../hooks/useSecureAIAnalysis";
 import { AI_PROVIDERS, AIConfigManager, SessionData } from "../lib/ai/config";
@@ -74,6 +74,19 @@ const Results = () => {
     error,
     streamingState,
   } = useSecureAIAnalysis();
+
+  // Drive the AgentTrace from the REAL pipeline: local prep → connect →
+  // streaming chunks → composing. No fake progress — steps advance only
+  // when the underlying streamingState actually moves.
+  const traceStep = useMemo(() => {
+    if (!isAnalyzing) return 4;
+    const s = streamingState;
+    if (s.isStreaming && s.progress.chunksProcessed > 0) {
+      return s.progress.estimatedProgress > 70 ? 3 : 2;
+    }
+    if (s.connectionStatus === "connected" || s.connectionStatus === "connecting") return 1;
+    return 0;
+  }, [isAnalyzing, streamingState]);
 
   // ENHANCED: Robust safety checks with comprehensive validation
   const analyses = useMemo(() => {
@@ -793,13 +806,21 @@ Check out Imperfect Breath!`;
                     className="mb-4"
                   />
 
-                  {/* Fallback Loading State */}
+                  {/* Fallback Loading State — Zen's reasoning made visible */}
                   <Card>
                     <CardContent className="flex items-center justify-center p-8">
-                      <div className="text-center space-y-4">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                        <p>Dr. Breathe is analyzing your session...</p>
-                      </div>
+                      <AgentTrace
+                        steps={[
+                          { label: "Reading your breath rate curve" },
+                          { label: "Mapping the emotional arc" },
+                          { label: "Comparing to your recent sessions" },
+                          { label: "Writing your insight" },
+                        ]}
+                        activeLabel="Zen is reading your session"
+                        doneLabel="Insight ready"
+                        className="max-w-sm"
+                        currentStep={traceStep}
+                      />
                     </CardContent>
                   </Card>
                 </div>

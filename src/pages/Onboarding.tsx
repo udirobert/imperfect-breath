@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const STEPS = [
   {
     title: "Welcome to Stillness",
-    description: "Imperfect Breath is your space for conscious breathing and mental clarity.",
+    description: "Brume is your space for verified breathwork — progress you can prove.",
     icon: <Sparkles className="w-12 h-12 text-primary" />,
     color: "bg-primary/10"
   },

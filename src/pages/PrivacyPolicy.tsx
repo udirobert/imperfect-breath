@@ -20,7 +20,7 @@ const PrivacyPolicy = () => {
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Privacy Policy</h1>
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            How Imperfect Breath protects your privacy and handles your data
+            How Brume protects your privacy and handles your data
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             Last updated: {new Date().toLocaleDateString()}
@@ -177,16 +177,16 @@ const PrivacyPolicy = () => {
           {/* Section 4 */}
           <section id="blockchain-data" className="mb-8">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-              4. Blockchain and Web3 Data
+              4. Credentials and Blockchain Data
             </h2>
             <div className="space-y-4 text-gray-600 dark:text-gray-300">
-              <p>When you use Web3 features, we integrate with decentralized networks:</p>
+              <p>When you use credential features, we integrate with decentralized networks:</p>
 
               <div>
                 <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Flow Blockchain</h3>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>NFT creation and marketplace transactions</li>
-                  <li>Pattern ownership and intellectual property protection</li>
+                  <li>Verified practice credential attestations (opt-in)</li>
+                  <li>Public attestation records (session proof and scores)</li>
                   <li>Public blockchain data (transactions, smart contracts)</li>
                 </ul>
               </div>
@@ -224,7 +224,7 @@ const PrivacyPolicy = () => {
                 <ul className="list-disc list-inside space-y-1">
                   <li><strong>Local Storage:</strong> Session data cached on your device for offline access</li>
                   <li><strong>Supabase (Cloud):</strong> Encrypted user data and preferences for cross-device sync</li>
-                  <li><strong>IPFS:</strong> Decentralized storage for public content and NFT metadata</li>
+                  <li><strong>IPFS:</strong> Decentralized storage for public content and credential metadata</li>
                   <li><strong>Hetzner Servers:</strong> EU-based servers for AI processing and vision analysis</li>
                 </ul>
               </div>
@@ -407,9 +407,9 @@ const PrivacyPolicy = () => {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>This privacy policy is effective as of {new Date().toLocaleDateString()} and applies to all users of Imperfect Breath.</p>
+          <p>This privacy policy is effective as of {new Date().toLocaleDateString()} and applies to all users of Brume.</p>
           <Link to="/" className="text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block">
-            Return to Imperfect Breath
+            Return to Brume
           </Link>
         </div>
       </div>

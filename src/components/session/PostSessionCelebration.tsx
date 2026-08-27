@@ -1,8 +1,12 @@
 import React from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
-import { Trophy, ArrowRight, Sparkles, Star, Flame } from "lucide-react";
+import { Trophy, ArrowRight, Sparkles, Star, Flame, ShieldCheck, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { trackCredentialShared } from "@/lib/notifications/oneSignal";
+import { TaskPipeline, type PipelineRow } from "@/components/primitives/TaskPipeline";
+import { useAttestation } from "@/hooks/useAttestation";
 
 interface PostSessionCelebrationProps {
   metrics: {
@@ -14,6 +18,8 @@ interface PostSessionCelebrationProps {
     isFirstSession?: boolean;
     streak?: number;
   };
+  /** True when camera verification was active — unlocks the credential card */
+  verified?: boolean;
   onContinue?: () => void;
   onExplorePatterns?: () => void;
   onClose?: () => void;
@@ -21,11 +27,42 @@ interface PostSessionCelebrationProps {
 
 export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
   metrics,
+  verified = false,
   onContinue,
   onExplorePatterns,
   onClose,
 }) => {
   const durationMinutes = Math.round(metrics.duration / 60);
+
+  // Live attestation lifecycle — replaces the old static "pending" row
+  const attestation = useAttestation(verified, { score: metrics.score });
+  const attestRow: PipelineRow =
+    attestation.status === "loading"
+      ? { key: "attest", label: "Issuing credential", status: "active" }
+      : attestation.status === "done"
+        ? { key: "attest", label: "Credential issued", status: "done", meta: attestation.meta }
+        : attestation.status === "failed"
+          ? { key: "attest", label: "Credential issuance failed", status: "failed" }
+          : attestation.status === "needs-wallet"
+            ? { key: "attest", label: "On-chain credential", status: "pending", meta: "connect wallet" }
+            : { key: "attest", label: "On-chain credential", status: "pending" };
+
+  // The virality loop: shareable proof of practice (Grand Prize growth surface)
+  const handleShareCredential = async () => {
+    const text = `I just completed a camera-verified breathwork session on Brume — score ${metrics.score}${metrics.streak ? `, ${metrics.streak}-day streak` : ""}. Progress you can prove. 🌫️`;
+    const url = "https://brume.imperfectform.fun";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Brume — Verified Practice", text, url });
+      } else {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        toast.success("Credential copied — paste it anywhere");
+      }
+      trackCredentialShared();
+    } catch {
+      /* user dismissed the share sheet — fine */
+    }
+  };
 
   return (
     <motion.div 
@@ -76,6 +113,66 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           delay={0.3}
         />
       </div>
+
+      {verified && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="px-2"
+        >
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center justify-center gap-2 text-primary font-semibold">
+                <ShieldCheck className="w-5 h-5" />
+                Verified Record of Practice
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Camera-verified on {new Date().toLocaleDateString()} · Score {metrics.score}
+                {metrics.streak ? ` · ${metrics.streak}-day streak` : ""}
+              </p>
+              {/* Proof-of-practice pipeline — honest states, nothing faked */}
+              <TaskPipeline
+                rows={[
+                  { key: "verify", label: "Session verified by camera", status: "done" },
+                  { key: "score", label: "Score recorded", status: "done", meta: String(metrics.score) },
+                  attestRow,
+                ]}
+                onRetry={attestation.retry}
+                className="border-t border-primary/10 pt-3"
+              />
+              {/* User-initiated: the user must click to mint the on-chain credential.
+                  The wallet only prompts on this action, not on modal mount. */}
+              {attestation.status === "idle" && (
+                <Button
+                  onClick={() => void attestation.attest()}
+                  className="w-full rounded-full btn-premium py-6"
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Mint your verified credential
+                </Button>
+              )}
+              {attestation.status === "failed" && (
+                <Button
+                  onClick={() => void attestation.retry()}
+                  variant="outline"
+                  className="w-full rounded-full border-primary/30 text-primary hover:bg-primary/10"
+                >
+                  Retry credential issuance
+                </Button>
+              )}
+              <Button
+                onClick={handleShareCredential}
+                variant="outline"
+                className="rounded-full border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share your proof
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 pt-4 px-2">
         <Button 

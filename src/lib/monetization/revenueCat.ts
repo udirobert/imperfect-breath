@@ -8,6 +8,12 @@
  * PERFORMANT: Lazy loading and caching
  *
  * Updated for RevenueCat SDK 11.2.6 with proper TypeScript support
+ *
+ * BRUME PRODUCT TRUTH: a single entitlement (`ENTITLEMENT_ID = "brume_premium"`)
+ * gates everything paid. Two store products unlock it:
+ * `brume_premium_monthly` and `brume_premium_annual` (annual carries the
+ * 7-day free trial). Legacy 'pro'/'premium' entitlement/tier names are kept
+ * as backward-compatible aliases and always map back to brume_premium.
  */
 
 // CLEAN: Proper RevenueCat imports for latest SDK
@@ -17,6 +23,20 @@ import type {
   PurchasesPackage,
   PurchasesError,
 } from "@revenuecat/purchases-capacitor";
+import {
+  ENTITLEMENT_ID,
+  PRODUCT_IDS,
+  ANNUAL_TRIAL_DAYS,
+  loadRevenueCatConfig,
+  getRevenueCatKeyForPlatform,
+  isValidRevenueCatKey,
+} from "./revenueCatConfig";
+
+// Re-export the product truth so every consumer shares one source.
+export { ENTITLEMENT_ID, PRODUCT_IDS, ANNUAL_TRIAL_DAYS };
+
+/** Legacy tier labels kept for backward compatibility across the app. */
+export type LegacyTierId = "basic" | "premium" | "pro";
 
 // CLEAN: Simplified types for cross-platform compatibility
 export interface SubscriptionTier {
@@ -26,11 +46,31 @@ export interface SubscriptionTier {
   description: string;
   features: string[];
   isActive: boolean;
+  /** RevenueCat store product identifier (purchasable tiers only). */
+  productId?: string;
+  /** RevenueCat package identifier within the current offering. */
+  packageId?: string;
+  /** Free trial length in days, if the product carries one. */
+  trialDays?: number;
 }
 
 export interface UserSubscription {
   tier: SubscriptionTier | null;
   isActive: boolean;
+  features: string[];
+  expiresAt?: Date;
+  /** Entitlement backing this subscription (ENTITLEMENT_ID when premium). */
+  entitlementId?: string;
+}
+
+/**
+ * Flat subscription status shape (used by subscription-access hooks).
+ * `tier` is the legacy label mapped from the brume_premium entitlement.
+ */
+export interface SubscriptionStatus {
+  tier: LegacyTierId;
+  isActive: boolean;
+  features: string[];
   expiresAt?: Date;
 }
 
@@ -41,50 +81,61 @@ export interface PurchaseResult {
   customerInfo?: CustomerInfo;
 }
 
-// ORGANIZED: Subscription tier definitions
+/** Brume Premium benefits — mirrored by the paywall page copy. */
+export const BRUME_PREMIUM_FEATURES: string[] = [
+  "Verified deep session insights",
+  "All 20+ breathing patterns",
+  "Adaptive sessions that respond to your state",
+  "Credential gallery — portable proof of practice",
+  "Accountability buddies",
+];
+
+const FREE_FEATURES: string[] = [
+  "Core breathing patterns",
+  "Session tracking",
+  "Progress overview",
+];
+
+// ORGANIZED: Subscription tier definitions (prices are display placeholders —
+// live store pricing is resolved through RevenueCat offerings at purchase time)
 export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
-    id: "free",
-    name: "Free",
+    id: "basic",
+    name: "Brume Free",
     price: "Free",
-    description: "Basic breathing patterns and sessions",
-    features: [
-      "Basic breathing patterns",
-      "Session tracking",
-      "Progress overview",
-      "Community access",
-    ],
+    description: "Begin a calm, consistent breathing practice",
+    features: FREE_FEATURES,
     isActive: true,
   },
   {
-    id: "pro",
-    name: "Pro",
+    id: "premium",
+    name: "Brume Premium",
     price: "$4.99/month",
-    description: "Advanced features and personalization",
-    features: [
-      "All basic features",
-      "Advanced breathing patterns",
-      "Detailed analytics",
-      "Custom pattern creation",
-      "Social sharing",
-    ],
+    description: "Progress you can prove — billed monthly",
+    features: BRUME_PREMIUM_FEATURES,
     isActive: false,
+    productId: PRODUCT_IDS.monthly,
+    packageId: PRODUCT_IDS.monthly,
   },
   {
-    id: "premium",
-    name: "Premium",
-    price: "$9.99/month",
-    description: "Complete breathing experience with Web3 features",
-    features: [
-      "All pro features",
-      "NFT pattern minting",
-      "Creator monetization",
-      "Priority support",
-      "Beta feature access",
-    ],
+    id: "premium_annual",
+    name: "Brume Premium — Annual",
+    price: "$39.99/year",
+    description: `${ANNUAL_TRIAL_DAYS}-day free trial, then billed yearly`,
+    features: BRUME_PREMIUM_FEATURES,
     isActive: false,
+    productId: PRODUCT_IDS.annual,
+    packageId: PRODUCT_IDS.annual,
+    trialDays: ANNUAL_TRIAL_DAYS,
   },
 ];
+
+/** Map any tier/product/entitlement identity to its legacy tier label. */
+export function getLegacyTierLabel(tierId: string): LegacyTierId {
+  if (tierId === "pro") return "pro"; // legacy pro entitlement holders keep their label
+  if (tierId === "premium" || tierId === "premium_annual") return "premium";
+  return "basic";
+}
 
 // PERFORMANT: Platform detection with proper Capacitor check
 const isMobile =
@@ -127,15 +178,25 @@ class RevenueCatService {
 
     try {
       if (isMobile && Purchases) {
-        // Mobile: Initialize actual RevenueCat SDK
-        const apiKey = process.env.REVENUECAT_API_KEY;
-        if (!apiKey) {
-          console.warn("RevenueCat API key not provided");
+        // Mobile: initialize actual RevenueCat SDK with config-managed keys
+        const platform =
+          (
+            window as unknown as { Capacitor: { getPlatform(): string } }
+          ).Capacitor.getPlatform() === "ios"
+            ? "ios"
+            : "android";
+        const { config, mode } = await loadRevenueCatConfig();
+        const apiKey = config
+          ? getRevenueCatKeyForPlatform(config, platform)
+          : undefined;
+
+        if (!apiKey || !isValidRevenueCatKey(apiKey, platform)) {
+          console.warn("RevenueCat API key not provided or invalid");
           return false;
         }
 
         await Purchases.configure({ apiKey });
-        console.log("RevenueCat SDK initialized successfully");
+        console.log(`RevenueCat SDK initialized successfully (${mode} mode)`);
         this.isInitialized = true;
         return true;
       } else {
@@ -164,6 +225,7 @@ class RevenueCatService {
       return {
         tier: SUBSCRIPTION_TIERS[0], // Free tier
         isActive: true,
+        features: FREE_FEATURES,
       };
     }
   }
@@ -194,6 +256,59 @@ class RevenueCatService {
     }
   }
 
+  // CLEAN: Restore purchases (app-store requirement + judge testing path)
+  async restorePurchases(): Promise<PurchaseResult> {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    if (!isMobile || !Purchases) {
+      return {
+        success: false,
+        error: "Purchases can only be restored in the mobile app",
+      };
+    }
+
+    try {
+      const result = await Purchases.restorePurchases();
+      // Handle both possible return types
+      const customerInfo =
+        "customerInfo" in result ? result.customerInfo : result;
+      const subscription = this.subscriptionFromCustomerInfo(customerInfo);
+      return { success: true, customerInfo, subscription };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Restore failed",
+      };
+    }
+  }
+
+  // DRY: Feature access check against the current (entitlement-backed) status
+  async hasFeatureAccess(feature: string): Promise<boolean> {
+    const subscription = await this.getSubscriptionStatus();
+    return hasFeature(subscription, feature);
+  }
+
+  // NOTE (Shipaton judges): iOS offer/promo codes are redeemed through the
+  // App Store sheet below; the codes themselves are managed in RevenueCat /
+  // App Store Connect. Google Play codes are redeemed in the Play Store app.
+  async presentPromoCodeRedemption(): Promise<boolean> {
+    if (!isMobile || !Purchases) return false;
+    const platform = (
+      window as unknown as { Capacitor: { getPlatform(): string } }
+    ).Capacitor.getPlatform();
+    if (platform !== "ios") return false;
+
+    try {
+      await Purchases.presentCodeRedemptionSheet();
+      return true;
+    } catch (error) {
+      console.warn("Promo code sheet unavailable:", error);
+      return false;
+    }
+  }
+
   // CLEAN: User identification for analytics with proper SDK calls
   async identifyUser(
     userId: string,
@@ -217,6 +332,19 @@ class RevenueCatService {
     }
   }
 
+  // CLEAN: RevenueCat logout (keeps anonymous device purchases intact)
+  async logOut(): Promise<void> {
+    if (!this.isInitialized || !isMobile || !Purchases) return;
+
+    try {
+      await Purchases.logOut();
+      this.currentSubscription = null;
+      console.log("RevenueCat: User logged out");
+    } catch (error) {
+      console.warn("RevenueCat logout failed:", error);
+    }
+  }
+
   // PERFORMANT: Check if RevenueCat is available
   isRevenueCatAvailable(): boolean {
     return Boolean(isMobile && this.isInitialized && !!Purchases);
@@ -232,52 +360,65 @@ class RevenueCatService {
       const result = await Purchases.getCustomerInfo();
       // Handle both possible return types
       const customerInfo = 'customerInfo' in result ? result.customerInfo : result;
-      const activeEntitlements = customerInfo.entitlements?.active || {};
-
-      // Check for premium subscription
-      if (
-        activeEntitlements.premium &&
-        Boolean(activeEntitlements.premium.isActive) === true
-      ) {
-        return {
-          tier:
-            SUBSCRIPTION_TIERS.find((t) => t.id === "premium") ||
-            SUBSCRIPTION_TIERS[0],
-          isActive: true,
-          expiresAt: activeEntitlements.premium?.expirationDate
-            ? new Date(activeEntitlements.premium.expirationDate)
-            : undefined,
-        };
-      }
-
-      // Check for pro subscription
-      if (
-        activeEntitlements.pro &&
-        Boolean(activeEntitlements.pro.isActive) === true
-      ) {
-        return {
-          tier:
-            SUBSCRIPTION_TIERS.find((t) => t.id === "pro") ||
-            SUBSCRIPTION_TIERS[0],
-          isActive: true,
-          expiresAt: activeEntitlements.pro?.expirationDate
-            ? new Date(activeEntitlements.pro.expirationDate)
-            : undefined,
-        };
-      }
-
-      // Default to free tier
-      return {
-        tier: SUBSCRIPTION_TIERS[0], // Free tier
-        isActive: true,
-      };
+      return this.subscriptionFromCustomerInfo(customerInfo);
     } catch (error) {
       console.error("Failed to get mobile subscription status:", error);
       return {
         tier: SUBSCRIPTION_TIERS[0],
         isActive: true,
+        features: FREE_FEATURES,
       };
     }
+  }
+
+  /**
+   * DRY: Single mapping from RevenueCat entitlements to app subscription state.
+   * brume_premium is the source of truth; legacy 'premium'/'pro' entitlements
+   * are honored as aliases so existing subscribers keep access.
+   */
+  private subscriptionFromCustomerInfo(
+    customerInfo: CustomerInfo,
+  ): UserSubscription {
+    const activeEntitlements = customerInfo.entitlements?.active || {};
+
+    const premiumTier =
+      SUBSCRIPTION_TIERS.find((t) => t.id === "premium") ||
+      SUBSCRIPTION_TIERS[0];
+
+    // Source of truth: the brume_premium entitlement
+    const brumePremium = activeEntitlements[ENTITLEMENT_ID];
+    if (brumePremium && Boolean(brumePremium.isActive) === true) {
+      return {
+        tier: premiumTier,
+        isActive: true,
+        features: premiumTier.features,
+        expiresAt: brumePremium.expirationDate
+          ? new Date(brumePremium.expirationDate)
+          : undefined,
+        entitlementId: ENTITLEMENT_ID,
+      };
+    }
+
+    // Backward compatibility: legacy 'premium'/'pro' entitlements map to Brume Premium
+    const legacyPremium = activeEntitlements.premium || activeEntitlements.pro;
+    if (legacyPremium && Boolean(legacyPremium.isActive) === true) {
+      return {
+        tier: premiumTier,
+        isActive: true,
+        features: premiumTier.features,
+        expiresAt: legacyPremium.expirationDate
+          ? new Date(legacyPremium.expirationDate)
+          : undefined,
+        entitlementId: ENTITLEMENT_ID,
+      };
+    }
+
+    // Default to free tier
+    return {
+      tier: SUBSCRIPTION_TIERS[0], // Free tier
+      isActive: true,
+      features: FREE_FEATURES,
+    };
   }
 
   private async handleMobilePurchase(
@@ -315,11 +456,7 @@ class RevenueCatService {
       return {
         success: true,
         customerInfo,
-        subscription: {
-          tier,
-          isActive: true,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        },
+        subscription: this.subscriptionFromCustomerInfo(customerInfo),
       };
     } catch (error) {
       return {
@@ -333,30 +470,36 @@ class RevenueCatService {
     offerings: unknown,
     tierId: string,
   ): PurchasesPackage | null {
-    const packageMap: Record<string, string> = {
-      pro: "pro_monthly",
-      premium: "premium_monthly",
+    // Brume product truth: each paid tier maps to one store product
+    const tier = SUBSCRIPTION_TIERS.find((t) => t.id === tierId);
+    const productId = tier?.productId;
+    if (!productId) return null;
+
+    // Collect packages from the current offering (availablePackages plus the
+    // monthly/annual/lifetime convenience fields, which may be single values)
+    const allPackages: PurchasesPackage[] = [];
+    const record = offerings as Record<string, unknown>;
+
+    const addPackages = (value: unknown) => {
+      if (!value) return;
+      if (Array.isArray(value)) {
+        allPackages.push(...(value as PurchasesPackage[]));
+      } else {
+        allPackages.push(value as PurchasesPackage);
+      }
     };
 
-    const packageId = packageMap[tierId];
-    if (!packageId) return null;
-
-    // Look through all offering types
-    const allPackages: PurchasesPackage[] = [];
-
-    // Add packages from all available offering types
-    const offeringTypes = ["monthly", "annual", "lifetime"] as const;
-
-    for (const offerType of offeringTypes) {
-      const packages = (
-        offerings as unknown as Record<string, PurchasesPackage[]>
-      )[offerType];
-      if (packages && Array.isArray(packages)) {
-        allPackages.push(...packages);
-      }
+    addPackages(record.availablePackages);
+    for (const offerType of ["monthly", "annual", "lifetime"] as const) {
+      addPackages(record[offerType]);
     }
 
-    return allPackages.find((pkg) => pkg.identifier === packageId) || null;
+    return (
+      allPackages.find(
+        (pkg) =>
+          pkg.identifier === productId || pkg.product?.identifier === productId,
+      ) || null
+    );
   }
 }
 
@@ -376,6 +519,15 @@ export function isSubscriptionActive(
   subscription: UserSubscription | null,
 ): boolean {
   return subscription?.isActive === true;
+}
+
+/** True when the subscription is backed by the brume_premium entitlement. */
+export function isBrumePremium(subscription: UserSubscription | null): boolean {
+  return (
+    isSubscriptionActive(subscription) &&
+    subscription?.tier != null &&
+    subscription.tier.id !== "basic"
+  );
 }
 
 export function hasFeature(

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.imperfectbreath.app",
-  appName: "Imperfect Breath",
+  appId: "fun.imperfectform.brume",
+  appName: "Brume",
   webDir: "dist",
   server: {
     androidScheme: "https",

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { BreathingSessionPost } from '@/components/social/BreathingSessionPost';
 import { PostSessionCelebration } from '@/components/session/PostSessionCelebration';
+import { useSessionStore } from '@/stores/sessionStore';
 import { 
   Trophy, 
   Clock, 
@@ -48,6 +49,7 @@ export const SessionCompleteModal: React.FC<SessionCompleteModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState(sessionData.adaptiveFlow ? 'celebration' : 'results');
   const [isShared, setIsShared] = useState(false);
+  const lastSessionVerified = useSessionStore((s) => s.lastSessionVerified);
 
   const duration = Math.round(sessionData.duration / 60);
   const durationText = duration === 1 ? '1 minute' : `${duration} minutes`;
@@ -121,6 +123,7 @@ export const SessionCompleteModal: React.FC<SessionCompleteModalProps> = ({
                   sessionType: sessionData.sessionType || "classic",
                   isFirstSession: sessionData.isFirstSession
                 }}
+                verified={lastSessionVerified}
                 onContinue={onContinue}
                 onExplorePatterns={() => {
                   onClose();

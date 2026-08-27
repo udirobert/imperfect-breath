@@ -17,13 +17,11 @@ import {
   Trophy,
   TrendingUp,
   Users,
-  Store,
   Heart,
   Brain,
   Share2,
   Target,
   Zap,
-  Crown,
   Sparkles,
   RefreshCw,
   BarChart3,
@@ -70,7 +68,7 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
 }) => {
   const navigate = useNavigate();
   const auth = useAuth();
-  const { user, hasWallet } = auth;
+  const { user } = auth;
   const hasUser = auth.isAuthenticated || !!user;
   const { streak, totalMinutes, history } = useSessionHistory();
 
@@ -186,21 +184,6 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
       });
     }
 
-    if (hasWallet && userLevel !== "beginner") {
-      actions.push({
-        id: "mint_nft",
-        title: "Mint Your Session NFT",
-        description:
-          "Create a unique digital collectible of your breathing achievement",
-        icon: Coins,
-        action: () => navigate("/create"),
-        priority: "low",
-        category: "monetize",
-        requiresAuth: true,
-        badge: "Web3",
-      });
-    }
-
     // PROGRESS & ACHIEVEMENT ACTIONS
     if (hasUser) {
       actions.push({
@@ -212,30 +195,6 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
         priority: "low",
         category: "progress",
         progress: Math.min(100, (totalMinutes / 600) * 100), // 10 hours = 100%
-      });
-    }
-
-    // ADVANCED USER ACTIONS
-    if (userLevel === "advanced") {
-      actions.push({
-        id: "instructor_path",
-        title: "Become a Breathing Instructor",
-        description: "Share your knowledge and help others on their journey",
-        icon: Crown,
-        action: () => navigate("/instructor-onboarding"),
-        priority: "low",
-        category: "social",
-        badge: "Advanced",
-      });
-
-      actions.push({
-        id: "marketplace",
-        title: "Explore Pattern Marketplace",
-        description: "Discover premium patterns and monetize your creations",
-        icon: Store,
-        action: () => navigate("/marketplace"),
-        priority: "low",
-        category: "monetize",
       });
     }
 
@@ -263,7 +222,6 @@ export const PostSessionActions: React.FC<PostSessionActionsProps> = ({
     sessionData,
     userLevel,
     hasUser,
-    hasWallet,
     navigate,
     streak,
     totalMinutes,

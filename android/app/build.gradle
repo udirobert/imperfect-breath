@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.imperfectbreath.app"
+    namespace "fun.imperfectform.brume"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.imperfectbreath.app"
+        applicationId "fun.imperfectform.brume"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

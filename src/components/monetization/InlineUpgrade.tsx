@@ -64,7 +64,7 @@ const FEATURE_META = {
     name: "AI Coaching",
     description: "Real-time guidance and personalized coaching",
     icon: Sparkles,
-    requiredTier: "pro",
+    requiredTier: "premium",
     gradient: "from-purple-500 to-pink-600",
     benefits: [
       "Real-time coaching feedback",
@@ -88,7 +88,7 @@ const FEATURE_META = {
     name: "NFT Creation",
     description: "Transform your patterns into unique digital art",
     icon: Crown,
-    requiredTier: "pro",
+    requiredTier: "premium",
     gradient: "from-yellow-500 to-orange-600",
     benefits: [
       "Unique pattern-based art",

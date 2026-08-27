@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { Wind, Shield, Users, Zap, Compass, Star } from "lucide-react";
+import { TodayCard } from "@/components/home/TodayCard";
 
 export default function Index() {
   const navigate = useNavigate();
@@ -17,16 +18,16 @@ export default function Index() {
         
         <div className="inline-flex items-center space-x-2 badge-premium mb-4">
           <Star className="w-3 h-3 fill-primary" />
-          <span>Award Winning Breathing Experience</span>
+          <span>Camera-Verified Breathwork</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.1]">
           Breathe <span className="text-gradient">Better</span>. <br />
-          Experience <span className="text-gradient">Stillness</span>.
+          Prove <span className="text-gradient">It</span>.
         </h1>
         
         <p className="text-xl md:text-2xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
-          AI-powered guided breathing with decentralized social accountability. 
+          Guided breathing your camera can verify — real coaching, real progress you can prove.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -42,7 +43,7 @@ export default function Index() {
             variant="outline"
             size="lg"
             className="px-8 py-8 text-lg rounded-full w-full sm:w-auto glass-dark border-primary/20 text-primary hover:bg-primary/5"
-            onClick={() => navigate("/marketplace")}
+            onClick={() => navigate("/patterns")}
           >
             Explore Patterns
           </Button>
@@ -63,22 +64,27 @@ export default function Index() {
         )}
       </div>
 
+      {/* What do you need today — evidence-cited recommendation */}
+      <div className="mt-16 flex justify-center w-full animate-in fade-in duration-1000 delay-300 fill-mode-both">
+        <TodayCard />
+      </div>
+
       {/* Feature Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mt-32 animate-in fade-in duration-1000 delay-500 fill-mode-both">
-        <FeatureCard 
+        <FeatureCard
           icon={<Zap className="w-6 h-6" />}
-          title="AI Biometrics"
-          description="Real-time posture and breath detection using local, privacy-first vision processing."
+          title="Camera Verification"
+          description="On-device vision confirms you actually practiced. Video never leaves your phone."
         />
-        <FeatureCard 
+        <FeatureCard
           icon={<Users className="w-6 h-6" />}
-          title="Lens Social Hub"
-          description="Build streaks, earn rewards, and share your journey with the Lens ecosystem."
+          title="Verified Credentials"
+          description="Streaks and records anchored on-chain — progress you can carry anywhere."
         />
-        <FeatureCard 
+        <FeatureCard
           icon={<Shield className="w-6 h-6" />}
-          title="Decentralized Identity"
-          description="Your data is yours. Secure, wallet-based authentication with SIWE."
+          title="Private by Design"
+          description="Your data is yours. No raw video, no facial recognition, ever."
         />
       </div>
 

@@ -29,7 +29,7 @@ const TermsOfService = () => {
             </h1>
           </div>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Terms and conditions for using Imperfect Breath
+            Terms and conditions for using Brume
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             Last updated: {new Date().toLocaleDateString()}
@@ -130,7 +130,7 @@ const TermsOfService = () => {
             </h2>
             <div className="space-y-4 text-gray-600 dark:text-gray-300">
               <p>
-                By accessing or using Imperfect Breath ("the Service"), you
+                By accessing or using Brume ("the Service"), you
                 agree to be bound by these Terms of Service ("Terms"). If you do
                 not agree to these Terms, please do not use our Service.
               </p>
@@ -162,7 +162,7 @@ const TermsOfService = () => {
             </h2>
             <div className="space-y-4 text-gray-600 dark:text-gray-300">
               <p>
-                Imperfect Breath is a digital wellness platform that provides:
+                Brume is a digital wellness platform that provides:
               </p>
               <ul className="list-disc list-inside space-y-2">
                 <li>
@@ -186,12 +186,12 @@ const TermsOfService = () => {
                   Protocol
                 </li>
                 <li>
-                  <strong>Creator Tools:</strong> Pattern creation and
-                  marketplace features
+                  <strong>Verified Credentials:</strong> Portable, on-chain
+                  proof-of-practice records
                 </li>
                 <li>
-                  <strong>Web3 Integration:</strong> NFT creation and
-                  blockchain-based ownership
+                  <strong>Optional Wallet:</strong> Connect a wallet to hold
+                  your verified credentials
                 </li>
               </ul>
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 mt-4">
@@ -280,7 +280,7 @@ const TermsOfService = () => {
                     according to our refund policy
                   </li>
                   <li>
-                    Blockchain-based assets (NFTs) will remain in your wallet
+                    Verified credentials will remain in your wallet
                   </li>
                 </ul>
               </div>
@@ -343,11 +343,15 @@ const TermsOfService = () => {
 
               <div>
                 <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
-                  NFTs and Blockchain Content
+                  Verified Practice Credentials
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>
-                    NFT ownership is recorded on blockchain networks and
+                    Credentials attest that a practice session was
+                    camera-verified; they are records, not financial assets
+                  </li>
+                  <li>
+                    Credential issuance is recorded on blockchain networks and
                     governed by smart contracts
                   </li>
                   <li>
@@ -355,10 +359,10 @@ const TermsOfService = () => {
                     blockchain transactions
                   </li>
                   <li>
-                    NFT metadata may be stored on IPFS or similar decentralized
-                    storage systems
+                    Credential metadata may be stored on IPFS or similar
+                    decentralized storage systems
                   </li>
-                  <li>The value and utility of NFTs may change over time</li>
+                  <li>Credentials carry no expectation of monetary value or utility</li>
                 </ul>
               </div>
             </div>
@@ -461,23 +465,20 @@ const TermsOfService = () => {
 
               <div>
                 <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
-                  Marketplace Transactions
+                  Subscriptions
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>
-                    Creators set their own prices for breathing patterns and
-                    content
+                    Brume Premium subscriptions are billed through the Apple App
+                    Store or Google Play
                   </li>
                   <li>
-                    We may charge platform fees on marketplace transactions
+                    Subscription management, cancellation, and refunds follow
+                    the respective store&apos;s policies
                   </li>
                   <li>
-                    Payments to creators are processed according to our payment
-                    schedule
-                  </li>
-                  <li>
-                    Dispute resolution follows our creator and buyer protection
-                    policies
+                    Free trials convert to paid subscriptions unless cancelled
+                    before the trial ends
                   </li>
                 </ul>
               </div>
@@ -531,7 +532,7 @@ const TermsOfService = () => {
                     keys
                   </li>
                   <li>
-                    We are not liable for lost or stolen cryptocurrency or NFTs
+                    We are not liable for lost or stolen wallet assets
                   </li>
                   <li>
                     Wallet connections are facilitated by third-party providers
@@ -541,15 +542,16 @@ const TermsOfService = () => {
 
               <div>
                 <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
-                  NFT and Token Activities
+                  Credential Attestations
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>
-                    NFT minting and trading involves blockchain transaction fees
-                    (gas fees)
+                    Issuing a credential involves a blockchain transaction; any
+                    network fees are disclosed before you confirm
                   </li>
                   <li>
-                    We do not guarantee the future value or utility of any NFTs
+                    Credentials are non-transferable records of practice, not
+                    tokens or investment products
                   </li>
                   <li>
                     Blockchain networks may experience delays, failures, or
@@ -569,8 +571,8 @@ const TermsOfService = () => {
                 </h3>
                 <p>We currently support:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Flow Blockchain for NFT creation and marketplace</li>
-                  <li>Lens Protocol V3 for decentralized social features</li>
+                  <li>Flow Blockchain for verified credential attestations</li>
+                  <li>Lens Protocol V3 for decentralized social features (currently paused — see roadmap)</li>
                   <li>
                     Ethereum and other EVM-compatible networks for wallet
                     connections
@@ -591,7 +593,7 @@ const TermsOfService = () => {
             <div className="space-y-4 text-gray-600 dark:text-gray-300">
               <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
                 <p className="text-red-800 dark:text-red-200 font-medium">
-                  <strong>Medical Disclaimer:</strong> Imperfect Breath is not
+                  <strong>Medical Disclaimer:</strong> Brume is not
                   medical advice, treatment, or therapy. Always consult
                   healthcare professionals for medical concerns.
                 </p>
@@ -673,7 +675,7 @@ const TermsOfService = () => {
             </h2>
             <div className="space-y-4 text-gray-600 dark:text-gray-300">
               <p>
-                To the maximum extent permitted by law, Imperfect Breath and its
+                To the maximum extent permitted by law, Brume and its
                 affiliates, officers, employees, and agents shall not be liable
                 for:
               </p>
@@ -699,8 +701,8 @@ const TermsOfService = () => {
                   Service
                 </li>
                 <li>
-                  Damages related to blockchain networks, cryptocurrency, or NFT
-                  transactions
+                  Damages related to blockchain networks, wallets, or
+                  credential attestations
                 </li>
                 <li>
                   Health issues or injuries that may arise from using breathing
@@ -719,7 +721,7 @@ const TermsOfService = () => {
                   Indemnification
                 </h3>
                 <p>
-                  You agree to indemnify and hold harmless Imperfect Breath from
+                  You agree to indemnify and hold harmless Brume from
                   any claims, damages, or expenses arising from your use of the
                   Service, violation of these Terms, or infringement of any
                   rights.
@@ -935,7 +937,7 @@ const TermsOfService = () => {
                 </h3>
                 <p>
                   These Terms, together with our Privacy Policy, constitute the
-                  entire agreement between you and Imperfect Breath regarding
+                  entire agreement between you and Brume regarding
                   the Service.
                 </p>
               </div>
@@ -959,14 +961,14 @@ const TermsOfService = () => {
           <p>
             These terms of service are effective as of{" "}
             {new Date().toLocaleDateString()} and apply to all users of
-            Imperfect Breath.
+            Brume.
           </p>
           <div className="mt-2 space-x-4">
             <Link
               to="/"
               className="text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Return to Imperfect Breath
+              Return to Brume
             </Link>
             <span>•</span>
             <Link
