@@ -1,10 +1,41 @@
 # Consolidation Registry — Brume v1
 
-> Companion to `docs/STRATEGY.md` and `docs/BRUME.md`. Principle: **bury, don't delete.**
-> Everything below stays in the repo (git history + on disk) but is unrouted and unlinked.
-> Reversal cost is one commit. Registry last updated: Brume v1 sprint, Wk 0.
+> Companion to `docs/STRATEGY.md` and `docs/BRUME.md`. Principle (updated in the
+> dead-code sweep): **delete, don't bury** — git history preserves everything, and
+> unreferenced code rots into type/lint noise. The v1 "bury, don't delete" stance
+> was superseded once the surfaces were confirmed unreachable.
+> Registry last updated: consolidation round 3 (dead-code deletion).
 
-## Buried (unrouted Aug 27, branch `feat/brume`)
+## Consolidation Round 3 — dead-code deletion (branch `feat/consolidation-ux`)
+
+The buried surfaces from v1 (and every module they orphaned) were **deleted** after
+reachability analysis confirmed zero importers from `main.tsx`. Verified by
+`tsc` (0 errors), `eslint` (0 errors), `vitest` (39/39) and `pnpm build` (✓).
+
+- **110 files / ~21.6k lines removed** — buried pages (marketplace, creator tools,
+  instructor onboarding, Lens hub), their dedicated components/types, plus orphaned
+  hooks, libs, stores, providers and API routes.
+- **Kept:** `components/ui/` (shadcn kit = design-system baseline), `*.d.ts`
+  ambient declarations, and all `__tests__/` + `*.test.ts` suites (vitest
+  discovers tests by glob, so "no importer" is expected, not a dead signal).
+- The old v1 "buried" table below is retained for history; the files it lists are
+  now **gone** from the working tree (recoverable from git history).
+
+| Surface | Was buried at | Now |
+|---|---|---|
+| Marketplace | `src/pages/EnhancedMarketplace.tsx`, `src/components/marketplace/`, `src/types/marketplace.ts` | **deleted** |
+| Creator tools | `src/pages/CreatePattern.tsx`, `src/components/creator/`, `src/pages/EnhancedCreatorDashboard.tsx`, `src/types/creator.ts` | **deleted** |
+| Instructor onboarding | `src/pages/InstructorOnboarding.tsx` | **deleted** |
+| Lens social hub | `src/pages/LensSocialHubPage.tsx`, `src/pages/LensSocialFlowPage.tsx`, `src/components/lens/LensSocialHub.tsx` | **deleted** |
+| Social composer | `src/components/social/ResponsiveSocialCreate.tsx` | deleted in CI pass |
+
+**What was deliberately NOT deleted** (verified live): `sessionStore`, `visionStore`,
+`useSession`, `Results`-subtree (`PostSessionActions`, `InlineUpgrade`,
+`useSecureAIAnalysis`, `SessionCompleteModal`), `TodayCard`, `VideoFeed`,
+`BreathingAnimation`, `FaceMeshOverlay`, supabase client, `lib/lens`,
+`lib/sharing`, `cameraStore`, `authStore`.
+
+## Buried (unrouted Aug 27, branch `feat/brume`) — historical record
 
 | Surface | Files still on disk | Why buried |
 |---|---|---|
