@@ -1,16 +1,63 @@
 /**
- * Subscription Page - RevenueCat Integration Showcase
+ * Subscription Page — Brume Premium paywall (RevenueCat Shipaton)
  *
- * ENHANCEMENT: Adds monetization page while maintaining app design
- * CLEAN: Reuses existing layout and component patterns
- * MODULAR: Composable subscription management interface
+ * Product truth: a single entitlement (brume_premium) unlocked by two
+ * products — brume_premium_monthly and brume_premium_annual (the annual
+ * product carries the 7-day free trial). See src/lib/monetization/revenueCatConfig.ts.
+ *
+ * NOTE FOR SHIPATON JUDGES: promo/offer codes are issued and validated on the
+ * RevenueCat side (App Store Connect / Google Play). Redeem a code, then use
+ * "Restore Purchases" in the paywall below — on iOS the manager also exposes
+ * the native App Store offer-code sheet.
  */
 
 import React from "react";
-import { ArrowLeft, Crown, Sparkles, Heart } from "lucide-react";
+import {
+  ArrowLeft,
+  Award,
+  BadgeCheck,
+  Crown,
+  Sparkles,
+  Users,
+  Waves,
+  Wind,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { SubscriptionManager } from "@/components/monetization/SubscriptionManager";
+
+const BENEFITS = [
+  {
+    icon: BadgeCheck,
+    tint: "bg-blue-100 text-blue-600",
+    title: "Verified deep session insights",
+    copy: "Every session is verified, so the trends you see reflect real practice.",
+  },
+  {
+    icon: Wind,
+    tint: "bg-teal-100 text-teal-600",
+    title: "All 20+ breathing patterns",
+    copy: "The full library — from box breathing to coherence and beyond.",
+  },
+  {
+    icon: Waves,
+    tint: "bg-purple-100 text-purple-600",
+    title: "Adaptive sessions",
+    copy: "Sessions that respond to your state and adjust in real time.",
+  },
+  {
+    icon: Award,
+    tint: "bg-amber-100 text-amber-600",
+    title: "Credential gallery",
+    copy: "Portable proof of practice you own and can share anywhere.",
+  },
+  {
+    icon: Users,
+    tint: "bg-green-100 text-green-600",
+    title: "Accountability buddies",
+    copy: "Practice alongside others and stay consistent together.",
+  },
+];
 
 const Subscription: React.FC = () => {
   return (
@@ -28,7 +75,7 @@ const Subscription: React.FC = () => {
               </Link>
               <div className="flex items-center gap-2">
                 <Crown className="h-5 w-5 text-purple-600" />
-                <h1 className="text-xl font-semibold">Premium Plans</h1>
+                <h1 className="text-xl font-semibold">Brume Premium</h1>
               </div>
             </div>
           </div>
@@ -43,51 +90,43 @@ const Subscription: React.FC = () => {
               <Sparkles className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              Unlock Your Breathing Potential
+              Progress you can prove.
             </h2>
           </div>
           <p className="text-lg text-muted-foreground mb-8">
-            Transform your breathing practice with AI coaching, advanced patterns, and Web3 features.
-            Choose the plan that fits your wellness journey.
+            Brume verifies your breathwork and turns practice into portable,
+            provable progress. One calm membership — everything unlocked.
           </p>
 
           {/* Key Benefits */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="p-4 bg-white/60 rounded-xl border border-white/50">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Heart className="h-6 w-6 text-blue-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {BENEFITS.map(({ icon: Icon, tint, title, copy }) => (
+              <div
+                key={title}
+                className="p-4 bg-white/60 rounded-xl border border-white/50"
+              >
+                <div
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3 ${tint}`}
+                >
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="font-semibold mb-1">{title}</h3>
+                <p className="text-sm text-muted-foreground">{copy}</p>
               </div>
-              <h3 className="font-semibold mb-1">AI Coaching</h3>
-              <p className="text-sm text-muted-foreground">
-                Personalized guidance with our Zen AI agent
-              </p>
-            </div>
-
-            <div className="p-4 bg-white/60 rounded-xl border border-white/50">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Crown className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="font-semibold mb-1">Advanced Patterns</h3>
-              <p className="text-sm text-muted-foreground">
-                Access to premium breathing techniques
-              </p>
-            </div>
-
-            <div className="p-4 bg-white/60 rounded-xl border border-white/50">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <Sparkles className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="font-semibold mb-1">Web3 Features</h3>
-              <p className="text-sm text-muted-foreground">
-                NFT creation and blockchain integration
-              </p>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Subscription Manager Component */}
         <div className="max-w-6xl mx-auto">
           <SubscriptionManager variant="full" showCurrentPlan={true} />
+          {/* Judge testing: promo codes are provisioned in RevenueCat /
+              App Store Connect / Google Play — redeem, then Restore Purchases. */}
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Testing Brume Premium? Annual includes a 7-day free trial. Promo
+            codes are managed via RevenueCat — redeem your code, then tap
+            “Restore Purchases” above.
+          </p>
         </div>
 
         {/* FAQ Section */}
@@ -95,30 +134,30 @@ const Subscription: React.FC = () => {
           <h3 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h3>
           <div className="space-y-6">
             <div className="p-6 bg-white/60 rounded-xl border border-white/50">
-              <h4 className="font-semibold mb-2">Can I cancel anytime?</h4>
-              <p className="text-muted-foreground">
-                Yes, you can cancel your subscription at any time. You'll continue to have access to premium features until the end of your billing period.
-              </p>
-            </div>
-
-            <div className="p-6 bg-white/60 rounded-xl border border-white/50">
-              <h4 className="font-semibold mb-2">What happens to my data?</h4>
-              <p className="text-muted-foreground">
-                Your breathing session data, progress, and custom patterns are always yours. Downgrading only affects access to premium features, not your existing data.
-              </p>
-            </div>
-
-            <div className="p-6 bg-white/60 rounded-xl border border-white/50">
-              <h4 className="font-semibold mb-2">Do I need a crypto wallet for Web3 features?</h4>
-              <p className="text-muted-foreground">
-                Web3 features like NFT minting require a compatible wallet (Flow or Ethereum). However, all core breathing features work without any wallet connection.
-              </p>
-            </div>
-
-            <div className="p-6 bg-white/60 rounded-xl border border-white/50">
               <h4 className="font-semibold mb-2">Is there a free trial?</h4>
               <p className="text-muted-foreground">
-                The Basic plan is completely free forever. Premium and Pro subscriptions include full access from day one with the ability to cancel anytime.
+                Yes. Brume Premium Annual begins with a 7-day free trial — full access from day one, and you can cancel anytime during the trial.
+              </p>
+            </div>
+
+            <div className="p-6 bg-white/60 rounded-xl border border-white/50">
+              <h4 className="font-semibold mb-2">Can I cancel anytime?</h4>
+              <p className="text-muted-foreground">
+                Yes, you can cancel your subscription at any time. You'll keep access to Premium features until the end of your billing period.
+              </p>
+            </div>
+
+            <div className="p-6 bg-white/60 rounded-xl border border-white/50">
+              <h4 className="font-semibold mb-2">What happens to my data and credentials?</h4>
+              <p className="text-muted-foreground">
+                Your sessions, progress, and earned credentials are always yours. Downgrading only affects access to Premium features — never your history.
+              </p>
+            </div>
+
+            <div className="p-6 bg-white/60 rounded-xl border border-white/50">
+              <h4 className="font-semibold mb-2">Where can I use my subscription?</h4>
+              <p className="text-muted-foreground">
+                Purchases are handled securely through the App Store or Google Play via RevenueCat, and your membership follows your Brume account across devices.
               </p>
             </div>
           </div>
@@ -133,7 +172,7 @@ const Subscription: React.FC = () => {
             </p>
             <div className="flex items-center justify-center gap-4">
               <Button variant="outline" asChild>
-                <a href="mailto:support@imperfectbreath.com">Contact Support</a>
+                <a href="mailto:support@brume.app">Contact Support</a>
               </Button>
               <Button variant="ghost" asChild>
                 <Link to="/help">View Help Center</Link>

@@ -6,20 +6,13 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescri
 import { isTouchDevice } from "@/utils/mobile-detection";
 import { OfflineIndicator } from "@/components/offline/OfflineIndicator";
 import {
-  Brain,
-  Settings,
-  Store,
   Users,
-  Heart,
   Play,
-  Plus,
-  DollarSign,
   Sparkles,
   BarChart3,
   Menu,
   LogOut,
   User,
-  Hash,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStatus, useAuthProfile, useRevenueCatStatus } from "@/stores/authStore";
@@ -39,11 +32,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
   const revenueCatStatus = useRevenueCatStatus();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isMobile = isTouchDevice();
-
-  const isInstructorPath =
-    location.pathname.includes("/creator-dashboard") ||
-    location.pathname.includes("/instructor") ||
-    location.pathname.includes("/create-pattern");
 
   const handleMenuItemClick = () => {
     setIsMenuOpen(false);
@@ -76,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           >
             <Sparkles className={cn(isMobile ? "w-4 h-4" : "w-5 h-5")} />
           </div>
-          <span className={cn(isMobile && "truncate")}>Imperfect Breath</span>
+          <span className={cn(isMobile && "truncate")}>Brume</span>
         </Link>
 
         {/* Responsive Navigation */}
@@ -109,7 +97,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h2 className="font-medium text-slate-800">
-                        Imperfect Breath
+                        Brume
                       </h2>
                       {isAuthenticated && revenueCatStatus.subscriptionTier && (
                         <Badge 
@@ -158,29 +146,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                         <Users className="h-5 w-5" />
                         <span>Community</span>
                       </Link>
-                      {/* Lens Hub - Mobile Menu */}
-                      <Link
-                        to="/lens"
-                        onClick={() => {
-                          triggerHaptic();
-                          handleMenuItemClick();
-                        }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
-                      >
-                        <Hash className="h-5 w-5" />
-                        <span>Lens Hub</span>
-                      </Link>
-                      <Link
-                        to="/instructor-onboarding"
-                        onClick={() => {
-                          triggerHaptic();
-                          handleMenuItemClick();
-                        }}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-all duration-300 text-slate-700 hover:text-slate-900"
-                      >
-                        <Heart className="h-5 w-5" />
-                        <span>Start Teaching</span>
-                      </Link>
+
                     </>
                   ) : (
                     <Link
@@ -244,50 +210,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                   </Button>
                 </Link>
 
-                {/* Desktop Social Creation */}
-                <Link to="/create-post">
-                  <Button
-                    variant={
-                      location.pathname === "/create-post" ? "default" : "ghost"
-                    }
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Share
-                  </Button>
-                </Link>
-
-                {/* Lens Hub */}
-                <Link to="/lens">
-                  <Button
-                    variant={
-                      location.pathname.startsWith("/lens") ? "default" : "ghost"
-                    }
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Hash className="w-4 h-4" />
-                    Lens
-                  </Button>
-                </Link>
               </div>
-
-              {/* Enhanced Marketplace for Desktop */}
-              {isAuthenticated && (
-                <Link to="/marketplace">
-                  <Button
-                    variant={
-                      location.pathname === "/marketplace" ? "default" : "ghost"
-                    }
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Heart className="w-4 h-4" />
-                    Patterns
-                  </Button>
-                </Link>
-              )}
 
               {/* Desktop Progress/Analytics */}
               {isAuthenticated && (
@@ -305,21 +228,6 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                 </Link>
               )}
             </div>
-
-            {profile?.role === "creator" && (
-              <div className="flex items-center gap-2 pl-4 border-l border-border">
-                <Link to="/creator-dashboard">
-                  <Button
-                    variant={isInstructorPath ? "default" : "ghost"}
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Users className="w-4 h-4" />
-                    Creator Hub
-                  </Button>
-                </Link>
-              </div>
-            )}
 
             {/* Right Side - Enhanced Auth Visibility */}
             <div className="flex items-center gap-2">
@@ -400,22 +308,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                   {blockchainEnabled && (
                     <ConnectWalletButton variant="outline" size="sm" showChainInfo={true} />
                   )}
-                  {/* Secondary CTA for non-homepage */}
-                  {location.pathname !== "/" && (
-                    <Link to="/instructor-onboarding">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          triggerHaptic();
-                        }}
-                        className="flex items-center gap-2 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 transition-all duration-300"
-                      >
-                        <Heart className="w-4 h-4" />
-                        Teach
-                      </Button>
-                    </Link>
-                  )}
+
                 </div>
               )}
             </div>

@@ -25,6 +25,7 @@ import logging
 from dataclasses import dataclass
 from collections import deque
 import uuid
+from datetime import datetime, timezone
 
 # AI Analysis imports
 import os
@@ -1027,6 +1028,85 @@ async def stream_analysis_response(enhanced_data: dict, session_data: dict):
     except Exception as e:
         logger.error(f"Error in streaming response: {e}")
         yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+
+# Proof-of-Practice Attestation Models
+class AttestationRequest(BaseModel):
+    session_id: str
+    wallet_address: str
+    breath_rate: Optional[float] = None
+    session_score: Optional[float] = None
+    duration_seconds: Optional[int] = None
+    verified: bool = True
+
+class PracticeMetrics(BaseModel):
+    breath_rate: Optional[float] = None
+    session_score: Optional[float] = None
+    duration_seconds: Optional[int] = None
+
+class ProofOfPracticeCredential(BaseModel):
+    type: str = "ProofOfPractice"
+    sessionId: str
+    subject: str  # wallet address of the practitioner
+    issuedAt: str  # ISO8601 UTC
+    metrics: PracticeMetrics
+
+class ChainAttestation(BaseModel):
+    status: str  # "pending_chain" | "issued"
+    txId: Optional[str] = None
+    network: str = "flow-testnet"
+
+class AttestationResponse(BaseModel):
+    success: bool
+    credential: ProofOfPracticeCredential
+    attestation: ChainAttestation
+
+async def mint_flow_attestation(credential: ProofOfPracticeCredential) -> Optional[str]:
+    """
+    Mint a ProofOfPractice credential on Flow testnet.
+
+    TODO: Implement the chain call (Cadence transaction via flow-py-sdk against
+    flow-testnet) that mints the credential to credential.subject, and return the
+    Flow transaction ID. While unimplemented this returns None and the route
+    reports the attestation as "pending_chain".
+    """
+    logger.info(f"Flow minting stub: credential for session {credential.sessionId} not yet submitted to chain")
+    return None
+
+@app.post("/api/attest", response_model=AttestationResponse)
+async def attest_practice(request: AttestationRequest):
+    """Issue a ProofOfPractice attestation for a camera-verified breathwork session"""
+    # Never attest unverified practice
+    if not request.verified:
+        raise HTTPException(status_code=400, detail="Cannot attest unverified practice sessions")
+
+    credential = ProofOfPracticeCredential(
+        sessionId=request.session_id,
+        subject=request.wallet_address,
+        issuedAt=datetime.now(timezone.utc).isoformat(),
+        metrics=PracticeMetrics(
+            breath_rate=request.breath_rate,
+            session_score=request.session_score,
+            duration_seconds=request.duration_seconds
+        )
+    )
+
+    # Chain minting is best-effort: attestation issuance must not fail if the chain is unavailable
+    try:
+        tx_id = await mint_flow_attestation(credential)
+    except Exception as e:
+        logger.error(f"Flow attestation minting failed for session {request.session_id}: {e}")
+        tx_id = None
+
+    logger.info(f"ProofOfPractice attestation issued for session {request.session_id} (subject {request.wallet_address})")
+
+    return AttestationResponse(
+        success=True,
+        credential=credential,
+        attestation=ChainAttestation(
+            status="issued" if tx_id else "pending_chain",
+            txId=tx_id
+        )
+    )
 
 # AGGRESSIVE CONSOLIDATION: Single health check endpoint
 @app.get("/health")

@@ -26,26 +26,17 @@ import TermsOfService from "@/pages/TermsOfService";
 import Settings from "@/pages/Settings";
 
 // Responsive components
-import { ResponsiveSocialCreate } from "@/components/social/ResponsiveSocialCreate";
 import { MobileBottomNav } from "@/components/navigation/MobileBottomNav";
 import RouteErrorBoundary from "@/components/auth/RouteErrorBoundary";
 
 // Large pages - lazy load these to reduce initial bundle size
+// CONSOLIDATION (Brume v1): marketplace, creator tools, instructor onboarding and
+// Lens hub pages are buried — files kept in repo, routes removed. See docs/CONSOLIDATION.md
 const Progress = React.lazy(() => import("@/pages/Progress"));
 const Results = React.lazy(() => import("@/pages/Results"));
-const EnhancedMarketplace = React.lazy(
-  () => import("@/pages/EnhancedMarketplace"),
-);
-const CreatePattern = React.lazy(() => import("@/pages/CreatePattern"));
 const CommunityFeed = React.lazy(() => import("@/pages/CommunityFeed"));
 const UserProfile = React.lazy(() => import("@/pages/UserProfile"));
-const InstructorOnboarding = React.lazy(
-  () => import("@/pages/InstructorOnboarding"),
-);
 const Subscription = React.lazy(() => import("@/pages/Subscription"));
-// Add lazy imports for new Lens pages
-const LensSocialHubPage = React.lazy(() => import("@/pages/LensSocialHubPage"));
-const LensSocialFlowPage = React.lazy(() => import("@/pages/LensSocialFlowPage"));
 const LeaderboardPage = React.lazy(() => import("@/pages/LeaderboardPage"));
 
 // Loading component for lazy routes
@@ -70,37 +61,15 @@ function App() {
             {/* Main Application Routes with Header */}
             <Route element={<MainLayout />}> 
               <Route path="/" element={<Index />} />
-              <Route path="/enhanced" element={<Index />} />
               <Route path="/session" element={<SessionEntryPoints />} />
               <Route path="/patterns" element={<PatternSelectionPage />} />
               <Route path="/session/:mode" element={<SessionModeWrapper />} />
               <Route path="/progress" element={<RouteErrorBoundary><Progress /></RouteErrorBoundary>} />
               <Route path="/results" element={<RouteErrorBoundary><Results /></RouteErrorBoundary>} />
-              <Route path="/marketplace" element={<RouteErrorBoundary><EnhancedMarketplace /></RouteErrorBoundary>} />
-              <Route path="/create" element={<ProtectedRoute><RouteErrorBoundary><CreatePattern /></RouteErrorBoundary></ProtectedRoute>} />
-              <Route
-                path="/create-post"
-                element={
-                  <ProtectedRoute>
-                    <RouteErrorBoundary>
-                      <div className="min-h-screen">
-                        <ResponsiveSocialCreate />
-                      </div>
-                    </RouteErrorBoundary>
-                  </ProtectedRoute>
-                }
-              />
               <Route path="/community" element={<RouteErrorBoundary><CommunityFeed /></RouteErrorBoundary>} />
               <Route path="/profile" element={<ProtectedRoute><RouteErrorBoundary><UserProfile /></RouteErrorBoundary></ProtectedRoute>} />
-              <Route
-                path="/instructor-onboarding"
-                element={<ProtectedRoute><RouteErrorBoundary><InstructorOnboarding /></RouteErrorBoundary></ProtectedRoute>}
-              />
               <Route path="/subscription" element={<ProtectedRoute><RouteErrorBoundary><Subscription /></RouteErrorBoundary></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              {/* New Lens routes */}
-              <Route path="/lens" element={<RouteErrorBoundary><LensSocialHubPage /></RouteErrorBoundary>} />
-              <Route path="/lens/flow" element={<RouteErrorBoundary><LensSocialFlowPage /></RouteErrorBoundary>} />
               <Route path="/leaderboard" element={<RouteErrorBoundary><LeaderboardPage /></RouteErrorBoundary>} />
             </Route>
 

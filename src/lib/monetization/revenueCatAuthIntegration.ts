@@ -244,7 +244,8 @@ export class RevenueCatAuthIntegration {
         return { success: true, error: "RevenueCat not available" };
       }
 
-      // Note: Logout functionality would be implemented in revenueCatService
+      // Optional-call: mocked service in tests may not implement logOut
+      await revenueCatService.logOut?.();
       console.log("✅ RevenueCat: User logged out");
       return { success: true };
     } catch (error) {
@@ -305,26 +306,17 @@ export class RevenueCatAuthIntegration {
           "Basic session analytics",
           "Offline access"
         ];
+      // Brume consolidation: one paid tier. Legacy 'pro' overrides map to the
+      // same brume_premium benefit set (mirrors BRUME_PREMIUM_FEATURES in
+      // revenueCat.ts — kept literal here so test mocks stay valid).
       case "premium":
-        return [
-          "All basic features",
-          "Advanced breathing patterns",
-          "Detailed analytics",
-          "Custom pattern creation",
-          "Social sharing",
-          "NFT pattern minting",
-          "Creator monetization",
-          "Priority support",
-          "Beta feature access"
-        ];
       case "pro":
         return [
-          "All premium features",
-          "AI-powered coaching",
-          "Personalized recommendations",
-          "Advanced pattern analysis",
-          "Community leaderboards",
-          "Exclusive content access"
+          "Verified deep session insights",
+          "All 20+ breathing patterns",
+          "Adaptive sessions that respond to your state",
+          "Credential gallery — portable proof of practice",
+          "Accountability buddies"
         ];
       default:
         return [];

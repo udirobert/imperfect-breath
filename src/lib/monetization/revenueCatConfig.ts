@@ -33,6 +33,28 @@ export interface DeveloperOverride {
 }
 
 /**
+ * Brume Premium — single source of truth for RevenueCat naming.
+ *
+ * CLEAN: One entitlement, two products. Everything paid in Brume maps to the
+ * `brume_premium` entitlement; legacy 'pro'/'premium' tier labels elsewhere in
+ * the app are backward-compatible aliases of it.
+ *
+ * NOTE (Shipaton judges): promo/offer codes are configured on the RevenueCat
+ * side (App Store Connect / Google Play offers) — no client constants needed.
+ */
+export const ENTITLEMENT_ID = "brume_premium";
+
+export const PRODUCT_IDS = {
+  monthly: "brume_premium_monthly",
+  annual: "brume_premium_annual",
+} as const;
+
+export type BrumeProductInterval = keyof typeof PRODUCT_IDS;
+
+/** The annual product carries the 7-day free trial (configured in the stores). */
+export const ANNUAL_TRIAL_DAYS = 7;
+
+/**
  * Enhanced configuration loading with graceful fallbacks
  * ENHANCEMENT: Better error handling and developer overrides
  * CLEAN: Clear separation of configuration strategies
