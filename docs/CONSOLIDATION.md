@@ -40,3 +40,21 @@ out (marketplace resurrection requires density we don't have).
 - Dead-code deletion sweep of buried files (after attestation metrics validate the bet)
 - `src/components/{debug,developer,monitoring,integration}` — audit for prod-only necessity
 - `src/pages/api/` — verify nothing routes there
+
+---
+
+## Consolidation Round 2 — UI/UX & page consolidation (branch `feat/consolidation-ux`)
+
+**Principle applied: fold destinations toward the 6-screen core loop; keep the files, stop separate routes.**
+
+| Move | Before | After |
+|---|---|---|
+| **Mobile nav dedup** | `MobileBottomNav` (global in `App.tsx`) **and** `BottomTabBar` (inside `ResponsiveNavigation`) both rendered on touch → **two stacked bars** | Removed global `MobileBottomNav.tsx`; the single context-aware `BottomTabBar` (from `ResponsiveNavigation`) is the only mobile bottom nav. |
+| **Community + Leaderboard** | Separate `/community` and `/leaderboard` pages | `Leaderboard` folded into `/community` sidebar; `/leaderboard` redirects → `/community`. One accountability door. |
+| **Profile + Settings** | Separate `/profile` and `/settings` pages | Settings (theme, privacy/terms, sign out) hosted inline inside `/profile`; `/settings` redirects → `/profile`. `Settings.tsx` kept on disk (buried), removed dead Marketplace/Share buttons. |
+| **Session entry unify** | Nav + "Start Again"/"Start Now" pointed directly at `/session/classic` | All practice/repeat CTAs and nav unify on `/session` entry (which still offers classic/enhanced mode cards). Resolves the v1 known-inconsistency note. |
+| **Results → Progress** | Post-session screen ended at share/repeat actions | Added "See My Progress" CTA that closes the core loop: session → results → proof gallery. |
+
+**Route set after round 2 (MainLayout):** `/`, `/session`, `/patterns`, `/session/:mode`, `/progress`, `/results`, `/community`, `/profile`, `/subscription` (+ `/settings` and `/leaderboard` kept as redirects so nothing breaks).
+
+**Still buried (unchanged from v1):** marketplace, creator tools, instructor onboarding, Lens hub, social composer — files on disk, unrouted.

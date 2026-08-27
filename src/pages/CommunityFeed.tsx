@@ -33,6 +33,7 @@ import {
   Calendar,
   User,
   Award,
+  Trophy,
   CheckCircle,
   Sparkles,
   ArrowRight,
@@ -42,6 +43,7 @@ import { BreathingSessionPost } from "@/components/social/BreathingSessionPost";
 import { SocialActions } from "@/components/social/SocialActions";
 // Add unified social action buttons for consistent UX
 import { LikeButton, CommentButton, RepostButton } from "@/components/social/SocialButton";
+import { Leaderboard } from "@/components/social/Leaderboard";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { formatTime } from "@/lib/utils/formatters";
@@ -497,6 +499,19 @@ const CommunityFeed: React.FC = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Consolidation: community + accountability (leaderboard) live in one destination */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5" />
+                  Community Leaderboard
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Leaderboard />
+              </CardContent>
+            </Card>
+
             {/* User Profile Card */}
             {currentAccount && (
               <Card>
