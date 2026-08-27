@@ -23,13 +23,13 @@ import {
   Star,
   Share,
   Brain,
-  Loader2,
   Shield,
   BarChart3,
   Heart,
   TrendingUp,
 } from "lucide-react";
 import { BREATHING_PATTERNS } from "../lib/breathingPatterns";
+import { AgentTrace } from "@/components/primitives/AgentTrace";
 import { useSessionHistory } from "../hooks/useSessionHistory";
 import { useSecureAIAnalysis } from "../hooks/useSecureAIAnalysis";
 import { AI_PROVIDERS, AIConfigManager, SessionData } from "../lib/ai/config";
@@ -793,13 +793,20 @@ Check out Imperfect Breath!`;
                     className="mb-4"
                   />
 
-                  {/* Fallback Loading State */}
+                  {/* Fallback Loading State — Zen's reasoning made visible */}
                   <Card>
                     <CardContent className="flex items-center justify-center p-8">
-                      <div className="text-center space-y-4">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto" />
-                        <p>Dr. Breathe is analyzing your session...</p>
-                      </div>
+                      <AgentTrace
+                        steps={[
+                          { label: "Reading your breath rate curve" },
+                          { label: "Mapping the emotional arc" },
+                          { label: "Comparing to your recent sessions" },
+                          { label: "Writing your insight" },
+                        ]}
+                        activeLabel="Zen is reading your session"
+                        doneLabel="Insight ready"
+                        className="max-w-sm"
+                      />
                     </CardContent>
                   </Card>
                 </div>

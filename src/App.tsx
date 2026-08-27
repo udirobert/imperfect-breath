@@ -42,14 +42,12 @@ const UserProfile = React.lazy(() => import("@/pages/UserProfile"));
 const Subscription = React.lazy(() => import("@/pages/Subscription"));
 const LeaderboardPage = React.lazy(() => import("@/pages/LeaderboardPage"));
 
-// Loading component for lazy routes
+// Loading component for lazy routes — pixel-grid loader with elapsed timer
+import { PixelLoader } from "@/components/primitives/PixelLoader";
+
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-pulse flex space-x-4">
-      <div className="rounded-full bg-blue-400 h-6 w-6"></div>
-      <div className="rounded-full bg-blue-400 h-6 w-6"></div>
-      <div className="rounded-full bg-blue-400 h-6 w-6"></div>
-    </div>
+    <PixelLoader variant="drive" label="Brume" />
   </div>
 );
 
