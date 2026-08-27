@@ -26,7 +26,7 @@ export class ReviewService {
       return data;
     } catch (error) {
       console.error('Error submitting review:', error);
-      throw new Error('Failed to submit review');
+      throw new Error('Failed to submit review', { cause: error });
     }
   }
 
@@ -45,7 +45,7 @@ export class ReviewService {
       return data || [];
     } catch (error) {
       console.error('Error fetching reviews:', error);
-      throw new Error(`Failed to fetch reviews for pattern ${patternId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to fetch reviews for pattern ${patternId}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
   }
 
@@ -63,7 +63,7 @@ export class ReviewService {
       return data || [];
     } catch (error) {
       console.error('Error fetching all reviews:', error);
-      throw new Error(`Failed to fetch all reviews: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to fetch all reviews: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
     }
   }
 }

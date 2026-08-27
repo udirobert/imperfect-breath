@@ -116,7 +116,7 @@ Timestamp: ${sessionData.timestamp || 'Current session'}
     prompt += `\n• Stillness Score: ${estimatedStillness}% (${getStillnessAssessment(estimatedStillness)})`;
   }
 
-  if (sessionData.breathHoldTime > 0) {
+  if (sessionData.breathHoldTime && sessionData.breathHoldTime > 0) {
     prompt += `\n• Best Breath Hold: ${sessionData.breathHoldTime} seconds`;
   } else if (sessionData.bpm) {
     // Estimate breath hold from BPM if available

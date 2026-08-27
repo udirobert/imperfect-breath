@@ -20,6 +20,9 @@ export interface CustomPattern {
   licensingInfo?: Json;
   ipAssetId?: string;
   licenseTermsId?: string;
+  updatedAt?: string | number;
+  createdAt?: string | number;
+  isPublic?: boolean;
 }
 
 interface SupabasePattern {
@@ -84,7 +87,7 @@ export class PatternStorageService {
       
       const { data, error } = await supabase
         .from('patterns')
-        .upsert(supabasePattern, { onConflict: 'id' })
+        .upsert(supabasePattern as Record<string, unknown> as never, { onConflict: 'id' })
         .select('id')
         .single();
       
@@ -93,10 +96,10 @@ export class PatternStorageService {
         throw new Error('Failed to save pattern');
       }
       
-      return data.id;
+      return (data as { id: string }).id;
     } catch (error) {
       console.error('Error saving pattern:', error);
-      throw new Error('Failed to save pattern');
+      throw new Error('Failed to save pattern', { cause: error });
     }
   }
 
@@ -133,7 +136,7 @@ export class PatternStorageService {
       }
     } catch (error) {
       console.error('Error deleting pattern:', error);
-      throw new Error('Failed to delete pattern');
+      throw new Error('Failed to delete pattern', { cause: error });
     }
   }
 

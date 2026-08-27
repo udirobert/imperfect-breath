@@ -31,6 +31,7 @@ describe('RevenueCatAuthIntegration', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('getInstance', () => {
@@ -314,46 +315,35 @@ describe('RevenueCatAuthIntegration', () => {
 
   describe('getPlatform', () => {
     it('should detect Capacitor platform', () => {
-      // Mock window.Capacitor
-      const originalWindow = { ...window };
-      // @ts-ignore
-      window.Capacitor = {
+      // Mock the Capacitor global via vi.stubGlobal (auto-restored in afterEach)
+      vi.stubGlobal('Capacitor', {
         getPlatform: vi.fn().mockReturnValue('ios'),
-      };
+      });
 
-      // @ts-ignore - Private method access for testing
+      // @ts-expect-error - private method access for testing
       const platform = revenueCatAuthIntegration.getPlatform();
 
       expect(platform).toBe('ios');
-      // @ts-ignore
-      window.Capacitor = originalWindow.Capacitor;
     });
 
     it('should default to web when no platform is detected', () => {
-      // Mock window without Capacitor
-      const originalWindow = { ...window };
-      // @ts-ignore
-      delete window.Capacitor;
+      // No Capacitor is defined on the web global
+      vi.stubGlobal('Capacitor', undefined);
 
-      // @ts-ignore - Private method access for testing
+      // @ts-expect-error - private method access for testing
       const platform = revenueCatAuthIntegration.getPlatform();
 
       expect(platform).toBe('web');
-      // @ts-ignore
-      window = originalWindow;
     });
 
     it('should handle server-side rendering', () => {
-      // Mock server-side environment
-      const originalWindow = global.window;
-      // @ts-ignore
-      delete global.window;
+      // Simulate a server-side environment with no window global
+      vi.stubGlobal('window', undefined);
 
-      // @ts-ignore - Private method access for testing
+      // @ts-expect-error - private method access for testing
       const platform = revenueCatAuthIntegration.getPlatform();
 
       expect(platform).toBe('server');
-      global.window = originalWindow;
     });
   });
 });

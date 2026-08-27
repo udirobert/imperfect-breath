@@ -104,6 +104,9 @@ export interface BreathingSession {
   completedAt: string;
   userId?: string;
   restlessnessScore?: number;
+  timestamp?: string;
+  insights?: string[];
+  nftId?: string;
 }
 
 export interface SignedSessionRecord {

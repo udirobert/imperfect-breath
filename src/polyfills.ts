@@ -7,7 +7,7 @@ if (typeof window !== 'undefined' && !window.process) {
     env: {},
     cwd: () => '',
     versions: { node: '16.0.0' },
-    nextTick: (fn: Function) => setTimeout(fn, 0),
+    nextTick: (fn: () => void) => setTimeout(fn, 0),
     platform: 'browser',
     browser: true,
   } as any;

@@ -93,7 +93,7 @@ export class FlowConfigService {
       console.log("📋 Contract address:", this.config.contractAddress);
     } catch (error) {
       console.error("❌ Failed to configure FCL:", error);
-      throw new Error("Flow configuration failed");
+      throw new Error("Flow configuration failed", { cause: error });
     }
   }
 
@@ -180,7 +180,7 @@ export class FlowConfigService {
    */
   async getAccount(address: string): Promise<unknown> {
     try {
-      return await fcl.send([fcl.getAccount(address)]).then(fcl.decode);
+      return await fcl.send([fcl.getAccount(address)]).then(fcl.decode as unknown as (r: unknown) => unknown);
     } catch (error) {
       console.error("Failed to get account:", error);
       throw error;

@@ -23,7 +23,7 @@ export interface UseSessionOptions {
   autoStart?: boolean;
   enableVision?: boolean;
   targetFPS?: number;
-  videoElement?: React.RefObject<HTMLVideoElement>;
+  videoElement?: React.RefObject<HTMLVideoElement | null>;
 }
 
 export const useSession = (options: UseSessionOptions = {}) => {
@@ -85,8 +85,8 @@ export const useSession = (options: UseSessionOptions = {}) => {
   const visionMetrics = visionSelectors.hasMetrics() ? visionStore.metrics : null;
 
   // Breathing phase timer
-  const phaseTimerRef = useRef<NodeJS.Timeout>();
-  const cycleTimerRef = useRef<NodeJS.Timeout>();
+  const phaseTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const cycleTimerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   // ========================================================================
   // CAMERA MANAGEMENT - Clean, unified
@@ -174,10 +174,10 @@ export const useSession = (options: UseSessionOptions = {}) => {
 
     const { pattern } = config;
     const phases = [
-      { name: 'inhale' as const, duration: typeof pattern.phases?.inhale === 'number' && pattern.phases.inhale >= 0 ? pattern.phases.inhale : 4 },
-      ...(typeof pattern.phases?.hold === 'number' && pattern.phases.hold != null && pattern.phases.hold > 0 ? [{ name: 'hold' as const, duration: pattern.phases.hold }] : []),
-      { name: 'exhale' as const, duration: typeof pattern.phases?.exhale === 'number' && pattern.phases.exhale >= 0 ? pattern.phases.exhale : 4 },
-      ...(typeof pattern.phases?.hold_after_exhale === 'number' && pattern.phases.hold_after_exhale != null && pattern.phases.hold_after_exhale > 0 ? [{ name: 'pause' as const, duration: pattern.phases.hold_after_exhale }] : []),
+      { name: 'inhale' as const, duration: typeof pattern.inhale === 'number' && pattern.inhale >= 0 ? pattern.inhale : 4 },
+      ...(typeof pattern.hold === 'number' && pattern.hold != null && pattern.hold > 0 ? [{ name: 'hold' as const, duration: pattern.hold }] : []),
+      { name: 'exhale' as const, duration: typeof pattern.exhale === 'number' && pattern.exhale >= 0 ? pattern.exhale : 4 },
+      ...(typeof pattern.hold_after_exhale === 'number' && pattern.hold_after_exhale != null && pattern.hold_after_exhale > 0 ? [{ name: 'pause' as const, duration: pattern.hold_after_exhale }] : []),
     ];
 
     console.log('🫁 startBreathingCycle: Starting with phases:', phases);
@@ -270,7 +270,6 @@ export const useSession = (options: UseSessionOptions = {}) => {
             sessionId,
             targetFPS: targetFPS,
             silentMode: false,
-            gracefulDegradation: false, // No fake data
             features: {
               detectFace: true,
               analyzePosture: true,

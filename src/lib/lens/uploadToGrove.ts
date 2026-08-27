@@ -31,7 +31,7 @@ export async function uploadMetadataToGrove(
     return response.uri;
   } catch (error) {
     console.error("Failed to upload metadata to Grove:", error);
-    throw new Error(`Grove upload failed: ${(error as Error).message}`);
+    throw new Error(`Grove upload failed: ${(error as Error).message}`, { cause: error });
   }
 }
 
@@ -54,7 +54,7 @@ export async function uploadBreathingSessionToGrove(
     return response.uri;
   } catch (error) {
     console.error("Failed to upload session to Grove:", error);
-    throw new Error(`Grove session upload failed: ${(error as Error).message}`);
+    throw new Error(`Grove session upload failed: ${(error as Error).message}`, { cause: error });
   }
 }
 
@@ -76,7 +76,7 @@ export async function uploadToGrove(
     return response.uri;
   } catch (error) {
     console.error("Failed to upload to Grove:", error);
-    throw new Error(`Grove upload failed: ${(error as Error).message}`);
+    throw new Error(`Grove upload failed: ${(error as Error).message}`, { cause: error });
   }
 }
 
@@ -109,7 +109,7 @@ export async function uploadFileToGrove(
     return response.uri;
   } catch (error) {
     console.error("Failed to upload file to Grove:", error);
-    throw new Error(`Grove file upload failed: ${(error as Error).message}`);
+    throw new Error(`Grove file upload failed: ${(error as Error).message}`, { cause: error });
   }
 }
 
@@ -193,7 +193,7 @@ export function createFallbackDataUri(data: unknown): string {
     return `data:application/json;base64,${base64}`;
   } catch (error) {
     console.error("Failed to create fallback data URI:", error);
-    throw new Error("Cannot create fallback data URI");
+    throw new Error("Cannot create fallback data URI", { cause: error });
   }
 }
 

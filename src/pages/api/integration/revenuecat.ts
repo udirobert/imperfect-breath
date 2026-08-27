@@ -55,7 +55,7 @@ export default async function handler(req: any, res: any) {
     const { action, data } = req.body;
 
     switch (action) {
-      case 'identifyUser':
+      case 'identifyUser': {
         // Identify user with RevenueCat
         if (!data.userId) {
           return res.status(400).json({
@@ -112,8 +112,9 @@ export default async function handler(req: any, res: any) {
           success: true,
           message: 'Successfully identified user with RevenueCat'
         });
+      }
 
-      case 'setDeveloperOverride':
+      case 'setDeveloperOverride': {
         // Set developer override for testing
         if (!data.tier) {
           return res.status(400).json({
@@ -144,8 +145,9 @@ export default async function handler(req: any, res: any) {
           success: true,
           message: 'Successfully set developer override'
         });
+      }
 
-      case 'clearDeveloperOverride':
+      case 'clearDeveloperOverride': {
         // Clear developer override
         const clearResult = await revenueCatAuthIntegration.clearDeveloperOverride();
         
@@ -163,6 +165,7 @@ export default async function handler(req: any, res: any) {
           success: true,
           message: 'Successfully cleared developer override'
         });
+      }
 
       default:
         return res.status(400).json({

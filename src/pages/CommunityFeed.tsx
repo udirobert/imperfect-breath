@@ -69,7 +69,7 @@ interface BreathingChallenge {
 
 const CommunityFeed: React.FC = () => {
   // Use consolidated auth system
-  const auth = useAuth({ blockchain: true, lens: true });
+  const auth = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { history } = useSessionHistory();
@@ -559,7 +559,7 @@ const CommunityFeed: React.FC = () => {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>Connected: {auth.wallet?.chain || "Unknown"}</span>
                       <Badge variant="outline" className="text-xs">
-                        {auth.isFullyConnected ? "Fully Connected" : "Partial"}
+                        {auth.wallet?.isConnected ? "Fully Connected" : "Partial"}
                       </Badge>
                     </div>
                   </div>

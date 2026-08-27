@@ -13,12 +13,12 @@ export interface ValidationResult {
 // Common validation patterns
 const VALIDATION_PATTERNS = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/,
+  url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/,
   alphanumeric: /^[a-zA-Z0-9]+$/,
   alphanumericWithSpaces: /^[a-zA-Z0-9\s]+$/,
   flowAddress: /^0x[a-fA-F0-9]{16}$/,
   ethereumAddress: /^0x[a-fA-F0-9]{40}$/,
-  apiKey: /^[a-zA-Z0-9\-_\.]+$/,
+  apiKey: /^[a-zA-Z0-9_.-]+$/,
   username: /^[a-zA-Z0-9_-]{3,20}$/,
   breathingPatternName: /^[a-zA-Z0-9\s\-_()]{1,50}$/
 };

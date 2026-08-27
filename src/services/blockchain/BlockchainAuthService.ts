@@ -362,7 +362,7 @@ export class BlockchainAuthService {
    */
   getCurrentFlowUser(): FlowUser | null {
     if (!this.isFlowInitialized) return null;
-    return fcl.currentUser().snapshot() as FlowUser | null;
+    return fcl.currentUser().snapshot() as unknown as FlowUser | null;
   }
 
   /**

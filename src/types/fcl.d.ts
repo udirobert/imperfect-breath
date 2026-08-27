@@ -12,6 +12,7 @@ declare module "@onflow/fcl" {
   export interface FclUser {
     addr: string | null;
     loggedIn: boolean;
+    [key: string]: unknown;
   }
 
   export interface FclUserHandle {
@@ -38,6 +39,7 @@ declare module "@onflow/fcl" {
 
   export interface FclTxHandle {
     onceSealed(): Promise<FclTxResult>;
+    snapshot(): Promise<FclTxResult>;
   }
 
   export interface FclArgFn {
@@ -74,7 +76,7 @@ declare module "@onflow/fcl" {
   export function mutate(opts: MutateArgs): Promise<string>;
   export function tx(txId: string): FclTxHandle;
   export function query(opts: QueryArgs): Promise<unknown>;
-  export function send(opts: Record<string, unknown>): Promise<unknown>;
+  export function send(opts: unknown): Promise<unknown>;
   export function getAccount(address: string): Promise<FclAccount>;
   export function decode<T = unknown>(fn: (value: unknown) => T): (response: unknown) => T;
   export function authenticate(): Promise<void>;

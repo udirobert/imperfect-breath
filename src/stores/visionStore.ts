@@ -46,8 +46,10 @@ export interface VisionState {
     // Connection status
     backendAvailable: boolean;
     error: string | null;
+    isProcessing: boolean;
 
     // Session tracking
+    sessionId: string | null;
     sessionStartTime: number | null;
     frameCount: number;
 }
@@ -103,6 +105,8 @@ const initialState: VisionState = {
     performanceMode: 'optimal',
     backendAvailable: false,
     error: null,
+    isProcessing: false,
+    sessionId: null,
     sessionStartTime: null,
     frameCount: 0,
 };

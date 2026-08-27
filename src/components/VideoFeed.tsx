@@ -3,7 +3,7 @@ import { useCamera } from "../contexts/CameraContext";
 import { TrackingStatus, Keypoint } from "../hooks/visionTypes";
 
 interface VideoFeedProps {
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   isActive: boolean;
   landmarks?: Keypoint[];
   trackingStatus?: TrackingStatus;

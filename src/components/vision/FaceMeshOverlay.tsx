@@ -84,7 +84,7 @@ export const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({
   showDebugInfo = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const [isProcessing, setIsProcessing] = useState(false);
   const [faceCenter, setFaceCenter] = useState<{ x: number; y: number } | null>(
     null

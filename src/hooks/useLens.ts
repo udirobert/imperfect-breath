@@ -11,7 +11,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { blockchainAuthService } from "../services/blockchain/BlockchainAuthService";
 import { lensAPI } from "../lib/lens";
-import { ShareTextGenerator } from "../lib/sharing";
+import { ShareTextGenerator, type ShareableSessionData } from "../lib/sharing";
 import type {
   Account,
   Post,
@@ -313,7 +313,7 @@ export const useLens = (): UseLensReturn => {
             ...sessionOrContent,
             score: sessionScore,
             sessionDuration: sessionOrContent.duration
-          });
+          } as unknown as ShareableSessionData);
         }
 
         // Create metadata and upload to Grove with fallback

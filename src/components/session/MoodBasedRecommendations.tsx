@@ -154,7 +154,7 @@ export const MoodBasedRecommendations: React.FC<
       // Create enhanced recommendation context
       const enhancedContext: RecommendationContext = {
         timeOfDay: context.timeOfDay || new Date().getHours(),
-        userGoal: context.moodGoal,
+        userGoal: context.moodGoal as RecommendationContext['userGoal'],
         currentMood: context.mood as any,
         userLevel: "beginner", // Could be made dynamic based on session history
         sessionType: "enhanced", // Enhanced because we have more context
@@ -510,7 +510,7 @@ export const MoodBasedRecommendations: React.FC<
                         timeToEffect={rec.timeToEffect}
                         badge={rec.badge}
                         explanation={rec.explanation}
-                        bestFor={rec.pattern.benefits?.slice(0, 2)}
+                        bestFor={((rec.pattern as unknown as { benefits?: string[] }).benefits)?.slice(0, 2)}
                         priority={index === 0 ? "high" : index === 1 ? "medium" : "low"}
                         variant="detailed"
                         onClick={() => {
