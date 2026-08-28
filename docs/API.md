@@ -1,178 +1,238 @@
 # API Documentation
 
-Comprehensive API documentation for Imperfect Breath services.
+API reference for the Brume vision service (FastAPI, `backend/vision-service`).
+This is the service the frontend calls for frame analysis, AI insights, and
+proof-of-practice attestations.
 
 ## Overview
 
-The API provides integration endpoints for:
-- Lens Protocol v3 integration
-- Flow Forte integration
-- RevenueCat configuration
-- Cross-network coordination
+The service provides:
+
+- **Vision processing** — MediaPipe-based frame analysis (face, posture,
+  breathing) with per-session state
+- **AI analysis** — session insights via Cerebras / Gemini / OpenAI fallback
+- **Attestations** — server-verified proof-of-practice issuance with a
+  Flow-compatible verifier co-signature
+- **Lens session signing** — quiet infrastructure for verifiable session records
+- **RevenueCat config** — monetization configuration for the client
 
 ## Authentication
 
-All API endpoints require authentication using Supabase JWT tokens:
-
-```bash
-Authorization: Bearer YOUR_SUPABASE_JWT_TOKEN
-```
+The vision service endpoints do **not** use Supabase JWTs. Session privacy is
+capability-based: the `session_id` is a UUID generated client-side at session
+start, and session data is keyed only by it. The attest endpoint additionally
+requires that the session accumulated real camera data server-side before it
+will issue anything (see below). Supabase auth secures app data (profiles,
+progress, subscriptions) on the frontend, not these endpoints.
 
 ## Endpoints
 
-### Lens Protocol v3 Integration
+### Vision
 
-#### POST /api/integration/lens-v3
+#### POST /api/vision/process
 
-Integrate with Lens Protocol v3 features.
+Analyze a single camera frame within a session.
 
 **Request Body:**
 ```json
 {
-  "action": "authenticate|createPost|follow",
-  "data": {
-    // Action-specific data
-  }
+  "image_data": "<base64 image>",
+  "session_id": "uuid",
+  "timestamp": 1724800000000,
+  "breathing_phase": "inhale",
+  "options": { "detect_face": true, "analyze_posture": true, "track_breathing": true }
 }
 ```
-
-**Actions:**
-- `authenticate`: Authenticate with Lens Protocol v3
-- `createPost`: Create a post using Lens Protocol v3
-- `follow`: Follow an account using Lens Protocol v3
 
 **Response:**
 ```json
 {
   "success": true,
-  "data": {},
-  "message": "Success message"
-}
-```
-
-### Flow Forte Integration
-
-#### POST /api/integration/flow-forte
-
-Integrate with Flow Forte features.
-
-**Request Body:**
-```json
-{
-  "action": "scheduleTransaction|getScheduledTransactions|cancelScheduledTransaction|getCapabilities",
-  "data": {
-    // Action-specific data
+  "session_id": "uuid",
+  "metrics": {
+    "confidence": 0.97,
+    "face_detected": true,
+    "posture_score": 82.5,
+    "movement_level": 0.12,
+    "breathing_rate": 5.4,
+    "landmarks": [],
+    "processing_time_ms": 18.2
   }
 }
 ```
 
-**Actions:**
-- `scheduleTransaction`: Schedule a transaction for future execution
-- `getScheduledTransactions`: Get all scheduled transactions for the user
-- `cancelScheduledTransaction`: Cancel a scheduled transaction
-- `getCapabilities`: Get Flow Forte capabilities
+#### GET /api/vision/sessions/{session_id}/summary
+
+Aggregated session metrics (duration, total frames, avg confidence/posture/
+movement/breathing rate, stillness percentage, consistency score).
+
+#### GET /api/vision/sessions
+
+List active sessions (debug/ops).
+
+#### POST /api/vision/session/{session_id}/stop
+
+Stop a session (finalizes state).
+
+#### DELETE /api/vision/session/{session_id}
+
+Discard a session's server-side state (privacy — nothing persists after this).
+
+### AI Analysis
+
+#### POST /api/ai-analysis
+
+Generate session insights.
+
+**Request Body:**
+```json
+{
+  "provider": "cerebras",
+  "session_data": { "patternName": "Box Breathing", "sessionDuration": 120 },
+  "analysis_type": "session"
+}
+```
 
 **Response:**
 ```json
 {
   "success": true,
-  "data": {},
-  "message": "Success message"
+  "provider": "cerebras",
+  "analysis_type": "session",
+  "result": { "analysis": "…" },
+  "cached": false
 }
 ```
 
-### RevenueCat Integration
+#### POST /api/ai-analysis/stream
 
-#### POST /api/integration/revenuecat
+Streaming variant (server-sent events).
 
-Integrate with RevenueCat features.
+### Attestations (trust layer)
+
+#### POST /api/attest
+
+Issue a ProofOfPractice attestation for a camera-verified session.
+
+**Security model** (see `docs/PR9_REVIEW_NOTES.md` resolution addendum):
+
+- There is **no `verified` field** — verification is established server-side:
+  the session must exist in the vision processor's store with ≥10 real
+  breathing/confidence frames. A bare curl cannot mint an attestation.
+- `session_score` is **ignored** — the score is computed server-side from the
+  session's own breathing data (consistency of measured rate).
+- `wallet_address` must be the **Flow address that will submit the on-chain
+  transaction** — it is bound into the co-signature payload.
 
 **Request Body:**
 ```json
 {
-  "action": "identifyUser|setDeveloperOverride|clearDeveloperOverride",
-  "data": {
-    // Action-specific data
-  }
+  "session_id": "uuid",
+  "wallet_address": "0x1234…",
+  "breath_rate": null,
+  "duration_seconds": 120
 }
 ```
-
-**Actions:**
-- `identifyUser`: Identify user with RevenueCat
-- `setDeveloperOverride`: Set developer override for testing
-- `clearDeveloperOverride`: Clear developer override
 
 **Response:**
 ```json
 {
   "success": true,
-  "message": "Success message"
-}
-```
-
-### Cross-Network Integration
-
-#### POST /api/cross-network/mint
-
-Coordinate activities between Flow Forte and Lens Protocol.
-
-**Request Body:**
-```json
-{
-  "action": "mintWithSocial|purchaseWithSocial|createChallenge",
-  "data": {
-    // Action-specific data
+  "credential": {
+    "sessionId": "uuid",
+    "subject": "0x0000000000001234",
+    "issuedAt": "2026-08-28T06:00:00+00:00",
+    "metrics": { "breath_rate": 5.4, "session_score": 87.5, "duration_seconds": 120 }
+  },
+  "attestation": { "status": "pending_chain", "txId": null, "network": "flow-testnet" },
+  "verifier_signature": {
+    "verifier_address": "0x…",
+    "verifier_signature_hex": "…",
+    "signed_data_hex": "…"
   }
 }
 ```
 
-**Actions:**
-- `mintWithSocial`: Mint an NFT and share on social networks
-- `purchaseWithSocial`: Purchase an NFT and share on social networks
-- `createChallenge`: Create a breathing challenge with cross-network rewards
+The client passes `verifier_signature` to the user-initiated Flow transaction
+(`cadence/transactions/attest_practice.cdc`). The `PracticeCredential` contract
+accepts the credential only if the verifier is allowlisted, the signed payload
+equals `sessionId || subject.toString() || score.toString()`, and the signature
+verifies against the verifier account's key (ECDSA/secp256k1 over
+`SHA3-256(pad32(tag) || payload)`, tag `Brume-PracticeCredential-v1`).
+Verifier setup: `docs/RUNBOOK.md` §8.
+
+#### GET /api/session/{session_id}/verify-status
+
+Whether a session has enough camera data to be considered verified (used by
+the MCP server and clients; never trusts a client flag).
 
 **Response:**
 ```json
 {
-  "success": true,
-  "data": {},
-  "message": "Success message"
+  "session_id": "uuid",
+  "verified": true,
+  "breathing_frames": 42,
+  "confidence_frames": 40,
+  "breath_rate": 5.4
 }
 ```
+
+### Lens (quiet infrastructure)
+
+#### POST /lens/sign-session
+
+Sign a breathing session record (Lens V3 Open Action proof). No social
+surfaces remain in the app — this endpoint is plumbing, not a feature.
+
+**Request Body:**
+```json
+{
+  "user_address": "0x…",
+  "pattern_name": "Box Breathing",
+  "duration": 120,
+  "score": 87,
+  "timestamp": "2026-08-28T06:00:00Z"
+}
+```
+
+**Response:** `{ "payload": { … }, "signature": "0x…" }`
+
+### Monetization
+
+#### GET /revenuecat
+
+RevenueCat configuration for the client (public SDK keys, entitlement ids).
+
+#### GET /revenuecat/status
+
+Configuration health check.
+
+### Ops
+
+#### GET /health
+
+Service status (includes Cerebras backend status).
 
 ## Error Handling
 
-All API endpoints return consistent error responses:
+Errors use FastAPI's standard shape:
 
 ```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Error description"
-  }
-}
+{ "detail": "Cannot attest unverified practice: session … has only 3 breathing frames …" }
 ```
 
-### Common Error Codes
-
-- `METHOD_NOT_ALLOWED`: Invalid HTTP method
-- `UNAUTHORIZED`: Missing or invalid authentication
-- `MISSING_PARAMS`: Required parameters missing
-- `INVALID_ACTION`: Invalid action specified
-- `INVALID_TOKEN`: Invalid or expired authentication token
-- `FORBIDDEN`: Insufficient permissions
+Attest-specific rejections return `400` with a human-readable `detail`
+(session missing, insufficient frames, malformed Flow address).
 
 ## Rate Limiting
 
-API endpoints are rate-limited to prevent abuse:
-- 100 requests per minute per IP address
-- 1000 requests per hour per authenticated user
+Not yet enforced on the vision service — tracked in
+`docs/PRODUCTION_READINESS.md` (Priority 2).
 
 ## Security
 
-- All endpoints use HTTPS
-- CORS protection enabled
-- Input validation and sanitization
-- Content Security Policy enforcement
-- Rate limiting to prevent abuse
+- All endpoints served over HTTPS in production
+- CORS restricted to app origins
+- No raw video is stored: frames are processed in-memory and discarded
+- Attestations cannot be forged or replayed (contract-enforced payload
+  binding + authorized-verifier co-signature)

@@ -25,6 +25,9 @@
 
 ### 4. Smart Account & Wallets
 - [ ] **Mainnet Transition**: Update `BlockchainAuthService` to point to Flow Mainnet and Lens Mainnet.
+- [ ] **Trust layer deployment**: Deploy `PracticeCredential` to testnet → mainnet,
+    create the verifier account, set `BRUME_VERIFIER_KEY` / `BRUME_VERIFIER_ADDRESS`,
+    run `setup_verifier.cdc` — full procedure in `docs/RUNBOOK.md` §8.
 - [ ] **Policy Updates**: Finalize ERC-7715 execution policies for production permissions.
 
 ## 📱 Priority 3: Distribution & Mobile

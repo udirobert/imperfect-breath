@@ -88,11 +88,18 @@ backend/vision-service/
 
 ### API Endpoints
 ```
-GET  /health                    # Service status
-POST /api/vision/process        # Frame analysis
-GET  /api/vision/sessions/{id}  # Session data
-POST /api/ai-analysis          # AI insights
-GET  /api/config/revenuecat    # Monetization config
+GET    /health                           # Service status
+POST   /api/vision/process               # Frame analysis (MediaPipe)
+GET    /api/vision/sessions/{id}/summary # Session summary
+GET    /api/vision/sessions              # List sessions
+POST   /api/vision/session/{id}/stop     # Stop a session
+DELETE /api/vision/session/{id}          # Discard session data
+POST   /api/ai-analysis                  # AI insights
+POST   /api/ai-analysis-stream           # Streaming AI insights
+POST   /api/attest                       # ProofOfPractice attestation (server-verified)
+GET    /api/session/{id}/verify-status   # Camera-verification status
+POST   /lens/sign-session                # Lens session signing (quiet infra)
+GET    /revenuecat                       # Monetization config
 ```
 
 ### Data Flow
@@ -100,7 +107,7 @@ GET  /api/config/revenuecat    # Monetization config
 2. **Processing**: Backend analyzes with MediaPipe
 3. **AI Analysis**: Generate insights & recommendations
 4. **Storage**: Save session data (local + cloud)
-5. **Blockchain**: Optional NFT minting
+5. **Attestation**: optional user-initiated credential minting (backend co-signs only after server-side camera verification)
 
 ## Database Schema
 
@@ -195,25 +202,31 @@ Lazy-loaded with conflict detection and connection timeout protection.
 
 ## Blockchain Integration
 
-### Flow Blockchain
-```typescript
-// NFT minting for achievements
-contract BreathingNFT {
-  mint(sessionData: SessionMetrics): NFT
-  transfer(tokenId: number, to: Address): void
-  getMetadata(tokenId: number): Metadata
-}
-```
+### Flow Blockchain — PracticeCredential (credentials, not collectibles)
+
+Non-transferable attestations of camera-verified practice. Contract:
+`cadence/contracts/PracticeCredential.cdc`.
+
+- **Records, not assets**: no withdraw/transfer is exposed; a credential
+  cannot be sold or moved (see STRATEGY — attestations, not collectibles).
+- **Issuance is two-party**: the user submits the Flow transaction (keys stay
+  client-side), but the contract only accepts a credential whose payload
+  (`sessionId || subject.toString() || score.toString()`) carries a valid
+  co-signature from an **authorized verifier** — the Brume backend.
+- **The backend signs only after server-side verification**: the session must
+  have accumulated real camera frames (≥10) in the vision processor, and the
+  score is computed server-side from the session's own breathing data. The
+  client cannot supply or inflate either. Signature scheme: ECDSA/secp256k1
+  over `SHA3-256(pad32(tag) || payload)`, tag `Brume-PracticeCredential-v1`.
+- **Verifier management**: allowlist admin via
+  `cadence/transactions/setup_verifier.cdc` / `remove_verifier.cdc`
+  (operational steps in RUNBOOK §8).
 
 ### Lens Protocol V3
-```typescript
-// Social features
-interface LensIntegration {
-  createPost(sessionSummary: string): Post;
-  followUser(address: string): void;
-  sharePattern(pattern: BreathingPattern): void;
-}
-```
+
+Quiet infrastructure, not a destination: session signing for verifiable
+practice records (`POST /lens/sign-session`). The social surfaces (hub,
+composer, feed) were buried in consolidation round 1 and deleted in round 3.
 
 ## Security Architecture
 
@@ -490,46 +503,45 @@ const EmotionalVisionComponent = () => {
 };
 ```
 
-## Blockchain Integration APIs
+## Attestation APIs (trust layer)
 
-### Flow Blockchain
+#### 1. Request the attestation — `POST /api/attest`
 
-#### NFT Minting
 ```typescript
-import { mintBreathingNFT } from '@/lib/flow/nft';
-
-const mintAchievement = async (sessionData) => {
-  const nft = await mintBreathingNFT({
-    sessionMetrics: sessionData.metrics,
-    patternName: sessionData.pattern,
-    timestamp: sessionData.completedAt,
-    metadata: {
-      description: "Breathing session achievement",
-      attributes: [
-        { trait_type: "Pattern", value: sessionData.pattern },
-        { trait_type: "Score", value: sessionData.score }
-      ]
-    }
-  });
-
-  return nft;
-};
+// src/hooks/useAttestation.ts (simplified)
+const res = await fetch(`${BACKEND_URL}/api/attest`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    session_id: sessionId,      // capability: must exist in the vision session store
+    wallet_address: address,    // the user's FLOW address (the tx submitter)
+  }),
+});
+const data = await res.json();
+// data.credential.metrics.session_score  — computed server-side
+// data.verifier_signature                — co-signature for the Flow transaction
 ```
 
-#### Marketplace Integration
+The backend refuses unless the session accumulated ≥10 real camera frames,
+ignores any client-supplied score, and signs the canonical payload
+`sessionId || subject.toString() || score.toString()`.
+
+#### 2. Mint user-initiated — `attestPracticeOnChain`
+
 ```typescript
-import { listPatternForSale } from '@/lib/flow/marketplace';
-
-const sellPattern = async (pattern) => {
-  const listing = await listPatternForSale({
-    patternId: pattern.id,
-    price: "10.0", // FLOW tokens
-    royalty: 5 // 5% royalty to creator
-  });
-
-  return listing;
-};
+// src/lib/flow/attest-practice.ts (simplified)
+await attestPracticeOnChain({
+  sessionId,
+  score: data.credential.metrics.session_score, // must match the signed value
+  verifierSignature: data.verifier_signature,
+});
 ```
+
+Submits `cadence/transactions/attest_practice.cdc`. The contract
+(`PracticeCredential.attest`) panics unless the verifier is allowlisted, the
+signed payload matches the transaction's subject/score exactly, and the
+signature verifies against the verifier account's key — so self-issuance,
+score inflation, and cross-account replay are all impossible.
 
 ## Configuration
 

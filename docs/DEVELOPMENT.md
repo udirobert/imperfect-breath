@@ -151,14 +151,16 @@ imperfect-breath/
 ### Real Blockchain Integration (✅ Complete)
 
 **What Was Implemented:**
-- ✅ Real Lens Protocol integration with official SDK
-- ✅ Real Flow Blockchain integration with NFT operations
+- ✅ Real Lens Protocol integration with official SDK (quiet infrastructure)
+- ✅ Real Flow integration — `PracticeCredential` attestations with
+  authorized-verifier co-signatures (credentials, not collectibles)
 - ✅ User-friendly error messages and transaction monitoring
 - ✅ Gas cost estimation and transaction status tracking
 
 **Key Features:**
-- **Lens Protocol**: Share sessions, create posts, follow users, load timeline
-- **Flow Blockchain**: Mint NFTs, transfer assets, marketplace payments
+- **Lens Protocol**: Session signing infrastructure (social surfaces removed in consolidation)
+- **Flow Blockchain**: User-initiated credential minting; the contract accepts
+  only backend-co-signed attestations (see `docs/RUNBOOK.md` §8)
 - **Error Handling**: User-friendly error translations and recovery
 - **Transaction Monitoring**: Real-time status updates and gas estimates
 
