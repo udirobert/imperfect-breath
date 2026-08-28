@@ -1,7 +1,7 @@
 {
   "contracts": {
-    "ImperfectBreath": {
-      "source": "cadence/contracts/ImperfectBreath.cdc"
+    "PracticeCredential": {
+      "source": "cadence/contracts/PracticeCredential.cdc"
     }
   },
   "networks": {
@@ -43,13 +43,13 @@
   },
   "deployments": {
     "emulator": {
-      "emulator-account": ["ImperfectBreath"]
+      "emulator-account": ["PracticeCredential"]
     },
     "testnet": {
-      "testnet-account": ["ImperfectBreath"]
+      "testnet-account": ["PracticeCredential"]
     },
     "mainnet": {
-      "mainnet-account": ["ImperfectBreath"]
+      "mainnet-account": ["PracticeCredential"]
     }
   }
 }
