@@ -72,7 +72,7 @@ export function TodayCard({ className }: { className?: string }) {
             <Button
               size="lg"
               className="btn-premium rounded-full px-8"
-              onClick={() => navigate("/patterns")}
+              onClick={() => navigate(`/session/classic?pattern=${top.pattern.id}`)}
             >
               Start {top.pattern.name}
             </Button>
