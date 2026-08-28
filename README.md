@@ -59,10 +59,10 @@ MODEL_DOWNLOAD_ON_START=false python3 main.py &
 - Mobile-optimized responsive design
 - Camera integration for vision features
 
-### ⛓️ Web3 Integration
-- **Flow Blockchain** - NFT minting and marketplace
-- **Lens Protocol** - Decentralized social features
-- **Multi-wallet support** - Connect any Web3 wallet
+### ⛓️ Trust layer (quiet by design)
+- **Flow Blockchain** — `PracticeCredential`: non-transferable records of camera-verified practice, minted user-initiated and only valid when co-signed by Brume's authorized verifier
+- **Lens Protocol** — quiet attestation infrastructure (session signing), not a social destination
+- **Wallet connect** — used for credentials; nothing else asks for it
 
 ## 🔒 Privacy & Security
 
