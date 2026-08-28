@@ -108,3 +108,39 @@ prop.
 Re-run full review coverage (monetization/authStore ordering around RevenueCat
 login/logout was the highest-risk gap not yet reviewed), then re-validate all
 of the above if `feat/brume` has moved past `f669d9b`.
+
+---
+
+## Resolution addendum (post-merge)
+
+All four high-confidence findings above were verified against `main` after the
+PR merged and are **fixed** (see PR "fix(trust): …" / branch
+`fix/trust-invariants`):
+
+1. **MCP `breath_verify_session`** — now calls
+   `GET /api/session/{id}/verify-status` (exists, correct response shape).
+2. **MCP `coach_respond`** — now sends `provider` + `session_data` per
+   `AIAnalysisRequest` and reads `result.analysis`.
+3. **`/api/attest` trust invariant** — the `verified` field was removed;
+   verification requires ≥10 real camera frames in the vision session store.
+   Additionally the score is now computed server-side (client `session_score`
+   ignored) and the wallet address must be the submitter's Flow address.
+4. **Cadence `attest()` access control** — verifier allowlist + on-chain
+   co-signature check were present but **not deployable or sound** as merged:
+   - `PublicKey.verify` was called without the required `hashAlgorithm`
+     (compile error — the contract could never deploy);
+   - `Account.Keys` was used with `.len`/indexing (not valid in Cadence 1.x)
+     — replaced with a `get(keyIndex:)` scan;
+   - resource-dict init used `=` instead of `<-` (deploy error);
+   - the backend co-signed EIP-191/Ethereum-style (keccak, personal-message
+     prefix, 65-byte sig) which Flow's tagged `verify` can never accept —
+     replaced with ECDSA/secp256k1 over `SHA3-256(pad32(tag) || payload)`,
+     raw r‖s, verified against a Flow emulator;
+   - `signedData` was opaque, so a co-signature could be replayed for a
+     different subject/score — the contract now reconstructs
+     `sessionId || subject.toString() || score.toString()` and requires
+     equality, binding submitter + score into the signature.
+
+   E2E on the Flow emulator: happy path mints exactly one credential with the
+   server-signed score; forged signature, tampered score, replay from another
+   account, and unauthorized verifier all panic correctly.

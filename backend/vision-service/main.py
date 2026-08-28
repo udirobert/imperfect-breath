@@ -1039,6 +1039,11 @@ class AttestationRequest(BaseModel):
     # NOTE: the `verified` field was removed — verification is established
     # server-side from the vision processor's session store, not trusted
     # from the client. See attest_practice() below.
+    #
+    # NOTE: `session_score` is likewise IGNORED — the score is computed
+    # server-side from the session's own breathing data, and `wallet_address`
+    # must be the Flow address that will submit the on-chain transaction
+    # (the contract binds it into the co-signature payload).
 
 class PracticeMetrics(BaseModel):
     breath_rate: Optional[float] = None
@@ -1087,6 +1092,66 @@ async def mint_flow_attestation(credential: ProofOfPracticeCredential) -> Option
     logger.info(f"Flow minting stub: credential for session {credential.sessionId} not yet submitted to chain")
     return None
 
+# --- Verifier co-signature (Flow-compatible) ---------------------------------
+#
+# The PracticeCredential contract verifies this signature on-chain with
+# Cadence `PublicKey.verify(signature:, signedData:, domainSeparationTag:,
+# hashAlgorithm:)`. Flow's tagged hashing (flow-go `NewPrefixedHashing`) is
+#
+#     digest = SHA3_256( pad32(tag) || signedData )
+#
+# where the tag is ZERO-PADDED to 32 bytes (flow.DomainTagLength) — verified
+# end-to-end against a Flow emulator. The signature is raw r||s (64 bytes)
+# over ECDSA/secp256k1, and the verifier's public key must be registered on
+# the Flow account at BRUME_VERIFIER_ADDRESS (see docs/RUNBOOK.md).
+# EIP-191/Ethereum personal-message signing does NOT verify on Flow and was
+# removed. The tag must stay <= 32 chars or Flow rejects it.
+VERIFIER_DOMAIN_TAG = "Brume-PracticeCredential-v1"
+_FLOW_DOMAIN_TAG_LENGTH = 32
+
+
+def _normalize_flow_address(address: str) -> str:
+    """Canonicalize a Flow address to 0x + 16 lowercase hex chars.
+
+    The canonical form matters: the contract reconstructs the signed payload
+    using `subject.toString()`, which renders the full 16-hex form.
+    """
+    a = address.strip().lower()
+    if a.startswith("0x"):
+        a = a[2:]
+    if not a or len(a) > 16 or any(c not in "0123456789abcdef" for c in a):
+        raise HTTPException(
+            status_code=400,
+            detail="wallet_address must be a Flow address (0x + up to 16 hex chars); "
+                   "it must be the address that submits the on-chain transaction.",
+        )
+    return "0x" + a.rjust(16, "0")
+
+
+def _ufix64_str(value: float) -> str:
+    """Render a score the way Cadence `UFix64.toString()` does: ALWAYS eight
+    decimal places (verified on emulator: 87.5 -> "87.50000000"). Scores are
+    rounded to one decimal first; the fixed rendering keeps the backend's
+    signed bytes and the contract's reconstructed payload byte-identical."""
+    return f"{round(value, 1):.8f}"
+
+
+def _flow_verifier_sign(private_key_hex: str, payload: bytes) -> str:
+    """ECDSA/secp256k1 signature over SHA3-256(pad32(tag) || payload), raw r||s."""
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.asymmetric import utils as ec_utils
+
+    if len(VERIFIER_DOMAIN_TAG) > _FLOW_DOMAIN_TAG_LENGTH:
+        raise ValueError("verifier domain tag exceeds Flow's 32-byte domain tag limit")
+    padded_tag = VERIFIER_DOMAIN_TAG.encode("utf-8").ljust(_FLOW_DOMAIN_TAG_LENGTH, b"\x00")
+
+    key_int = int(private_key_hex.removeprefix("0x"), 16)
+    priv = ec.derive_private_key(key_int, ec.SECP256K1())
+    der = priv.sign(padded_tag + payload, ec.ECDSA(hashes.SHA3_256()))
+    r, s = ec_utils.decode_dss_signature(der)
+    return (r.to_bytes(32, "big") + s.to_bytes(32, "big")).hex()
+
 @app.post("/api/attest", response_model=AttestationResponse)
 async def attest_practice(request: AttestationRequest):
     """Issue a ProofOfPractice attestation for a camera-verified breathwork session.
@@ -1095,6 +1160,8 @@ async def attest_practice(request: AttestationRequest):
     is established server-side by checking that the session accumulated real
     camera data in the vision processor's session store (breathing history +
     confidence frames). An attestation cannot be minted by a bare curl call.
+    The score is likewise computed server-side, and the co-signature binds the
+    submitter's Flow address, so neither can be forged by the client.
     """
     # Server-side verification: the session must exist and have real camera data.
     # The client's `verified` flag is deliberately not trusted.
@@ -1125,13 +1192,23 @@ async def attest_practice(request: AttestationRequest):
             sum(session.breathing_history) / len(session.breathing_history), 2
         )
 
+    # Score integrity: computed server-side from the session's own breathing
+    # data (same formula the vision pipeline reports live). The client's
+    # `session_score` is deliberately ignored — a verified session must not
+    # be able to claim an arbitrary score.
+    session_score = round(session._calculate_consistency(), 1)
+
+    # The co-signature binds the submitter's Flow address — normalize it so
+    # the signed bytes match the contract's `subject.toString()` rendering.
+    subject_address = _normalize_flow_address(request.wallet_address)
+
     credential = ProofOfPracticeCredential(
         sessionId=request.session_id,
-        subject=request.wallet_address,
+        subject=subject_address,
         issuedAt=datetime.now(timezone.utc).isoformat(),
         metrics=PracticeMetrics(
             breath_rate=breath_rate,
-            session_score=request.session_score,
+            session_score=session_score,
             duration_seconds=request.duration_seconds
         )
     )
@@ -1153,18 +1230,23 @@ async def attest_practice(request: AttestationRequest):
     verifier_address = os.environ.get("BRUME_VERIFIER_ADDRESS", "")
     if verifier_key and verifier_address:
         try:
-            # signed_data = sessionId || wallet_address || score (UTF-8 bytes)
-            signed_data_str = f"{request.session_id}{request.wallet_address}{request.session_score or 0}"
+            # Canonical payload — must match byte-for-byte what the contract
+            # reconstructs: sessionId || subject.toString() || score.toString()
+            # (see PracticeCredential.attest). Score uses the server-computed
+            # value, rendered as Cadence UFix64.toString() would.
+            signed_data_str = (
+                f"{request.session_id}{subject_address}{_ufix64_str(session_score)}"
+            )
             signed_data_bytes = signed_data_str.encode("utf-8")
-            signer_account = Account.from_key(verifier_key)
-            signed_message = encode_defunct(text=signed_data_str)
-            signed = Account.sign_message(signed_message, private_key=verifier_key)
+            signature_hex = _flow_verifier_sign(verifier_key, signed_data_bytes)
             verifier_cosig = VerifierCoSignature(
-                verifier_address=verifier_address,
-                verifier_signature_hex=signed.signature.hex(),
+                verifier_address=_normalize_flow_address(verifier_address),
+                verifier_signature_hex=signature_hex,
                 signed_data_hex=signed_data_bytes.hex(),
             )
             logger.info(f"Verifier co-signature produced for session {request.session_id}")
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to produce verifier co-signature: {e}")
     else:

@@ -60,13 +60,22 @@ export function useAttestation(enabled: boolean, opts?: { score?: number }) {
       setMeta(data?.attestation?.status === "pending_chain" ? "Flow · queued" : "Flow");
       setStatus("done");
 
+      // The score is SERVER-authoritative: the backend computes it from the
+      // session's camera data and signs exactly this value into the
+      // co-signature payload. We must pass the signed value to the
+      // transaction — the contract rejects any other score (payload binding
+      // in PracticeCredential.attest). Fall back to the local score only if
+      // an older backend doesn't return metrics yet.
+      const serverScore = data?.credential?.metrics?.session_score;
+      const chainScore = typeof serverScore === "number" ? serverScore : (opts?.score ?? 0);
+
       // User-initiated on-chain write (client holds keys). Only attempted when
       // the PracticeCredential contract is configured; failure keeps "queued" —
       // the backend record stands and the user can retry later.
       try {
         await attestPracticeOnChain({
           sessionId,
-          score: opts?.score ?? 0,
+          score: chainScore,
           verifierSignature: data?.verifier_signature,
         });
         setMeta("Flow testnet ✓");
