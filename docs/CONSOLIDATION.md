@@ -4,7 +4,35 @@
 > dead-code sweep): **delete, don't bury** — git history preserves everything, and
 > unreferenced code rots into type/lint noise. The v1 "bury, don't delete" stance
 > was superseded once the surfaces were confirmed unreachable.
-> Registry last updated: consolidation round 3 (dead-code deletion).
+> Registry last updated: consolidation round 4 (final pass — copy sweep + debug audit).
+
+## Consolidation Round 4 — final pass (branch `feat/consolidation-final`)
+
+Closes the two remaining items from the "next passes" list plus the stale
+known-inconsistency note.
+
+- **Copy sweep completed.** `UserProfile` no longer displays Lens identity or
+  social-graph stats ("Lens Protocol Stats" / "No Lens Profile Found" cards,
+  @handle + follow button). Lens survives as quiet infrastructure: wallets are
+  still disconnected on sign-out, nothing chain-forward is shown. The Lens card
+  is replaced by a "Verified Practice" card pointing at `/progress`. Dead
+  "Creator Verified" stat row removed (creator economy is buried). `Index` hero
+  rebrand shipped in PR #12. `Settings` was already clean.
+- **Debug audit resolved.**
+  - `AIAnalysisDebugButton` + `src/debug/ai-analysis-debug.ts` **deleted** —
+    explicitly marked "TEMPORARY … Remove after debugging" and rendered
+    unconditionally on `/results`.
+  - `DeveloperTools` + `SystemHealthMonitor` **kept** — already env-gated
+    behind `development.debugMode` (`VITE_DEBUG_MODE === "true"`, off in prod)
+    in `MainLayout`, which is the intended prod posture.
+  - `src/components/integration/` and `src/pages/api/` confirmed already gone
+    (removed in round 3).
+- **Known-inconsistency #5 closed.** `MobileBottomNav` was deleted in round 2;
+  the single `BottomTabBar` uses `/session`. `SessionEntryPoints` offering
+  `/session/classic` vs `/session/enhanced` mode cards is the intended entry.
+
+With round 4 the consolidation registry has **no open passes**. Future cleanup
+happens file-by-file under the nav-discipline and delete-don't-bury rules.
 
 ## Consolidation Round 3 — dead-code deletion (branch `feat/consolidation-ux`)
 
@@ -60,17 +88,23 @@ out (marketplace resurrection requires density we don't have).
 
 ## UI/UX consolidation notes
 
-1. **One voice.** Brand copy now reads "Brume — progress you can prove" (index.html, Header, Onboarding). Remaining sweep: `src/pages/Index.tsx` hero + `Settings`/`UserProfile` still carry old-brand and Web3-forward copy — next pass.
+1. **One voice.** Brand copy reads "Brume — progress you can prove" everywhere
+   user-facing (index.html, Header, Onboarding, Index hero as of PR #12,
+   UserProfile as of round 4). Sweep complete.
 2. **One palette.** `index.css` root tokens → mist family (h≈204), matching the `brume` Tailwind scale. The old teal primary (180°) and peach accent (25°) are gone from the base theme; page-level gradients (e.g. Subscription's purple/blue) are being normalized as files are touched.
 3. **One promise per screen.** Camera permission = "let Brume see your breath" (not "enable biometrics"). NFT → "verified record of practice" everywhere user-facing.
 4. **Nav discipline rule going forward:** adding a nav item requires removing one — the Header's desktop row is capped at Practice / Progress / Community / Profile.
-5. **Known inconsistency (accepted for v1):** `MobileBottomNav` Session tab links `/session/classic` while desktop uses `/session` — unify on `/session` entry in the polish pass.
+5. **Known inconsistency (resolved in round 4):** `MobileBottomNav` was
+   deleted in round 2; the single `BottomTabBar` links `/session`.
 
 ## Next consolidation passes (post-release)
 
-- Dead-code deletion sweep of buried files (after attestation metrics validate the bet)
-- `src/components/{debug,developer,monitoring,integration}` — audit for prod-only necessity
-- `src/pages/api/` — verify nothing routes there
+**None open.** All listed passes completed:
+
+- ~~Dead-code deletion sweep~~ → round 3 (110 files / ~21.6k lines)
+- ~~`src/components/{debug,developer,monitoring,integration}` audit~~ → round 4
+  (debug button deleted; developer/monitoring kept, env-gated; integration gone)
+- ~~`src/pages/api/`~~ → confirmed gone in round 4 (deleted in round 3)
 
 ---
 

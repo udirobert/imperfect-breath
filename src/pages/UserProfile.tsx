@@ -12,7 +12,6 @@ import {
 } from "../components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Skeleton } from "../components/ui/skeleton";
-import { FollowButton } from "../components/social/SocialButton";
 import { Button } from "../components/ui/button";
 import {
   BarChart3,
@@ -27,7 +26,8 @@ import {
 
 const UserProfilePage = () => {
   const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { currentAccount, isAuthenticating, logout: lensLogout } = useLens();
+  // Lens stays quiet infrastructure: disconnected on sign-out, never displayed.
+  const { isAuthenticating, logout: lensLogout } = useLens();
   const { disconnect: flowDisconnect } = useFlow();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ const UserProfilePage = () => {
       <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
         <Avatar className="w-24 h-24 border-4 border-primary">
           <AvatarImage
-            src={currentAccount?.metadata?.picture || user.profile.avatar}
+            src={user.profile.avatar}
             alt={user.profile.name || user.profile.username}
           />
           <AvatarFallback>
@@ -93,14 +93,6 @@ const UserProfilePage = () => {
           <h1 className="text-4xl font-bold">
             {user.profile.name || user.profile.username}
           </h1>
-          {currentAccount && (
-            <div className="flex items-center gap-4">
-              <p className="text-xl text-muted-foreground">
-                @{currentAccount.username?.fullHandle || currentAccount.id}
-              </p>
-              <FollowButton address={currentAccount.address} />
-            </div>
-          )}
           <p className="mt-2">{user?.email}</p>
         </div>
       </div>
@@ -188,61 +180,34 @@ const UserProfilePage = () => {
               <li>
                 <span className="font-semibold">Role:</span> {profile.role}
               </li>
-              <li>
-                <span className="font-semibold">Creator Verified:</span>{" "}
-                {profile.creator_verified ? "Yes" : "No"}
-              </li>
-              {/* Add more Supabase stats here */}
             </ul>
           </CardContent>
         </Card>
 
-        {currentAccount ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Lens Protocol Stats</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                <li>
-                  <span className="font-semibold">Profile ID:</span>{" "}
-                  {currentAccount.address}
-                </li>
-                <li>
-                  <span className="font-semibold">Username:</span>{" "}
-                  {currentAccount.username?.fullHandle || "No username set"}
-                </li>
-                <li>
-                  <span className="font-semibold">Followers:</span>{" "}
-                  {currentAccount.stats?.followers || 0}
-                </li>
-                <li>
-                  <span className="font-semibold">Following:</span>{" "}
-                  {currentAccount.stats?.following || 0}
-                </li>
-                <li>
-                  <span className="font-semibold">Posts:</span>{" "}
-                  {currentAccount.stats?.posts || 0}
-                </li>
-                <li>
-                  <span className="font-semibold">Comments:</span>{" "}
-                  {currentAccount.stats?.comments || 0}
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="flex flex-col items-center justify-center text-center">
-            <CardHeader>
-              <CardTitle>No Lens Profile Found</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                This user has not linked a wallet with a Lens Protocol profile.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Consolidation: the profile shows practice proof, not chain
+            mechanics — credentials live on /progress. */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Verified Practice
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Every camera-verified session becomes a verified record of
+              practice — progress you can prove.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/progress")}
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View My Progress
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

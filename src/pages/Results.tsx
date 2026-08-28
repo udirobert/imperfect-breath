@@ -44,8 +44,6 @@ import { EnhancedCustomPattern } from "../types/patterns";
 import { BreathingSessionPost } from "../components/social/BreathingSessionPost";
 import { SessionCompleteModal } from "../components/unified/SessionCompleteModal";
 
-import { AIAnalysisDebugButton } from "../components/debug/AIAnalysisDebugButton";
-
 import { AIAnalysisErrorBoundary } from "../components/error/AIAnalysisErrorBoundary";
 
 import { EnhancedAIAnalysisDisplay } from "../components/ai/EnhancedAIAnalysisDisplay";
@@ -788,10 +786,6 @@ Check out Imperfect Breath!`;
                     </div>
                   )}
 
-                  {/* 🚧 TEMPORARY DEBUG BUTTON - Remove after debugging */}
-                  <div className="mt-4">
-                    <AIAnalysisDebugButton />
-                  </div>
                   {AIConfigManager.getConfiguredProviders().length === 0 && (
                     <Alert>
                       <AlertDescription>
