@@ -57,3 +57,52 @@
 ## 7. Domain
 
 - `brume.imperfectform.fun` → Netlify deploy of the PWA build; agent API docs at `/agents` later.
+
+## 8. Flow PracticeCredential verifier (on-chain attestations)
+
+The `PracticeCredential` contract only accepts credentials co-signed by an
+**authorized verifier**. The Brume backend is that verifier. Setup (once per
+environment — emulator/testnet/mainnet):
+
+1. **Generate a secp256k1 keypair** for the backend:
+   ```
+   flow keys generate --sig-algo ECDSA_secp256k1
+   ```
+   Keep the private key secret; the public key goes on-chain.
+
+2. **Create (or reuse) a Flow account for the verifier** and register that
+   public key on it:
+   ```
+   flow accounts create --key <PUBLIC_KEY_HEX> \
+     --sig-algo ECDSA_secp256k1 --hash-algo SHA3_256 \
+     --signer <funder> --network <network>
+   ```
+   The resulting address is `BRUME_VERIFIER_ADDRESS`.
+
+3. **Deploy `PracticeCredential`** (already wired into `flow.json`) and
+   **allowlist the verifier** (run by the contract deployer/admin):
+   ```
+   flow project deploy --network <network>
+   flow transactions send cadence/transactions/setup_verifier.cdc \
+     <BRUME_VERIFIER_ADDRESS> --signer <admin> --network <network>
+   ```
+   `setup_verifier` stores the `VerifierAdmin` resource on first run, then adds
+   the verifier. Use `remove_verifier.cdc` to rotate/revoke.
+
+4. **Set backend env** on the vision service:
+   - `BRUME_VERIFIER_KEY`  = the private key hex (step 1)
+   - `BRUME_VERIFIER_ADDRESS` = the verifier account address (step 2), `0x…`
+
+5. **Set frontend env**: `VITE_PRACTICE_CREDENTIAL_ADDRESS` (contract address)
+   and `VITE_BRUME_VERIFIER_ADDRESS` (same as step 4).
+
+**How it stays honest:** `/api/attest` ignores the client's `verified` flag and
+`session_score`; it requires ≥10 real camera frames in the session store and
+computes the score from the session's own breathing data. It then signs
+`sessionId || subject.toString() || score.toString()` (the exact bytes the
+contract reconstructs) with ECDSA/secp256k1 over `SHA3-256(pad32(tag) || data)`,
+tag `Brume-PracticeCredential-v1`. The contract rejects any credential whose
+verifier isn't allowlisted, whose signature doesn't check out, or whose
+score/subject doesn't match the signed payload — so a user can't self-issue or
+inflate a score. Verified end-to-end against the Flow emulator (happy path +
+forged-sig / wrong-score / replay / unauthorized-verifier all reject).

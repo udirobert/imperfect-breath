@@ -53,7 +53,7 @@ access(all) contract PracticeCredential {
         access(all) var credentials: @{UInt64: Credential}
 
         init() {
-            self.credentials = {}
+            self.credentials <- {}
         }
 
         access(all) fun deposit(credential: @Credential) {
@@ -75,8 +75,8 @@ access(all) contract PracticeCredential {
 
     /// Issue a credential into a collection. Requires that `verifier` is an
     /// authorized verifier address AND `verifierSignature` is a valid
-    /// signature over the attestation payload (sessionId + subject + score)
-    /// produced by the `verifier` address's key.
+    /// signature over the attestation payload produced by the `verifier`
+    /// address's key.
     ///
     /// This means: the user initiates the transaction (pays gas, deposits into
     /// their own collection), but the credential is only valid if the Brume
@@ -96,20 +96,40 @@ access(all) contract PracticeCredential {
             panic("PracticeCredential: verifier not authorized")
         }
 
-        // 2. The signature must be valid — produced by the verifier's key,
-        //    over the exact payload (signedData = sessionId || subject || score).
-        //    We look up the verifier's public key from their account.
+        // 2. The signed payload must be EXACTLY the canonical rendering of
+        //    this attestation: sessionId || subject.toString() || score.toString()
+        //    (Address renders as 0x + 16 lowercase hex; UFix64 renders with
+        //    eight decimals — both verified against the Flow emulator).
+        //    This binds the submitter and the score into the co-signature:
+        //    a signature issued for one address/score cannot be replayed to
+        //    mint a credential for another, and the score cannot be inflated.
+        let expectedSignedData = sessionId.utf8
+            .concat(subject.toString().utf8)
+            .concat(score.toString().utf8)
+        if signedData != expectedSignedData {
+            panic("PracticeCredential: signedData does not match the attestation payload")
+        }
+
+        // 3. The signature must be valid — produced by the verifier's key,
+        //    over the exact payload. Flow's tagged verification hashes
+        //    pad32(tag) || signedData with the given hash algorithm.
+        //    Account.Keys is not iterable/length-queryable in Cadence 1.x, so
+        //    we scan key indices (sequential from 0) until get() returns nil.
         let verifierAccount = getAccount(verifier)
-        let publicKeys = verifierAccount.keys
         var signatureValid = false
         var i = 0
-        while i < publicKeys.len() {
-            let key = publicKeys[i]
+        while i < 10 {
+            let keyOpt = verifierAccount.keys.get(keyIndex: i)
+            if keyOpt == nil {
+                break
+            }
+            let key = keyOpt!
             if !key.isRevoked {
                 let isValid = key.publicKey.verify(
                     signature: verifierSignature,
                     signedData: signedData,
-                    domainSeparationTag: "Brume-PracticeCredential-v1"
+                    domainSeparationTag: "Brume-PracticeCredential-v1",
+                    hashAlgorithm: HashAlgorithm.SHA3_256
                 )
                 if isValid {
                     signatureValid = true
