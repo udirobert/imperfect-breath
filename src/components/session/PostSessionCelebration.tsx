@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { trackCredentialShared } from "@/lib/notifications/oneSignal";
 import { TaskPipeline, type PipelineRow } from "@/components/primitives/TaskPipeline";
 import { useAttestation } from "@/hooks/useAttestation";
+import { shareProofCard } from "@/lib/proofCard";
 
 interface PostSessionCelebrationProps {
   metrics: {
@@ -47,18 +48,28 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
             ? { key: "attest", label: "On-chain credential", status: "pending", meta: "connect wallet" }
             : { key: "attest", label: "On-chain credential", status: "pending" };
 
-  // The virality loop: shareable proof of practice (Grand Prize growth surface)
+  // The virality loop: shareable proof of practice as a designed image card
+  // (Grand Prize growth surface). Uses canvas-rendered image via Web Share API.
   const handleShareCredential = async () => {
-    const text = `I just completed a camera-verified breathwork session on Brume — score ${metrics.score}${metrics.streak ? `, ${metrics.streak}-day streak` : ""}. Progress you can prove. 🌫️`;
-    const url = "https://brume.imperfectform.fun";
     try {
-      if (navigator.share) {
-        await navigator.share({ title: "Brume — Verified Practice", text, url });
+      const result = await shareProofCard({
+        patternName: metrics.patternName,
+        duration: metrics.duration,
+        score: metrics.score,
+        cycles: metrics.cycles,
+        streak: metrics.streak,
+        verified: verified,
+      });
+
+      if (result === "shared") {
+        trackCredentialShared();
+      } else if (result === "downloaded") {
+        toast.success("Proof card saved — share it anywhere");
+        trackCredentialShared();
       } else {
-        await navigator.clipboard.writeText(`${text} ${url}`);
-        toast.success("Credential copied — paste it anywhere");
+        toast.success("Proof card copied — paste it anywhere");
+        trackCredentialShared();
       }
-      trackCredentialShared();
     } catch {
       /* user dismissed the share sheet — fine */
     }
@@ -167,7 +178,7 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
                 className="rounded-full border-primary/30 text-primary hover:bg-primary/10"
               >
                 <Share2 className="h-4 w-4 mr-2" />
-                Share your proof
+                Share proof card
               </Button>
             </CardContent>
           </Card>
@@ -175,16 +186,27 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
       )}
 
       <div className="flex flex-col sm:flex-row gap-4 pt-4 px-2">
-        <Button 
-          onClick={onContinue} 
+        <Button
+          onClick={onContinue}
           className="flex-1 btn-premium py-7 text-lg rounded-full"
         >
           <Sparkles className="h-5 w-5 mr-2" />
           Keep the Momentum
         </Button>
-        <Button 
-          onClick={onExplorePatterns} 
-          variant="outline" 
+        {/* Share proof card — available for all sessions, verified or not */}
+        {!verified && (
+          <Button
+            onClick={handleShareCredential}
+            variant="outline"
+            className="flex-1 glass-dark py-7 text-lg rounded-full border-primary/20 text-primary"
+          >
+            <Share2 className="h-5 w-5 mr-2" />
+            Share Proof
+          </Button>
+        )}
+        <Button
+          onClick={onExplorePatterns}
+          variant="outline"
           className="flex-1 glass-dark py-7 text-lg rounded-full border-primary/20 text-primary"
         >
           <ArrowRight className="h-5 w-5 mr-2" />

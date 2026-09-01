@@ -4,7 +4,55 @@
 > dead-code sweep): **delete, don't bury** — git history preserves everything, and
 > unreferenced code rots into type/lint noise. The v1 "bury, don't delete" stance
 > was superseded once the surfaces were confirmed unreachable.
-> Registry last updated: consolidation round 4 (final pass — copy sweep + debug audit).
+> Registry last updated: consolidation round 5 (Shipaton sprint — UX collapse + dead code + Web3 lazy-load).
+
+## Consolidation Round 5 — Shipaton UX collapse + dead code + Web3 lazy-load
+
+**37 files changed, 603 insertions, 8,169 deletions.** Main bundle: 2,777 kB → 1,837 kB (34% smaller). Build: 8,972 → 8,920 modules.
+
+### UX collapse (product design)
+
+- **Onboarding:** 4 marketing slides → 1 screen with mist orb + "Begin" → direct session. Account creation deferred to after the magic moment.
+- **Home:** 3-layer flow (state chips → ContextCard → Start button) → 1-tap entry. State chip navigates directly to session with recommendation reason as router state. Feature cards and dual CTAs removed.
+- **Session:** 3 modes (classic/enhanced/mobile) → 1. Camera permission asked in-session; orb shows verified vs unverified visually. No mode picker.
+- **Post-session:** 1,162-line `Results.tsx` dashboard → 80-line `PostSession.tsx`. Score + proof card + share. No tabs, no agent traces, no streaming indicators.
+- **BreathingAnimation:** Flat blue circle → 3-layer volumetric mist orb (halo + cloud + core, progressive blur). Breath signal from `useStableMetrics` drives glow (confidence), opacity (verified vs unverified), shiver (restlessness during holds), color (blue→amber), and a pulsing verification ring. Floating SessionHeader/SessionFooter bars replaced by minimal 10px corner overlay.
+- **Proof card:** Canvas-rendered 1080×1920 shareable image via Web Share API. Replaces text-only share. Designed card with mist visual language, verification seal, score, stats.
+- **Header:** 324 lines → 92 lines. Killed mobile sheet menu, WalletManager, OfflineIndicator, community links. Logo + 3 links + auth state.
+- **Footer:** Deleted (98 lines). Privacy/terms links live in profile.
+
+### Dead code deleted (22 files, ~7,200 lines)
+
+**Results chain (12 files):** `Results.tsx`, `SessionCompleteModal.tsx`, `PostSessionActions.tsx`, `EnhancedAIAnalysisDisplay.tsx`, `StreamingIndicator.tsx`, `AgentTrace.tsx`, `AIAnalysisErrorBoundary.tsx`, `PatternSelection.tsx`, `MoodBasedRecommendations.tsx`, `ContextCollector.tsx`, `RecommendationCard.tsx`, `PatternSelectionPage.tsx`
+
+**Social chain (6 files):** `CommunityFeed.tsx`, `BreathingSessionPost.tsx`, `SocialActions.tsx`, `SocialButton.tsx`, `Leaderboard.tsx`, `LeaderboardService.ts`
+
+**Infrastructure (4 files):** `Footer.tsx`, `use-toast.ts`, `ui/toast.tsx`, `ui/use-toast.ts`, `CameraContext.tsx`
+
+### Infrastructure consolidation
+
+- **Dual toast system → one.** Deleted `use-toast` hook (191 lines) + `ui/toast.tsx` (127 lines). All toast calls now use `sonner`. `ConnectWalletButton` migrated.
+- **CameraContext → cameraStore.** Deleted `CameraContext.tsx` (47 lines). All consumers now call `useCameraStore()` directly. Removed `CameraProvider` from App.
+- **Web3 lazy-loaded.** `EagerWeb3Provider` (836 kB chunk: wagmi + ConnectKit + QueryClient + WalletProvider) was eagerly loaded on every page. Now lazy-loaded and wraps only `/profile` and `/subscription` routes. Session, home, onboarding, and post-session screens load with zero Web3 overhead.
+
+### Route set after round 5
+
+| Route | Screen | Web3? |
+|-------|--------|-------|
+| `/` | Home — headline + state chips → one tap to session | No |
+| `/onboarding` | Mist orb + "Begin" | No |
+| `/session` | Camera permission → mist orb → breathe | No |
+| `/post-session` | Score + proof card + share | No |
+| `/progress` | Streak trail (pending redesign) | No |
+| `/profile` | Settings, wallet, subscription | **Yes** |
+| `/subscription` | Paywall | **Yes** |
+| `/auth` | Sign in / sign up | No |
+
+**Removed routes:** `/results`, `/patterns`, `/community`, `/leaderboard`, `/settings` — all redirect to `/` or `/profile`.
+
+### Empty directories removed
+
+`src/components/unified/`, `src/components/social/`, `src/components/context/`, `src/components/recommendations/`, `src/components/error/`, `src/services/social/`
 
 ## Consolidation Round 4 — final pass (branch `feat/consolidation-final`)
 
@@ -78,13 +126,12 @@ reachability analysis confirmed zero importers from `main.tsx`. Verified by
 from the route tree and nav. Full deletion is a post-Shipaton decision once attestations prove
 out (marketplace resurrection requires density we don't have).
 
-## Kept (the v1 spine)
+## Kept (the v1 spine — updated round 5)
 
-- **Core loop:** `Index` (home) → `SessionEntryPoints` / `SessionModeWrapper` → `Results` (post-session insight + credential share) → `Progress` (streaks, credentials)
-- **Accountability:** `CommunityFeed`, `LeaderboardPage` (verified-only — the thesis made visible)
+- **Core loop:** `Index` (home) → `SessionModeWrapper` → `PostSession` (proof card + share) → `Progress` (streaks)
 - **Money:** `Subscription` (Brume Premium paywall, `brume_premium` entitlement)
-- **Trust/legal:** `Auth`, `Onboarding`, `PrivacyPolicy`, `TermsOfService`, `Settings`, `UserProfile`
-- **Mobile nav:** Home / Session / Profile — was already minimal, unchanged
+- **Trust/legal:** `Auth`, `Onboarding`, `PrivacyPolicy`, `TermsOfService`, `UserProfile`
+- **Mobile nav:** Home / Session / Profile — unchanged
 
 ## UI/UX consolidation notes
 

@@ -11,7 +11,7 @@
 
 import React, { useRef } from 'react';
 import { useIsMobile } from '../../hooks/use-mobile';
-import { useCamera } from '../../contexts/CameraContext';
+import { useCameraStore } from '../../stores/cameraStore';
 import { useStableMetrics } from '../../hooks/useStableMetrics';
 import { useSession } from '../../hooks/useSession';
 import { useSessionPhase } from '../../stores/sessionStore';
@@ -65,7 +65,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   const sessionPhase = useSessionPhase();
   
   // Camera and vision state
-  const { stream: cameraStream } = useCamera();
+  const { stream: cameraStream } = useCameraStore();
   const stableMetrics = useStableMetrics();
   const session = useSession({
     autoStart: false,
@@ -169,6 +169,17 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   );
 
   // Breathing animation component
+  // The breath signal from useStableMetrics drives the orb's quality
+  // (glow, stability, color) — making verification visible in real time.
+  const breathSignal = modeConfig.enableVision
+    ? {
+        stillness: stableMetrics.stillnessScore,
+        confidence: Math.round(stableMetrics.confidence * 100),
+        faceDetected: stableMetrics.hasValidData,
+        hasValidData: stableMetrics.hasValidData,
+      }
+    : undefined;
+
   const breathingAnimation = (
     <BreathingAnimation
       phase={
@@ -180,6 +191,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
       isActive={session.isActive}
       cycleCount={session.metrics?.cycleCount || 0}
       phaseProgress={session.metrics?.phaseProgress || 0}
+      breathSignal={breathSignal}
       sessionInfo={{
         duration: sessionInfo.duration,
         progressPercentage: sessionInfo.progressPercentage,

@@ -17,7 +17,7 @@ import {
   SessionConfig
 } from '../stores/sessionStore';
 import { useVisionStore, visionSelectors } from '../stores/visionStore';
-import { useCamera } from '../contexts/CameraContext';
+import { useCameraStore } from '../stores/cameraStore';
 
 export interface UseSessionOptions {
   autoStart?: boolean;
@@ -77,7 +77,7 @@ export const useSession = (options: UseSessionOptions = {}) => {
     requestStream: requestCameraStream,
     releaseStream: releaseCameraStream,
     hasPermission: cameraPermission
-  } = useCamera();
+  } = useCameraStore();
 
   // Vision processing (conditional) - use vision store
   const visionStore = useVisionStore();

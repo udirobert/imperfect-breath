@@ -8,7 +8,21 @@ import {
   shouldShowRhythmIndicator,
 } from "../lib/breathing-phase-config";
 import { getQualityColor } from "../utils/quality";
-import { getAffirmationForCycle } from "../lib/affirmations";
+
+/**
+ * Breath signal from the vision pipeline — drives the orb's *quality*
+ * (glow, stability, color) while the timer drives its *rhythm* (scale).
+ *
+ * When hasValidData is false or faceDetected is false, the orb falls back
+ * to a mechanical timer-only mode — visually dimmer, no verification ring.
+ * This is the honest "unverified" state.
+ */
+export interface BreathSignal {
+  stillness: number;      // 0-100 (100 = perfectly still)
+  confidence: number;     // 0-100 (face detection confidence)
+  faceDetected: boolean;
+  hasValidData: boolean;
+}
 
 interface BreathingAnimationProps {
   phase:
@@ -37,6 +51,8 @@ interface BreathingAnimationProps {
     stillness?: number;
     confidence?: number;
   };
+  /** Live breath signal from the vision pipeline — makes the orb reactive */
+  breathSignal?: BreathSignal;
   cycleCount?: number;
   emotionalState?: "calm" | "focused" | "energized" | "peaceful";
   sessionQuality?: number;
@@ -47,6 +63,195 @@ interface BreathingAnimationProps {
     progressPercentage?: number;
   };
 }
+
+// ============================================================================
+// MIST ORB — the breath-reactive visual core
+// ============================================================================
+//
+// Three layered radial-gradient divs with progressive blur create a
+// volumetric mist cloud. The timer drives the scale (inhale grows, exhale
+// shrinks). The breath signal drives:
+//   - glow intensity (face detection confidence)
+//   - opacity (verified = vivid, unverified = dim)
+//   - shiver (restlessness during hold phases)
+//   - color (blue when calm, amber when restless during hold)
+//   - verification ring (pulses when face detected, absent when not)
+//
+// When no breath signal is available (no camera / classic mode), the orb
+// runs in "mechanical" mode — timer-driven only, dimmer, no ring. This is
+// the visual distinction between verified and unverified practice.
+
+interface MistOrbProps {
+  phase: BreathingAnimationProps["phase"];
+  phaseProgress: number;
+  isActive: boolean;
+  compactMode: boolean;
+  breathSignal?: BreathSignal;
+}
+
+const MistOrb: React.FC<MistOrbProps> = React.memo(({
+  phase,
+  phaseProgress,
+  isActive,
+  compactMode,
+  breathSignal,
+}) => {
+  // --- Breath signal interpretation ---
+  const hasData = breathSignal?.hasValidData && breathSignal?.faceDetected;
+  const stillness = hasData ? breathSignal!.stillness : 50;
+  const confidence = hasData ? breathSignal!.confidence : 0;
+  const restlessness = 100 - stillness;
+
+  const isHoldPhase = phase === "hold" || phase === "hold_after_exhale";
+  // Shiver only during hold when restless — movement is expected during inhale/exhale
+  const shiverPx = hasData && isHoldPhase && isActive
+    ? Math.min(restlessness / 100, 1) * 3.5
+    : 0;
+
+  // Glow: confidence drives how vivid the orb is
+  const glowFactor = hasData ? Math.min(confidence / 100, 1) : 0;
+  // Opacity: verified = 0.7-1.0, unverified = 0.35 (visually distinct)
+  const orbOpacity = hasData ? 0.65 + glowFactor * 0.35 : 0.35;
+
+  // --- Continuous scale from phase + progress ---
+  // Smooth grow/shrink that tracks the timer precisely, not hardcoded jumps
+  const scale = useMemo(() => {
+    if (!isActive) return 0.88;
+    const p = Math.min(phaseProgress / 100, 1);
+    switch (phase) {
+      case "inhale":              return 0.82 + p * 0.42;   // 0.82 → 1.24
+      case "hold":                return 1.24;
+      case "exhale":              return 1.24 - p * 0.42;   // 1.24 → 0.82
+      case "hold_after_exhale":   return 0.82;
+      case "prepare":
+      case "countdown":           return 1.0;
+      default:                    return 1.0;
+    }
+  }, [phase, phaseProgress, isActive]);
+
+  // --- Color: interpolate blue → amber based on restlessness during hold ---
+  const orbColor = useMemo(() => {
+    if (!hasData) return { r: 147, g: 197, b: 253 }; // blue-300, dim
+    if (isHoldPhase && restlessness > 20) {
+      const t = Math.min((restlessness - 20) / 60, 1); // ramp from 20-80
+      // blue-300 (147,197,253) → amber-400 (251,191,36)
+      return {
+        r: Math.round(147 + t * (251 - 147)),
+        g: Math.round(197 + t * (191 - 197)),
+        b: Math.round(253 + t * (36 - 253)),
+      };
+    }
+    return { r: 147, g: 197, b: 253 }; // blue-300
+  }, [hasData, isHoldPhase, restlessness]);
+
+  const rgba = (a: number) => `rgba(${orbColor.r}, ${orbColor.g}, ${orbColor.b}, ${a})`;
+
+  // Sizes — smaller on mobile for performance
+  const haloSize = compactMode ? 170 : 230;
+  const cloudSize = compactMode ? 130 : 175;
+  const coreSize  = compactMode ? 75  : 100;
+
+  // Box shadow glow — scales with confidence
+  const coreGlow = hasData
+    ? `0 0 ${15 + glowFactor * 45}px ${rgba(0.25 + glowFactor * 0.15)}`
+    : `0 0 8px ${rgba(0.08)}`;
+
+  const showVerificationRing = hasData && isActive;
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      {/* Shiver wrapper — translates the whole orb by small random offsets.
+          Only animates when restlessness during hold exceeds threshold. */}
+      <motion.div
+        animate={
+          shiverPx > 0.5
+            ? {
+                x: [0, shiverPx, -shiverPx, shiverPx * 0.5, 0],
+                y: [0, -shiverPx, shiverPx * 0.7, -shiverPx * 0.3, 0],
+              }
+            : { x: 0, y: 0 }
+        }
+        transition={{
+          duration: 0.12,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+        className="relative flex items-center justify-center"
+      >
+        {/* Verification ring — subtle pulsing border when face is detected.
+            Absent in unverified mode — this is the "camera is watching" signal. */}
+        {showVerificationRing && (
+          <motion.div
+            className="absolute rounded-full border"
+            style={{
+              width: compactMode ? 150 : 200,
+              height: compactMode ? 150 : 200,
+              borderColor: rgba(0.25),
+            }}
+            animate={{
+              scale: [1, 1.06, 1],
+              opacity: [0.3, 0.55, 0.3],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        )}
+
+        {/* Scale wrapper — all mist layers scale together */}
+        <motion.div
+          animate={{ scale }}
+          transition={{
+            duration: 0.3,
+            ease: "easeOut",
+          }}
+          className="relative flex items-center justify-center"
+        >
+          {/* Outer halo — large, very blurred, low opacity */}
+          <div
+            className="absolute rounded-full"
+            style={{
+              width: haloSize,
+              height: haloSize,
+              background: `radial-gradient(circle, ${rgba(0.12 * orbOpacity)} 0%, transparent 70%)`,
+              filter: `blur(${compactMode ? 22 : 30}px)`,
+            }}
+          />
+
+          {/* Mid cloud — medium blur, the main body */}
+          <div
+            className="absolute rounded-full"
+            style={{
+              width: cloudSize,
+              height: cloudSize,
+              background: `radial-gradient(circle, ${rgba(0.28 * orbOpacity)} 0%, ${rgba(0.08 * orbOpacity)} 55%, transparent 82%)`,
+              filter: `blur(${compactMode ? 12 : 16}px)`,
+            }}
+          />
+
+          {/* Inner core — sharpest, brightest, carries the glow */}
+          <div
+            className="absolute rounded-full"
+            style={{
+              width: coreSize,
+              height: coreSize,
+              background: `radial-gradient(circle, ${rgba(0.45 * orbOpacity)} 0%, ${rgba(0.18 * orbOpacity)} 60%, transparent 92%)`,
+              filter: `blur(${compactMode ? 6 : 8}px)`,
+              boxShadow: coreGlow,
+            }}
+          />
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+});
+MistOrb.displayName = "MistOrb";
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 const BreathingAnimation = React.memo<BreathingAnimationProps>(
   ({
@@ -59,6 +264,7 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
     showTimer = false,
     compactMode = false,
     overlayMetrics,
+    breathSignal,
     cycleCount = 0,
     emotionalState = "calm",
     sessionQuality = 75,
@@ -110,17 +316,6 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       phaseProgress,
     ]);
 
-    const circleSize = useMemo(() => {
-      const baseSize =
-        !isActive || phase === "countdown" ? "80%" : phaseConfig.size;
-      // In compact mode, reduce size by 20%
-      if (compactMode) {
-        const sizeValue = parseInt(baseSize);
-        return `${Math.round(sizeValue * 0.8)}%`;
-      }
-      return baseSize;
-    }, [isActive, phase, phaseConfig.size, compactMode]);
-
     // Calculate remaining time for timer display
     const remainingTime = useMemo(() => {
       if (
@@ -137,50 +332,6 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       return remaining > 0 ? remaining : 0;
     }, [showTimer, pattern, phase, phaseProgress]);
 
-    const BackgroundCircle = () => (
-      <div
-        className={cn(
-          "absolute rounded-full transition-all duration-1000 ease-in-out",
-          // Enhanced glow effect based on phase
-          phase === "inhale"
-            ? "bg-blue-100/40"
-            : phase === "hold"
-            ? "bg-blue-100/30"
-            : phase === "exhale"
-            ? "bg-blue-50/30"
-            : "bg-blue-50/30",
-          // Add blur for glow effect when active
-          isActive && "blur-sm"
-        )}
-        style={{
-          width: `${Math.min(120, parseInt(circleSize) + 20)}%`,
-          height: `${Math.min(120, parseInt(circleSize) + 20)}%`,
-        }}
-      />
-    );
-
-    const MainCircle = () => (
-      <motion.div
-        animate={{
-          scale: phase === "inhale" ? 1.2 : phase === "exhale" ? 0.9 : 1.0,
-          backgroundColor: phase === "inhale" ? "rgba(59, 130, 246, 0.2)" : "rgba(59, 130, 246, 0.1)",
-          boxShadow: phase === "inhale" ? "0 0 40px rgba(59, 130, 246, 0.3)" : "0 0 20px rgba(59, 130, 246, 0.1)"
-        }}
-        transition={{
-          duration: phase === "inhale" ? 4 : phase === "exhale" ? 4 : 0.5,
-          ease: "easeInOut"
-        }}
-        className={cn(
-          "absolute rounded-full border border-blue-200/40",
-          isActive && `shadow-lg ${currentColors.shadow}`
-        )}
-        style={{
-          width: circleSize,
-          height: circleSize,
-        }}
-      />
-    );
-
     const RhythmIndicator = () => (
       <div className="w-40 h-2 bg-blue-100/40 rounded-full mx-auto">
         <div
@@ -195,52 +346,16 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       </div>
     );
 
-    // INTEGRATED: Session header component
-    const SessionHeader = () => {
+    // MINIMAL OVERLAY: Duration + cycle in a corner — no floating bars.
+    // The orb owns the screen. Affirmations show transiently at phase
+    // transitions, not as a permanent footer.
+    const SessionOverlay = () => {
       if (!sessionInfo || !isActive) return null;
-      
+
       return (
-        <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 w-full max-w-md">
-          <div className="bg-gradient-to-r from-slate-50/90 to-slate-100/90 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium text-slate-700 dark:text-slate-300">
-                {pattern?.name || "Breathing"}
-              </span>
-              <span className="font-mono font-bold text-primary">
-                {sessionInfo.duration || "00:00"}
-              </span>
-            </div>
-          </div>
-        </div>
-      );
-    };
-    
-    // ENHANCEMENT FIRST: Session footer with affirmations (replaces duplicate metrics)
-    const SessionFooter = () => {
-      if (!sessionInfo || !isActive) return null;
-      
-      // Get affirmation based on cycle count
-      const affirmation = getAffirmationForCycle(cycleCount);
-      
-      return (
-        <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 w-full max-w-md">
-          <div className="bg-gradient-to-r from-slate-50/90 to-slate-100/90 dark:from-slate-900/90 dark:to-slate-800/90 backdrop-blur-sm rounded-xl px-4 py-3 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-            <div className="space-y-2">
-              {/* Minimal progress info */}
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Cycle {cycleCount}</span>
-                <span>•</span>
-                <span>{Math.round(sessionInfo.progressPercentage || 0)}% complete</span>
-              </div>
-              
-              {/* ENHANCEMENT: Affirmation - main focus */}
-              <div className="text-center py-2">
-                <p className="text-sm font-light text-slate-700 dark:text-slate-300 tracking-wide leading-relaxed italic">
-                  {affirmation.text}
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="absolute -top-2 -right-2 flex flex-col items-end gap-0.5 text-[10px] font-mono text-slate-400/70 dark:text-slate-500/70 pointer-events-none select-none">
+          <span>{sessionInfo.duration || "00:00"}</span>
+          {cycleCount > 0 && <span>cycle {cycleCount}</span>}
         </div>
       );
     };
@@ -284,19 +399,21 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
           compactMode
             ? "w-48 h-48 md:w-56 md:h-56"
             : "w-64 h-64 md:w-80 md:h-80",
-          // Add extra space for header/footer when session info is present
-          sessionInfo && isActive && "mt-20 mb-24"
         )}
       >
-        {/* INTEGRATED: Session header */}
-        <SessionHeader />
-        
-        <BackgroundCircle />
-        <MainCircle />
+        {/* MINIMAL OVERLAY: duration + cycle, top-right corner */}
+        <SessionOverlay />
+
+        {/* MIST ORB — breath-reactive visual core */}
+        <MistOrb
+          phase={phase}
+          phaseProgress={phaseProgress}
+          isActive={isActive}
+          compactMode={compactMode}
+          breathSignal={breathSignal}
+        />
+
         <CenterContent />
-        
-        {/* INTEGRATED: Session footer */}
-        <SessionFooter />
 
         {/* ENHANCED: Micro-celebration with haptic feedback */}
         {isActive &&

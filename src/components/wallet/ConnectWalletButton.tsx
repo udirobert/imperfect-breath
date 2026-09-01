@@ -11,7 +11,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback } from "../ui/avatar";
-import { useToast } from "../ui/use-toast";
+import { toast } from "sonner";
 import { useWallet, useWalletStatus, useWalletActions } from "../../hooks/useWallet";
 import { WalletErrorBoundary } from "../../lib/errors/error-boundary";
 import { AuthContext, AuthType, getAuthMessage } from "../../config/messaging";
@@ -44,7 +44,7 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
 }) => {
   const { isAvailable, isConnected, isConnecting, address, shortAddress, chainId, error } = useWalletStatus();
   const { connect, disconnect, clearError } = useWalletActions();
-  const { toast } = useToast();
+  // toast is imported from sonner — no hook needed
 
   const authMessage = context ? getAuthMessage(authRequired, context) : null;
 
@@ -58,16 +58,9 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
         ? `Wallet connected! You can now ${requiredFor.toLowerCase()}`
         : "Your wallet has been connected successfully";
         
-      toast({
-        title: "Wallet connected",
-        description: successMessage,
-      });
+      toast.success("Wallet connected", { description: successMessage });
     } catch (error) {
-      toast({
-        title: "Connection failed",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
+      toast.error("Connection failed", { description: (error as Error).message });
     }
   };
 
@@ -98,16 +91,9 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
     if (shortAddress) {
       try {
         await navigator.clipboard.writeText(address!);
-        toast({
-          title: "Address copied",
-          description: "Wallet address copied to clipboard",
-        });
+        toast.success("Address copied", { description: "Wallet address copied to clipboard" });
       } catch (error) {
-        toast({
-          title: "Copy failed",
-          description: "Could not copy address to clipboard",
-          variant: "destructive",
-        });
+        toast.error("Copy failed", { description: "Could not copy address to clipboard" });
       }
     }
   };
@@ -130,16 +116,9 @@ const ConnectWalletButtonInner: React.FC<ConnectWalletButtonProps> = ({
   const handleDisconnect = async () => {
     try {
       await disconnect();
-      toast({
-        title: "Wallet disconnected",
-        description: "Your wallet has been disconnected successfully",
-      });
+      toast.success("Wallet disconnected", { description: "Your wallet has been disconnected successfully" });
     } catch (error) {
-      toast({
-        title: "Disconnect failed",
-        description: (error as Error).message,
-        variant: "destructive",
-      });
+      toast.error("Disconnect failed", { description: (error as Error).message });
     }
   };
 

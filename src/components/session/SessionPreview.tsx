@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import BreathingAnimation from "../BreathingAnimation";
-import { useCamera } from "../../contexts/CameraContext";
+import { useCameraStore } from "../../stores/cameraStore";
 import { cn } from "../../lib/utils";
 import {
   Heart,
@@ -51,6 +52,10 @@ export const SessionPreview: React.FC<SessionPreviewProps> = ({
   landmarks = [],
   trackingStatus = 'INITIALIZING',
 }) => {
+  const location = useLocation();
+  const reason = (location.state as { reason?: string; reasonDetail?: string } | null)?.reason;
+  const reasonDetail = (location.state as { reason?: string; reasonDetail?: string } | null)?.reasonDetail;
+
   const [previewStep, setPreviewStep] = useState<
     "benefits" | "setup" | "preview"
   >("benefits");
@@ -67,7 +72,7 @@ export const SessionPreview: React.FC<SessionPreviewProps> = ({
     error: cameraError,
     requestStream: requestCameraStream,
     hasPermission
-  } = useCamera();
+  } = useCameraStore();
   
   
   // AGGRESSIVE CONSOLIDATION: Remove background camera setup to prevent conflicts
@@ -156,16 +161,22 @@ export const SessionPreview: React.FC<SessionPreviewProps> = ({
     return (
       <div className="flex-grow flex flex-col items-center justify-center p-6 space-y-8 animate-fade-in">
         <div className="text-center space-y-4 max-w-md">
+          {/* Reason caption from the state check-in — shows why this pattern was picked */}
+          {reason && (
+            <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-2">
+              {reason}
+            </div>
+          )}
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
           </div>
           
           <h2 className="text-2xl font-bold text-primary">
-            {patternName} Benefits
+            {patternName}
           </h2>
           
           <p className="text-muted-foreground leading-relaxed">
-            {pattern.description || 'A powerful breathing technique for wellness'}
+            {reasonDetail || pattern.description || 'A powerful breathing technique for wellness'}
           </p>
         </div>
 

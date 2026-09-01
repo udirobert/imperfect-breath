@@ -2,7 +2,6 @@ import React from "react";
 import { isTouchDevice } from "@/utils/mobile-detection";
 import { BottomTabBar } from "./BottomTabBar";
 import Header from "@/components/Header";
-import { Footer } from "@/components/layout/Footer";
 
 interface ResponsiveNavigationProps {
   children: React.ReactNode;
@@ -27,14 +26,11 @@ export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
       {/* Main Content */}
       <main
         className={`flex-grow flex flex-col items-center justify-center p-4 ${
-          isMobile ? "pb-4" : "" // Reduced padding since footer provides spacing
+          isMobile ? "pb-4" : ""
         }`}
       >
         {children}
       </main>
-
-      {/* Footer - Always visible */}
-      <Footer />
 
       {/* Bottom Navigation - Mobile Only */}
       {isMobile && <BottomTabBar />}

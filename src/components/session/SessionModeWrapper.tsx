@@ -1,45 +1,28 @@
 /**
- * Session Mode Wrapper - Routes and configures sessions based on URL mode
+ * Session Mode Wrapper — single session route, no mode picker.
  *
- * SINGLE RESPONSIBILITY: Parse URL mode and configure MeditationSession
- * CLEAN: Separates routing logic from session logic
- * MODULAR: Easy to extend with new session modes
+ * Consolidated from three modes (classic/enhanced/mobile) to one.
+ * Camera permission is asked in-session via SessionPreview. If granted
+ * → verified. If denied → unverified. The orb shows the difference.
+ * Mobile layout is auto-deted by ResponsiveEnhancedSession.
+ *
+ * Navigates to /post-session on completion (not /results).
  */
 
 import React, { useCallback, useMemo } from "react";
 import {
-  useParams,
   Navigate,
   useLocation,
   useNavigate,
 } from "react-router-dom";
 import { BREATHING_PATTERNS } from "../../lib/breathingPatterns";
 import { useSession } from "../../hooks/useSession";
-import { isTouchDevice } from "../../utils/mobile-detection";
 import { useOfflineManager } from "../../lib/offline/OfflineManager";
 import { ResponsiveEnhancedSession } from "./ResponsiveEnhancedSession";
-
-interface MeditationSessionConfig {
-  mode: 'classic' | 'enhanced' | 'mobile';
-  pattern: {
-    name: string;
-    phases: {
-      inhale: number;
-      hold?: number;
-      exhale: number;
-      pause?: number;
-    };
-    difficulty: string;
-    benefits: string[];
-    description?: string;
-  };
-  autoStart: boolean;
-  maxCycles?: number;
-}
 import { SessionErrorBoundary } from "../../lib/errors/error-boundary";
 
 /**
- * Session completion handler - extracted for reusability
+ * Session completion handler — navigates to the post-session surface.
  */
 const useSessionCompletion = () => {
   const navigate = useNavigate();
@@ -60,6 +43,7 @@ const useSessionCompletion = () => {
       cameraUsed?: boolean;
       aiUsed?: boolean;
       visionSessionId?: string;
+      stillnessScore?: number | null;
     }) => {
       const {
         pattern,
@@ -73,10 +57,8 @@ const useSessionCompletion = () => {
         patternName,
       } = sessionData;
 
-      // Use actual session duration if available, otherwise calculate from pattern
       const actualSessionDuration = sessionDuration || elapsedTime / 1000;
 
-      // Save session offline-first
       const sessionId = saveSession({
         patternId: pattern.id || "custom",
         patternName: pattern.name,
@@ -89,10 +71,11 @@ const useSessionCompletion = () => {
         completed: true,
       });
 
-      navigate("/results", {
+      navigate("/post-session", {
         state: {
           breathHoldTime,
           restlessnessScore: restlessnessScore || 0,
+          stillnessScore: sessionData.stillnessScore,
           patternName: patternName || pattern.name,
           sessionDuration: actualSessionDuration,
           sessionId,
@@ -101,11 +84,9 @@ const useSessionCompletion = () => {
           phaseAccuracy,
           rhythmConsistency,
           targetCycles: 10,
-          // Preserve session metadata
           sessionType: sessionData.sessionType,
           cameraUsed: sessionData.cameraUsed,
           aiUsed: sessionData.aiUsed,
-          // UNIFIED: Include vision session ID for AI integration (DRY)
           visionSessionId: sessionData.visionSessionId,
         },
       });
@@ -115,58 +96,33 @@ const useSessionCompletion = () => {
 };
 
 export const SessionModeWrapper: React.FC = () => {
-  const { mode } = useParams<{ mode: "classic" | "enhanced" | "mobile" }>();
   const location = useLocation();
-  const isMobile = isTouchDevice();
 
-  // Validate mode. NOTE: must be deferred until after all hooks are invoked —
-  // React requires hooks to run unconditionally before any early return.
-  const isValidMode = !!mode && ["classic", "enhanced", "mobile"].includes(mode);
-
-  // CLEAN: Get pattern from URL search params, location state, or localStorage
+  // Get pattern from URL search params, location state, or localStorage
   const initialPattern = useMemo(() => {
-    console.log('🔍 Pattern resolution debug:', {
-      fullURL: window.location.href,
-      search: location.search,
-      availablePatterns: Object.keys(BREATHING_PATTERNS)
-    });
-
-    // 1. Try URL search params first (e.g., ?pattern=wim_hof)
     const searchParams = new URLSearchParams(location.search);
     const patternParam = searchParams.get('pattern');
-    console.log('🔍 Pattern param from URL:', patternParam);
 
     if (patternParam && BREATHING_PATTERNS[patternParam]) {
-      console.log('📋 Using pattern from URL:', patternParam);
       return BREATHING_PATTERNS[patternParam];
     }
 
-    // 2. Try navigation state
     if (location.state?.previewPattern) {
-      console.log('📋 Using pattern from navigation state');
       return location.state.previewPattern;
     }
 
-    // 3. Try localStorage
     try {
       const stored = localStorage.getItem("selectedPattern");
-      if (stored) {
-        console.log('📋 Using pattern from localStorage');
-        return JSON.parse(stored);
-      }
+      if (stored) return JSON.parse(stored);
     } catch {
-      // Silent fail for localStorage issues
+      // silent
     }
 
-    // 4. Fallback to default
-    console.log('📋 Using default box pattern');
     return BREATHING_PATTERNS.box;
   }, [location.search, location.state?.previewPattern]);
 
-  // Session completion handler
   const handleSessionComplete = useSessionCompletion();
 
-  // Session management using unified hook
   const {
     phase: sessionState,
     isActive,
@@ -174,21 +130,9 @@ export const SessionModeWrapper: React.FC = () => {
     complete,
   } = useSession();
 
-  // Determine session configuration based on mode
-  // FIXED: Default to enhanced vision unless explicitly classic
-  const useEnhancedVision = mode !== "classic";
-  const useMobileInterface =
-    mode === "mobile" || (isMobile && mode !== "classic");
-
-  // Build configuration for MeditationSession
-  const sessionConfig: MeditationSessionConfig = useMemo(
+  // Single mode — always enhanced. Camera on/off is handled by SessionPreview.
+  const sessionConfig = useMemo(
     () => ({
-      mode:
-        mode === "enhanced"
-          ? "enhanced"
-          : mode === "mobile"
-          ? "mobile"
-          : "classic",
       pattern: {
         name: initialPattern.name,
         phases: {
@@ -197,18 +141,14 @@ export const SessionModeWrapper: React.FC = () => {
           exhale: initialPattern.exhale,
           pause: initialPattern.hold_after_exhale || 0,
         },
-        difficulty: "intermediate",
         benefits: initialPattern.benefits,
         description: initialPattern.description,
       },
-      autoStart: false,
-      // CLEAN: Default session durations based on mode
-      maxCycles: mode === "enhanced" ? 15 : mode === "mobile" ? 8 : 10,
+      mode: 'enhanced' as const,
     }),
-    [initialPattern, mode]
+    [initialPattern]
   );
 
-  // Session completion callback
   const onSessionComplete = useCallback(
     (metrics: any) => {
       handleSessionComplete({
@@ -231,17 +171,13 @@ export const SessionModeWrapper: React.FC = () => {
       benefits: sessionConfig.pattern.benefits,
       description: sessionConfig.pattern.description,
     },
-    mode: (sessionConfig.mode === 'mobile' ? 'enhanced' : sessionConfig.mode) as 'classic' | 'enhanced',
-  };
-  
-  const modeConfig = {
-    enableCamera: sessionConfig.mode !== 'classic',
-    enableVision: sessionConfig.mode === 'enhanced' || sessionConfig.mode === 'mobile',
+    mode: 'enhanced' as 'classic' | 'enhanced',
   };
 
-  if (!isValidMode) {
-    return <Navigate to="/session" replace />;
-  }
+  const modeConfig = {
+    enableCamera: true,
+    enableVision: true,
+  };
 
   return (
     <SessionErrorBoundary>

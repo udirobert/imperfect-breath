@@ -1,5 +1,5 @@
 import React from "react";
-import { useCamera } from "../contexts/CameraContext";
+import { useCameraStore } from "../stores/cameraStore";
 import { TrackingStatus, Keypoint } from "../hooks/visionTypes";
 
 interface VideoFeedProps {
@@ -128,8 +128,8 @@ const VideoFeed = ({
     }
   };
 
- // Stream presence derived from CameraContext
- const { stream } = useCamera();
+ // Stream presence derived from cameraStore
+ const { stream } = useCameraStore();
  const hasVideoStream = !!stream;
 
  // Attach stream to video element when available
