@@ -2,8 +2,8 @@
  * PostSession — the single post-session surface.
  *
  * Replaces the 1162-line Results.tsx dashboard. The post-session moment
- * is: proof → share → done. AI analysis is an optional tap, not the
- * default view. No tabs, no agent traces, no streaming indicators.
+ * is: land, see the stillness, go. Verification is a quiet property of
+ * the record, not the landing job. No tabs, no agent traces.
  *
  * Session data arrives via router state from SessionModeWrapper.
  */
@@ -23,10 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
-function buildInsight(score: number, verified: boolean, patternName: string): string {
-  if (!verified) {
-    return `You completed ${patternName}. Next time, let Brume see your breath for a verified record.`;
-  }
+function buildInsight(score: number): string {
   if (score >= 80) return "Your stillness held. Sessions like this are settling you.";
   if (score >= 60) return "Good practice. Shorter and stiller usually beats heroic.";
   return "Take a moment to notice how you feel. Be gentle — the streak is the credential.";
@@ -84,10 +81,7 @@ export default function PostSession() {
 
   return (
     <div className="min-h-screen bg-calm-gradient flex flex-col items-center justify-center px-6 py-12">
-      {/* Ambient glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 bg-primary/15 rounded-full blur-[120px] -z-10 animate-pulse" />
-
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-md">
         <PostSessionCelebration
           metrics={{
             patternName: sessionData.patternName,
@@ -97,7 +91,7 @@ export default function PostSession() {
             streak,
           }}
           verified={verified}
-          insight={buildInsight(score, verified, sessionData.patternName)}
+          insight={buildInsight(score)}
           isGuest={!user}
           onContinue={() => navigate("/")}
           onSeeProgress={() => navigate("/progress")}
