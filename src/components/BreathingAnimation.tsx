@@ -1,11 +1,10 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo } from "react";
 import { cn } from "../lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   getPhaseConfig,
   shouldShowRhythmIndicator,
 } from "../lib/breathing-phase-config";
-import { getAffirmationForCycle, getStillnessAffirmation } from "../lib/affirmations";
 import { HaloRipple } from "./atmosphere/HaloRipple";
 
 /**
@@ -251,27 +250,6 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
   }) => {
     const phaseConfig = useMemo(() => getPhaseConfig(phase), [phase]);
 
-    const [affirmation, setAffirmation] = useState<string | null>(null);
-    const prevPhaseRef = useRef(phase);
-
-    useEffect(() => {
-      if (!isActive) {
-        setAffirmation(null);
-        prevPhaseRef.current = phase;
-        return;
-      }
-      if (prevPhaseRef.current === phase) return;
-      prevPhaseRef.current = phase;
-
-      const next =
-        breathSignal?.hasValidData
-          ? getStillnessAffirmation(breathSignal.stillness)
-          : getAffirmationForCycle(cycleCount);
-      setAffirmation(next.text);
-      const t = window.setTimeout(() => setAffirmation(null), 2400);
-      return () => window.clearTimeout(t);
-    }, [phase, isActive, breathSignal, cycleCount]);
-
     const instruction = useMemo(() => {
       if (phase === "countdown" && countdownValue !== undefined) {
         return countdownValue > 0 ? countdownValue.toString() : "Begin";
@@ -279,32 +257,8 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       if (text && text !== "prepare" && text !== phase) {
         return text;
       }
-
-      // Add variety to instructions based on progress
-      const variations: Record<string, string[]> = {
-        inhale: ["Breathe In", "Inhale Deeply", "Fill Your Lungs"],
-        exhale: ["Breathe Out", "Exhale Slowly", "Release"],
-        hold: ["Hold", "Be Still", "Pause"],
-        hold_after_exhale: ["Rest", "Relax", "Be Present"],
-      };
-
-      if (isActive && phase in variations && phaseProgress !== undefined) {
-        const options = variations[phase];
-        // Cycle through variations based on phase progress
-        const index =
-          Math.floor(phaseProgress / (100 / options.length)) % options.length;
-        return options[index];
-      }
-
       return phaseConfig.instruction;
-    }, [
-      phase,
-      text,
-      countdownValue,
-      phaseConfig.instruction,
-      isActive,
-      phaseProgress,
-    ]);
+    }, [phase, text, countdownValue, phaseConfig.instruction]);
 
     // Calculate remaining time for timer display
     const remainingTime = useMemo(() => {
@@ -336,9 +290,7 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
       </div>
     );
 
-    // MINIMAL OVERLAY: Duration + cycle in a corner — no floating bars.
-    // The orb owns the screen. Affirmations show transiently at phase
-    // transitions, not as a permanent footer.
+    // The orb owns the screen. Phase word only — no pep.
     const SessionOverlay = () => {
       if (!sessionInfo || !isActive) return null;
 
@@ -404,21 +356,6 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
         />
 
         <CenterContent />
-
-        <AnimatePresence>
-          {affirmation && (
-            <motion.p
-              key={affirmation}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.5 }}
-              className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-max max-w-[16rem] text-center text-sm font-light text-muted-foreground/80"
-            >
-              {affirmation}
-            </motion.p>
-          )}
-        </AnimatePresence>
       </div>
     );
   }

@@ -14,11 +14,9 @@
 import React from "react";
 import {
   ArrowLeft,
-  Award,
   BadgeCheck,
   Crown,
   Sparkles,
-  Users,
   Waves,
   Wind,
 } from "lucide-react";
@@ -30,32 +28,20 @@ const BENEFITS = [
   {
     icon: BadgeCheck,
     tint: "bg-blue-100 text-blue-600",
-    title: "Verified deep session insights",
-    copy: "Every session is verified, so the trends you see reflect real practice.",
+    title: "Sessions that see you",
+    copy: "Stillness from the breath itself — not an honor-system log.",
   },
   {
     icon: Wind,
     tint: "bg-teal-100 text-teal-600",
-    title: "All 20+ breathing patterns",
-    copy: "The full library — from box breathing to coherence and beyond.",
+    title: "The full library",
+    copy: "Every rhythm — from box breathing to coherence and beyond.",
   },
   {
     icon: Waves,
     tint: "bg-purple-100 text-purple-600",
     title: "Adaptive sessions",
-    copy: "Sessions that respond to your state and adjust in real time.",
-  },
-  {
-    icon: Award,
-    tint: "bg-amber-100 text-amber-600",
-    title: "Credential gallery",
-    copy: "Portable proof of practice you own and can share anywhere.",
-  },
-  {
-    icon: Users,
-    tint: "bg-green-100 text-green-600",
-    title: "Accountability buddies",
-    copy: "Practice alongside others and stay consistent together.",
+    copy: "The orb responds to your state and adjusts in real time.",
   },
 ];
 
@@ -90,12 +76,12 @@ const Subscription: React.FC = () => {
               <Sparkles className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              Progress you can prove.
+              Breathwork that can see you.
             </h2>
           </div>
           <p className="text-lg text-muted-foreground mb-8">
-            Brume verifies your breathwork and turns practice into portable,
-            provable progress. One calm membership — everything unlocked.
+            The session watches you back. One membership unlocks the full
+            practice.
           </p>
 
           {/* Key Benefits */}
@@ -148,9 +134,10 @@ const Subscription: React.FC = () => {
             </div>
 
             <div className="p-6 bg-white/60 rounded-xl border border-white/50">
-              <h4 className="font-semibold mb-2">What happens to my data and credentials?</h4>
+              <h4 className="font-semibold mb-2">What happens to my sessions?</h4>
               <p className="text-muted-foreground">
-                Your sessions, progress, and earned credentials are always yours. Downgrading only affects access to Premium features — never your history.
+                Your history stays yours. Downgrading only changes what you can
+                unlock next — never the sessions you already took.
               </p>
             </div>
 
@@ -166,18 +153,13 @@ const Subscription: React.FC = () => {
         {/* Support Section */}
         <div className="mt-12 text-center">
           <div className="p-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-100">
-            <h3 className="text-xl font-semibold mb-2">Need Help?</h3>
+            <h3 className="text-xl font-semibold mb-2">Need a hand?</h3>
             <p className="text-muted-foreground mb-4">
-              Our support team is here to help you get the most out of your breathing practice.
+              Write us and we'll help you get back to the breath.
             </p>
-            <div className="flex items-center justify-center gap-4">
-              <Button variant="outline" asChild>
-                <a href="mailto:support@brume.app">Contact Support</a>
-              </Button>
-              <Button variant="ghost" asChild>
-                <Link to="/help">View Help Center</Link>
-              </Button>
-            </div>
+            <Button variant="outline" asChild>
+              <a href="mailto:support@brume.app">Contact support</a>
+            </Button>
           </div>
         </div>
       </div>

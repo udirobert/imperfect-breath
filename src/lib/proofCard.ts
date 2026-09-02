@@ -78,7 +78,7 @@ export async function renderProofCard(data: ProofCardData): Promise<Blob | null>
   // Tagline
   ctx.fillStyle = TEXT_SECONDARY;
   ctx.font = "300 24px system-ui, -apple-system, sans-serif";
-  ctx.fillText("progress you can prove", W / 2, 160);
+  ctx.fillText("breathwork that can see you", W / 2, 160);
 
   // --- Verification seal — the hero element ---
   if (data.verified) {
@@ -118,7 +118,7 @@ export async function renderProofCard(data: ProofCardData): Promise<Blob | null>
     // "VERIFIED" label
     ctx.fillStyle = VERIFIED_GREEN;
     ctx.font = "600 22px system-ui, -apple-system, sans-serif";
-    ctx.fillText("CAMERA-VERIFIED", W / 2, 620);
+    ctx.fillText("SEEN", W / 2, 620);
   } else {
     // Unverified: simpler mark
     ctx.strokeStyle = `rgba(147, 197, 253, 0.3)`;
@@ -140,7 +140,7 @@ export async function renderProofCard(data: ProofCardData): Promise<Blob | null>
 
   ctx.fillStyle = TEXT_SECONDARY;
   ctx.font = "400 28px system-ui, -apple-system, sans-serif";
-  ctx.fillText("focus score", W / 2, 870);
+  ctx.fillText("stillness", W / 2, 870);
 
   // --- Stats row ---
   const stats = [
@@ -208,7 +208,7 @@ export async function renderProofCard(data: ProofCardData): Promise<Blob | null>
 
   ctx.fillStyle = TEXT_SECONDARY;
   ctx.font = "300 20px system-ui, -apple-system, sans-serif";
-  ctx.fillText("breathe better. prove it.", W / 2, H - 80);
+  ctx.fillText("the session watches you back", W / 2, H - 80);
 
   // --- Convert to blob ---
   return new Promise((resolve) => {
@@ -233,7 +233,7 @@ export async function shareProofCard(data: ProofCardData): Promise<"shared" | "d
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({
-        title: "Brume — Verified Practice",
+        title: "Brume",
         text: shareText(data),
         files: [file],
       });
@@ -256,7 +256,7 @@ export async function shareProofCard(data: ProofCardData): Promise<"shared" | "d
 
 function shareText(data: ProofCardData): string {
   const parts = [
-    `Camera-verified breathwork on Brume`,
+    `A session on Brume`,
     `Score ${data.score}`,
     data.streak ? `${data.streak}-day streak` : "",
   ].filter(Boolean);

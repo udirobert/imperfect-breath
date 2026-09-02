@@ -5,23 +5,24 @@ import { useAuth } from "@/hooks/useAuth";
 import { TodayCard } from "@/components/home/TodayCard";
 import { WordReveal, type WordPart } from "@/components/atmosphere/WordReveal";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { useDayPart } from "@/hooks/useDayPart";
+import { roomWhisper } from "@/lib/atmosphere/dayPart";
 
 export default function Index() {
   const { user } = useAuth();
   const { streak } = useSessionHistory();
   const isGuest = !user;
   const reduceMotion = useReducedMotion();
+  const dayPart = useDayPart();
 
   const headline = useMemo((): WordPart[] => {
-    if (!isGuest && streak > 0) {
+    if (streak > 0) {
       return [`Day ${streak}. Keep it breathing.`];
     }
     if (isGuest) {
       return [
-        "Breathe ",
-        { text: "better.", className: "text-gradient" },
-        " Prove ",
-        { text: "it.", className: "text-gradient" },
+        "Tap how you feel. Brume picks the ",
+        { text: "breath.", className: "text-gradient" },
       ];
     }
     return ["Welcome back."];
@@ -42,7 +43,7 @@ export default function Index() {
         >
           {streak > 0
             ? "One check-in, one session — that's the whole practice."
-            : "Tap how you feel. Brume picks the breath."}
+            : roomWhisper(dayPart)}
         </motion.p>
       </div>
 
@@ -72,7 +73,7 @@ export default function Index() {
             </Link>
           </p>
           <p className="text-xs text-muted-foreground/60">
-            Camera-verified · Video never leaves your phone
+            Video never leaves your phone
           </p>
         </motion.div>
       )}

@@ -11,10 +11,12 @@ test.describe("Brume core loop", () => {
   test("home renders Brume positioning and today's check-in", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Brume/);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Breathe");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Prove");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Tap how you feel");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Brume picks the breath");
     await expect(page.getByText("What do you need today?")).toBeVisible();
     await expect(page.getByText("or pick a rhythm")).toBeVisible();
+    await expect(page.getByRole("banner")).toContainText("Progress");
+    await expect(page.getByRole("banner")).not.toContainText("Practice");
   });
 
   test("check-in produces an evidence-cited recommendation", async ({ page }) => {
@@ -39,14 +41,14 @@ test.describe("Brume core loop", () => {
   test("no dead links to buried surfaces", async ({ page }) => {
     await page.goto("/");
     const dead = page.locator(
-      'a[href="/marketplace"], a[href="/lens"], a[href="/create"], a[href="/instructor-onboarding"]',
+      'a[href="/marketplace"], a[href="/lens"], a[href="/create"], a[href="/instructor-onboarding"], a[href="/community"], a[href="/help"]',
     );
     await expect(dead).toHaveCount(0);
   });
 
   test("progress page renders empty state or stats", async ({ page }) => {
     await page.goto("/progress");
-    const empty = page.getByText("No progress yet.");
+    const empty = page.getByText("Nothing here yet.");
     const stats = page.getByText("Current Streak");
     await expect(empty.or(stats)).toBeVisible();
   });

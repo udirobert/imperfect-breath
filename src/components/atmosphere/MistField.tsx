@@ -2,10 +2,17 @@ import React, { useEffect, useRef } from "react";
 
 /**
  * Slow mist folds + pointer-lifted motes behind the practice shell.
- * Emit by distance (not time) so a flick doesn't gap and a rest doesn't clump.
- * Same rAF as the folds — no second loop. Session never mounts this.
+ * Color follows html[data-daypart] via --mist-r/g/b.
+ * Session never mounts this.
  */
-const FOLD_BLUE = { r: 147, g: 197, b: 253 };
+const rgb = { r: 147, g: 197, b: 253 };
+
+function readMist() {
+  const s = getComputedStyle(document.documentElement);
+  rgb.r = Number(s.getPropertyValue("--mist-r")) || 147;
+  rgb.g = Number(s.getPropertyValue("--mist-g")) || 197;
+  rgb.b = Number(s.getPropertyValue("--mist-b")) || 253;
+}
 
 const FOLDS = [
   { x: 0.38, y: 0.30, rx: 0.42, ry: 0.30, speed: 0.00011, phase: 0.2, amp: 22, depth: 1 },
@@ -22,7 +29,7 @@ const CAP = 14;
 const IDLE = 0.055;
 
 function rgba(a: number) {
-  return `rgba(${FOLD_BLUE.r}, ${FOLD_BLUE.g}, ${FOLD_BLUE.b}, ${a})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
 }
 
 export function MistField() {
@@ -160,6 +167,7 @@ export function MistField() {
     };
 
     const paint = (t: number) => {
+      readMist();
       const breathe = reduceMotion.matches ? 1 : 0.97 + Math.sin(t * 0.00022) * 0.03;
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = "screen";

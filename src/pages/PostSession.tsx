@@ -26,7 +26,7 @@ import { toast } from "sonner";
 function buildInsight(score: number): string {
   if (score >= 80) return "Your stillness held. Sessions like this are settling you.";
   if (score >= 60) return "Good practice. Shorter and stiller usually beats heroic.";
-  return "Take a moment to notice how you feel. Be gentle — the streak is the credential.";
+  return "Take a moment to notice how you feel. Showing up again is the whole point.";
 }
 
 export default function PostSession() {

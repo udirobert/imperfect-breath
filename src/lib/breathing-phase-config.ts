@@ -20,7 +20,7 @@ export interface PhaseConfig {
 
 export const BREATHING_PHASE_CONFIG: Record<string, PhaseConfig> = {
   inhale: {
-    instruction: "Breathe In",
+    instruction: "Inhale",
     color: "text-slate-600",
     size: "100%",
     gradientFrom: "from-blue-50",
@@ -44,7 +44,7 @@ export const BREATHING_PHASE_CONFIG: Record<string, PhaseConfig> = {
     shouldAnimate: ""
   },
   exhale: {
-    instruction: "Breathe Out",
+    instruction: "Exhale",
     color: "text-slate-600",
     size: "60%",
     gradientFrom: "from-blue-50",
@@ -56,7 +56,7 @@ export const BREATHING_PHASE_CONFIG: Record<string, PhaseConfig> = {
     shouldAnimate: ""
   },
   hold_after_exhale: {
-    instruction: "Hold",
+    instruction: "Rest",
     color: "text-slate-600",
     size: "60%",
     gradientFrom: "from-blue-50",

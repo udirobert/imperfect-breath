@@ -56,8 +56,8 @@ function buildInsights(history: SessionLike[], streak: number, preferredPattern:
           : `You practiced ${Math.round(thisWeek)} minutes this week. Your baseline starts now.`,
       points: minutes,
       valueLabel: `${Math.round(thisWeek)} min this week`,
-      pill: "Practice today",
-      pillTo: "/session",
+      pill: "Breathe",
+      pillTo: "/",
     });
   }
 
@@ -77,8 +77,8 @@ function buildInsights(history: SessionLike[], streak: number, preferredPattern:
           : "Restlessness is running higher lately. Shorter, more frequent sessions usually beat heroic ones.",
         points: calm,
         valueLabel: down ? "Calmer lately" : "More restless lately",
-        pill: down ? "Keep the rhythm" : "Try a 3-minute reset",
-        pillTo: "/session",
+        pill: down ? "Keep going" : "A short one today",
+        pillTo: "/",
       });
     }
   }
@@ -87,11 +87,11 @@ function buildInsights(history: SessionLike[], streak: number, preferredPattern:
   if (streak >= 2) {
     out.push({
       key: "streak",
-      prose: `${streak} days in a row${preferredPattern && preferredPattern !== "None" ? `, mostly with ${preferredPattern}` : ""}. The streak is the credential — protect it.`,
+      prose: `${streak} days in a row${preferredPattern && preferredPattern !== "None" ? `, mostly with ${preferredPattern}` : ""}. Showing up again is the whole point.`,
       points: dailySeries(history, 14, () => 1),
       valueLabel: `${streak}-day streak`,
-      pill: "Protect the streak",
-      pillTo: "/session",
+      pill: "Breathe",
+      pillTo: "/",
     });
   }
 

@@ -15,7 +15,6 @@ import { Skeleton } from "../components/ui/skeleton";
 import { Button } from "../components/ui/button";
 import {
   BarChart3,
-  Users,
   Settings,
   CreditCard,
   Palette,
@@ -71,8 +70,11 @@ const UserProfilePage = () => {
 
   if (!user || !profile) {
     return (
-      <div className="container mx-auto p-4 text-center">
-        <p>Please log in to view your profile.</p>
+      <div className="container mx-auto p-4 text-center space-y-4">
+        <p className="text-muted-foreground">Sign in to see your profile.</p>
+        <Button asChild>
+          <Link to="/auth?redirect=/profile">Sign in</Link>
+        </Button>
       </div>
     );
   }
@@ -97,7 +99,7 @@ const UserProfilePage = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-6 max-w-md">
+      <div className="grid grid-cols-2 gap-2 mb-6 max-w-md">
         <Button
           variant="outline"
           className="flex flex-col items-center gap-2 h-auto py-3"
@@ -113,14 +115,6 @@ const UserProfilePage = () => {
         >
           <CreditCard className="h-5 w-5" />
           <span className="text-xs">Premium</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-          onClick={() => navigate("/community")}
-        >
-          <Users className="h-5 w-5" />
-          <span className="text-xs">Community</span>
         </Button>
       </div>
 
@@ -173,30 +167,14 @@ const UserProfilePage = () => {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Platform Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              <li>
-                <span className="font-semibold">Role:</span> {profile.role}
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Consolidation: the profile shows practice proof, not chain
-            mechanics — credentials live on /progress. */}
-        <Card>
-          <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Verified Practice
+              Your practice
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Every camera-verified session becomes a verified record of
-              practice — progress you can prove.
+              Sessions live on Progress. Video never left your phone.
             </p>
             <Button
               variant="outline"
@@ -204,7 +182,7 @@ const UserProfilePage = () => {
               onClick={() => navigate("/progress")}
             >
               <BarChart3 className="h-4 w-4 mr-2" />
-              View My Progress
+              See progress
             </Button>
           </CardContent>
         </Card>

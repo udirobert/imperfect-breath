@@ -35,7 +35,7 @@ const Progress = () => {
 
   const stats = [
     { title: 'Current Streak', value: `${streak} Day${streak === 1 ? '' : 's'}`, icon: <Star className="w-6 h-6 text-primary" /> },
-    { title: 'Total Mindful Minutes', value: `${totalMinutes} min`, icon: <Clock className="w-6 h-6 text-primary" /> },
+    { title: 'Total minutes', value: `${totalMinutes} min`, icon: <Clock className="w-6 h-6 text-primary" /> },
     { title: 'Longest Breath Hold', value: formatTime(longestBreathHold), icon: <Activity className="w-6 h-6 text-primary" /> },
     { title: 'Avg. Restlessness', value: `${averageRestlessness}/100`, icon: <Zap className="w-6 h-6 text-primary" /> },
     { title: 'Favorite Rhythm', value: preferredPattern, icon: <HeartPulse className="w-6 h-6 text-primary" /> },
@@ -44,20 +44,27 @@ const Progress = () => {
   if (history.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center text-center animate-fade-in p-4 h-full">
-            <h2 className="text-2xl font-bold mb-4">No progress yet.</h2>
+            <h2 className="text-2xl font-bold mb-4">Nothing here yet.</h2>
             {isGuestMode ? (
               <>
-                <p className="text-muted-foreground mb-4">Complete a session to start tracking your progress!</p>
+                <p className="text-muted-foreground mb-4">
+                  Tap how you feel. One session is the start.
+                </p>
                 <p className="text-sm text-muted-foreground mb-8">
-                  <Link to="/auth?redirect=/progress" className="text-primary hover:underline font-medium">
-                    Sign up
-                  </Link> to save your progress and access it from any device.
+                  <Link to="/auth?redirect=/progress&context=progress-tracking" className="text-primary hover:underline font-medium">
+                    Create an account
+                  </Link>{" "}
+                  to keep this practice across devices.
                 </p>
               </>
             ) : (
-              <p className="text-muted-foreground mb-8">Complete a session to start tracking your progress!</p>
+              <p className="text-muted-foreground mb-8">
+                Tap how you feel. One session is the start.
+              </p>
             )}
-            <Button asChild><Link to="/session">Start First Session</Link></Button>
+            <Button asChild className="rounded-full">
+              <Link to="/">Breathe</Link>
+            </Button>
         </div>
       )
   }
@@ -65,7 +72,7 @@ const Progress = () => {
   return (
     <div className="flex flex-col items-center justify-center animate-fade-in p-4 space-y-8">
       <div className="flex items-center gap-4">
-        <h1 className="text-4xl font-bold">My Progress</h1>
+        <h1 className="text-4xl font-bold">Progress</h1>
         {isGuestMode && (
           <Badge variant="outline" className="text-xs">
             Local
@@ -122,7 +129,7 @@ const Progress = () => {
       </Card>
 
       <Button asChild variant="outline">
-        <Link to="/">Back to Home</Link>
+        <Link to="/">Home</Link>
       </Button>
 
     </div>

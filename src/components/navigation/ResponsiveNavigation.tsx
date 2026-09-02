@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { isTouchDevice } from "@/utils/mobile-detection";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { BottomTabBar } from "./BottomTabBar";
 import Header from "@/components/Header";
 import { MistField } from "@/components/atmosphere/MistField";
@@ -21,7 +21,7 @@ function isImmersivePath(pathname: string) {
 export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
   children,
 }) => {
-  const isMobile = isTouchDevice();
+  const isMobile = useIsMobile();
   const { pathname } = useLocation();
   const immersive = isImmersivePath(pathname);
 
@@ -35,7 +35,7 @@ export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
         className={
           immersive
             ? "flex-grow flex flex-col"
-            : `relative z-10 flex-grow flex flex-col items-center justify-center p-4 ${isMobile ? "pb-4" : ""}`
+            : `relative z-10 flex-grow flex flex-col items-center justify-center p-4 ${isMobile ? "pb-24" : ""}`
         }
       >
         {children}

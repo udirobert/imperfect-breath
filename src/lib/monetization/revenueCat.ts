@@ -83,11 +83,9 @@ export interface PurchaseResult {
 
 /** Brume Premium benefits — mirrored by the paywall page copy. */
 export const BRUME_PREMIUM_FEATURES: string[] = [
-  "Verified deep session insights",
-  "All 20+ breathing patterns",
+  "Sessions that see you",
+  "The full pattern library",
   "Adaptive sessions that respond to your state",
-  "Credential gallery — portable proof of practice",
-  "Accountability buddies",
 ];
 
 const FREE_FEATURES: string[] = [
@@ -111,7 +109,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     id: "premium",
     name: "Brume Premium",
     price: "$4.99/month",
-    description: "Progress you can prove — billed monthly",
+    description: "The full practice — billed monthly",
     features: BRUME_PREMIUM_FEATURES,
     isActive: false,
     productId: PRODUCT_IDS.monthly,

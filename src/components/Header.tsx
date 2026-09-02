@@ -1,16 +1,16 @@
 /**
- * Header — minimal. Logo + 3 links + auth state.
+ * Header — logo + Progress + auth.
  *
- * Mobile: bottom tab bar handles nav, header is just logo + sign in.
- * Desktop: logo + Practice/Progress/Profile links + sign in/out.
+ * Mobile: bottom tab bar handles nav, header is logo + sign in.
+ * Desktop: logo + Progress + Profile/sign in.
  *
- * No mobile sheet menu (BottomTabBar covers it). No community link (dead).
- * No WalletManager (wallet lives on /profile). No OfflineIndicator (niche).
+ * Session is not a nav destination — it starts from the check-in on Home.
+ * No community link (dead). Wallet lives on /profile.
  */
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Play, BarChart3, User, LogOut } from "lucide-react";
+import { Sparkles, BarChart3, User, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStatus } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
@@ -29,9 +29,12 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
     return (
       <Link to={path}>
         <Button
-          variant={isActive ? "default" : "ghost"}
+          variant="ghost"
           size="sm"
-          className="flex items-center gap-2"
+          className={cn(
+            "flex items-center gap-2 rounded-full",
+            isActive ? "text-foreground bg-foreground/5" : "text-muted-foreground",
+          )}
         >
           {React.createElement(icon, { className: "w-4 h-4" })}
           {label}
@@ -43,7 +46,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
   return (
     <header
       className={cn(
-        "w-full border-b border-slate-200 bg-white/95 backdrop-blur-sm sticky top-0 z-50",
+        "w-full sticky top-0 z-50 border-b border-border/30 bg-transparent backdrop-blur-md",
         className,
       )}
     >
@@ -59,26 +62,26 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
         </Link>
 
         <div className="flex items-center gap-2">
-          {navLink("/session", "Practice", Play)}
-          {isAuthenticated && navLink("/progress", "Progress", BarChart3)}
+          <div className="hidden md:flex items-center gap-2">
+            {navLink("/progress", "Progress", BarChart3)}
+            {isAuthenticated && navLink("/profile", "Profile", User)}
+          </div>
           {isAuthenticated ? (
-            <>
-              {navLink("/profile", "Profile", User)}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => logout()}
-                className="text-slate-500 hover:text-slate-700"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => logout()}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           ) : (
-            <Link to="/auth">
-              <Button variant="default" size="sm" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Sign In
-              </Button>
+            <Link
+              to="/auth"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5"
+            >
+              Sign in
             </Link>
           )}
         </div>

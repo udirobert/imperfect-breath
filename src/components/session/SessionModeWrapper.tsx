@@ -9,13 +9,14 @@
  * Navigates to /post-session on completion (not /results).
  */
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
 import { BREATHING_PATTERNS } from "../../lib/breathingPatterns";
 import { useOfflineManager } from "../../lib/offline/OfflineManager";
+import { useSessionStore } from "@/stores/sessionStore";
 import { ResponsiveEnhancedSession } from "./ResponsiveEnhancedSession";
 import { SessionErrorBoundary } from "../../lib/errors/error-boundary";
 
@@ -104,6 +105,16 @@ const useSessionCompletion = () => {
 
 export const SessionModeWrapper: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Zustand keeps phase='complete' after a session. Reset before the
+  // preview tree mounts, or the next visit skips warmup and dead-ends.
+  const sessionKey = `${location.pathname}${location.search}`;
+  const lastKeyRef = useRef<string | null>(null);
+  if (lastKeyRef.current !== sessionKey) {
+    lastKeyRef.current = sessionKey;
+    useSessionStore.getState().resetSession();
+  }
 
   // Get pattern from URL search params, location state, or localStorage
   const initialPattern = useMemo(() => {
@@ -183,7 +194,7 @@ export const SessionModeWrapper: React.FC = () => {
         config={responsiveConfig}
         modeConfig={modeConfig}
         onSessionComplete={onSessionComplete}
-        onSessionExit={() => window.history.back()}
+        onSessionExit={() => navigate("/")}
       />
     </SessionErrorBoundary>
   );

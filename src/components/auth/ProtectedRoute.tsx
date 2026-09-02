@@ -23,7 +23,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    const dest = `${location.pathname}${location.search}`;
+    return (
+      <Navigate
+        to={`/auth?redirect=${encodeURIComponent(dest)}`}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;

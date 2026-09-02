@@ -70,9 +70,9 @@ export const SessionPreview: React.FC<SessionPreviewProps> = ({
       let message = "Camera setup failed.";
       if (error instanceof Error) {
         if (error.name === "NotAllowedError") {
-          message = "Camera access denied. You can still breathe unverified.";
+          message = "Camera access denied. You can still breathe — the session just won't see you.";
         } else if (error.name === "NotFoundError") {
-          message = "No camera found. You can still breathe unverified.";
+          message = "No camera found. You can still breathe — the session just won't see you.";
         } else if (error.name === "NotReadableError") {
           message = "Camera is in use by another app.";
         }

@@ -118,3 +118,9 @@ tsc_output.txt
 # pnpm local env noise
 .pnpm-store/
 pnpm-workspace.yaml
+
+# Playwright / test artifacts
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/

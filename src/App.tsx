@@ -17,6 +17,7 @@ import TermsOfService from "@/pages/TermsOfService";
 
 // Notifications (OneSignal) — guarded no-op until VITE_ONESIGNAL_APP_ID is set
 import { initNotifications } from "@/lib/notifications/oneSignal";
+import { useDayPart } from "@/hooks/useDayPart";
 import RouteErrorBoundary from "@/components/auth/RouteErrorBoundary";
 
 // Large pages - lazy load these to reduce initial bundle size
@@ -62,6 +63,7 @@ const Web3Route: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 function App() {
+  useDayPart();
   React.useEffect(() => {
     void initNotifications();
   }, []);

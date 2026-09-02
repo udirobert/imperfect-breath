@@ -35,6 +35,44 @@
     --ring: 204 28% 45%;
 
     --radius: 0.5rem;
+
+    /* Living mist — daypart overrides these on <html data-daypart> */
+    --mist-r: 147;
+    --mist-g: 197;
+    --mist-b: 253;
+    --calm-1: 204 30% 98%;
+    --calm-2: 204 22% 95%;
+    --calm-3: 210 20% 98%;
+  }
+
+  html[data-daypart="dawn"] {
+    --mist-r: 176;
+    --mist-g: 214;
+    --mist-b: 242;
+    --calm-1: 200 32% 98%;
+    --calm-2: 204 20% 96%;
+    --calm-3: 210 18% 98%;
+  }
+
+  html[data-daypart="dusk"] {
+    --mist-r: 186;
+    --mist-g: 168;
+    --mist-b: 216;
+    --calm-1: 250 22% 97%;
+    --calm-2: 230 16% 95%;
+    --calm-3: 210 18% 97%;
+    --primary: 250 16% 42%;
+  }
+
+  html[data-daypart="night"] {
+    --mist-r: 112;
+    --mist-g: 148;
+    --mist-b: 204;
+    --calm-1: 214 24% 94%;
+    --calm-2: 216 20% 91%;
+    --calm-3: 218 18% 94%;
+    --background: 214 22% 94%;
+    --primary: 214 22% 40%;
   }
 
   /* No dark mode for this app to maintain a consistent calming theme. */
@@ -105,7 +143,12 @@
 
 @layer utilities {
   .bg-calm-gradient {
-    background: radial-gradient(circle at top left, hsl(204, 30%, 98%) 0%, hsl(204, 22%, 95%) 50%, hsl(210, 20%, 98%) 100%);
+    background: radial-gradient(
+      circle at top left,
+      hsl(var(--calm-1)) 0%,
+      hsl(var(--calm-2)) 50%,
+      hsl(var(--calm-3)) 100%
+    );
   }
   
   .glass {
@@ -118,7 +161,7 @@
 
   /* Premium Gradients */
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-blue-500 to-teal-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70;
   }
   
   /* Mobile-specific utilities */

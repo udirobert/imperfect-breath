@@ -1,25 +1,25 @@
-import { useEffect, useState } from 'react';
-import { isTouchDevice } from '@/utils/mobile-detection';
+import { useEffect, useState } from "react";
+import { isTouchDevice } from "@/utils/mobile-detection";
+
+const MOBILE_MQ = "(max-width: 767px)";
+
+function computeIsMobile() {
+  if (typeof window === "undefined") return false;
+  return isTouchDevice() || window.matchMedia(MOBILE_MQ).matches;
+}
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(computeIsMobile);
 
   useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(isTouchDevice());
-    };
-
-    // Check on mount
-    checkIsMobile();
-
-    // Add event listeners for resize/orientation change
-    window.addEventListener('resize', checkIsMobile);
-    window.addEventListener('orientationchange', checkIsMobile);
-
-    // Cleanup
+    const mq = window.matchMedia(MOBILE_MQ);
+    const check = () => setIsMobile(isTouchDevice() || mq.matches);
+    check();
+    mq.addEventListener("change", check);
+    window.addEventListener("orientationchange", check);
     return () => {
-      window.removeEventListener('resize', checkIsMobile);
-      window.removeEventListener('orientationchange', checkIsMobile);
+      mq.removeEventListener("change", check);
+      window.removeEventListener("orientationchange", check);
     };
   }, []);
 
