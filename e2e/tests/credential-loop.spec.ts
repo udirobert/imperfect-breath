@@ -49,7 +49,7 @@ test.describe("Brume core loop", () => {
   test("progress page renders empty state or stats", async ({ page }) => {
     await page.goto("/progress");
     const empty = page.getByText("Nothing here yet.");
-    const stats = page.getByText("Current Streak");
-    await expect(empty.or(stats)).toBeVisible();
+    const lived = page.getByRole("heading", { name: /Day |Your practice/ });
+    await expect(empty.or(lived)).toBeVisible();
   });
 });

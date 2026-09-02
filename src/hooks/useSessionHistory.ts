@@ -74,18 +74,28 @@ const calculateAverageRestlessness = (history: SessionRecordFromDb[]): number =>
     return Math.round(totalRestlessness / sessionsWithScore.length);
 };
 
+function displayPatternName(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const byId = BREATHING_PATTERNS[raw];
+  if (byId?.name) return byId.name;
+  const byName = Object.values(BREATHING_PATTERNS).find((p) => p.name === raw);
+  return byName?.name || raw;
+}
+
 const calculatePreferredPattern = (history: SessionRecordFromDb[]): string => {
     if (history.length === 0) return 'None';
     const patternCounts = history.reduce((acc, session) => {
-        acc[session.pattern_name] = (acc[session.pattern_name] || 0) + 1;
+        const name = displayPatternName(session.pattern_name);
+        if (!name) return acc;
+        acc[name] = (acc[name] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
     if (Object.keys(patternCounts).length === 0) return 'None';
 
-    const preferredPatternKey = Object.keys(patternCounts).reduce((a, b) => patternCounts[a] > patternCounts[b] ? a : b);
-    const patternDetails = BREATHING_PATTERNS[preferredPatternKey as keyof typeof BREATHING_PATTERNS];
-    return patternDetails?.name || 'Unknown';
+    return Object.keys(patternCounts).reduce((a, b) =>
+      patternCounts[a] > patternCounts[b] ? a : b,
+    );
 };
 
 function toCreatedAt(value: Date | string | number | null | undefined): string {

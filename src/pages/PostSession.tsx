@@ -41,22 +41,25 @@ export default function PostSession() {
   const sessionData = useMemo(() => location.state || {}, [location.state]);
   const verified = lastSessionVerified || !!sessionData.cameraUsed;
 
-  // Save session once on mount
+  // Save once on mount. Guests are already persisted by SessionModeWrapper.
   useEffect(() => {
-    if (sessionData.patternName && !hasSavedRef.current) {
-      try {
-        saveSession({
-          breathHoldTime: sessionData.breathHoldTime || 0,
-          restlessnessScore: sessionData.restlessnessScore || 0,
-          sessionDuration: sessionData.sessionDuration || 0,
-          patternName: sessionData.patternName,
-        });
-        hasSavedRef.current = true;
-      } catch (error) {
-        console.error("Failed to save session", error);
-      }
+    if (!sessionData.patternName || hasSavedRef.current) return;
+    if (!user && sessionData.sessionId) {
+      hasSavedRef.current = true;
+      return;
     }
-  }, [sessionData, saveSession]);
+    try {
+      saveSession({
+        breathHoldTime: sessionData.breathHoldTime || 0,
+        restlessnessScore: sessionData.restlessnessScore || 0,
+        sessionDuration: sessionData.sessionDuration || 0,
+        patternName: sessionData.patternName,
+      });
+      hasSavedRef.current = true;
+    } catch (error) {
+      console.error("Failed to save session", error);
+    }
+  }, [sessionData, saveSession, user]);
 
   // Compute score — same logic as the old Results.tsx
   const score = useMemo(() => {

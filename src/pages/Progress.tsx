@@ -1,139 +1,109 @@
-import React from 'react';
-import { useSessionHistory } from '@/hooks/useSessionHistory';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, LineChart, Line, Tooltip } from 'recharts';
-import { format, parseISO } from 'date-fns';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Star, Clock, Activity, Zap, HeartPulse } from 'lucide-react';
-import { formatTime } from '@/lib/utils/formatters';
-import { InsightCarousel } from '@/components/progress/InsightCarousel';
+import React, { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { format, parseISO, isToday, isYesterday } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { useSessionHistory } from "@/hooks/useSessionHistory";
+import { InsightCarousel } from "@/components/progress/InsightCarousel";
 
-// Using consolidated formatters from utils
+function when(iso: string): string {
+  const date = parseISO(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  if (isToday(date)) return "Today";
+  if (isYesterday(date)) return "Yesterday";
+  return format(date, "d MMM");
+}
 
-const Progress = () => {
-  const { history, streak, totalMinutes, longestBreathHold, averageRestlessness, preferredPattern, isGuestMode } = useSessionHistory();
+function stillness(restlessness: number | null | undefined): string {
+  if (typeof restlessness !== "number") return "—";
+  return String(Math.max(0, Math.min(100, Math.round(100 - restlessness))));
+}
 
-  const chartData = history.map(session => ({
-    date: format(parseISO(session.created_at), 'MMM d'),
-    'Breath Hold': session.breath_hold_time,
-    'Restlessness': session.restlessness_score,
-  })).slice(-30);
+export default function Progress() {
+  const { history, streak, totalMinutes, preferredPattern, isGuestMode } =
+    useSessionHistory();
 
-  const chartConfig: ChartConfig = {
-    'Breath Hold': {
-      label: 'Breath Hold (s)',
-      color: 'hsl(var(--primary))',
-    },
-    'Restlessness': {
-      label: 'Restlessness',
-      color: 'hsl(var(--destructive))',
-    },
-  };
-
-  const stats = [
-    { title: 'Current Streak', value: `${streak} Day${streak === 1 ? '' : 's'}`, icon: <Star className="w-6 h-6 text-primary" /> },
-    { title: 'Total minutes', value: `${totalMinutes} min`, icon: <Clock className="w-6 h-6 text-primary" /> },
-    { title: 'Longest Breath Hold', value: formatTime(longestBreathHold), icon: <Activity className="w-6 h-6 text-primary" /> },
-    { title: 'Avg. Restlessness', value: `${averageRestlessness}/100`, icon: <Zap className="w-6 h-6 text-primary" /> },
-    { title: 'Favorite Rhythm', value: preferredPattern, icon: <HeartPulse className="w-6 h-6 text-primary" /> },
-  ];
+  const recent = useMemo(() => history.slice(0, 8), [history]);
 
   if (history.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center text-center animate-fade-in p-4 h-full">
-            <h2 className="text-2xl font-bold mb-4">Nothing here yet.</h2>
-            {isGuestMode ? (
-              <>
-                <p className="text-muted-foreground mb-4">
-                  Tap how you feel. One session is the start.
-                </p>
-                <p className="text-sm text-muted-foreground mb-8">
-                  <Link to="/auth?redirect=/progress&context=progress-tracking" className="text-primary hover:underline font-medium">
-                    Create an account
-                  </Link>{" "}
-                  to keep this practice across devices.
-                </p>
-              </>
-            ) : (
-              <p className="text-muted-foreground mb-8">
-                Tap how you feel. One session is the start.
-              </p>
-            )}
-            <Button asChild className="rounded-full">
-              <Link to="/">Breathe</Link>
-            </Button>
-        </div>
-      )
+    return (
+      <div className="flex flex-col items-center justify-center text-center p-4 h-full max-w-md mx-auto">
+        <h1 className="text-3xl font-bold tracking-tight mb-3">Nothing here yet.</h1>
+        <p className="text-muted-foreground mb-8">
+          Tap how you feel. One session is the start.
+        </p>
+        {isGuestMode && (
+          <p className="text-sm text-muted-foreground mb-8">
+            <Link
+              to="/auth?redirect=/progress&context=progress-tracking"
+              className="font-medium text-primary hover:underline underline-offset-2"
+            >
+              Create an account
+            </Link>{" "}
+            to keep this practice across devices.
+          </p>
+        )}
+        <Button asChild className="rounded-full btn-premium px-10 py-6">
+          <Link to="/">Breathe</Link>
+        </Button>
+      </div>
+    );
   }
 
+  const meta = [
+    totalMinutes > 0 ? `${totalMinutes} min` : null,
+    preferredPattern &&
+    preferredPattern !== "None" &&
+    preferredPattern !== "Unknown"
+      ? preferredPattern
+      : null,
+    isGuestMode ? "On this device" : null,
+  ].filter(Boolean) as string[];
+
   return (
-    <div className="flex flex-col items-center justify-center animate-fade-in p-4 space-y-8">
-      <div className="flex items-center gap-4">
-        <h1 className="text-4xl font-bold">Progress</h1>
-        {isGuestMode && (
-          <Badge variant="outline" className="text-xs">
-            Local
-          </Badge>
-        )}
+    <div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-2 py-4">
+      <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+        {streak > 0 ? `Day ${streak}.` : "Your practice."}
+      </h1>
+      <p className="mt-2 text-muted-foreground">
+        One check-in, one session — that's the whole practice.
+      </p>
+      {meta.length > 0 && (
+        <p className="mt-3 text-sm text-muted-foreground">{meta.join(" · ")}</p>
+      )}
+
+      <div className="mt-10 w-full">
+        <InsightCarousel
+          history={history}
+          streak={streak}
+          preferredPattern={preferredPattern}
+        />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full max-w-5xl">
-        {stats.map((stat, index) => (
-          <Card key={index} className="text-center flex flex-col items-center justify-center p-4">
-            <CardHeader className="p-0 mb-2">{stat.icon}</CardHeader>
-            <CardContent className="p-0">
-              <p className="text-xs text-muted-foreground">{stat.title}</p>
-              <p className="text-xl font-bold">{stat.value}</p>
-            </CardContent>
-          </Card>
+      <ol className="mt-10 w-full text-left space-y-3">
+        {recent.map((session, i) => (
+          <li
+            key={session.id || `${session.created_at}-${i}`}
+            className="flex items-baseline justify-between gap-4 text-[15px]"
+          >
+            <span className="text-muted-foreground shrink-0 w-24">
+              {when(session.created_at)}
+            </span>
+            <span className="flex-1 truncate">
+              {session.pattern_name || "Session"}
+            </span>
+            <span className="tabular-nums text-muted-foreground shrink-0">
+              {stillness(session.restlessness_score)}
+            </span>
+          </li>
         ))}
-      </div>
+      </ol>
+      <p className="mt-2 w-full text-right text-[11px] uppercase tracking-[0.18em] text-muted-foreground/70">
+        stillness
+      </p>
 
-      <InsightCarousel history={history} streak={streak} preferredPattern={preferredPattern} />
-
-      <Card className="w-full max-w-5xl">
-        <CardHeader>
-          <CardTitle>Breath Hold Over Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px] w-full">
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
-              <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} unit="s" />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Line type="monotone" dataKey="Breath Hold" stroke="var(--color-Breath Hold)" strokeWidth={2} dot={true} />
-            </LineChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-      
-      <Card className="w-full max-w-5xl">
-        <CardHeader>
-          <CardTitle>Restlessness Over Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px] w-full">
-            <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
-              <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
-              <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-              <Bar dataKey="Restlessness" fill="var(--color-Restlessness)" radius={4} />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      <Button asChild variant="outline">
-        <Link to="/">Home</Link>
+      <Button asChild className="mt-12 rounded-full btn-premium w-full max-w-xs py-6">
+        <Link to="/">Breathe</Link>
       </Button>
-
     </div>
   );
-};
-
-export default Progress;
+}
