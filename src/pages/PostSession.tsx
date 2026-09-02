@@ -7,20 +7,42 @@
  *
  * Session data arrives via router state from SessionModeWrapper.
  */
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PostSessionCelebration } from "@/components/session/PostSessionCelebration";
+import { SignInForm } from "@/components/auth/SignInForm";
 import { useSessionHistory } from "@/hooks/useSessionHistory";
 import { useSessionStore } from "@/stores/sessionStore";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { toast } from "sonner";
+
+function buildInsight(score: number, verified: boolean, patternName: string): string {
+  if (!verified) {
+    return `You completed ${patternName}. Next time, let Brume see your breath for a verified record.`;
+  }
+  if (score >= 80) return "Your stillness held. Sessions like this are settling you.";
+  if (score >= 60) return "Good practice. Shorter and stiller usually beats heroic.";
+  return "Take a moment to notice how you feel. Be gentle — the streak is the credential.";
+}
 
 export default function PostSession() {
   const location = useLocation();
   const navigate = useNavigate();
   const { streak, saveSession } = useSessionHistory();
+  const { user } = useAuth();
   const lastSessionVerified = useSessionStore((s) => s.lastSessionVerified);
   const hasSavedRef = useRef(false);
+  const [saveOpen, setSaveOpen] = useState(false);
 
   const sessionData = useMemo(() => location.state || {}, [location.state]);
+  const verified = lastSessionVerified || !!sessionData.cameraUsed;
 
   // Save session once on mount
   useEffect(() => {
@@ -74,12 +96,41 @@ export default function PostSession() {
             cycles: sessionData.cycleCount,
             streak,
           }}
-          verified={lastSessionVerified}
+          verified={verified}
+          insight={buildInsight(score, verified, sessionData.patternName)}
+          isGuest={!user}
           onContinue={() => navigate("/")}
-          onExplorePatterns={() => navigate("/")}
+          onSeeProgress={() => navigate("/progress")}
+          onSaveProgress={() => setSaveOpen(true)}
+          onConnectWallet={() => navigate("/profile")}
           onClose={() => navigate("/")}
         />
       </div>
+
+      <Sheet open={saveOpen} onOpenChange={setSaveOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-[2rem] border-t px-6 pb-10 pt-8 max-h-[90vh] overflow-y-auto sm:max-w-md sm:mx-auto"
+        >
+          <SheetHeader className="text-center space-y-2 mb-6">
+            <SheetTitle className="text-2xl font-bold tracking-tight">
+              Keep this streak
+            </SheetTitle>
+            <SheetDescription className="text-[15px]">
+              An email is enough. This session stays on screen.
+            </SheetDescription>
+          </SheetHeader>
+          <SignInForm
+            compact
+            intent="save-session"
+            defaultSignUp
+            onComplete={() => {
+              toast.success("Saved. This streak is yours.");
+              setSaveOpen(false);
+            }}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

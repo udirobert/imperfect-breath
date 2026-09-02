@@ -1,39 +1,47 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
 import { isTouchDevice } from "@/utils/mobile-detection";
 import { BottomTabBar } from "./BottomTabBar";
 import Header from "@/components/Header";
+import { MistField } from "@/components/atmosphere/MistField";
+import { ProgressiveBlur } from "@/components/atmosphere/ProgressiveBlur";
 
 interface ResponsiveNavigationProps {
   children: React.ReactNode;
 }
 
 /**
- * Responsive navigation wrapper that provides unified layout for desktop and mobile
- * - Unified Header: Automatically adapts to mobile/desktop
- * - Mobile: Bottom tab bar for navigation
- * - Desktop: Traditional layout
+ * Session and post-session own the screen — no header, no tab bar, no mist.
+ * Everywhere else: living mist field + Header + (mobile) BottomTabBar.
  */
+function isImmersivePath(pathname: string) {
+  return pathname.startsWith("/session") || pathname.startsWith("/post-session");
+}
+
 export const ResponsiveNavigation: React.FC<ResponsiveNavigationProps> = ({
   children,
 }) => {
   const isMobile = isTouchDevice();
+  const { pathname } = useLocation();
+  const immersive = isImmersivePath(pathname);
 
   return (
-    <div className="min-h-screen w-full bg-calm-gradient flex flex-col">
-      {/* Unified Header - Responsive */}
-      <Header />
+    <div className="relative min-h-screen w-full bg-calm-gradient flex flex-col">
+      {!immersive && <MistField />}
+      {!immersive && <ProgressiveBlur />}
+      {!immersive && <Header />}
 
-      {/* Main Content */}
       <main
-        className={`flex-grow flex flex-col items-center justify-center p-4 ${
-          isMobile ? "pb-4" : ""
-        }`}
+        className={
+          immersive
+            ? "flex-grow flex flex-col"
+            : `relative z-10 flex-grow flex flex-col items-center justify-center p-4 ${isMobile ? "pb-4" : ""}`
+        }
       >
         {children}
       </main>
 
-      {/* Bottom Navigation - Mobile Only */}
-      {isMobile && <BottomTabBar />}
+      {!immersive && isMobile && <BottomTabBar />}
     </div>
   );
 };

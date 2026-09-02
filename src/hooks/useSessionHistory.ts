@@ -88,13 +88,22 @@ const calculatePreferredPattern = (history: SessionRecordFromDb[]): string => {
     return patternDetails?.name || 'Unknown';
 };
 
+function toCreatedAt(value: Date | string | number | null | undefined): string {
+  try {
+    const date = value instanceof Date ? value : new Date(value ?? Date.now());
+    return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
 const convertOfflineSessionToGuestSession = (offlineSession: OfflineSession): GuestSession => ({
   id: offlineSession.id,
   pattern_name: offlineSession.patternName,
   breath_hold_time: offlineSession.breathHoldTime,
   restlessness_score: offlineSession.restlessnessScore || 0,
   session_duration: offlineSession.duration,
-  created_at: offlineSession.startTime instanceof Date ? offlineSession.startTime.toISOString() : new Date(offlineSession.startTime).toISOString(),
+  created_at: toCreatedAt(offlineSession.startTime),
   synced: offlineSession.synced,
 });
 

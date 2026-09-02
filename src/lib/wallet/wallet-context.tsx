@@ -330,21 +330,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
    * Initialize and setup event listeners
    */
   useEffect(() => {
+    void walletProviderManager.initialize().then(() => {
+      updateConnectionState();
+      if (autoConnect && localStorage.getItem('wallet-last-connected')) {
+        connect().catch(console.error);
+      }
+    });
+
     const cleanup = walletProviderManager.addEventListener(handleWalletEvent);
-    
-    // Initial state update
-    updateConnectionState();
-
-    // Auto-connect if enabled and previously connected
-    if (autoConnect && localStorage.getItem('wallet-last-connected')) {
-      const lastProvider = localStorage.getItem('wallet-last-provider');
-      connect(lastProvider || undefined).catch((error) => {
-        console.warn('Auto-connect failed:', error);
-      });
-    }
-
     return cleanup;
-  }, [handleWalletEvent, updateConnectionState, autoConnect, connect]);
+  }, [autoConnect, connect, handleWalletEvent, updateConnectionState]);
 
   /**
    * Save connection state to localStorage

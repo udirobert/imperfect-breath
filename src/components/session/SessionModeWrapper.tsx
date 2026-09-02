@@ -11,12 +11,10 @@
 
 import React, { useCallback, useMemo } from "react";
 import {
-  Navigate,
   useLocation,
   useNavigate,
 } from "react-router-dom";
 import { BREATHING_PATTERNS } from "../../lib/breathingPatterns";
-import { useSession } from "../../hooks/useSession";
 import { useOfflineManager } from "../../lib/offline/OfflineManager";
 import { ResponsiveEnhancedSession } from "./ResponsiveEnhancedSession";
 import { SessionErrorBoundary } from "../../lib/errors/error-boundary";
@@ -50,21 +48,30 @@ const useSessionCompletion = () => {
         cycleCount,
         breathHoldTime,
         restlessnessScore,
-        elapsedTime,
         phaseAccuracy,
         rhythmConsistency,
-        sessionDuration,
         patternName,
       } = sessionData;
 
-      const actualSessionDuration = sessionDuration || elapsedTime / 1000;
+      const durationSeconds =
+        (typeof sessionData.sessionDuration === "number" && Number.isFinite(sessionData.sessionDuration)
+          ? sessionData.sessionDuration
+          : null) ??
+        (typeof sessionData.duration === "number" && Number.isFinite(sessionData.duration)
+          ? sessionData.duration
+          : null) ??
+        (typeof sessionData.elapsedTime === "number" && Number.isFinite(sessionData.elapsedTime)
+          ? sessionData.elapsedTime / 1000
+          : 0);
+
+      const elapsedMs = Math.max(0, durationSeconds * 1000);
 
       const sessionId = saveSession({
         patternId: pattern.id || "custom",
         patternName: pattern.name,
-        startTime: new Date(Date.now() - elapsedTime),
+        startTime: new Date(Date.now() - elapsedMs),
         endTime: new Date(),
-        duration: actualSessionDuration,
+        duration: durationSeconds,
         cycleCount,
         breathHoldTime,
         restlessnessScore: restlessnessScore || 0,
@@ -74,10 +81,10 @@ const useSessionCompletion = () => {
       navigate("/post-session", {
         state: {
           breathHoldTime,
-          restlessnessScore: restlessnessScore || 0,
+          restlessnessScore: restlessnessScore ?? null,
           stillnessScore: sessionData.stillnessScore,
           patternName: patternName || pattern.name,
-          sessionDuration: actualSessionDuration,
+          sessionDuration: durationSeconds,
           sessionId,
           isOffline: !syncStatus.isOnline,
           cycleCount,
@@ -123,14 +130,6 @@ export const SessionModeWrapper: React.FC = () => {
 
   const handleSessionComplete = useSessionCompletion();
 
-  const {
-    phase: sessionState,
-    isActive,
-    start,
-    complete,
-  } = useSession();
-
-  // Single mode — always enhanced. Camera on/off is handled by SessionPreview.
   const sessionConfig = useMemo(
     () => ({
       pattern: {
@@ -159,9 +158,8 @@ export const SessionModeWrapper: React.FC = () => {
         },
         patternName: metrics?.patternName ?? initialPattern.name,
       });
-      complete();
     },
-    [handleSessionComplete, initialPattern, complete]
+    [handleSessionComplete, initialPattern]
   );
 
   const responsiveConfig = {

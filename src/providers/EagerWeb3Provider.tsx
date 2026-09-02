@@ -1,36 +1,31 @@
 import React from 'react';
 import { WagmiProvider } from 'wagmi';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ConnectKitProvider } from 'connectkit';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { config as wagmiConfig } from '@/lib/wagmi/config';
 import { WalletProvider } from '@/lib/wallet/wallet-context';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      gcTime: 1000 * 60 * 10,
-    },
-  },
-});
+import { queryClient } from '@/lib/query/config';
 
 interface EagerWeb3ProviderProps {
   children: React.ReactNode;
 }
 
 /**
- * Eager Web3 Provider - loads immediately at app startup
- * Use this for routes that need blockchain features available immediately
+ * Web3 provider for /profile, /subscription, and wallet auth steps.
+ * Wallet login uses wagmi connectors (WalletConnection) — ConnectKit is not
+ * mounted. ConnectKit's useConfig() was resolving a different wagmi copy than
+ * WagmiProvider, which crashed Sign in with:
+ * "ConnectKitProvider must be within a WagmiProvider".
+ *
+ * QueryClientProvider must sit *inside* WagmiProvider (wagmi v2). Reuse the
+ * root client so session-history queries stay on one cache.
  */
 export const EagerWeb3Provider: React.FC<EagerWeb3ProviderProps> = ({ children }) => {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ConnectKitProvider>
-          <WalletProvider autoConnect={false}>
-            {children}
-          </WalletProvider>
-        </ConnectKitProvider>
+        <WalletProvider autoConnect={false}>
+          {children}
+        </WalletProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

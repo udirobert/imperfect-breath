@@ -71,7 +71,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ className }) => {
     return null;
   }
 
-  const hiddenPaths = ["/session/", "/auth", "/onboarding"];
+  const hiddenPaths = ["/session", "/post-session", "/auth", "/onboarding"];
   if (hiddenPaths.some((path) => location.pathname.startsWith(path))) {
     return null;
   }

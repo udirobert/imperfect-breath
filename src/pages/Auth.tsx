@@ -1,53 +1,78 @@
 /**
- * ENHANCED Auth Page - Uses UnifiedAuthFlow
- * 
- * ENHANCEMENT FIRST: Replaced duplicate auth logic with enhanced UnifiedAuthFlow
- * AGGRESSIVE CONSOLIDATION: Removed redundant auth implementation
- * DRY: Single source of truth for auth flows
+ * Dedicated sign-in. Email first. Wallet is a quiet extra, not a peer door.
  */
 
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UnifiedAuthFlow } from '@/components/auth/UnifiedAuthFlow';
-import { toast } from 'sonner';
-import type { AuthContext } from '@/types/auth';
+import { useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { SignInForm, type SignInIntent } from "@/components/auth/SignInForm";
+import { MistField } from "@/components/atmosphere/MistField";
+import { ProgressiveBlur } from "@/components/atmosphere/ProgressiveBlur";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+function intentFromSearch(searchParams: URLSearchParams): SignInIntent {
+  const context = searchParams.get("context");
+  const redirect = searchParams.get("redirect") || "";
+
+  if (context === "onboarding") return "onboarding";
+  if (
+    context === "progress-tracking" ||
+    redirect.includes("/progress") ||
+    redirect.includes("post-session")
+  ) {
+    return "progress";
+  }
+  return "signin";
+}
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
-  // ORGANIZED: Extract context from URL params
-  const context: AuthContext = {
-    type: (searchParams.get('context') as AuthContext['type']) || 'profile',
-    source: searchParams.get('source') || undefined,
-  };
-  
-  const handleAuthComplete = (authType?: string) => {
-    // CLEAN: Contextual success messages
-    const messages = {
-      guest: 'Welcome! You can start breathing immediately.',
-      email: 'Successfully signed in! Your progress will be saved.',
-      wallet: 'Wallet connected! You now have access to all features.',
-    };
-    
-    if (authType && messages[authType as keyof typeof messages]) {
-      toast.success(messages[authType as keyof typeof messages]);
+  const { isAuthenticated, loading } = useAuth();
+
+  const redirectTo = searchParams.get("redirect") || "/";
+  const intent = intentFromSearch(searchParams);
+  const defaultSignUp = intent === "progress";
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate(redirectTo, { replace: true });
     }
-    
-    // ORGANIZED: Context-aware navigation
-    const redirectTo = searchParams.get('redirect') || '/';
+  }, [loading, isAuthenticated, navigate, redirectTo]);
+
+  const handleAuthComplete = (authType?: string) => {
+    if (authType === "email") {
+      toast.success("Signed in. Your practice is saved.");
+    } else if (authType === "wallet") {
+      toast.success("Wallet connected.");
+    }
+
     navigate(redirectTo);
   };
 
+  if (!loading && isAuthenticated) {
+    return <div className="min-h-screen bg-calm-gradient" />;
+  }
+
   return (
-    <div className="flex items-center justify-center min-h-full animate-fade-in p-4">
-      <UnifiedAuthFlow
-        // MODULAR: Enable blockchain features for full auth experience
-        features={{ blockchain: true }}
-        context={context}
-        onComplete={handleAuthComplete}
-        // SIMPLIFIED: Use minimal mode to show fewer options
-        mode="minimal"
-      />
+    <div className="relative min-h-screen bg-calm-gradient flex flex-col items-center justify-center px-6 py-12">
+      <MistField />
+      <ProgressiveBlur />
+
+      <div className="relative z-10 flex flex-col items-center">
+        <SignInForm
+          intent={intent}
+          defaultSignUp={defaultSignUp}
+          onComplete={handleAuthComplete}
+        />
+
+        <Link
+          to="/"
+          className="mt-10 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Back to practice
+        </Link>
+      </div>
     </div>
   );
 };

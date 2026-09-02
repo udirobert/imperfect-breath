@@ -77,10 +77,16 @@ export default defineConfig(({ mode }) => {
         types: resolve(__dirname, "./src/types"),
         pages: resolve(__dirname, "./src/pages"),
         utils: resolve(__dirname, "./src/utils"),
-        // Remove React aliases to prevent bundling issues
-        // react: resolve(__dirname, "./node_modules/react"),
-        // "react-dom": resolve(__dirname, "./node_modules/react-dom"),
+        wagmi: resolve(__dirname, "./node_modules/wagmi"),
+        viem: resolve(__dirname, "./node_modules/viem"),
       },
+      dedupe: [
+        "react",
+        "react-dom",
+        "wagmi",
+        "viem",
+        "@tanstack/react-query",
+      ],
     },
 
     // Production-optimized build configuration

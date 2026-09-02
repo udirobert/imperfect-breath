@@ -21,16 +21,25 @@ interface PostSessionCelebrationProps {
   };
   /** True when camera verification was active — unlocks the credential card */
   verified?: boolean;
+  /** One honest sentence from this session. */
+  insight?: string;
+  isGuest?: boolean;
   onContinue?: () => void;
-  onExplorePatterns?: () => void;
+  onSeeProgress?: () => void;
+  onSaveProgress?: () => void;
+  onConnectWallet?: () => void;
   onClose?: () => void;
 }
 
 export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
   metrics,
   verified = false,
+  insight,
+  isGuest = false,
   onContinue,
-  onExplorePatterns,
+  onSeeProgress,
+  onSaveProgress,
+  onConnectWallet,
   onClose,
 }) => {
   const durationMinutes = Math.round(metrics.duration / 60);
@@ -95,10 +104,11 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
         
         <div className="space-y-2 px-4">
           <h2 className="text-3xl font-bold tracking-tight">
-            {metrics.isFirstSession ? "Welcome to the Journey!" : "Incredible Session!"}
+            {metrics.isFirstSession ? "Your first breath." : "Session complete."}
           </h2>
           <p className="text-lg text-muted-foreground">
-            You've nurtured your focus for {durationMinutes} minutes with {metrics.patternName}.
+            {insight ||
+              `You practiced ${metrics.patternName} for ${durationMinutes} minute${durationMinutes === 1 ? "" : "s"}.`}
           </p>
         </div>
       </div>
@@ -163,6 +173,15 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
                   Mint your verified credential
                 </Button>
               )}
+              {attestation.status === "needs-wallet" && (
+                <Button
+                  onClick={onConnectWallet}
+                  className="w-full rounded-full btn-premium py-6"
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Connect wallet to mint
+                </Button>
+              )}
               {attestation.status === "failed" && (
                 <Button
                   onClick={() => void attestation.retry()}
@@ -185,6 +204,19 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
         </motion.div>
       )}
 
+      {isGuest && (
+        <p className="text-sm text-muted-foreground px-4">
+          <button
+            type="button"
+            onClick={onSaveProgress}
+            className="font-medium text-primary hover:underline underline-offset-2"
+          >
+            Create an account
+          </button>{" "}
+          to keep this streak across devices.
+        </p>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-4 pt-4 px-2">
         <Button
           onClick={onContinue}
@@ -193,7 +225,6 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           <Sparkles className="h-5 w-5 mr-2" />
           Keep the Momentum
         </Button>
-        {/* Share proof card — available for all sessions, verified or not */}
         {!verified && (
           <Button
             onClick={handleShareCredential}
@@ -205,12 +236,12 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
           </Button>
         )}
         <Button
-          onClick={onExplorePatterns}
+          onClick={onSeeProgress}
           variant="outline"
           className="flex-1 glass-dark py-7 text-lg rounded-full border-primary/20 text-primary"
         >
           <ArrowRight className="h-5 w-5 mr-2" />
-          Explore Trends
+          See my progress
         </Button>
       </div>
 

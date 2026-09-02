@@ -1,13 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { cn } from "../lib/utils";
-import { motion } from "framer-motion";
-import { Badge } from "./ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   getPhaseConfig,
-  isExpandedPhase,
   shouldShowRhythmIndicator,
 } from "../lib/breathing-phase-config";
-import { getQualityColor } from "../utils/quality";
+import { getAffirmationForCycle, getStillnessAffirmation } from "../lib/affirmations";
+import { HaloRipple } from "./atmosphere/HaloRipple";
 
 /**
  * Breath signal from the vision pipeline — drives the orb's *quality*
@@ -73,7 +72,7 @@ interface BreathingAnimationProps {
 // shrinks). The breath signal drives:
 //   - glow intensity (face detection confidence)
 //   - opacity (verified = vivid, unverified = dim)
-//   - shiver (restlessness during hold phases)
+//   - halo ripples (restlessness during hold — surface, not a whole-orb shiver)
 //   - color (blue when calm, amber when restless during hold)
 //   - verification ring (pulses when face detected, absent when not)
 //
@@ -103,10 +102,10 @@ const MistOrb: React.FC<MistOrbProps> = React.memo(({
   const restlessness = 100 - stillness;
 
   const isHoldPhase = phase === "hold" || phase === "hold_after_exhale";
-  // Shiver only during hold when restless — movement is expected during inhale/exhale
-  const shiverPx = hasData && isHoldPhase && isActive
-    ? Math.min(restlessness / 100, 1) * 3.5
-    : 0;
+  const rippleAmp =
+    hasData && isHoldPhase && isActive
+      ? Math.min(Math.max((restlessness - 18) / 55, 0), 1)
+      : 0;
 
   // Glow: confidence drives how vivid the orb is
   const glowFactor = hasData ? Math.min(confidence / 100, 1) : 0;
@@ -160,26 +159,7 @@ const MistOrb: React.FC<MistOrbProps> = React.memo(({
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
-      {/* Shiver wrapper — translates the whole orb by small random offsets.
-          Only animates when restlessness during hold exceeds threshold. */}
-      <motion.div
-        animate={
-          shiverPx > 0.5
-            ? {
-                x: [0, shiverPx, -shiverPx, shiverPx * 0.5, 0],
-                y: [0, -shiverPx, shiverPx * 0.7, -shiverPx * 0.3, 0],
-              }
-            : { x: 0, y: 0 }
-        }
-        transition={{
-          duration: 0.12,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-        className="relative flex items-center justify-center"
-      >
-        {/* Verification ring — subtle pulsing border when face is detected.
-            Absent in unverified mode — this is the "camera is watching" signal. */}
+      <div className="relative flex items-center justify-center">
         {showVerificationRing && (
           <motion.div
             className="absolute rounded-full border"
@@ -200,7 +180,6 @@ const MistOrb: React.FC<MistOrbProps> = React.memo(({
           />
         )}
 
-        {/* Scale wrapper — all mist layers scale together */}
         <motion.div
           animate={{ scale }}
           transition={{
@@ -209,7 +188,6 @@ const MistOrb: React.FC<MistOrbProps> = React.memo(({
           }}
           className="relative flex items-center justify-center"
         >
-          {/* Outer halo — large, very blurred, low opacity */}
           <div
             className="absolute rounded-full"
             style={{
@@ -220,7 +198,12 @@ const MistOrb: React.FC<MistOrbProps> = React.memo(({
             }}
           />
 
-          {/* Mid cloud — medium blur, the main body */}
+          <HaloRipple
+            size={compactMode ? 150 : 200}
+            color={rgba(0.55)}
+            amplitude={rippleAmp}
+          />
+
           <div
             className="absolute rounded-full"
             style={{
@@ -231,7 +214,6 @@ const MistOrb: React.FC<MistOrbProps> = React.memo(({
             }}
           />
 
-          {/* Inner core — sharpest, brightest, carries the glow */}
           <div
             className="absolute rounded-full"
             style={{
@@ -243,7 +225,7 @@ const MistOrb: React.FC<MistOrbProps> = React.memo(({
             }}
           />
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 });
@@ -262,25 +244,33 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
     countdownValue,
     phaseProgress = 0,
     showTimer = false,
-    compactMode = false,
-    overlayMetrics,
-    breathSignal,
-    cycleCount = 0,
-    emotionalState = "calm",
-    sessionQuality = 75,
+        compactMode = false,
+        breathSignal,
+        cycleCount = 0,
     sessionInfo,
   }) => {
     const phaseConfig = useMemo(() => getPhaseConfig(phase), [phase]);
-    
-    // ENHANCEMENT: Emotional color adaptation (DRY principle)
-    const emotionalColors = useMemo(() => ({
-      calm: { primary: "from-blue-400 to-blue-600", shadow: "shadow-blue-200/50" },
-      focused: { primary: "from-purple-400 to-purple-600", shadow: "shadow-purple-200/50" },
-      energized: { primary: "from-orange-400 to-red-500", shadow: "shadow-orange-200/50" },
-      peaceful: { primary: "from-green-400 to-emerald-500", shadow: "shadow-green-200/50" }
-    }), []);
-    
-    const currentColors = emotionalColors[emotionalState];
+
+    const [affirmation, setAffirmation] = useState<string | null>(null);
+    const prevPhaseRef = useRef(phase);
+
+    useEffect(() => {
+      if (!isActive) {
+        setAffirmation(null);
+        prevPhaseRef.current = phase;
+        return;
+      }
+      if (prevPhaseRef.current === phase) return;
+      prevPhaseRef.current = phase;
+
+      const next =
+        breathSignal?.hasValidData
+          ? getStillnessAffirmation(breathSignal.stillness)
+          : getAffirmationForCycle(cycleCount);
+      setAffirmation(next.text);
+      const t = window.setTimeout(() => setAffirmation(null), 2400);
+      return () => window.clearTimeout(t);
+    }, [phase, isActive, breathSignal, cycleCount]);
 
     const instruction = useMemo(() => {
       if (phase === "countdown" && countdownValue !== undefined) {
@@ -415,48 +405,20 @@ const BreathingAnimation = React.memo<BreathingAnimationProps>(
 
         <CenterContent />
 
-        {/* ENHANCED: Micro-celebration with haptic feedback */}
-        {isActive &&
-          cycleCount > 0 &&
-          cycleCount % 5 === 0 &&
-          phase === "inhale" &&
-          phaseProgress < 10 && (
-            <Badge
-              className={cn(
-                "absolute -top-12 left-1/2 -translate-x-1/2",
-                "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200",
-                "animate-bounce shadow-lg cursor-pointer",
-                "transition-all duration-1000 hover:scale-105"
-              )}
-              variant="secondary"
-              onClick={() => {
-                // PERFORMANT: Haptic feedback for mobile
-                if ('vibrate' in navigator) {
-                  navigator.vibrate([50, 100, 50]);
-                }
-              }}
+        <AnimatePresence>
+          {affirmation && (
+            <motion.p
+              key={affirmation}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.5 }}
+              className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-max max-w-[16rem] text-center text-sm font-light text-muted-foreground/80"
             >
-              {cycleCount} breaths! *
-            </Badge>
+              {affirmation}
+            </motion.p>
           )}
-        
-        {/* ENHANCEMENT: Quality-based particles (MODULAR) */}
-        {isActive && sessionQuality > 80 && (
-          <div className="absolute inset-0 pointer-events-none">
-            {Array.from({ length: Math.floor(sessionQuality / 20) }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-1 h-1 bg-white rounded-full animate-pulse opacity-60"
-                style={{
-                  left: `${20 + Math.random() * 60}%`,
-                  top: `${20 + Math.random() * 60}%`,
-                  animationDelay: `${i * 200}ms`,
-                  animationDuration: "2s"
-                }}
-              />
-            ))}
-          </div>
-        )}
+        </AnimatePresence>
       </div>
     );
   }

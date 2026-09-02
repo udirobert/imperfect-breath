@@ -14,7 +14,7 @@ import { useIsMobile } from '../../hooks/use-mobile';
 import { useCameraStore } from '../../stores/cameraStore';
 import { useStableMetrics } from '../../hooks/useStableMetrics';
 import { useSession } from '../../hooks/useSession';
-import { useSessionPhase } from '../../stores/sessionStore';
+import { useSessionPhase, useSessionStore } from '../../stores/sessionStore';
 
 import VideoFeed from '../VideoFeed';
 import { VisionManager } from './VisionManager';
@@ -22,11 +22,6 @@ import BreathingAnimation from '../BreathingAnimation';
 import { SessionControls } from './SessionControls';
 import { EnhancedSessionLayout } from './EnhancedSessionLayout';
 import { SessionPreview } from './SessionPreview';
-
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Eye, Activity, Camera, CameraOff } from 'lucide-react';
-import { Button } from '../ui/button';
 
 interface ResponsiveEnhancedSessionProps {
   config: {
@@ -142,31 +137,26 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   };
 
   // Video feed component
-  const videoFeed = modeConfig.enableCamera && cameraStream ? (
+  const videoFeed = cameraStream ? (
     <div className="relative w-full h-full">
       <VideoFeed
         videoRef={videoRef}
         isActive={session.isActive}
         landmarks={session.visionMetrics?.faceLandmarks || []}
         trackingStatus={(session.visionMetrics?.presence || 0) > 0 ? "TRACKING" : "IDLE"}
+        luxuryMode={false}
       />
       <VisionManager
         enabled={modeConfig.enableVision && cameraStream !== null}
         videoRef={videoRef}
         cameraStream={cameraStream}
         sessionId={sessionId ?? ''}
+        quiet
         onVisionReady={() => console.log('Vision processing ready')}
         onVisionError={(error) => console.warn('Vision processing error:', error)}
       />
     </div>
-  ) : (
-    <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
-      <div className="text-center text-gray-500">
-        <CameraOff className="w-8 h-8 mx-auto mb-2" />
-        <p className="text-sm">Camera not available</p>
-      </div>
-    </div>
-  );
+  ) : null;
 
   // Breathing animation component
   // The breath signal from useStableMetrics drives the orb's quality
@@ -202,90 +192,28 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
   // Session controls component
   const controls = (
     <SessionControls
-      onEndSession={async () => {
-        // Collect session metrics
-        const sessionDuration = session.getSessionDuration?.() || 0;
-        const cycleCount = session.metrics?.cycleCount || 0;
-
-        // HONEST UX: Fetch REAL aggregated vision metrics from Hetzner API
-        let realVisionMetrics = null;
-        if (modeConfig.enableVision && sessionId) {
-          try {
-            console.log('📊 Fetching vision summary for session:', sessionId);
-            const visionSummaryResponse = await fetch(
-              `${import.meta.env.VITE_HETZNER_SERVICE_URL || "http://localhost:8001"}/api/vision/sessions/${sessionId}/summary`
-            );
-            
-            if (visionSummaryResponse.ok) {
-              const visionSummary = await visionSummaryResponse.json();
-              console.log('✅ Fetched real vision summary:', visionSummary);
-              
-              // Calculate real stillness from movement (inverse relationship)
-              const realStillness = Math.round((1 - visionSummary.avg_movement_level) * 100);
-              
-              realVisionMetrics = {
-                averageStillness: realStillness,
-                faceDetectionRate: Math.round(visionSummary.avg_confidence * 100),
-                postureScore: Math.round(visionSummary.avg_posture_score * 100),
-                movementLevel: visionSummary.avg_movement_level,
-                totalFrames: visionSummary.total_frames,
-                stillnessPercentage: visionSummary.stillness_percentage,
-                consistencyScore: visionSummary.consistency_score,
-              };
-            } else {
-              console.warn('⚠️ Vision summary not available, using last frame data');
-              // FALLBACK: Use last available vision metrics from session
-              if (session.visionMetrics?.stillness) {
-                const lastFrameStillness = Math.round(session.visionMetrics.stillness);
-                console.log('🔄 Using last frame stillness:', lastFrameStillness);
-                realVisionMetrics = {
-                  averageStillness: lastFrameStillness,
-                  faceDetectionRate: Math.round((session.visionMetrics.presence || 0) * 100),
-                  postureScore: Math.round((session.visionMetrics.posture || 0) * 100),
-                  movementLevel: (100 - lastFrameStillness) / 100,
-                  totalFrames: 1,
-                  stillnessPercentage: lastFrameStillness,
-                  consistencyScore: 75, // Default consistency
-                };
-              }
-            }
-          } catch (error) {
-            console.error('❌ Failed to fetch vision summary:', error);
-            // FALLBACK: Use last available vision metrics from session
-            if (session.visionMetrics?.stillness) {
-              const lastFrameStillness = Math.round(session.visionMetrics.stillness);
-              console.log('🔄 Using last frame stillness as fallback:', lastFrameStillness);
-              realVisionMetrics = {
-                averageStillness: lastFrameStillness,
-                faceDetectionRate: Math.round((session.visionMetrics.presence || 0) * 100),
-                postureScore: Math.round((session.visionMetrics.posture || 0) * 100),
-                movementLevel: (100 - lastFrameStillness) / 100,
-                totalFrames: 1,
-                stillnessPercentage: lastFrameStillness,
-                consistencyScore: 75, // Default consistency
-              };
-            }
-          }
-        }
+      onEndSession={() => {
+        const durationSeconds = useSessionStore.getState().metrics.duration || 0;
+        const lastStillness =
+          session.visionMetrics?.stillness != null
+            ? Math.round(session.visionMetrics.stillness)
+            : stableMetrics.hasValidData
+              ? stableMetrics.stillnessScore
+              : null;
 
         const sessionMetrics = {
-          duration: typeof sessionDuration === "string"
-            ? parseInt(sessionDuration.split(":")[0]) * 60 + parseInt(sessionDuration.split(":")[1])
-            : sessionDuration,
-          cycleCount,
+          duration: durationSeconds,
+          sessionDuration: durationSeconds,
+          elapsedTime: durationSeconds * 1000,
+          cycleCount: session.metrics?.cycleCount || 0,
           breathHoldTime: 0,
-          // HONEST: Use real aggregated stillness, not last frame
-          stillnessScore: realVisionMetrics?.averageStillness || null,
-          restlessnessScore: realVisionMetrics ? (100 - realVisionMetrics.averageStillness) : null,
+          stillnessScore: lastStillness,
+          restlessnessScore: lastStillness != null ? 100 - lastStillness : null,
           cameraUsed: !!cameraStream,
           sessionType: config.mode === "classic" ? "classic" : "enhanced",
           visionSessionId: sessionId,
           patternName: config.pattern.name,
-          difficulty: 'intermediate',
-          visionMetrics: realVisionMetrics,
         };
-
-        console.log('📊 Session metrics with real vision data:', sessionMetrics);
 
         session.complete();
         onSessionComplete(sessionMetrics);
@@ -293,10 +221,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
     />
   );
 
-  // CLEAN: Phase-driven rendering - single responsibility
-  // Show preparation flow for setup/preparation/camera_setup phases
   if (sessionPhase === 'setup' || sessionPhase === 'preparation' || sessionPhase === 'camera_setup') {
-    console.log('📋 Showing preparation phase:', sessionPhase);
     return (
       <div className="min-h-screen flex flex-col">
         <SessionPreview
@@ -313,7 +238,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
             description: config.pattern.description || `Experience the ${config.pattern.name} breathing technique with enhanced AI feedback.`
           }}
           enableCamera={modeConfig.enableCamera}
-          videoRef={videoRef}
+          capture={videoFeed}
           onStart={handleSessionStart}
           onCancel={onSessionExit}
         />
@@ -321,51 +246,18 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
     );
   }
 
-
-  // MOBILE: Special handling for mobile enhanced sessions
-  if (isMobile && config.mode === 'enhanced') {
-    return (
-      <EnhancedSessionLayout
-        videoFeed={videoFeed}
-        showVideo={modeConfig.enableCamera}
-        breathingAnimation={breathingAnimation}
-        metrics={metrics}
-        sessionInfo={sessionInfo}
-        controls={controls}
-        isMobile={true}
-      />
-    );
-  }
-
-  // DESKTOP: Side-by-side layout for optimal correlation viewing
-  if (!isMobile && config.mode === 'enhanced') {
-    return (
-      <EnhancedSessionLayout
-        videoFeed={videoFeed}
-        showVideo={modeConfig.enableCamera}
-        breathingAnimation={breathingAnimation}
-        metrics={metrics}
-        sessionInfo={sessionInfo}
-        controls={controls}
-        isMobile={false}
-      />
-    );
-  }
-
-  // FALLBACK: Classic session layout
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <Card className="border-0 shadow-lg">
-        <CardContent className="p-6">
-          <div className="space-y-6">
-            <div className="flex justify-center">
-              {breathingAnimation}
-            </div>
-            {controls}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <EnhancedSessionLayout
+      videoFeed={videoFeed}
+      showVideo={!!cameraStream}
+      seen={stableMetrics.hasValidData}
+      breathingAnimation={breathingAnimation}
+      metrics={metrics}
+      sessionInfo={sessionInfo}
+      controls={controls}
+      isMobile={isMobile}
+      onExit={onSessionExit}
+    />
   );
 };
 

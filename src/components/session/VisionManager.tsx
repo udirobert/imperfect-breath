@@ -23,6 +23,8 @@ export interface VisionManagerProps {
   sessionId: string;
   onVisionReady?: () => void;
   onVisionError?: (error: string) => void;
+  /** Skip large loader/error cards — used in the session pip. */
+  quiet?: boolean;
 }
 
 export const VisionManager: React.FC<VisionManagerProps> = ({
@@ -32,6 +34,7 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
   sessionId,
   onVisionReady,
   onVisionError,
+  quiet = false,
 }) => {
   // Memoize vision config to prevent recreation
   const visionConfig = useMemo(
@@ -148,6 +151,7 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
   }
 
   if (!visionStore.isReady) {
+    if (quiet) return null;
     return (
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="rounded-xl border border-border bg-card/90 p-5 shadow-lg backdrop-blur-sm">
@@ -158,6 +162,7 @@ export const VisionManager: React.FC<VisionManagerProps> = ({
   }
 
   if (visionStore.error) {
+    if (quiet) return null;
     return (
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center max-w-sm">

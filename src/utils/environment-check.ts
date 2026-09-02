@@ -31,7 +31,9 @@ export function checkReactEnvironment() {
   }
 
   // Check for window.ethereum
-  checkWalletEnvironment();
+  if (import.meta.env.DEV) {
+    checkWalletEnvironment();
+  }
 
   return {
     isProduction,
@@ -71,7 +73,9 @@ export function checkWalletEnvironment() {
 export function runEnvironmentChecks() {
   try {
     const envInfo = checkReactEnvironment();
-    console.log('Environment check complete:', envInfo);
+    if (import.meta.env.DEV) {
+      console.log('Environment check complete:', envInfo);
+    }
     return envInfo;
   } catch (error) {
     console.error('Error during environment check:', error);

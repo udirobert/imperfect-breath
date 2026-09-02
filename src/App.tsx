@@ -10,7 +10,6 @@ import { Toaster } from "@/components/ui/sonner";
 
 // Small pages that can load immediately
 import Index from "@/pages/Index";
-import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
 import NotFound from "@/pages/NotFound";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -21,13 +20,14 @@ import { initNotifications } from "@/lib/notifications/oneSignal";
 import RouteErrorBoundary from "@/components/auth/RouteErrorBoundary";
 
 // Large pages - lazy load these to reduce initial bundle size
+const Auth = React.lazy(() => import("@/pages/Auth"));
 const Progress = React.lazy(() => import("@/pages/Progress"));
 const PostSession = React.lazy(() => import("@/pages/PostSession"));
 const UserProfile = React.lazy(() => import("@/pages/UserProfile"));
 const Subscription = React.lazy(() => import("@/pages/Subscription"));
 
 // Web3 Provider — lazy-loaded, only wraps /profile and /subscription.
-// The session, home, onboarding, and post-session screens don't need Web3.
+// /auth is email-first: wagmi mounts only if the user picks wallet login.
 const EagerWeb3Provider = React.lazy(() =>
   import("@/providers/EagerWeb3Provider").then((m) => ({ default: m.EagerWeb3Provider }))
 );
@@ -50,8 +50,8 @@ const PageLoader = () => (
 
 /**
  * Web3Route — wraps children with the lazy-loaded Web3 provider.
- * Only used for /profile and /subscription. Other routes load without
- * any Web3 overhead (no wagmi, no ConnectKit, no QueryClient).
+ * Used for /profile and /subscription. Session, home, auth (email),
+ * onboarding, and post-session load with zero Wagmi.
  */
 const Web3Route: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Suspense fallback={<PageLoader />}>
@@ -104,8 +104,12 @@ function App() {
             <Route path="/leaderboard" element={<LeaderboardRedirect />} />
           </Route>
 
-          {/* Routes without Header */}
-          <Route path="/auth" element={<Auth />} />
+          {/* Email sign-in must not mount Wagmi. Wallet login lazy-loads it. */}
+          <Route path="/auth" element={
+            <RouteErrorBoundary>
+              <Auth />
+            </RouteErrorBoundary>
+          } />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />

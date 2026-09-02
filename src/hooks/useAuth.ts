@@ -6,7 +6,35 @@ import { useWalletStatus, useWalletActions } from "./useWallet";
 import { revenueCatAuthIntegration } from "../lib/monetization/revenueCatAuthIntegration";
 import { revenueCatService, UserSubscription } from "../lib/monetization/revenueCat";
 import { useSiweAuth } from './useSiweAuth';
-import { useBlockchainAuth, BlockchainAuthReturn } from './useBlockchainAuth';
+import type { BlockchainAuthReturn } from './useBlockchainAuth';
+
+/**
+ * useAuth is used on every screen (Header, Home, session history).
+ * It must NOT call wagmi hooks — WagmiProvider only wraps /profile,
+ * /subscription, and the lazy wallet step on /auth.
+ */
+const disconnectedBlockchainAuth = {
+  state: {
+    isAuthenticated: { lens: false, flow: false, both: false },
+    isInitializing: false,
+    isAuthenticating: false,
+    isProcessingPayment: false,
+    error: null,
+    lensSession: null,
+    flowUser: null,
+  },
+  isAuthenticated: false,
+  isLensAuthenticated: false,
+  isFlowAuthenticated: false,
+  authenticateBoth: async () => ({ success: false as const, error: "Connect a wallet from Profile" }),
+  authenticateLens: async () => ({ success: false as const, error: "Connect a wallet from Profile" }),
+  authenticateFlow: async () => ({ success: false as const, error: "Connect a wallet from Profile" }),
+  logout: async () => {},
+  executePayment: async () => ({ success: false as const, error: "Connect a wallet from Profile" }),
+  subscribeToPlan: async () => ({ success: false as const, error: "Connect a wallet from Profile" }),
+  refreshAuthStatus: () => {},
+  authService: undefined,
+} as unknown as BlockchainAuthReturn;
 
 // Auth action result interface (consistent with SocialActionResult)
 export interface AuthActionResult {
@@ -76,14 +104,9 @@ export const useAuth = (): UseAuthReturn => {
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Wallet hooks for wallet integration
+  // Wallet hooks for wallet integration (safe when WalletProvider is absent)
   const { isConnected, isConnecting, address, chainId } = useWalletStatus();
   const { connect, disconnect } = useWalletActions();
-  
-  // Blockchain auth (Lens + Flow)
-  const blockchainAuth = useBlockchainAuth();
-  const hasLensProfile = blockchainAuth.isLensAuthenticated;
-  const lensHandle = blockchainAuth.authService?.getAuthorAddress() || null;
 
   // SIWE auth hook — must be called at top level, not inside a callback
   const { authenticate: siweAuthenticate } = useSiweAuth();
@@ -413,12 +436,13 @@ export const useAuth = (): UseAuthReturn => {
     currentChain: getChainName(chainId),
     currentChainId: chainId,
     
-    // Lens/Social auth
-    hasLensProfile,
-    lensHandle,
-    hasFlowAccount: blockchainAuth.isFlowAuthenticated,
-    flowAddress: blockchainAuth.authService?.getCurrentFlowUser()?.addr || null,
-    blockchainAuth,
+    // Lens/Flow — stubbed here. Real values come from useBlockchainAuth
+    // on /profile and /subscription (inside WagmiProvider).
+    hasLensProfile: false,
+    lensHandle: null,
+    hasFlowAccount: false,
+    flowAddress: null,
+    blockchainAuth: disconnectedBlockchainAuth,
     signOut: logout,
   };
 };

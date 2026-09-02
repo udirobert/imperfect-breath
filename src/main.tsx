@@ -35,7 +35,9 @@ import { optimizeForMobile } from "./utils/mobile-detection";
 
 // Run environment checks before initializing the app
 const envCheck = runEnvironmentChecks();
-console.log("Environment check results:", envCheck);
+if (import.meta.env.DEV) {
+  console.log("Environment check results:", envCheck);
+}
 
 // Initialize mobile optimizations
 optimizeForMobile();

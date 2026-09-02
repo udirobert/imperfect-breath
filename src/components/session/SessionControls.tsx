@@ -81,9 +81,11 @@ export const SessionControls = ({
 
   const handleStop = () => {
     if (disabled || isLoading) return;
-    
+    if (onEndSession) {
+      onEndSession();
+      return;
+    }
     stop();
-    onEndSession?.();
   };
 
   const handleToggleAudio = () => {

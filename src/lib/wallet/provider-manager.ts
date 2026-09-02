@@ -40,13 +40,14 @@ class WalletProviderManager {
   private isInitialized = false;
 
   constructor() {
-    this.initialize();
+    // Lazy: WalletProvider calls initialize() on mount so session/home
+    // never probe window.ethereum.
   }
 
   /**
    * Initialize the provider manager
    */
-  private async initialize(): Promise<void> {
+  async initialize(): Promise<void> {
     if (typeof window === 'undefined' || this.isInitialized) return;
 
     try {
