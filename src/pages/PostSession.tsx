@@ -3,7 +3,8 @@
  *
  * Replaces the 1162-line Results.tsx dashboard. The post-session moment
  * is: land, see the stillness, go. Verification is a quiet property of
- * the record, not the landing job. No tabs, no agent traces.
+ * the record, not the landing job. No tabs — but a brief AgentTrace ritual
+ * now makes the insight generation visible (trust layer, re-inspectable).
  *
  * Session data arrives via router state from SessionModeWrapper.
  */

@@ -9,12 +9,15 @@
  * - HONEST: Real metrics correlation visible at all times
  */
 
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useIsMobile } from '../../hooks/use-mobile';
 import { useCameraStore } from '../../stores/cameraStore';
 import { useStableMetrics } from '../../hooks/useStableMetrics';
 import { useSession } from '../../hooks/useSession';
 import { useSessionPhase, useSessionStore } from '../../stores/sessionStore';
+import { useVoiceGuidance } from '../../hooks/useVoiceGuidance';
+import { useAdaptiveEncouragement } from '../../hooks/useAdaptiveEncouragement';
+import { usePreferencesStore } from '../../stores/preferencesStore';
 
 import VideoFeed from '../VideoFeed';
 import { VisionManager } from './VisionManager';
@@ -71,6 +74,39 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
 
   // DRY: Single source of truth for session ID
   const sessionId = session.getSessionId();
+
+  // Voice guidance — phase cues ("Breathe in…", "Hold…", "Breathe out…").
+  // Opt-in via sessionStore audioEnabled AND user preference. No continuous chatter.
+  const audioEnabled = useSessionStore((s) => s.audioEnabled);
+  const audioPrefs = usePreferencesStore((s) => s.audio);
+  const voiceEnabled = audioEnabled && audioPrefs.enableVoiceGuidance && audioPrefs.enablePhaseCues;
+  const { cuePhase } = useVoiceGuidance(voiceEnabled);
+
+  // Adaptive encouragement — contextual, performance-timed coaching.
+  // Reads stillness from vision metrics; surfaces a single fade message.
+  const encouragement = useAdaptiveEncouragement({
+    enabled: session.isActive,
+    sessionMetrics: session.metrics,
+    visionMetrics: session.visionMetrics,
+    currentPhase: sessionPhase,
+    isSessionActive: session.isActive,
+  });
+
+  // Speak the phase cue on each phase transition during the active session.
+  const lastPhaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!session.isActive || session.isPaused) return;
+    const phase = session.metrics?.currentPhase;
+    if (phase && phase !== lastPhaseRef.current) {
+      lastPhaseRef.current = phase;
+      cuePhase(phase);
+    }
+  }, [session.metrics?.currentPhase, session.isActive, session.isPaused, cuePhase]);
+
+  // Reset phase tracker when session exits active state.
+  useEffect(() => {
+    if (!session.isActive) lastPhaseRef.current = null;
+  }, [session.isActive]);
 
   // ENHANCEMENT FIRST: Initialize session with proper config
   React.useEffect(() => {
@@ -255,6 +291,7 @@ export const ResponsiveEnhancedSession: React.FC<ResponsiveEnhancedSessionProps>
       metrics={metrics}
       sessionInfo={sessionInfo}
       controls={controls}
+      encouragement={encouragement.currentEncouragement}
       isMobile={isMobile}
       onExit={onSessionExit}
     />

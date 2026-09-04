@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "../ui/button";
 import { ChevronDown } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { trackCredentialShared } from "@/lib/notifications/oneSignal";
 import { useAttestation } from "@/hooks/useAttestation";
 import { shareProofCard } from "@/lib/proofCard";
+import { AgentTrace } from "@/components/primitives/AgentTrace";
 import {
   Collapsible,
   CollapsibleContent,
@@ -51,6 +52,19 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
 }) => {
   const reduceMotion = useReducedMotion();
   const streak = metrics.streak || 1;
+  const [insightReady, setInsightReady] = useState(false);
+
+  // The insight generation as a brief, honest ritual — "Reading your session
+  // → Writing your insight" — then settles to reveal the text. Reintegrated
+  // from the deleted AgentTrace primitive; runs once, stays expandable.
+  const traceSteps = React.useMemo(
+    () => [
+      { label: "Reading your session" },
+      { label: "Noticing your stillness" },
+      { label: "Writing your insight" },
+    ],
+    [],
+  );
 
   const handleShare = async () => {
     try {
@@ -98,9 +112,20 @@ export const PostSessionCelebration: React.FC<PostSessionCelebrationProps> = ({
         <h2 className="text-3xl font-bold tracking-tight">
           {metrics.isFirstSession ? "Your first breath." : "Session complete."}
         </h2>
-        <p className="text-lg text-muted-foreground max-w-md mx-auto">
-          {insight || `You practiced ${metrics.patternName}.`}
-        </p>
+        {insightReady ? (
+          <p className="text-lg text-muted-foreground max-w-md mx-auto">
+            {insight || `You practiced ${metrics.patternName}.`}
+          </p>
+        ) : (
+          <div className="flex justify-center py-2">
+            <AgentTrace
+              steps={traceSteps}
+              activeLabel="Reading your session"
+              doneLabel="Insight ready"
+              onSettled={() => setInsightReady(true)}
+            />
+          </div>
+        )}
       </motion.div>
 
       <motion.div className="mt-14 space-y-3" {...fade(0.12)}>

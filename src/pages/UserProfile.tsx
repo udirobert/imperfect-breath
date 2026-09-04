@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Skeleton } from "../components/ui/skeleton";
 import { Button } from "../components/ui/button";
+import { Slider } from "../components/ui/slider";
 import {
   BarChart3,
   Settings,
@@ -21,7 +22,10 @@ import {
   Shield,
   LogOut,
   HelpCircle,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
+import { usePreferencesStore } from "../stores/preferencesStore";
 
 const UserProfilePage = () => {
   const { user, profile, loading: authLoading, signOut } = useAuth();
@@ -30,6 +34,8 @@ const UserProfilePage = () => {
   const { disconnect: flowDisconnect } = useFlow();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const audioPrefs = usePreferencesStore((s) => s.audio);
+  const setAudio = usePreferencesStore((s) => s.setAudio);
 
   const cycleTheme = () => {
     if (theme === 'system') setTheme('light');
@@ -165,6 +171,56 @@ const UserProfilePage = () => {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Volume2 className="h-5 w-5" />
+              Session
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-sm">
+                {audioPrefs.enableVoiceGuidance ? (
+                  <Volume2 className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <VolumeX className="h-4 w-4 text-muted-foreground" />
+                )}
+                Voice guidance
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setAudio({ enableVoiceGuidance: !audioPrefs.enableVoiceGuidance })
+                }
+              >
+                {audioPrefs.enableVoiceGuidance ? "On" : "Off"}
+              </Button>
+            </div>
+            {audioPrefs.enableVoiceGuidance && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Cue volume</span>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {audioPrefs.voiceVolume}%
+                  </span>
+                </div>
+                <Slider
+                  value={[audioPrefs.voiceVolume]}
+                  onValueChange={([v]) => setAudio({ voiceVolume: v })}
+                  min={0}
+                  max={100}
+                  step={5}
+                />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Spoken phase cues during your session. "Breathe in… hold… and out."
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

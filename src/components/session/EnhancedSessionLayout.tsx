@@ -28,6 +28,8 @@ interface EnhancedSessionLayoutProps {
   controls: React.ReactNode;
   isMobile?: boolean;
   onExit?: () => void;
+  /** Optional in-session encouragement message — fades in/out, no chrome. */
+  encouragement?: { message: string; type: "celebration" | "encouragement" } | null;
 }
 
 export const EnhancedSessionLayout: React.FC<EnhancedSessionLayoutProps> = ({
@@ -37,6 +39,7 @@ export const EnhancedSessionLayout: React.FC<EnhancedSessionLayoutProps> = ({
   breathingAnimation,
   controls,
   onExit,
+  encouragement,
 }) => {
   return (
     <div className="relative flex flex-col h-[100dvh] min-h-screen bg-calm-gradient overflow-hidden">
@@ -82,6 +85,26 @@ export const EnhancedSessionLayout: React.FC<EnhancedSessionLayoutProps> = ({
       <div className="relative flex-1 flex items-center justify-center p-6">
         {breathingAnimation}
       </div>
+
+      {/* In-session encouragement — a single fade, no toast chrome. Sits above
+          the orb, below the controls. Auto-clears via the hook (4s). */}
+      {encouragement && (
+        <div
+          key={encouragement.message}
+          className="pointer-events-none absolute left-1/2 top-[62%] z-10 -translate-x-1/2 px-4"
+        >
+          <p
+            className={cn(
+              "fade-up text-center text-[15px] font-medium tracking-tight",
+              encouragement.type === "celebration"
+                ? "text-foreground"
+                : "text-muted-foreground",
+            )}
+          >
+            {encouragement.message}
+          </p>
+        </div>
+      )}
 
       <div className="relative flex-shrink-0 pb-8 pt-2">
         {controls}
