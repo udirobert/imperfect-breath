@@ -9,7 +9,7 @@
 | Primitive | File | Wired into | Why it earns its place |
 |---|---|---|---|
 | LoadingState → **PixelLoader** | `PixelLoader.tsx` | Global `PageLoader` (every lazy route) | Pixel-grid + live elapsed timer turns dead loads into a branded moment; reduced-motion freezes decoration, keeps the timer |
-| ThinkingState → **AgentTrace** | `AgentTrace.tsx` | `Results.tsx` AI insight loading | Zen's latency becomes a visible ritual ("Reading your breath rate curve → … → Writing your insight"); settles, stays expandable = re-inspectable reasoning. *Data-driven*: callers pass real steps |
+| ThinkingState → **AgentTrace** | `AgentTrace.tsx` | `PostSessionCelebration` insight reveal | Zen's latency becomes a visible ritual ("Reading your session → Noticing your stillness → Writing your insight"); settles, stays expandable = re-inspectable reasoning. *Data-driven*: callers pass real steps. Reintegrated post-consolidation (was deleted in round 5 with Results.tsx; restored as a brief post-session ritual only, not a dashboard).
 | TaskRows → **TaskPipeline** | `TaskPipeline.tsx` | `PostSessionCelebration` credential card | The proof-of-practice pipeline as UI: Verify ✓ → Score ✓ → Attest (pending). Honest states only — nothing marked done that isn't |
 | ContextCards → **ContextCards** | `ContextCard.tsx` | available; first use: Zen recommendation rationale | Coaching that cites evidence ("chose Physiological Sigh because resting rate was elevated" + source chip) is the trust layer made visible |
 
@@ -43,6 +43,17 @@ Brume HSL tokens (`foreground`, `muted-foreground`, `card`, `border`); keyframes
 
 ## Still open
 
-- ~~AgentTrace real stages~~ ✅ — `currentStep` prop added; Results.tsx drives it from `streamingState` (connect → chunks → composing); uncontrolled auto-play remains the fallback
-- ContextCards on the **Home/Index** "what do you need today" surface (camera-detected state variant, not just self-report)
+- ~~AgentTrace real stages~~ ✅ — `currentStep` prop added; restored and wired into `PostSessionCelebration` as a brief post-session insight ritual (presentation-timed, settles to reveal the insight text). The deleted `Results.tsx` dashboard wiring is not restored — the trace is a moment, not a tab.
+- ContextCards on the **Home/Index** "what do you need today" surface (camera-detected state variant, not just self-report) — partially done: `SessionPreview` already renders a `ContextCard` from router-state `reasonDetail`; the Home surface itself is still state-chip-only.
 - ~~TaskPipeline live attestation~~ ✅ — `useAttestation` hook runs POST /api/attest on verified sessions (wallet present), honest lifecycle: loading → done ("Flow · queued") | failed + retry | needs-wallet
+
+## Reintegrated session interactivity (post-consolidation pass)
+
+The round-5 collapse silenced the session itself. These were brought back selectively — in-loop, no chrome:
+
+| What | File | Why |
+|---|---|---|
+| **Voice guidance** (phase cues) | `src/hooks/useVoiceGuidance.ts` | Competitors are "a timer with audio"; the session had zero audio guidance. Speaks only phase transitions, opt-in via preferences. |
+| **Adaptive encouragement** | `src/hooks/useAdaptiveEncouragement.ts` | Contextual, performance-timed coaching (45s for high performers, 20s for struggling). Surfaces as a single fade on the orb overlay, not toasts. Haptics on celebration only. |
+| **Retryable async** | `src/hooks/useRetryableAsync.ts` | Lightweight extraction of the deleted `useErrorHandler` (408→80 lines). Backoff+jitter retry for transient AI/attestation failures. |
+| **Preferences store** (partial) | `src/stores/preferencesStore.ts` | Session + Audio domains only (120 of 523 lines). Gives voice guidance and default pattern a typed, persisted home. |

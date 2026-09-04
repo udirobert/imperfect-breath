@@ -10,6 +10,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { SmartPatternRecommendations } from "@/lib/recommendations/SmartPatternRecommendations";
+import { usePreferencesStore } from "@/stores/preferencesStore";
 import { cn } from "@/lib/utils";
 
 const STATE_CHIPS = [
@@ -30,6 +31,7 @@ const RHYTHMS = [
 export function TodayCard({ className }: { className?: string }) {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
+  const defaultPatternId = usePreferencesStore((s) => s.session.defaultPatternId);
 
   const handleStateSelect = (mood: "stressed" | "anxious" | "tired" | "calm") => {
     const top = SmartPatternRecommendations.getRecommendations({
@@ -48,7 +50,7 @@ export function TodayCard({ className }: { className?: string }) {
         },
       });
     } else {
-      navigate("/session?pattern=box");
+      navigate(`/session?pattern=${defaultPatternId}`);
     }
   };
 
